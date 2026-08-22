@@ -1,0 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=UnifrakturMaguntia&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+body {
+  background-color: #111111;
+  color: #EDEDED;
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+}
+
+/* Кастомний скроллбар для краси */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2D2D2D;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3D3D3D;
+}
+/* Стилі для Tiptap Editor */
+/* Стилі для Tiptap Editor */
+.tiptap {
+  outline: none;
+  min-height: 120px;
+}
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #525252;
+  pointer-events: none;
+  height: 0;
+}
+.tiptap p {
+  margin-bottom: 0.5rem;
+}
+.tiptap strong, .tiptap b {
+  font-weight: 800 !important;
+  color: inherit; /* Щоб колір тексту застосовувався і до жирного */
+}
+.tiptap h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #ffffff;
+}
+.tiptap h2 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #EDEDED;
+}
+.tiptap ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.tiptap ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.tiptap blockquote {
+  border-left: 3px solid #3B82F6;
+  padding-left: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #A1A1AA;
+  font-style: italic;
+}
+/* index.css / App.css */
+.icon-container-parent {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.icon-container-parent > * {
+  grid-area: 1 / 1 / 2 / 2;
+}
+/* ==================================================================
+   Вимкнені анімації.
+
+   framer ми глушимо через MotionConfig, але половина руху в проєкті
+   зроблена на CSS — ховери, підсвітки, тремтіння плиток. Тому тут
+   друга половина вимикача, інакше «вимкнено» було б напівправдою.
+
+   Не чіпаємо тільки прозорість і колір: без них інтерфейс перестає
+   відповідати на курсор і починає здаватись зламаним.
+================================================================== */
+.edge-no-motion *,
+.edge-no-motion *::before,
+.edge-no-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Спокійний режим: рух лишається, але зникає те, що не несе змісту —
+   нескінченні цикли на кшталт дихання, пульсацій і тремтіння. */
+.edge-calm-motion *,
+.edge-calm-motion *::before,
+.edge-calm-motion *::after {
+  animation-iteration-count: 1 !important;
+}
+
+/* ==================================================================
+   Світла тема — доналаштування.
+
+   Змінні закривають кольори з токенів, але не все в проєкті через них
+   проходить: лишились місця з жорстко вписаним білим по прозорому.
+   На темному тлі це були ледь помітні відблиски, на світлому вони
+   зникають зовсім. Тут — найпомітніші з них.
+================================================================== */
+.edge-light {
+  color-scheme: light;
+}
+
+/* Скролбари: світлий інтерфейс із чорною смугою прокрутки виглядає
+   як вставлений з іншого застосунку. */
+.edge-light .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+}
+.edge-light .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+
+/* ==================================================================
+   Значення за замовчуванням для токенів теми.
+
+   Дублюють темну палітру з lib/themes.js. Потрібні тому, що
+   Tailwind-класи виду bg-[var(--edge-bg)] не мають власного
+   резерву: якщо скрипт теми ще не відпрацював, змінна має вже
+   існувати, інакше в цьому місці не буде кольору взагалі.
+================================================================== */
+:root {
+  /* Яскравість світла за курсором. Значення ставить SettingsContext,
+     тут воно на випадок першого кадру — поки налаштування ще їдуть з
+     бази, сторінка має виглядати так само, як після їх приїзду, а не
+     спалахнути на повну й потім пригаснути. */
+  --edge-fx: 0.6;
+
+  --edge-bg: #0A0A0C;
+  --edge-surface: #131316;
+  --edge-surface-hi: #18181C;
+  --edge-sunken: #0D0D10;
+  --edge-line: #232328;
+  --edge-line-hi: #33333A;
+  --edge-line-acc: rgba(139,123,255,0.35);
+  --edge-text: #FAFAFA;
+  --edge-text2: #B4B4BD;
+  --edge-text3: #7A7A85;
+  --edge-text4: #4A4A52;
+  --edge-acc: #8b7bff;
+  --edge-acc-rgb: 139,123,255;
+  --edge-acc-soft: rgba(139,123,255,0.10);
+  --edge-acc-line: rgba(139,123,255,0.25);
+  --edge-ok: #34d399;
+  --edge-ok-rgb: 52,211,153;
+  --edge-warn: #fbbf24;
+  --edge-warn-rgb: 251,191,36;
+  --edge-bad: #f87171;
+  --edge-bad-rgb: 248,113,113;
+  --edge-info: #60a5fa;
+  --edge-info-rgb: 96,165,250;
+  --edge-shell: #07080b;
+  --edge-hair: rgba(255,255,255,0.07);
+  --edge-hair-strong: rgba(255,255,255,0.14);
+  --edge-nav: #8b95a7;
+  --edge-nav-active: #f4f6fa;
+  --edge-nav-dim: rgba(150,160,179,0.5);
+  --edge-nav-hover: rgba(255,255,255,0.035);
+  --edge-panel: rgba(12,13,18,0.95);
+  --edge-panel-shadow: 0 40px 100px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.08);
+  --edge-card-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 24px 48px -32px rgba(0,0,0,0.9);
+  --edge-dot: rgba(255,255,255,0.9);
+  --edge-wordmark: #f2f4f8;
+  --edge-on-acc: #0A0A0C;
+  --edge-mono-bg: rgba(10,11,15,0.95);
+  --edge-mono-shadow: 0 8px 20px -6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2);
+}
