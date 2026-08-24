@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Check, Plus, Trash2, Pencil, X, RotateCcw, HelpCircle, ShieldAlert,
-  ShieldCheck, Zap, Eraser, FolderPlus,
+  Check, Plus, Trash2, Pencil, X, RotateCcw, ShieldAlert,
+  ShieldCheck, Zap, Eraser, FolderPlus, SlidersHorizontal,
 } from 'lucide-react';
 
 import { T, EASE, useEdgeFonts } from '../lib/theme';
@@ -12,23 +12,50 @@ import {
   verdictOf, newGroupId,
 } from '../lib/checklistData';
 import useCloudState from '../hooks/useCloudState';
-import { SoftCard } from '../components/ui/Hovers';
 import {
-  Counter, DrawnCheck, ProgressRing, SpineNode, Sweep, EdgeProgress,
+  Counter, DrawnCheck, ProgressRing, Sweep,
 } from '../components/checklist/ChecklistBits';
 
 /* ==================================================================
    Чекліст перед входом.
-   Головна ідея: його треба ПРОКЛІКАТИ, а не проглянути. Тому пункт —
-   велика зона натискання на всю ширину, а зверху завжди видно
-   вердикт: можна заходити чи ні. Критичні пункти тримають вердикт
-   червоним, поки не закриті.
+
+   Попередня версія була щільною — і саме тому втомлювала. Виявилось,
+   що «менше гортати» і «легше читати» тягнуть у різні боки, і
+   перемогти має друге: чекліст проходять у момент, коли людина вже
+   збуджена сетапом, і дрібний текст у рамочках вона просто
+   проглядає, не читаючи.
+
+   Що з цього випливає:
+
+   1. Жодних рамок навколо пунктів. Тринадцять обведених прямокутників
+      на екрані — це тринадцять фігур, які око мусить розібрати перш
+      ніж дістатись до слів. Тепер пункт — просто рядок з ледь
+      світлішою підкладкою, а межу тримає відступ.
+
+   2. Дві колонки, не чотири. Ширша колонка дозволяє більший кегль
+      (15px замість 13.5) і довший рядок без переносу. Блоки стоять
+      2×2 і все одно поміщаються в екран.
+
+   3. Закритий блок не згортається, а тьмяніє. Згортання смикало
+      розкладку під руками і ховало те, що людина щойно зробила —
+      а бачити пройдений шлях важливо. Наведення повертає яскравість.
+
+   4. Прохід з клавіатури. Пробіл відмічає поточний пункт і сам
+      переходить до наступного невідміченого. Весь чекліст — це
+      тринадцять натискань пробілу, без миші й без пошуку очима,
+      куди клікати далі.
+
+   Контрасти тримаються трьох рівнів: text — те, що читають; text3 —
+   службове; text4 — тільки вимкнене.
 ================================================================== */
 
-/* ---------- пункт ---------- */
-function Item({ item, checked, editing, onToggle, onStartEdit, onSaveEdit, onCancelEdit, onDelete, editText, setEditText }) {
-  const c = checked ? T.ok : item.critical ? T.warn : T.acc;
+/* ---------- один пункт ---------- */
 
+function Item({
+  item, checked, editMode, editing, focused,
+  onToggle, onStartEdit, onSaveEdit, onCancelEdit, onDelete,
+  editText, setEditText,
+}) {
   if (editing) {
     return (
       <motion.div
@@ -36,41 +63,36 @@ function Item({ item, checked, editing, onToggle, onStartEdit, onSaveEdit, onCan
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.18, ease: EASE }}
-        className="rounded-xl"
+        className="flex items-center gap-1.5 rounded-lg px-2 py-1.5"
         style={{ background: T.sunken, border: `1px solid ${T.lineAcc}` }}
       >
-        <div className="flex items-center gap-2 px-2.5 py-2">
-          <input
-            autoFocus
-            value={editText}
-            onChange={(e) => setEditText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onSaveEdit();
-              if (e.key === 'Escape') onCancelEdit();
-            }}
-            className="h-9 min-w-0 flex-1 bg-transparent px-1.5 text-[14.5px] outline-none"
-            style={{ fontFamily: T.sans, color: T.text }}
-          />
-          <span className="h-5 w-px shrink-0" style={{ background: T.line }} />
-          <button
-            onClick={onSaveEdit}
-            title="Зберегти (Enter)"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-all duration-200 active:scale-95"
-            style={{ background: `rgba(${T.accRgb},0.14)`, border: `1px solid ${T.lineAcc}`, color: T.acc }}
-          >
-            <Check size={15} strokeWidth={3} />
-          </button>
-          <button
-            onClick={onCancelEdit}
-            title="Скасувати (Esc)"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors duration-200"
-            style={{ color: T.text4, border: `1px solid ${T.line}` }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.lineHi; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
-          >
-            <X size={15} strokeWidth={2.6} />
-          </button>
-        </div>
+        <input
+          autoFocus
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onSaveEdit();
+            if (e.key === 'Escape') onCancelEdit();
+          }}
+          className="h-8 min-w-0 flex-1 bg-transparent px-1.5 text-[15px] outline-none"
+          style={{ fontFamily: T.sans, color: T.text }}
+        />
+        <button
+          onClick={onSaveEdit}
+          title="Зберегти (Enter)"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md transition-transform duration-200 active:scale-95"
+          style={{ background: `rgba(${T.accRgb},0.14)`, border: `1px solid ${T.lineAcc}`, color: T.acc }}
+        >
+          <Check size={14} strokeWidth={3} />
+        </button>
+        <button
+          onClick={onCancelEdit}
+          title="Скасувати (Esc)"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
+          style={{ color: T.text3, border: `1px solid ${T.line}` }}
+        >
+          <X size={14} strokeWidth={2.6} />
+        </button>
       </motion.div>
     );
   }
@@ -78,60 +100,60 @@ function Item({ item, checked, editing, onToggle, onStartEdit, onSaveEdit, onCan
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 6 }}
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.14 } }}
-      transition={{ duration: 0.22, ease: EASE }}
-      whileHover={{ x: 2 }}
-      whileTap={{ scale: 0.995 }}
-      onClick={() => onToggle(item.id)}
-      className="group relative flex cursor-pointer select-none items-center gap-3.5 overflow-hidden rounded-xl px-3.5 py-3 transition-colors duration-300"
+      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12 } }}
+      transition={{ duration: 0.2, ease: EASE }}
+      whileTap={editMode ? undefined : { scale: 0.995 }}
+      onClick={() => { if (!editMode) onToggle(item.id); }}
+      className={`group relative flex select-none items-center gap-3 overflow-hidden rounded-[10px] py-[9px] pl-3 pr-2 ${editMode ? '' : 'cursor-pointer'}`}
+      /* Підкладка світліша за картку, а не темніша: темна читалась як
+         дірка в поверхні, світла — як предмет, що лежить зверху.
+         Відмічений пункт підкладку втрачає й тихо тоне у фоні.
+
+         Курсор показаний акцентною підкладкою, а не смужкою зліва:
+         зліва вже живе жовта риска критичності, і два різні сенси на
+         одних двох пікселях завжди читаються як один. */
       style={{
-        background: checked ? `rgba(${T.okRgb},0.06)` : T.sunken,
-        border: `1px solid ${checked ? `rgba(${T.okRgb},0.22)` : T.line}`,
+        background: checked
+          ? 'transparent'
+          : focused && !editMode
+            ? `rgba(${T.accRgb},0.13)`
+            : 'rgba(255,255,255,0.022)',
+        transition: 'background 200ms',
       }}
-      onMouseEnter={(e) => { if (!checked) e.currentTarget.style.borderColor = T.lineHi; }}
-      onMouseLeave={(e) => { if (!checked) e.currentTarget.style.borderColor = T.line; }}
     >
-      {/* одноразовий проблиск у момент відмітки */}
       <Sweep trigger={checked} color={T.ok} />
 
-      {/* риска зліва: у критичних тліє завжди, у звичайних — тільки
-         коли пункт закрито. Так критичні видно, не крикнувши. */}
+      {/* Жовта риска = критичність, і більше нічого. Вона лишається й
+          після відмітки, тільки тихішає: те, що пункт був критичним,
+          не перестає бути правдою від того, що його закрили. */}
       <motion.span
         aria-hidden
-        className="absolute inset-y-2 left-0 w-[2px] rounded-full"
+        className="absolute inset-y-[5px] left-0 w-[2.5px] rounded-full"
         initial={false}
-        animate={{
-          backgroundColor: checked ? T.ok : T.warn,
-          opacity: checked ? 0.55 : item.critical ? 0.4 : 0,
-          scaleY: checked || item.critical ? 1 : 0.4,
-        }}
-        transition={{ duration: 0.3, ease: EASE }}
+        animate={{ opacity: item.critical ? (checked ? 0.45 : 0.9) : 0 }}
+        transition={{ duration: 0.25, ease: EASE }}
+        style={{ backgroundColor: T.warn }}
       />
 
       {/* галочка */}
       <motion.span
-        className="relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-lg"
+        className="relative z-10 grid h-[21px] w-[21px] shrink-0 place-items-center rounded-[7px]"
         initial={false}
         animate={{
           backgroundColor: checked ? T.ok : 'rgba(0,0,0,0)',
-          borderColor: checked ? T.ok : T.lineHi,
-          scale: checked ? 1 : 0.96,
+          borderColor: checked ? T.ok : focused && !editMode ? T.acc : T.lineHi,
         }}
         transition={{ type: 'spring', stiffness: 420, damping: 22 }}
         style={{ borderWidth: 1.5, borderStyle: 'solid' }}
       >
-        <AnimatePresence>{checked && <DrawnCheck key="check" />}</AnimatePresence>
+        <AnimatePresence>{checked && <DrawnCheck key="check" size={13} stroke={3.6} />}</AnimatePresence>
       </motion.span>
 
-      {/* текст.
-         Закреслення прокреслюється градієнтом по самому тексту, а не
-         лінією через увесь рядок — тому воно тягнеться рівно по словах
-         і коректно переноситься, якщо пункт довгий. */}
       <span className="relative z-10 min-w-0 flex-1">
         <motion.span
-          className="text-[14.5px] leading-snug"
+          className="text-[15px] leading-[1.4]"
           initial={false}
           animate={{
             color: checked ? T.text3 : T.text,
@@ -144,7 +166,7 @@ function Item({ item, checked, editing, onToggle, onStartEdit, onSaveEdit, onCan
           style={{
             fontFamily: T.sans,
             display: 'inline',
-            backgroundImage: `linear-gradient(rgba(${T.okRgb},0.6), rgba(${T.okRgb},0.6))`,
+            backgroundImage: `linear-gradient(rgba(${T.okRgb},0.5), rgba(${T.okRgb},0.5))`,
             backgroundRepeat: 'no-repeat',
             backgroundPosition: '0 62%',
             WebkitBoxDecorationBreak: 'clone',
@@ -155,47 +177,58 @@ function Item({ item, checked, editing, onToggle, onStartEdit, onSaveEdit, onCan
         </motion.span>
       </span>
 
-      {/* критичність */}
-      <AnimatePresence>
-        {item.critical && !checked && (
-          <motion.span
-            key="crit"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.2, ease: EASE }}
-            className="relative z-10 hidden shrink-0 rounded-md px-1.5 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.08em] sm:inline"
-            style={{ fontFamily: T.sans, color: T.warn, background: `rgba(${T.warnRgb},0.10)` }}
+      {editMode && (
+        <span className="relative z-10 flex shrink-0 items-center gap-0.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); onStartEdit(item); }}
+            title="Редагувати"
+            className="grid h-8 w-8 place-items-center rounded-md transition-colors duration-200"
+            style={{ color: T.text3 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
           >
-            критичний
-          </motion.span>
-        )}
-      </AnimatePresence>
-
-      {/* дії */}
-      <span className="relative z-10 flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-        <button
-          onClick={(e) => { e.stopPropagation(); onStartEdit(item); }}
-          title="Редагувати"
-          className="grid h-8 w-8 place-items-center rounded-lg transition-colors duration-200"
-          style={{ color: T.text4 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
-        >
-          <Pencil size={14} strokeWidth={2.2} />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-          title="Видалити"
-          className="grid h-8 w-8 place-items-center rounded-lg transition-colors duration-200"
-          style={{ color: T.text4 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
-        >
-          <Trash2 size={14} strokeWidth={2.2} />
-        </button>
-      </span>
+            <Pencil size={14} strokeWidth={2.2} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+            title="Видалити"
+            className="grid h-8 w-8 place-items-center rounded-md transition-colors duration-200"
+            style={{ color: T.text3 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
+          >
+            <Trash2 size={14} strokeWidth={2.2} />
+          </button>
+        </span>
+      )}
     </motion.div>
+  );
+}
+
+/* ---------- кнопка в шапці ---------- */
+
+function Btn({ icon: I, children, onClick, disabled, tone = 'plain', title }) {
+  const hot = tone === 'acc';
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-[13.5px] font-semibold transition-all duration-200 active:scale-[0.98]"
+      style={{
+        background: hot ? `rgba(${T.accRgb},0.12)` : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${hot ? T.lineAcc : 'transparent'}`,
+        color: hot ? T.acc : T.text2,
+        fontFamily: T.sans,
+        opacity: disabled ? 0.35 : 1,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+      }}
+      onMouseEnter={(e) => { if (!disabled && !hot) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = T.text; } }}
+      onMouseLeave={(e) => { if (!hot) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = T.text2; } }}
+    >
+      <I size={14} strokeWidth={2.2} />
+      {children}
+    </button>
   );
 }
 
@@ -204,9 +237,6 @@ function Item({ item, checked, editing, onToggle, onStartEdit, onSaveEdit, onCan
 export default function PreTradeChecklist() {
   useEdgeFonts();
 
-  /* Чекліст — це особисті правила входу, тому він має їхати за
-     трейдером між пристроями. Зберігається в базі, локально лишається
-     тільки дзеркало для миттєвого відкриття сторінки. */
   const [groups, setGroups] = useCloudState('checklist_groups', DEFAULT_GROUPS, {
     legacyKey: KEYS.groups, normalize: normalizeGroups,
   });
@@ -216,34 +246,114 @@ export default function PreTradeChecklist() {
   const [checked, setChecked] = useCloudState('checklist_checked', [], {
     legacyKey: KEYS.checked, normalize: normalizeChecked,
   });
+
+  const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
-  const [adding, setAdding] = useState(null);     // id групи, куди додаємо
+  const [adding, setAdding] = useState(null);
   const [newText, setNewText] = useState('');
   const [newCritical, setNewCritical] = useState(false);
-  const [editingGroup, setEditingGroup] = useState(null);   // id блоку, який перейменовуємо
+  const [editingGroup, setEditingGroup] = useState(null);
   const [groupDraft, setGroupDraft] = useState({ label: '', hint: '' });
-  const [confirm, setConfirm] = useState(null);   // { kind, id, title, text }
-  const [cheatOpen, setCheatOpen] = useState(false);
+  const [confirm, setConfirm] = useState(null);
+  const [cursor, setCursor] = useState(null);   // id пункту під клавіатурним курсором
   const addRef = useRef(null);
-
-  useEffect(() => {
-    if (!cheatOpen && !confirm) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e) => {
-      if (e.key !== 'Escape') return;
-      if (confirm) setConfirm(null);
-      else setCheatOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
-  }, [cheatOpen, confirm]);
 
   const verdict = useMemo(() => verdictOf(items, checked), [items, checked]);
 
-  const toggle = (id) =>
-    setChecked((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  /* Плаский список у тому порядку, в якому пункти читаються на
+     екрані — по блоках згори вниз. На ньому й живе клавіатура. */
+  const flat = useMemo(
+    () => groups.flatMap((g) => items.filter((i) => i.group === g.id)),
+    [groups, items],
+  );
+
+  const toggle = useCallback(
+    (id) => setChecked((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])),
+    [setChecked],
+  );
+
+  /* Активний пункт — обчислюється, а не зберігається.
+
+     Зберігати позицію курсора в стані виявилось пасткою: варто було
+     відмітити щось мишею чи скинути чекліст, і збережений курсор
+     показував на вже закритий пункт. Звідси й стрибки «закрито
+     чотири, а пробіл починає з девʼятого».
+
+     Тепер cursor — лише необовʼязкове побажання від стрілок. Якщо
+     воно застаріло (пункт зник або вже закритий), активним стає
+     перший незакритий згори. Стан не може розʼїхатись із тим, що
+     людина бачить на екрані. */
+  const active = useMemo(() => {
+    const wanted = flat.find((i) => i.id === cursor && !checked.includes(i.id));
+    if (wanted) return wanted.id;
+    const first = flat.find((i) => !checked.includes(i.id));
+    return first ? first.id : null;
+  }, [flat, cursor, checked]);
+
+  /* Наступний незакритий після заданого. Обхід із поверненням на
+     початок — щоб пропущений раніше пункт не загубився назавжди. */
+  const nextOpen = useCallback((afterId) => {
+    const start = flat.findIndex((i) => i.id === afterId);
+    for (let k = start + 1; k < flat.length; k += 1) {
+      if (!checked.includes(flat[k].id)) return flat[k].id;
+    }
+    for (let k = 0; k < Math.max(0, start); k += 1) {
+      if (!checked.includes(flat[k].id)) return flat[k].id;
+    }
+    return null;
+  }, [flat, checked]);
+
+  /* Відмітити активний і поїхати далі. Одна дія для пробілу й для
+     миші — інакше вони розходяться в поведінці. */
+  const strike = useCallback((id) => {
+    const target = id ?? active;
+    if (!target) return;
+    const wasChecked = checked.includes(target);
+    toggle(target);
+    setCursor(wasChecked ? target : nextOpen(target));
+  }, [active, checked, toggle, nextOpen]);
+
+  useEffect(() => {
+    if (editMode || confirm) return undefined;
+
+    const onKey = (e) => {
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+      if (!flat.length) return;
+
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        strike(null);
+        return;
+      }
+
+      const idx = flat.findIndex((i) => i.id === active);
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        setCursor(flat[idx < 0 ? 0 : Math.min(flat.length - 1, idx + 1)].id);
+        return;
+      }
+
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setCursor(flat[idx <= 0 ? 0 : idx - 1].id);
+      }
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [flat, active, editMode, confirm, strike]);
+
+  useEffect(() => {
+    if (!confirm) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e) => { if (e.key === 'Escape') setConfirm(null); };
+    window.addEventListener('keydown', onKey);
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
+  }, [confirm]);
 
   const removeItem = (id) => {
     setItems((s) => s.filter((i) => i.id !== id));
@@ -265,9 +375,7 @@ export default function PreTradeChecklist() {
     setTimeout(() => addRef.current?.focus(), 0);
   };
 
-  const reset = () => setChecked([]);
-
-  /* ---------- блоки ---------- */
+  const reset = () => { setChecked([]); setCursor(null); };
 
   const startGroupEdit = (g) => {
     setEditingGroup(g.id);
@@ -295,10 +403,7 @@ export default function PreTradeChecklist() {
     setGroups((s) => s.filter((g) => g.id !== id));
   };
 
-  const clearAll = () => {
-    setItems([]);
-    setChecked([]);
-  };
+  const clearAll = () => { setItems([]); setChecked([]); };
 
   const restoreDefaults = () => {
     setGroups(DEFAULT_GROUPS);
@@ -306,7 +411,6 @@ export default function PreTradeChecklist() {
     setChecked([]);
   };
 
-  const askConfirm = (cfg) => setConfirm(cfg);
   const runConfirm = () => {
     if (!confirm) return;
     if (confirm.kind === 'group') deleteGroup(confirm.id);
@@ -315,165 +419,144 @@ export default function PreTradeChecklist() {
     setConfirm(null);
   };
 
+  const leaveEdit = () => {
+    setEditMode(false);
+    setAdding(null);
+    setEditingId(null);
+    setEditingGroup(null);
+    setNewText('');
+    setNewCritical(false);
+  };
+
+  /* rgb поруч із color — не дублювання, а необхідність. Токени теми
+     це рядки виду var(--edge-ok, #34d399), і приклеїти до них
+     прозорість (`${V.color}22`) не можна: виходить невалідний CSS,
+     браузер тихо відкидає правило й малює своє. Саме через це тут
+     колись зʼявився білий бордер. Для напівпрозорого треба окремий
+     rgb-токен і чесна rgba(). */
   const V = {
-    go:     { color: T.ok,   icon: ShieldCheck, title: 'Можна заходити', text: 'Усі пункти закриті. Далі — тільки виконання: стоп на місці, розмір порахований.' },
-    almost: { color: T.info, icon: Zap,        title: 'Критичні закриті', text: `Лишилось ${verdict.total - verdict.done} необовʼязкових. Якщо це свідомо — заходь.` },
-    stop:   { color: T.bad,  icon: ShieldAlert, title: 'Ще рано',        text: `Не закрито критичних пунктів: ${verdict.criticalsLeft.length}. Саме через них зазвичай і прилітає мінус.` },
-    empty:  { color: T.text3, icon: ShieldAlert, title: 'Чекліст порожній', text: 'Додай хоча б кілька пунктів, які ти справді перевіряєш.' },
+    go:     { color: T.ok,    rgb: T.okRgb,        icon: ShieldCheck, title: 'Можна заходити',   text: 'Усі пункти закриті. Далі — тільки виконання.' },
+    almost: { color: T.info,  rgb: T.infoRgb,      icon: Zap,         title: 'Критичні закриті', text: `Лишилось ${verdict.total - verdict.done} необовʼязкових.` },
+    stop:   { color: T.bad,   rgb: T.badRgb,       icon: ShieldAlert, title: 'Ще рано',          text: `Не закрито критичних: ${verdict.criticalsLeft.length}. Саме через них і прилітає мінус.` },
+    empty:  { color: T.text3, rgb: '122,122,133',  icon: ShieldAlert, title: 'Чекліст порожній', text: 'Додай пункти, які ти справді перевіряєш.' },
   }[verdict.state];
 
   const VIcon = V.icon;
 
   return (
     <div className="relative min-h-full">
-
-      <div className="relative z-10 mx-auto w-full max-w-[1100px] px-4 pb-24 pt-5 sm:px-6 lg:w-[92%] lg:px-0 lg:pb-32 lg:pt-7">
+      <div className="relative z-10 mx-auto w-[94%] max-w-[1720px] pb-20 pt-5 lg:pt-7">
 
         {/* ─────────── Хедер ─────────── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"
+          className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="min-w-0">
-            <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
+            <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
               Перед входом
             </div>
             <h1
-              className="text-[28px] font-bold leading-none sm:text-[38px] lg:text-[46px]"
+              className="text-[26px] font-bold leading-none sm:text-[32px]"
               style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
             >
-              Чекліст
+              {editMode ? 'Налаштування чекліста' : 'Чекліст'}
             </h1>
-            <p className="mt-3 text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              Проклікай кожен пункт вголос до себе — саме це й зупиняє від дурних входів
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={reset}
-              disabled={!checked.length}
-              className="flex h-[42px] items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14px] font-semibold transition-all duration-200 active:scale-[0.98]"
-              style={{
-                background: T.surface, border: `1px solid ${T.line}`, color: T.text2,
-                fontFamily: T.sans, opacity: checked.length ? 1 : 0.45,
-              }}
-              onMouseEnter={(e) => { if (checked.length) { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; } }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
-            >
-              <RotateCcw size={15} strokeWidth={2.2} />
-              Скинути
-            </button>
-
-            <button
-              onClick={() => askConfirm({
-                kind: 'clear',
-                title: 'Очистити чекліст?',
-                text: `Зникнуть усі ${items.length} пунктів у всіх блоках. Блоки лишаться порожніми.`,
-                cta: 'Очистити',
-              })}
-              disabled={!items.length}
-              className="flex h-[42px] items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14px] font-semibold transition-all duration-200 active:scale-[0.98]"
-              style={{
-                background: T.surface, border: `1px solid ${T.line}`, color: T.text2,
-                fontFamily: T.sans, opacity: items.length ? 1 : 0.45,
-              }}
-              onMouseEnter={(e) => { if (items.length) { e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; e.currentTarget.style.color = T.bad; } }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
-            >
-              <Eraser size={15} strokeWidth={2.2} />
-              Очистити все
-            </button>
-
-            <button
-              onClick={() => askConfirm({
-                kind: 'restore',
-                title: 'Повернути стандартний чекліст?',
-                text: 'Твої блоки й пункти будуть замінені на початковий набір.',
-                cta: 'Повернути',
-              })}
-              title="Повернути стандартні блоки й пункти"
-              className="flex h-[42px] items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14px] font-semibold transition-all duration-200 active:scale-[0.98]"
-              style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
-            >
-              <ShieldCheck size={15} strokeWidth={2.2} />
-              Стандартний
-            </button>
-
-            <button
-              onClick={() => setCheatOpen(true)}
-              className="flex h-[42px] items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14px] font-semibold transition-all duration-200 active:scale-[0.98]"
-              style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
-            >
-              <HelpCircle size={15} strokeWidth={2.2} />
-              Памʼятка
-            </button>
+            {editMode ? (
+              <>
+                <Btn icon={FolderPlus} onClick={addGroup}>Блок</Btn>
+                <Btn
+                  icon={ShieldCheck}
+                  onClick={() => setConfirm({
+                    kind: 'restore',
+                    title: 'Повернути стандартний чекліст?',
+                    text: 'Твої блоки й пункти будуть замінені на початковий набір.',
+                    cta: 'Повернути',
+                  })}
+                >
+                  Стандартний
+                </Btn>
+                <Btn
+                  icon={Eraser}
+                  disabled={!items.length}
+                  onClick={() => setConfirm({
+                    kind: 'clear',
+                    title: 'Очистити чекліст?',
+                    text: `Зникнуть усі ${items.length} пунктів. Блоки лишаться порожніми.`,
+                    cta: 'Очистити',
+                  })}
+                >
+                  Очистити
+                </Btn>
+                <Btn icon={Check} tone="acc" onClick={leaveEdit}>Готово</Btn>
+              </>
+            ) : (
+              <>
+                <Btn icon={RotateCcw} onClick={reset} disabled={!checked.length}>Скинути</Btn>
+                <Btn icon={SlidersHorizontal} onClick={() => setEditMode(true)}>Налаштувати</Btn>
+              </>
+            )}
           </div>
         </motion.div>
 
-        {/* ─────────── Вердикт ─────────── */}
+        {/* ─────────── Вердикт ───────────
+            Без бордера взагалі. Стан тут і так сказаний тричі —
+            кольором заголовка, кільцем і смугою прогресу; обведення
+            додавало тільки ще одну лінію на екран. */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: EASE }}
-          className="sticky top-3 z-20 mb-5"
+          className="sticky top-3 z-20 mb-4"
         >
-          <motion.div
-            className="relative flex items-center gap-4 overflow-hidden rounded-2xl px-4 py-4 sm:px-5"
-            initial={false}
-            animate={{ borderColor: `${V.color}33` }}
-            transition={{ duration: 0.5, ease: EASE }}
+          <div
+            className="relative flex items-center gap-4 overflow-hidden rounded-2xl px-4 py-3.5 sm:px-5"
             style={{
-              background: 'rgba(19,19,22,0.92)',
+              background: 'rgba(20,20,24,0.94)',
               backdropFilter: 'blur(16px)',
-              borderWidth: 1,
-              borderStyle: 'solid',
-              boxShadow: '0 18px 40px -28px rgba(0,0,0,0.9)',
+              boxShadow: '0 18px 40px -30px rgba(0,0,0,0.9)',
             }}
           >
-            {/* дуже тихий кольоровий підмальовок стану */}
             <motion.span
               aria-hidden
               className="pointer-events-none absolute inset-0"
               initial={false}
-              animate={{ background: `linear-gradient(100deg, ${V.color}12, transparent 55%)` }}
+              animate={{ background: `linear-gradient(100deg, rgba(${V.rgb},0.09), transparent 52%)` }}
               transition={{ duration: 0.6, ease: EASE }}
             />
 
             <div className="relative z-10 flex w-full items-center gap-4">
-              <ProgressRing value={verdict.done} total={verdict.total} color={V.color} />
+              <ProgressRing value={verdict.done} total={verdict.total} color={V.color} size={64} />
 
               <div className="min-w-0 flex-1">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={verdict.state}
-                    initial={{ opacity: 0, y: 6 }}
+                    initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
+                    exit={{ opacity: 0, y: -5 }}
                     transition={{ duration: 0.22, ease: EASE }}
                   >
-                    <div className="mb-1 flex items-center gap-2">
+                    <div className="mb-0.5 flex items-center gap-2">
                       <VIcon size={16} strokeWidth={2.3} className="shrink-0" style={{ color: V.color }} />
                       <span className="truncate text-[17px] font-bold" style={{ fontFamily: T.display, color: V.color, letterSpacing: '-0.01em' }}>
                         {V.title}
                       </span>
                     </div>
-                    <p className="text-[13.5px] leading-snug" style={{ fontFamily: T.sans, color: T.text3 }}>
+                    <p className="truncate text-[13.5px]" style={{ fontFamily: T.sans, color: T.text2 }}>
                       {V.text}
                     </p>
                   </motion.div>
                 </AnimatePresence>
               </div>
 
-              {/* смуга прогресу для широких екранів */}
-              <div className="hidden w-[180px] shrink-0 lg:block">
-                <div className="h-2 overflow-hidden rounded-full" style={{ background: T.sunken }}>
+              <div className="hidden w-[150px] shrink-0 sm:block">
+                <div className="h-1.5 overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }}>
                   <motion.div
                     className="h-full rounded-full"
                     initial={false}
@@ -484,69 +567,63 @@ export default function PreTradeChecklist() {
                     transition={{ type: 'spring', stiffness: 140, damping: 24 }}
                   />
                 </div>
-                <div className="mt-1.5 text-right text-[12.5px] tabular-nums" style={{ fontFamily: T.sans, color: T.text4 }}>
+                <div className="mt-1 text-right text-[12px] tabular-nums" style={{ fontFamily: T.sans, color: T.text3 }}>
                   {verdict.criticalsLeft.length
-                    ? <>лишилось критичних: <Counter value={verdict.criticalsLeft.length} /></>
+                    ? <>критичних лишилось: <Counter value={verdict.criticalsLeft.length} /></>
                     : 'критичні закриті'}
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </motion.div>
 
-        {/* ─────────── Групи ─────────── */}
-        <div className="relative flex flex-col gap-4 lg:pl-11">
-          {/* вертикальна лінія прогресу — шлях, яким ти спускаєшся до входу */}
-          <div className="pointer-events-none absolute bottom-6 left-[15px] top-6 hidden w-px lg:block" style={{ background: T.line }}>
-            <motion.span
-              className="absolute inset-x-0 top-0 origin-top"
-              style={{ height: '100%', background: `linear-gradient(${T.acc}, ${V.color})` }}
-              initial={false}
-              animate={{ scaleY: verdict.total ? verdict.done / verdict.total : 0 }}
-              transition={{ type: 'spring', stiffness: 120, damping: 26 }}
-            />
-          </div>
-
+        {/* ─────────── Блоки 2×2 ─────────── */}
+        <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
           {groups.map((g, gi) => {
             const list = items.filter((i) => i.group === g.id);
             const doneIn = list.filter((i) => checked.includes(i.id)).length;
             const allDone = list.length > 0 && doneIn === list.length;
-            const groupPct = list.length ? doneIn / list.length : 0;
 
             return (
               <motion.div
                 key={g.id}
-                initial={{ opacity: 0, y: 10 }}
+                layout
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: gi * 0.05, ease: EASE }}
-                className="relative"
+                transition={{ duration: 0.3, delay: gi * 0.04, ease: EASE }}
               >
-                {/* вузол на лінії */}
-                <span className="absolute -left-11 top-3 hidden lg:block">
-                  <SpineNode done={allDone} color={allDone ? T.ok : T.acc} />
-                </span>
-
-                <SoftCard lift={0} className="group/blk overflow-hidden">
-                  <EdgeProgress pct={groupPct} color={allDone ? T.ok : T.acc} />
-                  {/* шапка групи */}
-                  <div className="flex items-center gap-3 px-4 py-3.5 sm:px-5" style={{ borderBottom: `1px solid ${T.line}` }}>
+                {/* Закритий блок тьмяніє, але лишається на місці — так
+                    видно пройдений шлях, і розкладка не смикається під
+                    руками. Наведення повертає повну яскравість. */}
+                <motion.div
+                  className="overflow-hidden rounded-2xl"
+                  initial={false}
+                  animate={{ opacity: allDone && !editMode ? 0.45 : 1 }}
+                  whileHover={{ opacity: 1 }}
+                  transition={{ duration: 0.35, ease: EASE }}
+                  style={{
+                    background: T.surface,
+                    border: `1px solid ${allDone ? `rgba(${T.okRgb},0.18)` : T.line}`,
+                  }}
+                >
+                  {/* шапка блоку */}
+                  <div className="flex items-center gap-3 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
                     <motion.span
                       className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-lg text-[12.5px] font-bold tabular-nums"
                       initial={false}
                       animate={{
-                        backgroundColor: allDone ? `rgba(${T.okRgb},0.12)` : T.sunken,
-                        borderColor: allDone ? `rgba(${T.okRgb},0.28)` : T.line,
+                        backgroundColor: allDone ? `rgba(${T.okRgb},0.14)` : 'rgba(255,255,255,0.05)',
                         color: allDone ? T.ok : T.text3,
                       }}
                       transition={{ duration: 0.35, ease: EASE }}
-                      style={{ fontFamily: T.mono, borderWidth: 1, borderStyle: 'solid' }}
+                      style={{ fontFamily: T.mono }}
                     >
                       <AnimatePresence mode="wait" initial={false}>
                         <motion.span
                           key={allDone ? 'done' : 'num'}
-                          initial={{ y: 8, opacity: 0 }}
+                          initial={{ y: 7, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
-                          exit={{ y: -8, opacity: 0 }}
+                          exit={{ y: -7, opacity: 0 }}
                           transition={{ duration: 0.18, ease: EASE }}
                           className="flex"
                         >
@@ -556,7 +633,7 @@ export default function PreTradeChecklist() {
                     </motion.span>
 
                     {editingGroup === g.id ? (
-                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-1.5">
                         <input
                           autoFocus
                           value={groupDraft.label}
@@ -565,8 +642,8 @@ export default function PreTradeChecklist() {
                             if (e.key === 'Enter') saveGroupEdit();
                             if (e.key === 'Escape') setEditingGroup(null);
                           }}
-                          placeholder="Назва блоку"
-                          className="h-9 min-w-[140px] flex-1 rounded-lg px-3 text-[14.5px] font-bold outline-none"
+                          placeholder="Назва"
+                          className="h-8 min-w-0 flex-1 rounded-md px-2 text-[15px] font-bold outline-none"
                           style={{ fontFamily: T.display, color: T.text, background: T.sunken, border: `1px solid ${T.lineAcc}` }}
                         />
                         <input
@@ -576,37 +653,33 @@ export default function PreTradeChecklist() {
                             if (e.key === 'Enter') saveGroupEdit();
                             if (e.key === 'Escape') setEditingGroup(null);
                           }}
-                          placeholder="Підпис (не обовʼязково)"
-                          className="h-9 min-w-[140px] flex-1 rounded-lg px-3 text-[13.5px] outline-none"
+                          placeholder="Підпис"
+                          className="h-8 min-w-0 flex-1 rounded-md px-2 text-[13px] outline-none"
                           style={{ fontFamily: T.sans, color: T.text2, background: T.sunken, border: `1px solid ${T.line}` }}
                         />
                         <button
                           onClick={saveGroupEdit}
-                          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors duration-200"
+                          className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
                           style={{ background: `rgba(${T.accRgb},0.12)`, border: `1px solid ${T.lineAcc}`, color: T.acc }}
                         >
-                          <Check size={15} strokeWidth={3} />
+                          <Check size={14} strokeWidth={3} />
                         </button>
                         <button
                           onClick={() => setEditingGroup(null)}
-                          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors duration-200"
-                          style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
+                          className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
+                          style={{ border: `1px solid ${T.line}`, color: T.text3 }}
                         >
-                          <X size={15} strokeWidth={2.6} />
+                          <X size={14} strokeWidth={2.6} />
                         </button>
                       </div>
                     ) : (
                       <>
-                        <div
-                          className="min-w-0 flex-1 cursor-text"
-                          onDoubleClick={() => startGroupEdit(g)}
-                          title="Подвійний клік — перейменувати"
-                        >
-                          <div className="truncate text-[15px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[15.5px] font-bold leading-tight" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
                             {g.label}
                           </div>
                           {g.hint && (
-                            <div className="truncate text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>{g.hint}</div>
+                            <div className="truncate text-[12.5px] leading-tight" style={{ fontFamily: T.sans, color: T.text3 }}>{g.hint}</div>
                           )}
                         </div>
 
@@ -618,48 +691,50 @@ export default function PreTradeChecklist() {
                           >
                             <Counter value={doneIn} />
                           </motion.span>
-                          <span className="text-[12.5px]" style={{ color: T.text2, opacity: 0.7 }}>/{list.length}</span>
+                          <span className="text-[12px]" style={{ color: T.text3 }}>/{list.length}</span>
                         </span>
 
-                        <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-200 group-hover/blk:opacity-100">
-                          <button
-                            onClick={() => startGroupEdit(g)}
-                            title="Перейменувати блок"
-                            className="grid h-8 w-8 place-items-center rounded-lg transition-colors duration-200"
-                            style={{ color: T.text4 }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
-                          >
-                            <Pencil size={14} strokeWidth={2.2} />
-                          </button>
-                          <button
-                            onClick={() => askConfirm({
-                              kind: 'group',
-                              id: g.id,
-                              title: `Видалити блок «${g.label}»?`,
-                              text: list.length
-                                ? `Разом із ним зникнуть ${list.length} ${list.length === 1 ? 'пункт' : 'пунктів'}.`
-                                : 'Блок порожній.',
-                              cta: 'Видалити',
-                            })}
-                            title="Видалити блок"
-                            className="grid h-8 w-8 place-items-center rounded-lg transition-colors duration-200"
-                            style={{ color: T.text4 }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
-                          >
-                            <Trash2 size={14} strokeWidth={2.2} />
-                          </button>
-                        </span>
+                        {editMode && (
+                          <span className="flex shrink-0 items-center gap-0.5">
+                            <button
+                              onClick={() => startGroupEdit(g)}
+                              title="Перейменувати блок"
+                              className="grid h-8 w-8 place-items-center rounded-md transition-colors duration-200"
+                              style={{ color: T.text3 }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
+                            >
+                              <Pencil size={14} strokeWidth={2.2} />
+                            </button>
+                            <button
+                              onClick={() => setConfirm({
+                                kind: 'group',
+                                id: g.id,
+                                title: `Видалити блок «${g.label}»?`,
+                                text: list.length
+                                  ? `Разом із ним зникнуть ${list.length} ${list.length === 1 ? 'пункт' : 'пунктів'}.`
+                                  : 'Блок порожній.',
+                                cta: 'Видалити',
+                              })}
+                              title="Видалити блок"
+                              className="grid h-8 w-8 place-items-center rounded-md transition-colors duration-200"
+                              style={{ color: T.text3 }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
+                            >
+                              <Trash2 size={14} strokeWidth={2.2} />
+                            </button>
+                          </span>
+                        )}
                       </>
                     )}
                   </div>
 
                   {/* пункти */}
-                  <div className="flex flex-col gap-2 p-3 sm:p-4">
+                  <div className="flex flex-col gap-1 p-2.5">
                     {list.length === 0 && adding !== g.id && (
-                      <p className="px-1 pb-1 text-[13.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        Порожньо — додай перше, що ти тут перевіряєш.
+                      <p className="px-1 py-2 text-[13.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                        Порожньо.
                       </p>
                     )}
 
@@ -669,8 +744,10 @@ export default function PreTradeChecklist() {
                           key={item.id}
                           item={item}
                           checked={checked.includes(item.id)}
+                          editMode={editMode}
                           editing={editingId === item.id}
-                          onToggle={toggle}
+                          focused={active === item.id}
+                          onToggle={strike}
                           onStartEdit={startEdit}
                           onSaveEdit={saveEdit}
                           onCancelEdit={() => setEditingId(null)}
@@ -681,117 +758,85 @@ export default function PreTradeChecklist() {
                       ))}
                     </AnimatePresence>
 
-                    {/* додавання.
-                       Один рядок замість трьох різнокаліберних кнопок:
-                       поле, перемикач «критичний» усередині нього і одна
-                       дія праворуч. Все однієї висоти й однієї мови. */}
-                    {adding === g.id ? (
+                    {editMode && (adding === g.id ? (
                       <motion.div
-                        initial={{ opacity: 0, y: 6 }}
+                        initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.2, ease: EASE }}
-                        className="rounded-xl transition-colors duration-200"
-                        style={{ background: T.sunken, border: `1px solid ${T.line}` }}
-                        onFocusCapture={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
-                        onBlurCapture={(e) => (e.currentTarget.style.borderColor = T.line)}
+                        className="rounded-lg p-1.5"
+                        style={{ background: T.sunken, border: `1px solid ${T.lineAcc}` }}
                       >
-                        <div className="flex items-center gap-2 px-2.5 py-2">
-                          <input
-                            ref={addRef}
-                            autoFocus
-                            value={newText}
-                            onChange={(e) => setNewText(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') addItem(g.id);
-                              if (e.key === 'Escape') { setAdding(null); setNewText(''); setNewCritical(false); }
-                            }}
-                            placeholder="Що саме ти перевіряєш?"
-                            className="h-9 min-w-0 flex-1 bg-transparent px-1.5 text-[14.5px] outline-none"
-                            style={{ fontFamily: T.sans, color: T.text }}
-                          />
-
-                          {/* перемикач важливості — тихий чип, а не кнопка */}
+                        <input
+                          ref={addRef}
+                          autoFocus
+                          value={newText}
+                          onChange={(e) => setNewText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') addItem(g.id);
+                            if (e.key === 'Escape') { setAdding(null); setNewText(''); setNewCritical(false); }
+                          }}
+                          placeholder="Що саме ти перевіряєш?"
+                          className="h-8 w-full bg-transparent px-1.5 text-[15px] outline-none"
+                          style={{ fontFamily: T.sans, color: T.text }}
+                        />
+                        <div className="mt-1.5 flex items-center gap-1.5">
                           <button
                             onClick={() => setNewCritical((v) => !v)}
                             title="Без цього пункту не заходити"
-                            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-semibold transition-colors duration-200"
+                            className="flex h-8 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2 text-[12.5px] font-semibold transition-colors duration-200"
                             style={{
                               fontFamily: T.sans,
-                              color: newCritical ? T.warn : T.text4,
+                              color: newCritical ? T.warn : T.text3,
                               background: newCritical ? `rgba(${T.warnRgb},0.10)` : 'transparent',
-                              border: `1px solid ${newCritical ? `rgba(${T.warnRgb},0.28)` : 'transparent'}`,
+                              border: `1px solid ${newCritical ? `rgba(${T.warnRgb},0.28)` : T.line}`,
                             }}
-                            onMouseEnter={(e) => { if (!newCritical) { e.currentTarget.style.color = T.text2; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; } }}
-                            onMouseLeave={(e) => { if (!newCritical) { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; } }}
                           >
-                            <ShieldAlert size={14} strokeWidth={2.3} />
+                            <ShieldAlert size={13} strokeWidth={2.3} />
                             критичний
                           </button>
-
-                          <span className="h-5 w-px shrink-0" style={{ background: T.line }} />
-
                           <button
                             onClick={() => addItem(g.id)}
                             disabled={!newText.trim()}
-                            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-all duration-200 active:scale-95"
                             title="Додати (Enter)"
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-md transition-transform duration-200 active:scale-95"
                             style={{
                               background: newText.trim() ? `rgba(${T.accRgb},0.14)` : 'transparent',
                               border: `1px solid ${newText.trim() ? T.lineAcc : T.line}`,
-                              color: newText.trim() ? T.acc : T.text4,
+                              color: newText.trim() ? T.acc : T.text3,
                               cursor: newText.trim() ? 'pointer' : 'not-allowed',
                             }}
                           >
-                            <Check size={15} strokeWidth={3} />
+                            <Check size={14} strokeWidth={3} />
                           </button>
-
                           <button
                             onClick={() => { setAdding(null); setNewText(''); setNewCritical(false); }}
                             title="Скасувати (Esc)"
-                            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors duration-200"
-                            style={{ color: T.text4, border: `1px solid ${T.line}` }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.lineHi; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
+                            className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
+                            style={{ color: T.text3, border: `1px solid ${T.line}` }}
                           >
-                            <X size={15} strokeWidth={2.6} />
+                            <X size={14} strokeWidth={2.6} />
                           </button>
                         </div>
                       </motion.div>
                     ) : (
                       <button
                         onClick={() => { setAdding(g.id); setNewText(''); }}
-                        className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[13.5px] font-semibold transition-colors duration-200"
-                        style={{ fontFamily: T.sans, color: T.text4, border: `1px dashed ${T.line}` }}
+                        className="flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-[13px] font-semibold transition-colors duration-200"
+                        style={{ fontFamily: T.sans, color: T.text3, border: `1px dashed ${T.line}` }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = T.lineAcc; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
                       >
-                        <Plus size={14} strokeWidth={2.6} />
-                        Додати пункт
+                        <Plus size={13} strokeWidth={2.6} />
+                        Пункт
                       </button>
-                    )}
+                    ))}
                   </div>
-                </SoftCard>
+                </motion.div>
               </motion.div>
             );
           })}
         </div>
 
-        {/* новий блок */}
-        <button
-          onClick={addGroup}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-[14px] font-semibold transition-colors duration-200"
-          style={{ fontFamily: T.sans, color: T.text4, border: `1px dashed ${T.line}` }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = T.lineAcc; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
-        >
-          <FolderPlus size={16} strokeWidth={2.2} />
-          Додати блок
-        </button>
-
-        {/* підказка знизу */}
-        <p className="mt-6 text-center text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          Стан чекліста зберігається — скинь його після кожної угоди. Назву блоку можна змінити подвійним кліком.
-        </p>
       </div>
 
       {/* ─────────── Підтвердження ─────────── */}
@@ -825,7 +870,7 @@ export default function PreTradeChecklist() {
               >
                 {confirm.title}
               </div>
-              <p className="mb-6 text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
+              <p className="mb-6 text-[14px]" style={{ fontFamily: T.sans, color: T.text2, lineHeight: 1.65 }}>
                 {confirm.text}
               </p>
               <div className="flex gap-2.5">
@@ -847,41 +892,6 @@ export default function PreTradeChecklist() {
                 </button>
               </div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ─────────── Памʼятка ─────────── */}
-      <AnimatePresence>
-        {cheatOpen && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setCheatOpen(false)}
-            className="fixed inset-0 z-[300] grid cursor-zoom-out place-items-center p-4 sm:p-8"
-            style={{ background: 'rgba(6,6,8,0.92)', backdropFilter: 'blur(10px)' }}
-          >
-            <button
-              onClick={() => setCheatOpen(false)}
-              className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-xl transition-colors duration-200"
-              style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2 }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = T.surface; e.currentTarget.style.color = T.text2; }}
-            >
-              <X size={18} strokeWidth={2.4} />
-            </button>
-
-            <motion.img
-              initial={{ opacity: 0, scale: 0.97, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.97, y: 12 }}
-              transition={{ duration: 0.26, ease: EASE }}
-              src="/analyz.png"
-              alt="Памʼятка"
-              onClick={(e) => e.stopPropagation()}
-              className="max-h-[90vh] max-w-[92vw] rounded-2xl object-contain"
-              style={{ border: `1px solid ${T.lineHi}`, background: T.surface }}
-            />
           </motion.div>
         )}
       </AnimatePresence>

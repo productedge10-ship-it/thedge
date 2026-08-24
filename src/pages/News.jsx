@@ -1,172 +1,241 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore,
+} from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CalendarClock, Bell, BellRing, ChevronDown, Loader2, RefreshCw,
-  AlertTriangle, Filter, X,
+  Bell, BellRing, ChevronDown, RefreshCw, AlertTriangle,
+  ExternalLink, Loader2, BellOff,
 } from 'lucide-react';
 
 import { T, EASE, useEdgeFonts } from '../lib/theme';
-import useCloudState from '../hooks/useCloudState';
-import useTerminalSkin from '../hooks/useTerminalSkin';
 import {
-  fetchWeek, fetchDescription, describe, WEEKS, IMPACTS, impactOf,
-  LEADS, ALERTS_KEY, normalizeAlerts,
+  WEEKS, IMPACTS, impactOf, fetchWeek, fetchDescription, describe,
+  ALERTS_KEY, normalizeAlerts,
 } from '../lib/newsStore';
+import {
+  LEAD_MIN, askNotifyPermission, notifyState, notifySupported, startNewsWatcher,
+} from '../lib/newsAlerts';
+import {
+  flagSrc, warmFlags, subscribe as flagsSubscribe, getVersion as flagsVersion,
+} from '../lib/flags';
+import useCloudState from '../hooks/useCloudState';
 
 /* ==================================================================
-   Календар новин.
+   Календар економічних новин.
 
-   Не стрічка заголовків, а розклад: коли саме ринок тряхне і чи варто
-   в цей час узагалі бути в позиції. Тому головне тут не назва події,
-   а час і важливість — усе інше розкривається на вимогу.
+   Сімдесят подій на тиждень — це список, який неможливо прочитати
+   цілком, і не треба. Людина приходить сюди з одним із двох питань:
+   «що сьогодні може рознести мій стоп» і «коли саме». Тому тут немає
+   рамок навколо рядків, немає підкладок під кожною клітинкою і немає
+   чотирьох відтінків сірого: важливе світле, службове тьмяне, і все.
 
-   Минулий тиждень із фактичними значеннями лежить поруч не для
-   архіву: подивитись, як цифра розійшлась із прогнозом і що після
-   цього зробила ціна, — єдиний спосіб навчитись читати ці новини.
+   Рядок розгортається, а не веде кудись. Опис вантажиться тільки в
+   цей момент — тягнути сімдесят описів на відкритті сторінки заради
+   двох, які реально розгорнуть, було б безглуздям.
 ================================================================== */
 
-const CCY = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD', 'CNY'];
-
-const DOW = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'Пʼятниця', 'Субота'];
-const MON = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
-
-const todayKey = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
-const fmtDay = (key) => {
-  const d = new Date(`${key}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return key;
-  return `${DOW[d.getDay()]}, ${d.getDate()} ${MON[d.getMonth()]}`;
-};
-
-/* Час поточного моменту читаємо у функціях поза компонентом.
-   Всередині рендера це нечистий виклик: результат залежить не від
-   пропсів, а від того, коли React вирішив перемалювати — і lint
-   справедливо на це свариться. */
 const isPast = (at) => !!at && at.getTime() < Date.now();
 
-/* Скільки лишилось до події. Показуємо тільки в межах доби: «через
-   4 дні» ніхто не планує, а «через 25 хвилин» міняє рішення. */
-function countdown(at) {
+const countdown = (at) => {
   if (!at) return null;
   const ms = at.getTime() - Date.now();
-  if (ms < 0 || ms > 24 * 3600 * 1000) return null;
+  if (ms < 0) return null;
   const m = Math.round(ms / 60000);
   if (m < 60) return `через ${m} хв`;
-  return `через ${Math.floor(m / 60)} год ${m % 60 ? `${m % 60} хв` : ''}`.trim();
-}
+  const h = Math.floor(m / 60);
+  if (h < 24) return `через ${h} год`;
+  return `через ${Math.round(h / 24)} дн`;
+};
 
-/* ---------- одна подія ---------- */
+const DAY_FMT = (iso) => {
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
+};
 
-function Row({ e, open, onToggle, alert, onAlert }) {
-  const imp = impactOf(e.impact);
-  const soon = countdown(e.at);
+const isToday = (iso) => {
+  const n = new Date();
+  const t = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  return iso === t;
+};
 
-  /* Опис із FF тягнемо лише коли подію розкрили. Сімдесят подій на
-     екрані означали б сімдесят походів на чужий сайт і майже
-     гарантований бан — а прочитають з них одну-дві. */
-  const [ff, setFf] = useState(null);
-  useEffect(() => {
-    if (!open || ff !== null) return;
-    let alive = true;
-    fetchDescription(e.title, e.ccy).then((t) => { if (alive) setFf(t || ''); });
-    return () => { alive = false; };
-  }, [open, ff, e.title, e.ccy]);
+/* Порівняння факту з прогнозом. Просте віднімання не годиться:
+   значення бувають «208K», «-99.9B», «0.2%». */
+const num = (v) => {
+  if (!v) return null;
+  const m = String(v).replace(/,/g, '').match(/-?\d+(\.\d+)?/);
+  if (!m) return null;
+  let n = parseFloat(m[0]);
+  if (/K/i.test(v)) n *= 1e3;
+  if (/M/i.test(v)) n *= 1e6;
+  if (/B/i.test(v)) n *= 1e9;
+  if (/T/i.test(v)) n *= 1e12;
+  return n;
+};
 
-  /* Свій словник — не заглушка, а перша лінія: він відповідає на «що
-     мені з цього», тоді як опис FF переказує методику підрахунку.
-     Тому показуємо обидва, і свій зверху. */
-  const mine = describe(e.title);
-  const desc = mine || ff || null;
-  const past = isPast(e.at);
+const surprise = (actual, forecast) => {
+  const a = num(actual);
+  const f = num(forecast);
+  if (a === null || f === null || a === f) return 0;
+  return a > f ? 1 : -1;
+};
 
-  /* Розбіжність факту з прогнозом — те, від чого ринок і рухається.
-     Порівнюємо як числа, вирізавши хвости на кшталт % і K. */
-  const num = (v) => {
-    const n = parseFloat(String(v).replace(/[^\d.-]/g, ''));
-    return Number.isFinite(n) ? n : null;
-  };
-  const a = num(e.actual);
-  const f = num(e.forecast);
-  const surprise = a !== null && f !== null ? a - f : null;
+/* ---------- прапор валюти ----------
+
+   Підписка на кеш, а не власний стан: коли прогрів дотягне картинки,
+   перемалюються всі прапори одразу, і жоден рядок не тримає для
+   цього окремого стану. */
+function Flag({ ccy }) {
+  useSyncExternalStore(flagsSubscribe, flagsVersion, flagsVersion);
+  const src = flagSrc(ccy);
+
+  if (!src) {
+    /* «All» та інші глобальні події країни не мають. Кружечок тієї
+       ж ваги, щоб колонка не стрибала. */
+    return (
+      <span
+        className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full text-[8px] font-bold"
+        style={{ background: 'rgba(255,255,255,0.07)', color: T.text3, fontFamily: T.mono }}
+        aria-hidden
+      >
+        ★
+      </span>
+    );
+  }
 
   return (
-    <div
-      className="overflow-hidden rounded-2xl transition-colors duration-200"
-      style={{
-        background: T.surface,
-        border: `1px solid ${open ? T.lineHi : T.line}`,
-        opacity: past && !e.actual ? 0.6 : 1,
-      }}
-    >
-      <button
-        onClick={onToggle}
-        className="flex w-full items-center gap-3 px-3.5 py-3 text-left sm:gap-4 sm:px-4"
-      >
-        {/* Смужка важливості замість іконки: колір читається боковим
-            зором, а список сканують саме так. */}
-        <span className="h-9 w-[3px] shrink-0 rounded-full" style={{ background: imp.color, opacity: e.impact === 'Low' ? 0.45 : 1 }} />
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      className="h-[18px] w-[18px] shrink-0 rounded-full object-cover"
+      style={{ boxShadow: '0 0 0 1px rgba(255,255,255,0.10)' }}
+    />
+  );
+}
 
-        <span className="w-[52px] shrink-0 text-[13.5px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: past ? T.text4 : T.text }}>
-          {e.time || '—'}
-        </span>
+/* ---------- значення ----------
+   Оголошено зовні: компонент, створений усередині рендера, щоразу
+   монтується наново і губить свій стан. */
+function Val({ label, value, tone }) {
+  return (
+    <div className="flex min-w-[62px] flex-col">
+      <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+        {label}
+      </span>
+      <span
+        className="text-[13.5px] font-bold tabular-nums"
+        style={{ fontFamily: T.mono, color: tone || (value ? T.text : T.text3) }}
+      >
+        {value || '—'}
+      </span>
+    </div>
+  );
+}
+
+/* ---------- один рядок ---------- */
+
+function Row({ ev, watched, onWatch, canWatch }) {
+  const [open, setOpen] = useState(false);
+  /* undefined — ще не питали, false — питали й не знайшли,
+     обʼєкт — знайшли. Три стани одним значенням, щоб не ставити
+     прапорець «вантажиться» синхронно всередині ефекту: це
+     викликає зайвий каскад рендерів. */
+  const [ext, setExt] = useState(undefined);
+  const asked = useRef(false);
+
+  const imp = impactOf(ev.impact);
+  const past = isPast(ev.at);
+  const soon = countdown(ev.at);
+  const mine = describe(ev.title);
+  const sur = surprise(ev.actual, ev.forecast);
+  const loading = open && ext === undefined;
+
+  useEffect(() => {
+    if (!open || asked.current) return undefined;
+    asked.current = true;
+    let alive = true;
+    fetchDescription(ev.title, ev.ccy).then((d) => { if (alive) setExt(d || false); });
+    return () => { alive = false; };
+  }, [open, ev.title, ev.ccy]);
+
+  return (
+    <div className="rounded-xl" style={{ background: open ? 'rgba(255,255,255,0.03)' : 'transparent' }}>
+      <div
+        onClick={() => setOpen((v) => !v)}
+        className="group relative flex cursor-pointer items-center gap-3 rounded-xl py-2.5 pl-3 pr-2 transition-colors duration-200"
+        onMouseEnter={(e) => { if (!open) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+        onMouseLeave={(e) => { if (!open) e.currentTarget.style.background = 'transparent'; }}
+        style={{ opacity: past && !ev.actual ? 0.5 : 1 }}
+      >
+        {/* важливість — колірна риска, а не ще один значок */}
+        <span
+          aria-hidden
+          className="absolute inset-y-2 left-0 w-[2.5px] rounded-full"
+          style={{ background: imp.color, opacity: ev.impact === 'High' ? 0.95 : ev.impact === 'Medium' ? 0.6 : 0.22 }}
+        />
 
         <span
-          className="w-[44px] shrink-0 rounded-md px-1.5 py-1 text-center text-[11.5px] font-bold"
-          style={{ fontFamily: T.mono, background: T.sunken, border: `1px solid ${T.line}`, color: T.text2 }}
+          className="w-[46px] shrink-0 text-[13.5px] font-bold tabular-nums"
+          style={{ fontFamily: T.mono, color: past ? T.text3 : T.text }}
         >
-          {e.ccy}
+          {ev.time || '—'}
+        </span>
+
+        <span className="flex w-[74px] shrink-0 items-center gap-2">
+          <Flag ccy={ev.ccy} />
+          <span className="text-[12.5px] font-bold" style={{ fontFamily: T.mono, color: T.text2 }}>
+            {ev.ccy}
+          </span>
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
-            {e.title}
+          <span className="block truncate text-[14.5px]" style={{ fontFamily: T.sans, color: past ? T.text2 : T.text }}>
+            {ev.title}
           </span>
-          {soon && !past && (
-            <span className="text-[11.5px]" style={{ fontFamily: T.sans, color: T.acc }}>{soon}</span>
+          {soon && ev.impact === 'High' && (
+            <span className="text-[11.5px]" style={{ fontFamily: T.sans, color: T.warn }}>{soon}</span>
           )}
         </span>
 
-        {/* Три числа праворуч — те, заради чого сюди й заходять */}
-        <span className="hidden shrink-0 items-center gap-3 text-right lg:flex">
-          {[
-            { k: 'факт', v: e.actual, tone: surprise === null ? T.text : surprise >= 0 ? T.ok : T.bad },
-            { k: 'прогноз', v: e.forecast, tone: T.text3 },
-            { k: 'було', v: e.previous, tone: T.text4 },
-          ].map((c) => (
-            <span key={c.k} className="w-[64px]">
-              <span className="block text-[10px] uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                {c.k}
-              </span>
-              <span className="block text-[13px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: c.v ? c.tone : T.text4 }}>
-                {c.v || '—'}
-              </span>
-            </span>
-          ))}
+        <span className="hidden shrink-0 items-center gap-5 md:flex">
+          <Val
+            label="факт"
+            value={ev.actual}
+            tone={sur > 0 ? T.ok : sur < 0 ? T.bad : undefined}
+          />
+          <Val label="прогноз" value={ev.forecast} />
+          <Val label="було" value={ev.previous} />
         </span>
 
-        <span
-          onClick={(ev) => { ev.stopPropagation(); onAlert(); }}
-          title={alert ? `Нагадаю ${LEADS.find((l) => l.id === alert.lead)?.label}` : 'Нагадати про подію'}
-          className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-lg transition-colors"
-          style={{
-            border: `1px solid ${alert ? T.lineAcc : T.line}`,
-            background: alert ? `rgba(${T.accRgb},0.10)` : 'transparent',
-            color: alert ? T.acc : T.text4,
-          }}
-        >
-          {alert ? <BellRing size={13} strokeWidth={2.4} /> : <Bell size={13} strokeWidth={2.2} />}
-        </span>
+        {/* дзвіночок тільки для того, що ще не сталося */}
+        {!past && canWatch && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onWatch(ev); }}
+            title={watched ? 'Не нагадувати' : `Нагадати за ${LEAD_MIN} хв`}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors duration-200"
+            style={{
+              color: watched ? T.acc : T.text3,
+              background: watched ? `rgba(${T.accRgb},0.12)` : 'transparent',
+            }}
+            onMouseEnter={(e) => { if (!watched) e.currentTarget.style.color = T.text; }}
+            onMouseLeave={(e) => { if (!watched) e.currentTarget.style.color = T.text3; }}
+          >
+            {watched ? <BellRing size={15} strokeWidth={2.2} /> : <Bell size={15} strokeWidth={2.2} />}
+          </button>
+        )}
 
         <ChevronDown
-          size={14}
+          size={15}
           strokeWidth={2.4}
-          className="shrink-0 transition-transform duration-200"
-          style={{ color: T.text4, transform: open ? 'rotate(180deg)' : 'none' }}
+          className="shrink-0"
+          style={{
+            color: T.text3,
+            transform: open ? 'rotate(180deg)' : 'none',
+            transition: `transform 220ms ${EASE}`,
+          }}
         />
-      </button>
+      </div>
 
       <AnimatePresence initial={false}>
         {open && (
@@ -177,88 +246,61 @@ function Row({ e, open, onToggle, alert, onAlert }) {
             transition={{ duration: 0.24, ease: EASE }}
             style={{ overflow: 'hidden' }}
           >
-            <div className="px-4 pb-4 pt-1" style={{ borderTop: `1px solid ${T.line}` }}>
-              {/* На вузькому екрані числа не влізли в рядок — показуємо тут */}
-              <div className="mb-3 flex gap-4 lg:hidden">
-                {[['факт', e.actual], ['прогноз', e.forecast], ['було', e.previous]].map(([k, v]) => (
-                  <span key={k}>
-                    <span className="block text-[10px] uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text4 }}>{k}</span>
-                    <span className="block text-[14px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: v ? T.text : T.text4 }}>{v || '—'}</span>
-                  </span>
-                ))}
+            <div className="flex flex-col gap-3 px-3 pb-3.5 pt-1">
+              {/* значення для вузьких екранів */}
+              <div className="flex gap-6 md:hidden">
+                <Val label="факт" value={ev.actual} tone={sur > 0 ? T.ok : sur < 0 ? T.bad : undefined} />
+                <Val label="прогноз" value={ev.forecast} />
+                <Val label="було" value={ev.previous} />
               </div>
 
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span
-                  className="rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.1em]"
-                  style={{ fontFamily: T.sans, background: `${imp.color}1f`, border: `1px solid ${imp.color}44`, color: imp.color }}
-                >
-                  {imp.label} вплив
-                </span>
-                {surprise !== null && Math.abs(surprise) > 1e-9 && (
-                  <span className="text-[12px]" style={{ fontFamily: T.sans, color: surprise > 0 ? T.ok : T.bad }}>
-                    {surprise > 0 ? 'вийшло краще за прогноз' : 'вийшло гірше за прогноз'}
-                  </span>
-                )}
-              </div>
-
-              <p className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
-                {desc || (ff === null
-                  ? 'дістаю опис…'
-                  : 'Опису для цієї події немає. Дивись на розбіжність факту з прогнозом — саме вона рухає ринок, а не сама цифра.')}
-              </p>
-
-              {/* Якщо є обидва — офіційний ховаємо під розкриттям:
-                  він довший і сухіший, і на екрані має бути другим. */}
-              {mine && ff && (
-                <details className="mt-2">
-                  <summary
-                    className="cursor-pointer text-[12px] font-semibold"
-                    style={{ fontFamily: T.sans, color: T.text4 }}
-                  >
-                    опис із ForexFactory
-                  </summary>
-                  <p className="mt-1.5 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.6 }}>
-                    {ff}
-                  </p>
-                </details>
+              {/* Спершу «що з цим робити» — це відповідь на питання,
+                  з яким людина сюди прийшла. Енциклопедичний опис
+                  нижче: він пояснює, що це взагалі таке. */}
+              {mine && (
+                <p className="text-[14px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text }}>
+                  {mine}
+                </p>
               )}
 
-              {/* Нагадування налаштовується тут, а не в дзвіночку:
-                  один клік ставить типове попередження, а вибрати час
-                  можна не поспішаючи. */}
-              <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
-                <span className="mr-1 text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>Нагадати:</span>
-                {LEADS.map((l) => {
-                  const on = alert?.lead === l.id;
-                  return (
-                    <button
-                      key={l.id}
-                      onClick={() => onAlert(l.id)}
-                      className="rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors"
-                      style={{
-                        fontFamily: T.sans,
-                        background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
-                        border: `1px solid ${on ? T.lineAcc : T.line}`,
-                        color: on ? T.acc : T.text3,
-                      }}
+              {loading && (
+                <span className="flex items-center gap-2 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                  <Loader2 size={13} className="animate-spin" />
+                  шукаю опис…
+                </span>
+              )}
+
+              {ext && (
+                <div
+                  className="rounded-lg p-3"
+                  style={{ background: 'rgba(255,255,255,0.03)' }}
+                >
+                  <p className="text-[13.5px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text2 }}>
+                    {ext.text}
+                  </p>
+                  {ext.url && (
+                    <a
+                      href={ext.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold transition-colors duration-150"
+                      style={{ fontFamily: T.sans, color: T.text3 }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
                     >
-                      {l.label}
-                    </button>
-                  );
-                })}
-                {alert && (
-                  <button
-                    onClick={() => onAlert(null)}
-                    className="ml-1 text-[12px] font-semibold transition-colors"
-                    style={{ fontFamily: T.sans, color: T.text4 }}
-                    onMouseEnter={(ev) => (ev.currentTarget.style.color = T.bad)}
-                    onMouseLeave={(ev) => (ev.currentTarget.style.color = T.text4)}
-                  >
-                    прибрати
-                  </button>
-                )}
-              </div>
+                      {ext.title || ext.source}
+                      <ExternalLink size={11} strokeWidth={2.4} />
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {ext === false && !mine && (
+                <p className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                  Опису для цієї події знайти не вдалось.
+                </p>
+              )}
             </div>
           </motion.div>
         )}
@@ -267,72 +309,101 @@ function Row({ e, open, onToggle, alert, onAlert }) {
   );
 }
 
+/* ---------- перемикач ---------- */
+
+function Seg({ items, value, onChange }) {
+  return (
+    <div className="flex gap-1 rounded-xl p-1" style={{ background: 'rgba(255,255,255,0.04)' }}>
+      {items.map((it) => {
+        const on = value === it.id;
+        return (
+          <button
+            key={it.id}
+            onClick={() => onChange(it.id)}
+            className="relative h-8 rounded-lg px-3 text-[13px] font-semibold transition-colors duration-200"
+            style={{ fontFamily: T.sans, color: on ? T.text : T.text3 }}
+          >
+            {on && (
+              <motion.span
+                layoutId={`seg-${items[0].id}`}
+                className="absolute inset-0 rounded-lg"
+                style={{ background: 'rgba(255,255,255,0.08)' }}
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              />
+            )}
+            <span className="relative">{it.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ================================================================== */
 
 export default function News() {
   useEdgeFonts();
-  useTerminalSkin();
 
   const [week, setWeek] = useState('this');
-  const [rows, setRows] = useState(null);
-  const [error, setError] = useState('');
-  const [reloading, setReloading] = useState(false);
-
-  const [minImpact, setMinImpact] = useState(['High', 'Medium']);
-  const [ccy, setCcy] = useState([]);
-  const [day, setDay] = useState(null);
-  const [openId, setOpenId] = useState(null);
+  const [rows, setRows] = useState([]);
+  const [busy, setBusy] = useState(true);
+  const [err, setErr] = useState(null);
+  const [imp, setImp] = useState('all');
+  const [ccy, setCcy] = useState('all');
+  const [perm, setPerm] = useState(notifyState());
 
   const [alerts, setAlerts] = useCloudState(ALERTS_KEY, [], { normalize: normalizeAlerts });
 
-  const load = async (w, force) => {
-    setError('');
-    if (force) {
-      setReloading(true);
-      try { localStorage.removeItem(`edge_news_${w}`); } catch { /* нічого */ }
-    } else {
-      setRows(null);
-    }
+  /* Жодного setState до першого await.
 
+     «Вантажиться» вмикає той, хто це спричинив — обробник кліку по
+     тижню чи по оновленню. Ефект тільки забирає дані й розкладає
+     результат. Якщо ставити прапорець тут, React справедливо лається
+     на каскад: ефект міняє стан, стан викликає ефект. */
+  const load = useCallback(async (w) => {
     try {
       const data = await fetchWeek(w);
       setRows(data);
+      setErr(null);
     } catch (e) {
+      setErr(e.message);
       setRows([]);
-      /* Найімовірніша причина — браузер не пустив крос-доменний
-         запит. Кажемо це прямо, а не «щось пішло не так»: із такою
-         помилкою людина хоч зрозуміє, що це не її дані зникли. */
-      setError(e.message || 'Не вдалось дістати календар');
-    } finally {
-      setReloading(false);
     }
-  };
+    setBusy(false);
+  }, []);
 
-  /* Тиждень змінився — тягнемо новий і скидаємо вибраний день:
-     пʼятниця минулого тижня в наступному нічого не означає. */
+  useEffect(() => { load(week); }, [week, load]);
+
+  const pickWeek = (w) => { setBusy(true); setWeek(w); };
+  const refresh = () => { setBusy(true); load(week); };
+
+  /* Планувальник дивиться на актуальний список через функцію, тому
+     його не треба перепідписувати щоразу, коли натиснули дзвіночок. */
+  const watchRef = useRef([]);
   useEffect(() => {
-    setDay(null);
-    load(week);
-  }, [week]);
+    const ids = new Set(alerts.map((a) => a.id));
+    watchRef.current = rows.filter((r) => ids.has(r.id));
+  }, [alerts, rows]);
 
-  /* Дні тижня, які реально є в даних */
+  useEffect(() => startNewsWatcher(() => watchRef.current), []);
+
+  const currencies = useMemo(
+    () => [...new Set(rows.map((r) => r.ccy).filter(Boolean))].sort(),
+    [rows],
+  );
+
+  /* Прогріваємо кеш прапорів, коли стало відомо, які валюти взагалі
+     є на екрані. Качається тільки те, чого ще немає в localStorage,
+     тому на другому візиті цей виклик нічого не робить. */
+  useEffect(() => { warmFlags(currencies); }, [currencies]);
+
+  const shown = useMemo(() => rows.filter((r) => {
+    if (imp !== 'all' && r.impact !== imp) return false;
+    if (ccy !== 'all' && r.ccy !== ccy) return false;
+    return true;
+  }), [rows, imp, ccy]);
+
   const days = useMemo(() => {
-    if (!rows) return [];
-    return [...new Set(rows.map((r) => r.day).filter(Boolean))].sort();
-  }, [rows]);
-
-
-  const shown = useMemo(() => {
-    if (!rows) return [];
-    return rows.filter((r) => {
-      if (minImpact.length && !minImpact.includes(r.impact)) return false;
-      if (ccy.length && !ccy.includes(r.ccy)) return false;
-      if (day && r.day !== day) return false;
-      return true;
-    });
-  }, [rows, minImpact, ccy, day]);
-
-  const grouped = useMemo(() => {
     const map = new Map();
     shown.forEach((r) => {
       if (!map.has(r.day)) map.set(r.day, []);
@@ -341,269 +412,242 @@ export default function News() {
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [shown]);
 
-  const toggle = (list, set, v) => set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  const watchedIds = useMemo(() => new Set(alerts.map((a) => a.id)), [alerts]);
 
-  const alertOf = (id) => alerts.find((a) => a.id === id);
-
-  const setAlert = (e) => (lead) => {
-    setAlerts((cur) => {
-      const rest = cur.filter((a) => a.id !== e.id);
-      if (lead === null) return rest;
-      /* Клік по дзвіночку без вибору часу — типове попередження за
-         15 хвилин: встигнути закрити позицію або не відкривати нову. */
-      const value = typeof lead === 'number' ? lead : (alertOf(e.id) ? null : 15);
-      if (value === null) return rest;
-      return [...rest, {
-        id: e.id, key: e.key, title: `${e.ccy} · ${e.title}`, at: e.at ? e.at.toISOString() : '', lead: value,
-      }];
-    });
+  const toggleWatch = async (ev) => {
+    if (watchedIds.has(ev.id)) {
+      setAlerts((s) => s.filter((a) => a.id !== ev.id));
+      return;
+    }
+    const state = await askNotifyPermission();
+    setPerm(state);
+    if (state !== 'granted') return;
+    setAlerts((s) => [
+      ...s,
+      { id: ev.id, key: ev.key, title: ev.title, ccy: ev.ccy, at: ev.at ? ev.at.toISOString() : '', lead: LEAD_MIN },
+    ]);
   };
 
-  const highToday = useMemo(
-    () => (rows || []).filter((r) => r.day === todayKey() && r.impact === 'High').length,
-    [rows],
-  );
+  const canWatch = notifySupported() && perm !== 'denied';
 
   return (
     <div className="relative min-h-full">
-      <div className="relative z-10 mx-auto w-full max-w-[1400px] px-4 pb-24 pt-5 sm:px-6 lg:w-[94%] lg:px-0 lg:pt-7">
+      <div className="relative z-10 mx-auto w-[94%] max-w-[1400px] pb-20 pt-5 lg:pt-7">
 
-        {/* ─────────── Шапка ─────────── */}
+        {/* ─────────── Хедер ─────────── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between"
+          className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
         >
           <div className="min-w-0">
-            <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
+            <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
               Календар
             </div>
             <h1
-              className="text-[26px] font-bold leading-none sm:text-[34px] lg:text-[42px]"
+              className="text-[26px] font-bold leading-none sm:text-[32px]"
               style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
             >
               Новини
             </h1>
-            <p className="mt-2.5 max-w-[560px] text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              {highToday
-                ? `Сьогодні ${highToday} ${highToday === 1 ? 'подія' : 'подій'} високого впливу — подивись час, перш ніж відкривати позицію.`
-                : 'Розклад того, коли ринок тряхне. Час у твоєму поясі.'}
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
-              {WEEKS.map((w) => {
-                const on = week === w.id;
-                return (
-                  <button
-                    key={w.id}
-                    onClick={() => setWeek(w.id)}
-                    title={w.hint}
-                    className="whitespace-nowrap rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors"
-                    style={{
-                      fontFamily: T.sans,
-                      background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
-                      border: `1px solid ${on ? T.lineAcc : 'transparent'}`,
-                      color: on ? T.acc : T.text3,
-                    }}
-                  >
-                    {w.label}
-                  </button>
-                );
-              })}
-            </div>
-
+            <Seg items={WEEKS} value={week} onChange={pickWeek} />
             <button
-              onClick={() => load(week, true)}
-              disabled={reloading}
-              className="flex h-[42px] items-center gap-2 rounded-xl px-3.5 text-[13px] font-semibold transition-colors"
-              style={{ fontFamily: T.sans, background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
+              onClick={refresh}
+              title="Оновити"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors duration-200"
+              style={{ background: 'rgba(255,255,255,0.04)', color: T.text3 }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
             >
-              <RefreshCw size={14} strokeWidth={2.3} className={reloading ? 'animate-spin' : ''} />
-              Оновити
+              <RefreshCw size={15} strokeWidth={2.2} className={busy ? 'animate-spin' : ''} />
             </button>
           </div>
         </motion.div>
 
         {/* ─────────── Фільтри ─────────── */}
-        <div className="mb-5 flex flex-col gap-2.5">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Filter size={13} strokeWidth={2.3} style={{ color: T.text4 }} className="mr-1" />
-            {IMPACTS.map((i) => {
-              const on = minImpact.includes(i.id);
-              return (
-                <button
-                  key={i.id}
-                  onClick={() => toggle(minImpact, setMinImpact, i.id)}
-                  className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors"
-                  style={{
-                    fontFamily: T.sans,
-                    background: on ? `${i.color}1a` : 'transparent',
-                    border: `1px solid ${on ? `${i.color}55` : T.line}`,
-                    color: on ? i.color : T.text3,
-                  }}
-                >
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: i.color }} />
-                  {i.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            {CCY.map((c) => {
-              const on = ccy.includes(c);
-              return (
-                <button
-                  key={c}
-                  onClick={() => toggle(ccy, setCcy, c)}
-                  className="rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition-colors"
-                  style={{
-                    fontFamily: T.mono,
-                    background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
-                    border: `1px solid ${on ? T.lineAcc : T.line}`,
-                    color: on ? T.acc : T.text3,
-                  }}
-                >
-                  {c}
-                </button>
-              );
-            })}
-            {ccy.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {[{ id: 'all', label: 'Усі', color: T.text3 }, ...IMPACTS].map((i) => {
+            const on = imp === i.id;
+            return (
               <button
-                onClick={() => setCcy([])}
-                className="ml-1 flex items-center gap-1 text-[12px] font-semibold"
-                style={{ fontFamily: T.sans, color: T.text4 }}
-              >
-                <X size={11} strokeWidth={2.6} /> усі
-              </button>
-            )}
-          </div>
-
-          {days.length > 1 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                onClick={() => setDay(null)}
-                className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors"
+                key={i.id}
+                onClick={() => setImp(i.id)}
+                className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-semibold transition-colors duration-200"
                 style={{
                   fontFamily: T.sans,
-                  background: !day ? `rgba(${T.accRgb},0.12)` : 'transparent',
-                  border: `1px solid ${!day ? T.lineAcc : T.line}`,
-                  color: !day ? T.acc : T.text3,
+                  color: on ? T.text : T.text3,
+                  background: on ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
                 }}
               >
-                Весь тиждень
+                {i.id !== 'all' && (
+                  <span className="h-2 w-2 rounded-full" style={{ background: i.color }} />
+                )}
+                {i.label}
               </button>
-              {days.map((d) => {
-                const on = day === d;
-                const isToday = d === todayKey();
-                return (
-                  <button
-                    key={d}
-                    onClick={() => setDay(on ? null : d)}
-                    className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors"
-                    style={{
-                      fontFamily: T.sans,
-                      background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
-                      border: `1px solid ${on ? T.lineAcc : isToday ? T.lineHi : T.line}`,
-                      color: on ? T.acc : isToday ? T.text : T.text3,
-                    }}
-                  >
-                    {fmtDay(d).split(',')[0]}
-                    {isToday && <span style={{ color: T.acc }}> ·</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+            );
+          })}
+
+          <span className="mx-1 h-5 w-px" style={{ background: T.line }} />
+
+          {['all', ...currencies].map((c) => {
+            const on = ccy === c;
+            return (
+              <button
+                key={c}
+                onClick={() => setCcy(c)}
+                className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-bold transition-colors duration-200"
+                style={{
+                  fontFamily: c === 'all' ? T.sans : T.mono,
+                  color: on ? T.text : T.text3,
+                  background: on ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
+                }}
+              >
+                {c !== 'all' && <Flag ccy={c} />}
+                {c === 'all' ? 'Всі валюти' : c}
+              </button>
+            );
+          })}
         </div>
 
-        {/* ─────────── Список ─────────── */}
-        {rows === null ? (
-          <div className="flex items-center justify-center gap-2.5 py-28">
-            <Loader2 size={18} className="animate-spin" style={{ color: T.acc }} />
-            <span className="text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>дістаю календар…</span>
-          </div>
-        ) : error ? (
+        {/* ─────────── Стан сповіщень ─────────── */}
+        {!notifySupported() && (
+          <Note icon={BellOff} tone={T.text3}>
+            Цей браузер не вміє показувати сповіщення.
+          </Note>
+        )}
+        {notifySupported() && perm === 'denied' && (
+          <Note icon={BellOff} tone={T.warn}>
+            Сповіщення заблоковані в налаштуваннях браузера — дзвіночки не спрацюють, доки не дозволиш їх для цього сайту.
+          </Note>
+        )}
+        {notifySupported() && perm === 'granted' && alerts.length > 0 && (
+          <Note icon={BellRing} tone={T.acc}>
+            Стежу за {alerts.length} {alerts.length === 1 ? 'подією' : 'подіями'}. Попереджу за {LEAD_MIN} хвилин — поки сайт відкритий хоча б у фоновій вкладці.
+          </Note>
+        )}
+
+        {/* ─────────── Помилка ─────────── */}
+        {err && (
           <div
-            className="flex items-start gap-3 rounded-2xl px-4 py-4"
-            style={{ background: `rgba(${T.badRgb},0.06)`, border: `1px solid rgba(${T.badRgb},0.22)` }}
+            className="mb-3 flex items-start gap-3 rounded-xl p-4"
+            style={{ background: `rgba(${T.badRgb},0.08)` }}
           >
-            <AlertTriangle size={15} strokeWidth={2.3} className="mt-0.5 shrink-0" style={{ color: T.bad }} />
-            <div className="min-w-0">
-              <div className="mb-1 text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
-                Календар не вдалось завантажити
+            <AlertTriangle size={17} strokeWidth={2.2} className="mt-0.5 shrink-0" style={{ color: T.bad }} />
+            <div>
+              <div className="mb-1 text-[14.5px] font-bold" style={{ fontFamily: T.display, color: T.bad }}>
+                Календар не завантажився
               </div>
-              <p className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.6 }}>
-                {error}. Дані беруться напряму з ForexFactory, і браузер може заблокувати
-                крос-доменний запит. Якщо повторюється — знадобиться власний проксі на бекенді.
-              </p>
+              <p className="text-[13px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text2 }}>{err}</p>
             </div>
           </div>
-        ) : grouped.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-6 py-24 text-center">
-            <CalendarClock size={22} strokeWidth={1.6} style={{ color: T.text4 }} />
-            <div className="text-[15px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>
-              Нічого не підходить під фільтри
-            </div>
-            <div className="max-w-[360px] text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.6 }}>
-              Спробуй увімкнути низький вплив або прибрати вибір валют.
-            </div>
+        )}
+
+        {/* ─────────── Дні ─────────── */}
+        {busy && !rows.length && (
+          <div className="flex items-center justify-center gap-2 py-16 text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+            <Loader2 size={16} className="animate-spin" />
+            вантажу календар…
           </div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {grouped.map(([d, list]) => (
-              <section key={d}>
-                <div className="mb-2.5 flex items-center gap-3">
+        )}
+
+        {!busy && !err && !days.length && (
+          <p className="py-16 text-center text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+            Під ці фільтри нічого не підпадає.
+          </p>
+        )}
+
+        {/* День — окрема картка, а не просто заголовок над списком.
+            Суцільна стрічка з сімдесяти рядків читається як одна
+            маса: око не бачить, де закінчився вівторок. Картка дає
+            межу, а тонкі лінії всередині розділяють самі події, не
+            додаючи кожній власної рамки. */}
+        <div className="flex flex-col gap-3">
+          {days.map(([day, list]) => {
+            const now = isToday(day);
+            const high = list.filter((e) => e.impact === 'High').length;
+
+            return (
+              <div
+                key={day}
+                className="overflow-hidden rounded-2xl"
+                style={{
+                  background: T.surface,
+                  border: `1px solid ${now ? T.lineAcc : T.line}`,
+                }}
+              >
+                <div
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5"
+                  style={{
+                    background: now ? `rgba(${T.accRgb},0.07)` : 'rgba(255,255,255,0.025)',
+                    borderBottom: `1px solid ${T.line}`,
+                  }}
+                >
                   <h2
-                    className="text-[16px] font-bold"
-                    style={{ fontFamily: T.display, color: d === todayKey() ? T.acc : T.text, letterSpacing: '-0.02em' }}
+                    className="text-[15px] font-bold capitalize"
+                    style={{
+                      fontFamily: T.display,
+                      color: now ? T.acc : T.text,
+                      letterSpacing: '-0.01em',
+                    }}
                   >
-                    {fmtDay(d)}
+                    {DAY_FMT(day)}
                   </h2>
-                  <span className="text-[12.5px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
-                    {list.length}
+
+                  {now && (
+                    <span className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.acc }}>
+                      сьогодні
+                    </span>
+                  )}
+
+                  <span className="ml-auto flex items-baseline gap-3 text-[12px] tabular-nums" style={{ fontFamily: T.sans, color: T.text3 }}>
+                    {high > 0 && (
+                      <span className="flex items-center gap-1.5" style={{ color: T.bad }}>
+                        <span className="h-2 w-2 rounded-full" style={{ background: T.bad }} />
+                        {high} важлив{high === 1 ? 'а' : 'их'}
+                      </span>
+                    )}
+                    <span>{list.length} поді{list.length === 1 ? 'я' : 'й'}</span>
                   </span>
-                  <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${T.line}, transparent)` }} />
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  {list.map((e) => (
-                    <Row
-                      key={e.id}
-                      e={e}
-                      open={openId === e.id}
-                      onToggle={() => setOpenId(openId === e.id ? null : e.id)}
-                      alert={alertOf(e.id)}
-                      onAlert={setAlert(e)}
-                    />
+                <div className="flex flex-col px-1.5 py-1">
+                  {list.map((ev, i) => (
+                    <div
+                      key={ev.id}
+                      style={i ? { borderTop: `1px solid ${T.line}` } : undefined}
+                    >
+                      <Row
+                        ev={ev}
+                        watched={watchedIds.has(ev.id)}
+                        onWatch={toggleWatch}
+                        canWatch={canWatch}
+                      />
+                    </div>
                   ))}
                 </div>
-              </section>
-            ))}
-          </div>
-        )}
-
-        {/* Чесно про те, що сповіщення поки не летять нікуди. Інакше
-            людина поставить десять нагадувань і не отримає жодного. */}
-        {alerts.length > 0 && (
-          <div
-            className="mt-6 flex items-start gap-2.5 rounded-2xl px-4 py-3.5"
-            style={{ background: T.sunken, border: `1px solid ${T.line}` }}
-          >
-            <Bell size={14} strokeWidth={2.3} className="mt-0.5 shrink-0" style={{ color: T.acc }} />
-            <p className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.6 }}>
-              Нагадувань поставлено: <b style={{ color: T.text }}>{alerts.length}</b>. Вони вже
-              зберігаються за тобою, але доставку зробить Telegram-бот і пошта — вони ще в роботі.
-              Поки що це список намірів, а не сповіщення.
-            </p>
-          </div>
-        )}
+              </div>
+            );
+          })}
+        </div>
       </div>
+    </div>
+  );
+}
+
+/* ---------- тиха плашка ---------- */
+
+function Note({ icon: I, tone, children }) {
+  return (
+    <div
+      className="mb-3 flex items-center gap-2.5 rounded-xl px-3.5 py-2.5"
+      style={{ background: 'rgba(255,255,255,0.03)' }}
+    >
+      <I size={15} strokeWidth={2.2} className="shrink-0" style={{ color: tone }} />
+      <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text2 }}>{children}</span>
     </div>
   );
 }
