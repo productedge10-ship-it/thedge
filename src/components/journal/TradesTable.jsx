@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, Trash2, Loader2,
   ShieldCheck, ShieldAlert, AlertTriangle, Zap, Inbox,
 } from 'lucide-react';
 import AssetIcon from '../ui/AssetIcon';
-import { T, SPRING } from '../../lib/theme';
+import { T, SPRING, EASE } from '../../lib/theme';
 
 /* ==================================================================
    Таблиця угод.
@@ -176,7 +176,7 @@ function Pagination({ page, totalPages, onChange }) {
 
 export default function TradesTable({
   trades, accountsMap, getProfit, onOpen, onDelete,
-  loading, page, totalPages, onPageChange,
+  loading, page, totalPages, onPageChange, pageSize = 10,
 }) {
   const [sort, setSort] = useState({ key: 'plan_date', dir: 'desc' });
 
@@ -228,7 +228,27 @@ export default function TradesTable({
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Зміна сторінки — крос-фейд усього блока таблиці.
+         — key прив'язаний до реальних даних (id рядків), а не до
+           номера сторінки: клік одразу міняє page, але рядки ще
+           старі, поки йде запит — інакше анімація відіграється на
+           застарілих даних, а свіжі просто вискакують без переходу.
+         — mode="wait" не дає старій і новій сторінці існувати в DOM
+           одночасно (це й давало «рваність»).
+         — висота завжди зарезервована під повну сторінку (pageSize),
+           а не під поточну кількість рядків: інакше на останній,
+           неповній сторінці контейнер стискався і всю сторінку сайту
+           смикало/скролило вгору. */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={rows.map((r) => r.id).join('-') || `empty-${page}`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: EASE }}
+          className="overflow-x-auto"
+          style={{ minHeight: pageSize * 56 + 45 }}
+        >
         <table className="w-full" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${T.line}`, background: T.sunken }}>
@@ -365,7 +385,8 @@ export default function TradesTable({
             })}
           </tbody>
         </table>
-      </div>
+        </motion.div>
+      </AnimatePresence>
 
       <Pagination page={page} totalPages={totalPages} onChange={onPageChange} />
     </>

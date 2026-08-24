@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { uk } from "date-fns/locale";
@@ -11,7 +11,10 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { BookOpen, Plus, TrendingUp, AlertTriangle } from "lucide-react";
+import {
+  BookOpen, Plus, TrendingUp, AlertTriangle, X,
+  Filter, Calendar, ChevronDown, Check, Search,
+} from "lucide-react";
 
 import { supabase } from "../lib/supabase";
 import { getTradeProfit } from "../utils/journalUtils";
@@ -22,15 +25,394 @@ import TradeDetailsModal from "../components/modals/TradeDetailsModal";
 import StatCards, { StreakBar } from "../components/journal/StatCards";
 import { Magnetic, Shine } from "../components/ui/Hovers";
 import TradesTable from "../components/journal/TradesTable";
-import {
-  AssetFilter,
-  PeriodFilter,
-  periodToRange,
-  QuickFilters,
-  QUICK,
-} from "../components/journal/JournalControls";
+import AssetIcon from "../components/ui/AssetIcon";
 
-const PAGE = 5;
+const PAGE = 10;
+
+/* ==================================================================
+   Селектори фільтрів — власний преміальний стиль сторінки Journal.
+   Двоярусний тригер (дрібний лейбл зверху, значення знизу) — патерн
+   фінтех-дашбордів (Stripe/Mercury), а не просто «іконка + текст».
+   Скляна панель з ковзним підсвітом активного рядка; в активі —
+   миттєвий пошук, бо список активів росте разом з журналом.
+================================================================== */
+
+function FieldTrigger({ label, value, icon, active, open, onClick, minWidth = 172 }) {
+  return (
+    <motion.button
+      onClick={onClick}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      transition={SPRING}
+      className="relative flex h-[54px] flex-col justify-center gap-1 rounded-2xl px-4 text-left"
+      style={{
+        minWidth,
+        background: active
+          ? `linear-gradient(180deg, rgba(${T.accRgb},0.10), rgba(${T.accRgb},0.02))`
+          : T.sunken,
+        border: `1px solid ${open || active ? T.lineAcc : T.line}`,
+        boxShadow: open
+          ? `0 14px 34px -12px rgba(${T.accRgb},0.5)`
+          : active
+          ? `0 6px 18px -9px rgba(${T.accRgb},0.3)`
+          : "none",
+      }}
+    >
+      <span className="flex items-center justify-between gap-3">
+        <span
+          className="text-[10px] font-bold uppercase tracking-[0.16em]"
+          style={{ fontFamily: T.sans, color: active ? T.acc : T.text4 }}
+        >
+          {label}
+        </span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={SPRING} className="flex shrink-0">
+          <ChevronDown size={13} strokeWidth={2.6} style={{ color: active ? T.acc : T.text4 }} />
+        </motion.span>
+      </span>
+      <span className="flex min-w-0 items-center gap-2 text-[15px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
+        {icon}
+        <span className="truncate">{value}</span>
+      </span>
+    </motion.button>
+  );
+}
+
+function FieldPanel({ children, width = "w-[248px]" }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -10, scale: 0.96 }}
+      transition={{ duration: 0.16, ease: EASE }}
+      className={`absolute left-0 top-[calc(100%+10px)] z-[130] ${width} overflow-hidden rounded-2xl`}
+      style={{
+        background: T.surfaceHi,
+        border: `1px solid ${T.lineHi}`,
+        boxShadow: "0 30px 70px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05)",
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function OptionRow({ active, layoutId, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className="group/opt relative flex w-full items-center justify-between overflow-hidden rounded-xl px-3 py-2.5 text-left"
+    >
+      {active && (
+        <motion.span
+          layoutId={layoutId}
+          transition={SPRING}
+          className="absolute inset-0 -z-10 rounded-xl"
+          style={{ background: `rgba(${T.accRgb},0.14)` }}
+        />
+      )}
+      <span
+        aria-hidden
+        className="absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-r-full transition-all duration-200 group-hover/opt:h-[60%]"
+        style={{ background: T.acc }}
+      />
+      {children}
+    </button>
+  );
+}
+
+function AssetSelect({ options, value, onChange, categories }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const ref = useRef(null);
+  const active = value !== "All";
+
+  useEffect(() => {
+    const onDoc = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setQ(""); }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const assets = options.filter((o) => o !== "All");
+  const filtered = q ? assets.filter((o) => o.toLowerCase().includes(q.toLowerCase())) : assets;
+
+  return (
+    <div className="relative" ref={ref}>
+      <FieldTrigger
+        label="Актив"
+        value={active ? value : "Усі активи"}
+        active={active}
+        open={open}
+        onClick={() => setOpen((v) => !v)}
+        icon={
+          active ? (
+            <span className="flex w-6 shrink-0 items-center justify-start">
+              <AssetIcon symbol={value} category={categories[value]} />
+            </span>
+          ) : (
+            <Filter size={15} strokeWidth={2.4} style={{ color: T.text3 }} />
+          )
+        }
+      />
+      <AnimatePresence>
+        {open && (
+          <FieldPanel>
+            <div className="p-2" style={{ borderBottom: `1px solid ${T.line}` }}>
+              <div className="flex items-center gap-2 rounded-xl px-3" style={{ background: T.sunken, height: 38 }}>
+                <Search size={13} strokeWidth={2.4} style={{ color: T.text4 }} />
+                <input
+                  autoFocus
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Пошук активу…"
+                  className="w-full border-none bg-transparent text-[13.5px] outline-none"
+                  style={{ fontFamily: T.sans, color: T.text }}
+                />
+              </div>
+            </div>
+
+            <div className="max-h-[260px] overflow-y-auto asset-dropdown-scroll p-1.5">
+              {!q && (
+                <OptionRow active={value === "All"} layoutId="asset-select-active" onClick={() => { onChange("All"); setOpen(false); setQ(""); }}>
+                  <span className="flex items-center gap-2.5 pl-1.5 text-[14px] font-bold" style={{ fontFamily: T.sans, color: value === "All" ? T.acc : T.text2 }}>
+                    <Filter size={14} strokeWidth={2.4} style={{ color: value === "All" ? T.acc : T.text4 }} />
+                    Усі активи
+                  </span>
+                  {value === "All" && <Check size={14} strokeWidth={3} style={{ color: T.acc }} />}
+                </OptionRow>
+              )}
+
+              {filtered.map((o) => {
+                const rowActive = value === o;
+                return (
+                  <OptionRow key={o} active={rowActive} layoutId="asset-select-active" onClick={() => { onChange(o); setOpen(false); setQ(""); }}>
+                    <span className="flex min-w-0 items-center gap-2.5 pl-1.5">
+                      <span className="flex w-9 shrink-0 items-center justify-start">
+                        <AssetIcon symbol={o} category={categories[o]} />
+                      </span>
+                      <span className="truncate text-[14px] font-bold" style={{ fontFamily: T.sans, color: rowActive ? T.acc : T.text2 }}>
+                        {o}
+                      </span>
+                    </span>
+                    {rowActive && <Check size={14} strokeWidth={3} style={{ color: T.acc }} className="shrink-0" />}
+                  </OptionRow>
+                );
+              })}
+
+              {q && !filtered.length && (
+                <div className="px-3 py-8 text-center text-[13px]" style={{ color: T.text4, fontFamily: T.sans }}>
+                  Актив не знайдено
+                </div>
+              )}
+            </div>
+          </FieldPanel>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+const PERIODS = [
+  { id: "all", label: "Весь час" },
+  { id: "7d", label: "7 днів" },
+  { id: "30d", label: "30 днів" },
+  { id: "90d", label: "3 місяці" },
+  { id: "month", label: "Цей місяць" },
+];
+
+function PeriodSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const active = value !== "all";
+  const current = PERIODS.find((p) => p.id === value) || PERIODS[0];
+
+  useEffect(() => {
+    const onDoc = (e) => ref.current && !ref.current.contains(e.target) && setOpen(false);
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <FieldTrigger
+        label="Період"
+        value={current.label}
+        active={active}
+        open={open}
+        minWidth={156}
+        onClick={() => setOpen((v) => !v)}
+        icon={<Calendar size={15} strokeWidth={2.4} style={{ color: active ? T.acc : T.text3 }} />}
+      />
+      <AnimatePresence>
+        {open && (
+          <FieldPanel width="w-[178px]">
+            <div className="p-1.5">
+              {PERIODS.map((p) => {
+                const rowActive = value === p.id;
+                return (
+                  <OptionRow key={p.id} active={rowActive} layoutId="period-select-active" onClick={() => { onChange(p.id); setOpen(false); }}>
+                    <span className="pl-1.5 text-[14px] font-bold" style={{ fontFamily: T.sans, color: rowActive ? T.acc : T.text2 }}>
+                      {p.label}
+                    </span>
+                    {rowActive && <Check size={14} strokeWidth={3} style={{ color: T.acc }} />}
+                  </OptionRow>
+                );
+              })}
+            </div>
+          </FieldPanel>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function periodToRange(id) {
+  const fmt = (d) => {
+    const p = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  };
+  const now = new Date();
+  const back = (days) => {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return d;
+  };
+  switch (id) {
+    case "7d": return { from: fmt(back(7)), to: fmt(now) };
+    case "30d": return { from: fmt(back(30)), to: fmt(now) };
+    case "90d": return { from: fmt(back(90)), to: fmt(now) };
+    case "month": return { from: fmt(new Date(now.getFullYear(), now.getMonth(), 1)), to: fmt(now) };
+    default: return { from: "", to: "" };
+  }
+}
+
+/* ==================================================================
+   Швидкі фільтри — пілюлі над таблицею. Працюють поверх завантажених
+   угод, тому реагують миттєво, без запиту на сервер.
+================================================================== */
+const QUICK = [
+  { id: "win",     label: "Win",          c: T.ok,   rgb: T.okRgb,   test: (t) => t.result?.trim().toLowerCase() === "win" },
+  { id: "lose",    label: "Lose",         c: T.bad,  rgb: T.badRgb,  test: (t) => t.result?.trim().toLowerCase() === "lose" },
+  { id: "be",      label: "BE",           c: T.warn, rgb: T.warnRgb, test: (t) => t.result?.trim().toLowerCase() === "be" },
+  { id: "offplan", label: "Не за планом", c: T.bad,  rgb: T.badRgb,  test: (t) => !t.followed_plan },
+  { id: "mistake", label: "З помилкою",   c: T.warn, rgb: T.warnRgb, test: (t) => !!t.has_mistake },
+  { id: "rushed",  label: "Поспіх",       c: "#fb923c", rgb: "251,146,60", test: (t) => !!t.rushed },
+];
+
+/* Критично затухаюча пружина — для натискань і кольору/фону
+   (без відскоку, бо це не жест з інерцією). Легкий bounce лишається
+   тільки на матеріалізації галочки — це момент підтвердження, тут
+   трошки «живості» доречне. */
+const CHIP_PRESS = { type: "spring", duration: 0.22, bounce: 0 };
+const CHIP_CONFIRM = { type: "spring", duration: 0.32, bounce: 0.3 };
+
+function QuickChip({ f, on, n, onToggle }) {
+  const dim = !on && n === 0;
+  return (
+    <motion.button
+      onClick={onToggle}
+      whileHover={dim ? undefined : { y: -1.5 }}
+      whileTap={{ scale: 0.95 }}
+      transition={CHIP_PRESS}
+      className="relative flex items-center gap-2 rounded-full py-2 pl-3 pr-2.5 text-[13px] font-bold"
+      style={{
+        background: on ? `rgba(${f.rgb},0.15)` : T.sunken,
+        border: `1px solid ${on ? `rgba(${f.rgb},0.42)` : T.line}`,
+        color: on ? f.c : T.text3,
+        fontFamily: T.sans,
+        opacity: dim ? 0.42 : 1,
+        boxShadow: on
+          ? `inset 0 1px 0 rgba(255,255,255,0.06), 0 6px 18px -8px rgba(${f.rgb},0.55)`
+          : "inset 0 1px 0 rgba(255,255,255,0.02)",
+      }}
+      onMouseEnter={(e) => { if (!on) e.currentTarget.style.borderColor = T.lineHi; }}
+      onMouseLeave={(e) => { if (!on) e.currentTarget.style.borderColor = T.line; }}
+    >
+      {/* Крапка «матеріалізується» в галочку при виборі — підтвердження
+          дії, а не просто зміна кольору. Стартує не з нуля (scale 0.5),
+          бо нічого в реальному світі не з'являється з нізвідки. */}
+      <span className="relative grid h-4 w-4 shrink-0 place-items-center">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {on ? (
+            <motion.span
+              key="check"
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              transition={CHIP_CONFIRM}
+              className="absolute inset-0 grid place-items-center"
+            >
+              <Check size={12} strokeWidth={3.2} style={{ color: f.c }} />
+            </motion.span>
+          ) : (
+            <motion.span
+              key="dot"
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              transition={CHIP_PRESS}
+              className="absolute inset-0 grid place-items-center"
+            >
+              <span className="h-[6px] w-[6px] rounded-full" style={{ background: T.text4 }} />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </span>
+
+      {f.label}
+
+      <span
+        className="rounded-full px-1.5 py-0.5 text-[11px] tabular-nums"
+        style={{
+          fontFamily: T.mono,
+          background: on ? `rgba(${f.rgb},0.2)` : "rgba(255,255,255,0.05)",
+          color: on ? f.c : T.text4,
+        }}
+      >
+        {n}
+      </span>
+    </motion.button>
+  );
+}
+
+function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
+  const has = active.length > 0;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2.5 px-5 py-4" style={{ borderBottom: `1px solid ${T.line}` }}>
+      {QUICK.map((f) => (
+        <QuickChip key={f.id} f={f} on={active.includes(f.id)} n={counts?.[f.id] ?? 0} onToggle={() => onToggle(f.id)} />
+      ))}
+
+      <AnimatePresence>
+        {has && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={CHIP_PRESS}
+            whileTap={{ scale: 0.92 }}
+            onClick={onClear}
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-full py-1.5 pl-1.5 pr-3 text-[13px] font-bold transition-colors"
+            style={{ color: T.text4, fontFamily: T.sans, background: T.sunken, border: `1px solid ${T.line}` }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
+          >
+            <span className="grid h-5 w-5 place-items-center rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <X size={11} strokeWidth={3} />
+            </span>
+            Скинути
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      <span className="ml-auto text-[13px] font-bold tabular-nums" style={{ fontFamily: T.sans, color: T.text3, letterSpacing: "0.01em" }}>
+        {has ? `${shown} з ${total}` : `${total} угод`}
+      </span>
+    </div>
+  );
+}
 
 /* ==================================================================
    Тултип графіка. Показує все, що корисно бачити в точці: дату,
@@ -386,23 +768,23 @@ export default function TradingJournal() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <AssetFilter
+          <div className="flex flex-wrap items-center gap-2.5">
+            <AssetSelect
               options={uniquePairs}
               categories={pairCategories}
               value={filterPair}
               onChange={setFilterPair}
             />
-            <PeriodFilter value={period} onChange={setPeriod} />
+            <PeriodSelect value={period} onChange={setPeriod} />
 
             <Magnetic
               onClick={() => setIsTradeModalOpen(true)}
-              className="group ml-1 inline-flex h-[42px] shrink-0 items-center justify-center rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-[1px]"
+              className="group ml-1 inline-flex h-[54px] shrink-0 items-center justify-center rounded-2xl px-6 text-[14.5px] font-bold transition-all duration-200 hover:-translate-y-[2px]"
               style={{
                 background: "#00C896",
                 color: "#06110D",
                 fontFamily: T.sans,
-                boxShadow: "0 6px 20px -7px rgba(0, 200, 150, 0.65)",
+                boxShadow: "0 10px 28px -8px rgba(0, 200, 150, 0.55)",
               }}
             >
               <Shine className="[&>span]:!flex [&>span]:!flex-row [&>span]:!items-center [&>span]:!gap-2 [&>span]:!whitespace-nowrap">
@@ -622,7 +1004,8 @@ export default function TradingJournal() {
             getProfit={getTradeProfit}
             onOpen={setSelectedTrade}
             onDelete={setTradeToDelete}
-            loading={loadingInitial}
+            loading={loadingInitial && trades.length === 0}
+            pageSize={PAGE}
             page={page}
             totalPages={Math.max(1, Math.ceil(totalCount / PAGE))}
             onPageChange={setPage}
