@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  ChevronUp, ChevronDown, ChevronsUpDown, Trash2, Loader2,
+  ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, Trash2, Loader2,
   ShieldCheck, ShieldAlert, AlertTriangle, Zap, Inbox,
 } from 'lucide-react';
 import AssetIcon from '../ui/AssetIcon';
@@ -99,9 +99,84 @@ function SortIcon({ state }) {
   );
 }
 
+/* Вікно номерів сторінок: перша, остання, сусіди поточної — решта
+   ховається за «···», щоб при сотні сторінок рядок не розповз. */
+function pageWindow(current, total) {
+  const set = new Set([1, total, current - 1, current, current + 1]);
+  return [...set].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+}
+
+function Pagination({ page, totalPages, onChange }) {
+  if (totalPages <= 1) return null;
+  const pages = pageWindow(page, totalPages);
+
+  const navBtn = (disabled, onClick, Icon) => (
+    <motion.button
+      onClick={onClick}
+      disabled={disabled}
+      whileTap={disabled ? undefined : { scale: 0.92 }}
+      transition={SPRING}
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors duration-150 disabled:opacity-25"
+      style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text3 }}
+      onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; } }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text3; }}
+    >
+      <Icon size={15} strokeWidth={2.4} />
+    </motion.button>
+  );
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 px-5 py-4" style={{ borderTop: `1px solid ${T.line}` }}>
+      {navBtn(page === 1, () => onChange(page - 1), ChevronLeft)}
+
+      {pages.map((p, i) => {
+        const prev = pages[i - 1];
+        const showGap = prev !== undefined && p - prev > 1;
+        const active = p === page;
+        return (
+          <div key={p} className="flex items-center gap-1.5">
+            {showGap && (
+              <span className="px-1 text-[13px] tabular-nums" style={{ color: T.text4, fontFamily: T.mono }}>
+                ···
+              </span>
+            )}
+            <motion.button
+              onClick={() => onChange(p)}
+              whileTap={{ scale: 0.92 }}
+              transition={SPRING}
+              className="relative grid h-9 min-w-9 place-items-center overflow-hidden rounded-lg px-2.5 text-[13.5px] font-bold tabular-nums transition-colors duration-150"
+              style={{
+                color: active ? T.acc : T.text3,
+                border: `1px solid ${active ? T.lineAcc : 'transparent'}`,
+                fontFamily: T.mono,
+              }}
+              onMouseEnter={(e) => { if (!active) { e.currentTarget.style.color = T.text; e.currentTarget.style.background = T.sunken; } }}
+              onMouseLeave={(e) => { if (!active) { e.currentTarget.style.color = T.text3; e.currentTarget.style.background = 'transparent'; } }}
+            >
+              {/* Спільний layoutId — приглушена акцентна заливка плавно
+                  «переїжджає» між кнопками замість миттєвого стрибка. */}
+              {active && (
+                <motion.span
+                  layoutId="journal-pagination-active"
+                  transition={SPRING}
+                  className="absolute inset-0 -z-10"
+                  style={{ background: `rgba(${T.accRgb},0.14)` }}
+                />
+              )}
+              <span className="relative">{p}</span>
+            </motion.button>
+          </div>
+        );
+      })}
+
+      {navBtn(page === totalPages, () => onChange(page + 1), ChevronRight)}
+    </div>
+  );
+}
+
 export default function TradesTable({
   trades, accountsMap, getProfit, onOpen, onDelete,
-  loading, loadingMore, hasMore, onLoadMore,
+  loading, page, totalPages, onPageChange,
 }) {
   const [sort, setSort] = useState({ key: 'plan_date', dir: 'desc' });
 
@@ -292,25 +367,7 @@ export default function TradesTable({
         </table>
       </div>
 
-      {hasMore && (
-        <div className="flex justify-center px-5 py-4" style={{ borderTop: `1px solid ${T.line}` }}>
-          <motion.button
-            onClick={onLoadMore}
-            disabled={loadingMore}
-            whileTap={{ scale: 0.97 }}
-            transition={SPRING}
-            className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-bold transition-colors"
-            style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
-          >
-            {loadingMore
-              ? <Loader2 size={15} className="animate-spin" style={{ color: T.acc }} />
-              : <ChevronDown size={15} strokeWidth={2.6} />}
-            {loadingMore ? 'Завантаження...' : 'Показати ще'}
-          </motion.button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onChange={onPageChange} />
     </>
   );
 }

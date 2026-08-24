@@ -30,7 +30,7 @@ import {
   QUICK,
 } from "../components/journal/JournalControls";
 
-const PAGE = 20;
+const PAGE = 5;
 
 /* ==================================================================
    Тултип графіка. Показує все, що корисно бачити в точці: дату,
@@ -120,8 +120,8 @@ export default function TradingJournal() {
 
   const [trades, setTrades] = useState([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   const [globalStatsData, setGlobalStatsData] = useState([]);
   const [accountsMap, setAccountsMap] = useState({});
@@ -214,38 +214,41 @@ export default function TradingJournal() {
   }, [applyFilters]);
 
   const fetchTradesList = useCallback(
-    async (reset = false, currentLen = 0) => {
-      reset
-        ? (setLoadingInitial(true), setHasMore(true))
-        : setLoadingMore(true);
+    async (pageNum = 1) => {
+      setLoadingInitial(true);
       try {
-        const from = reset ? 0 : currentLen;
+        const from = (pageNum - 1) * PAGE;
         const q = applyFilters(
           supabase
             .from("trades")
-            .select("*")
+            .select("*", { count: "exact" })
             .order("plan_date", { ascending: false })
         ).range(from, from + PAGE - 1);
 
-        const { data, error } = await q;
+        const { data, error, count } = await q;
         if (error) throw error;
 
-        setTrades((prev) => (reset ? data || [] : [...prev, ...(data || [])]));
-        if (!data || data.length < PAGE) setHasMore(false);
+        setTrades(data || []);
+        setTotalCount(count || 0);
       } catch (err) {
         console.error("Помилка завантаження угод:", err);
       } finally {
         setLoadingInitial(false);
-        setLoadingMore(false);
       }
     },
     [applyFilters]
   );
 
+  /* Зміна фільтрів завжди повертає на першу сторінку — інакше
+     можна опинитись на сторінці 8, якої після фільтра вже нема. */
+  useEffect(() => {
+    setPage(1);
+  }, [filterPair, dateFrom, dateTo]);
+
   useEffect(() => {
     fetchGlobalData();
-    fetchTradesList(true);
-  }, [fetchGlobalData, fetchTradesList]);
+    fetchTradesList(page);
+  }, [fetchGlobalData, fetchTradesList, page]);
 
   /* ---------- Похідні дані ---------- */
   const stats = useMemo(() => {
@@ -337,8 +340,11 @@ export default function TradingJournal() {
     try {
       const { error } = await supabase.from("trades").delete().eq("id", id);
       if (error) throw error;
-      setTrades((prev) => prev.filter((t) => t.id !== id));
       fetchGlobalData();
+      /* Останній рядок на не першій сторінці — повертаємось на
+         попередню, інакше лишимось на порожній сторінці. */
+      if (trades.length === 1 && page > 1) setPage((p) => p - 1);
+      else fetchTradesList(page);
     } catch {
       console.error("Не вдалося видалити угоду");
     }
@@ -601,7 +607,7 @@ export default function TradingJournal() {
             active={quick}
             counts={quickCounts}
             shown={visibleTrades.length}
-            total={trades.length}
+            total={totalCount}
             onToggle={(id) =>
               setQuick((q) =>
                 q.includes(id) ? q.filter((x) => x !== id) : [...q, id]
@@ -617,9 +623,9 @@ export default function TradingJournal() {
             onOpen={setSelectedTrade}
             onDelete={setTradeToDelete}
             loading={loadingInitial}
-            loadingMore={loadingMore}
-            hasMore={hasMore && !quick.length}
-            onLoadMore={() => fetchTradesList(false, trades.length)}
+            page={page}
+            totalPages={Math.max(1, Math.ceil(totalCount / PAGE))}
+            onPageChange={setPage}
           />
         </motion.div>
       </motion.div>
@@ -727,7 +733,9 @@ export default function TradingJournal() {
         onClose={() => {
           setIsTradeModalOpen(false);
           fetchGlobalData();
-          fetchTradesList(true);
+          /* Нова угода спливає найновішою — показуємо першу сторінку. */
+          if (page === 1) fetchTradesList(1);
+          else setPage(1);
         }}
       />
 
@@ -739,12 +747,13 @@ export default function TradingJournal() {
             onClose={() => setSelectedTrade(null)}
             onDeleted={(id) => {
               setSelectedTrade(null);
-              setTrades((prev) => prev.filter((t) => t.id !== id));
               fetchGlobalData();
+              if (trades.length === 1 && page > 1) setPage((p) => p - 1);
+              else fetchTradesList(page);
             }}
             onUpdated={() => {
               fetchGlobalData();
-              fetchTradesList(true);
+              fetchTradesList(page);
             }}
           />
         )}
