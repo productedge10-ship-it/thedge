@@ -1,14 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=UnifrakturMaguntia&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=UnifrakturMaguntia&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
 body {
   background-color: #111111;
-  color: #EDEDED;
-  font-family: 'Roboto', sans-serif;
+  color: #ededed;
+  font-family: "Roboto", sans-serif;
   margin: 0;
+}
+.recharts-wrapper,
+.recharts-wrapper *,
+.recharts-surface {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible,
+.recharts-wrapper svg:focus,
+.recharts-wrapper svg:focus-visible {
+  outline: none !important;
 }
 
 /* Кастомний скроллбар для краси */
@@ -20,11 +31,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2D2D2D;
+  background: #2d2d2d;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3D3D3D;
+  background: #3d3d3d;
 }
 /* Стилі для Tiptap Editor */
 /* Стилі для Tiptap Editor */
@@ -42,7 +53,8 @@ body {
 .tiptap p {
   margin-bottom: 0.5rem;
 }
-.tiptap strong, .tiptap b {
+.tiptap strong,
+.tiptap b {
   font-weight: 800 !important;
   color: inherit; /* Щоб колір тексту застосовувався і до жирного */
 }
@@ -58,7 +70,7 @@ body {
   font-weight: bold;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
-  color: #EDEDED;
+  color: #ededed;
 }
 .tiptap ul {
   list-style-type: disc;
@@ -71,11 +83,11 @@ body {
   margin-bottom: 0.5rem;
 }
 .tiptap blockquote {
-  border-left: 3px solid #3B82F6;
+  border-left: 3px solid #3b82f6;
   padding-left: 1rem;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
-  color: #A1A1AA;
+  color: #a1a1aa;
   font-style: italic;
 }
 /* index.css / App.css */
@@ -136,7 +148,6 @@ body {
   background: rgba(0, 0, 0, 0.28);
 }
 
-
 /* ==================================================================
    Значення за замовчуванням для токенів теми.
 
@@ -152,42 +163,45 @@ body {
      спалахнути на повну й потім пригаснути. */
   --edge-fx: 0.6;
 
-  --edge-bg: #0A0A0C;
+  --edge-bg: #0a0a0c;
   --edge-surface: #131316;
-  --edge-surface-hi: #18181C;
-  --edge-sunken: #0D0D10;
+  --edge-surface-hi: #18181c;
+  --edge-sunken: #0d0d10;
   --edge-line: #232328;
-  --edge-line-hi: #33333A;
-  --edge-line-acc: rgba(139,123,255,0.35);
-  --edge-text: #FAFAFA;
-  --edge-text2: #B4B4BD;
-  --edge-text3: #7A7A85;
-  --edge-text4: #4A4A52;
+  --edge-line-hi: #33333a;
+  --edge-line-acc: rgba(139, 123, 255, 0.35);
+  --edge-text: #fafafa;
+  --edge-text2: #b4b4bd;
+  --edge-text3: #7a7a85;
+  --edge-text4: #4a4a52;
   --edge-acc: #8b7bff;
-  --edge-acc-rgb: 139,123,255;
-  --edge-acc-soft: rgba(139,123,255,0.10);
-  --edge-acc-line: rgba(139,123,255,0.25);
+  --edge-acc-rgb: 139, 123, 255;
+  --edge-acc-soft: rgba(139, 123, 255, 0.1);
+  --edge-acc-line: rgba(139, 123, 255, 0.25);
   --edge-ok: #34d399;
-  --edge-ok-rgb: 52,211,153;
+  --edge-ok-rgb: 52, 211, 153;
   --edge-warn: #fbbf24;
-  --edge-warn-rgb: 251,191,36;
+  --edge-warn-rgb: 251, 191, 36;
   --edge-bad: #f87171;
-  --edge-bad-rgb: 248,113,113;
+  --edge-bad-rgb: 248, 113, 113;
   --edge-info: #60a5fa;
-  --edge-info-rgb: 96,165,250;
+  --edge-info-rgb: 96, 165, 250;
   --edge-shell: #07080b;
-  --edge-hair: rgba(255,255,255,0.07);
-  --edge-hair-strong: rgba(255,255,255,0.14);
+  --edge-hair: rgba(255, 255, 255, 0.07);
+  --edge-hair-strong: rgba(255, 255, 255, 0.14);
   --edge-nav: #8b95a7;
   --edge-nav-active: #f4f6fa;
-  --edge-nav-dim: rgba(150,160,179,0.5);
-  --edge-nav-hover: rgba(255,255,255,0.035);
-  --edge-panel: rgba(12,13,18,0.95);
-  --edge-panel-shadow: 0 40px 100px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.08);
-  --edge-card-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 24px 48px -32px rgba(0,0,0,0.9);
-  --edge-dot: rgba(255,255,255,0.9);
+  --edge-nav-dim: rgba(150, 160, 179, 0.5);
+  --edge-nav-hover: rgba(255, 255, 255, 0.035);
+  --edge-panel: rgba(12, 13, 18, 0.95);
+  --edge-panel-shadow: 0 40px 100px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --edge-card-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 24px 48px -32px rgba(0, 0, 0, 0.9);
+  --edge-dot: rgba(255, 255, 255, 0.9);
   --edge-wordmark: #f2f4f8;
-  --edge-on-acc: #0A0A0C;
-  --edge-mono-bg: rgba(10,11,15,0.95);
-  --edge-mono-shadow: 0 8px 20px -6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2);
+  --edge-on-acc: #0a0a0c;
+  --edge-mono-bg: rgba(10, 11, 15, 0.95);
+  --edge-mono-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
