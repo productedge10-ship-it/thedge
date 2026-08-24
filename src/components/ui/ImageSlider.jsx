@@ -82,7 +82,7 @@ function Lens({ src, containerRef, enabled }) {
 export default function ImageSlider({ images = [], containerClassName = '' }) {
   const [index, setIndex] = useState(0);
   const [full, setFull] = useState(false);
-  const [lensOn, setLensOn] = useState(true);
+  const [lensOn, setLensOn] = useState(false);
   const [hovering, setHovering] = useState(false);
   const wrapRef = useRef(null);
   const fullRef = useRef(null);
