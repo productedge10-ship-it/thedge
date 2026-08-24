@@ -37,6 +37,26 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #3d3d3d;
 }
+
+/* Тонший скролбар для компактних випадашок (напр. фільтр активів) —
+   у колір поверхні модалки, а не сірий системний */
+.asset-dropdown-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.asset-dropdown-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.asset-dropdown-scroll::-webkit-scrollbar-thumb {
+  background: var(--edge-line-hi);
+  border-radius: 3px;
+}
+.asset-dropdown-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--edge-hair-strong);
+}
+.asset-dropdown-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge-line-hi) transparent;
+}
 /* Стилі для Tiptap Editor */
 /* Стилі для Tiptap Editor */
 .tiptap {

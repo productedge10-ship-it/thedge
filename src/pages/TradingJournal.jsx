@@ -134,6 +134,7 @@ export default function TradingJournal() {
   const [tradeToDelete, setTradeToDelete] = useState(null);
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState(null);
+  const [pairCategories, setPairCategories] = useState({});
 
   const { from: dateFrom, to: dateTo } = useMemo(
     () => periodToRange(period),
@@ -162,6 +163,30 @@ export default function TradingJournal() {
           "All",
           ...new Set(data.map((t) => t.plan_pair).filter(Boolean)),
         ]);
+    })();
+
+    (async () => {
+      const CACHE_KEY = "journal_instrument_categories_v1";
+      const CACHE_TIME_KEY = "journal_instrument_categories_time_v1";
+      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+      const cached = localStorage.getItem(CACHE_KEY);
+      const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
+      if (cached && cachedTime && Date.now() - Number(cachedTime) < ONE_DAY_MS) {
+        try {
+          setPairCategories(JSON.parse(cached));
+          return;
+        } catch {}
+      }
+
+      const { data } = await supabase.from("instruments").select("symbol, category");
+      if (data) {
+        const map = {};
+        data.forEach((i) => { map[i.symbol] = i.category; });
+        setPairCategories(map);
+        localStorage.setItem(CACHE_KEY, JSON.stringify(map));
+        localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+      }
     })();
   }, []);
 
@@ -358,6 +383,7 @@ export default function TradingJournal() {
           <div className="flex flex-wrap items-center gap-2">
             <AssetFilter
               options={uniquePairs}
+              categories={pairCategories}
               value={filterPair}
               onChange={setFilterPair}
             />
@@ -365,21 +391,21 @@ export default function TradingJournal() {
 
             <Magnetic
               onClick={() => setIsTradeModalOpen(true)}
-              className="group ml-1 inline-flex h-[42px] shrink-0 items-center whitespace-nowrap rounded-xl px-5 text-[14px] font-bold"
+              className="group ml-1 inline-flex h-[42px] shrink-0 items-center justify-center rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-[1px]"
               style={{
-                background: T.acc,
-                color: "var(--edge-bg, #0A0A0C)",
+                background: "#00C896",
+                color: "#06110D",
                 fontFamily: T.sans,
-                boxShadow: `0 6px 20px -6px rgba(${T.accRgb},0.55)`,
+                boxShadow: "0 6px 20px -7px rgba(0, 200, 150, 0.65)",
               }}
             >
-              <Shine className="flex h-full items-center gap-2 whitespace-nowrap rounded-xl">
+              <Shine className="[&>span]:!flex [&>span]:!flex-row [&>span]:!items-center [&>span]:!gap-2 [&>span]:!whitespace-nowrap">
                 <Plus
                   size={16}
                   strokeWidth={3}
-                  className="shrink-0 transition-transform duration-300 group-hover:rotate-90"
+                  className="!block !shrink-0 transition-transform duration-300 group-hover:rotate-90"
                 />
-                Додати угоду
+                <span className="!whitespace-nowrap">Додати угоду</span>
               </Shine>
             </Magnetic>
           </div>
@@ -397,7 +423,7 @@ export default function TradingJournal() {
         {/* ─────────── Графік ─────────── */}
         <motion.div
           variants={fadeUp}
-          className="mt-5 overflow-hidden rounded-2xl select-none"
+          className="mt-5 overflow-hidden rounded-2xl "
           style={{ background: T.surface, border: `1px solid ${T.line}` }}
         >
           <div
