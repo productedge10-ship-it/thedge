@@ -233,7 +233,7 @@ function Editable({ value, onChange, editing, placeholder, minRows = 4, maxRows 
   if (!editing) {
     return value?.trim() ? (
       <p
-        className="max-h-[320px] overflow-y-auto whitespace-pre-wrap pr-1 text-[16px]"
+        className="notes-scroll max-h-[320px] overflow-y-auto whitespace-pre-wrap pr-1 text-[16px]"
         style={{ fontFamily: T.sans, lineHeight: 1.6, color: T.text2 }}
       >
         {value}
@@ -252,7 +252,7 @@ function Editable({ value, onChange, editing, placeholder, minRows = 4, maxRows 
       minRows={minRows}
       maxRows={maxRows}
       spellCheck={false}
-      className="w-full resize-none rounded-lg border-none px-3 py-2.5 outline-none"
+      className="notes-scroll w-full resize-none rounded-lg border-none px-3 py-2.5 outline-none"
       style={{ fontFamily: T.sans, fontSize: 15.5, lineHeight: 1.65, color: T.text, background: T.bg }}
     />
   );
@@ -866,7 +866,7 @@ export default function TradeDetailsModal({
                     </div>
                     {(editing || d.psy_notes?.trim()) && (
                       <div className="px-3.5 py-3" style={{ borderTop: `1px solid ${T.line}` }}>
-                        <Editable editing={editing} value={d.psy_notes} onChange={(v) => set({ psy_notes: v })} placeholder="Нотаток про стан немає" minRows={2} />
+                        <Editable editing={editing} value={d.psy_notes} onChange={(v) => set({ psy_notes: v })} placeholder="Нотаток про стан немає" minRows={2} maxRows={5} />
                       </div>
                     )}
                   </motion.div>

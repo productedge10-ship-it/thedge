@@ -57,6 +57,27 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--edge-line-hi) transparent;
 }
+
+/* Тонкий скролбар для текстових полів редагування (напр. нотатки
+   про стан у картці угоди) — щоб довгий текст гортався всередині
+   свого блоку, а не розтягував усю модалку. */
+.notes-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.notes-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.notes-scroll::-webkit-scrollbar-thumb {
+  background: var(--edge-line-hi);
+  border-radius: 4px;
+}
+.notes-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--edge-acc, #8b7bff);
+}
+.notes-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge-line-hi) transparent;
+}
 /* Стилі для Tiptap Editor */
 /* Стилі для Tiptap Editor */
 .tiptap {

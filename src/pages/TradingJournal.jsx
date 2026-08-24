@@ -300,15 +300,15 @@ const QUICK = [
   { id: "rushed",  label: "Поспіх",       icon: Zap,          c: "#fb923c", rgb: "251,146,60", test: (t) => !!t.rushed },
 ];
 
-/* Критично затухаюча пружина для натискань/ховерів (без відскоку —
-   це не жест з інерцією), і окрема — з легким bounce — тільки для
-   моменту підтвердження вибору (іконка «оживає»). */
 const TILE_PRESS = { type: "spring", duration: 0.22, bounce: 0 };
-const TILE_CONFIRM = { type: "spring", duration: 0.36, bounce: 0.32 };
+const TILE_CONFIRM = { type: "spring", duration: 0.34, bounce: 0.3 };
+const CHECK_MONO = "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace";
 
-/* Швидкий фільтр — не пілюля, а компактна KPI-картка: та сама мова,
-   що й у StatCards вище на сторінці. Число — головне, воно й веде
-   око; іконка-бейдж «оживає» кольором лише коли фільтр активний. */
+/* Швидкий фільтр — компактна картка з іконкою-бейджем. Активний
+   стан читається одразу з трьох сигналів одночасно (не тільки
+   з кольору): верхня риска, підсвічений бейдж, і сама іконка, що
+   «оживає» легким bounce-переходом — щоб клік відчувався подією,
+   а не просто перемиканням кольору. */
 function QuickTile({ f, on, n, onToggle }) {
   const Icon = f.icon;
   const dim = !on && n === 0;
@@ -317,53 +317,53 @@ function QuickTile({ f, on, n, onToggle }) {
     <motion.button
       onClick={onToggle}
       disabled={dim}
-      whileHover={dim ? undefined : { y: -3 }}
-      whileTap={dim ? undefined : { scale: 0.97 }}
+      whileHover={dim ? undefined : { y: -2 }}
+      whileTap={dim ? undefined : { scale: 0.96 }}
       transition={TILE_PRESS}
-      className="group relative flex min-w-[128px] items-center gap-3 overflow-hidden rounded-2xl px-3.5 py-3 text-left"
+      className="group relative flex min-w-[118px] items-center gap-2.5 overflow-hidden rounded-xl px-3.5 py-2.5 text-left"
       style={{
-        background: on ? `linear-gradient(165deg, rgba(${f.rgb},0.16), rgba(${f.rgb},0.04))` : T.sunken,
-        border: `1px solid ${on ? `rgba(${f.rgb},0.45)` : T.line}`,
-        opacity: dim ? 0.38 : 1,
+        background: on ? `linear-gradient(165deg, rgba(${f.rgb},0.15), rgba(${f.rgb},0.03))` : T.sunken,
+        border: `1px solid ${on ? `rgba(${f.rgb},0.42)` : T.line}`,
+        opacity: dim ? 0.4 : 1,
         boxShadow: on
-          ? `inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 26px -10px rgba(${f.rgb},0.6)`
+          ? `inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 20px -10px rgba(${f.rgb},0.55)`
           : "inset 0 1px 0 rgba(255,255,255,0.02)",
         cursor: dim ? "default" : "pointer",
       }}
       onMouseEnter={(e) => { if (!on && !dim) e.currentTarget.style.borderColor = T.lineHi; }}
       onMouseLeave={(e) => { if (!on) e.currentTarget.style.borderColor = T.line; }}
     >
-      {/* Верхня акцентна риска — тонкий сигнал стану, як у картках біржових терміналів */}
+      {/* Верхня акцентна риска — сигнал стану ще до того, як прочитав число */}
       <span
         className="absolute inset-x-0 top-0 h-[2px] origin-left transition-transform duration-300"
         style={{ background: f.c, transform: on ? "scaleX(1)" : "scaleX(0)" }}
       />
 
       <span
-        className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl"
-        style={{ background: on ? `rgba(${f.rgb},0.22)` : "rgba(255,255,255,0.04)" }}
+        className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors duration-200"
+        style={{ background: on ? `rgba(${f.rgb},0.2)` : "rgba(255,255,255,0.04)" }}
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span
             key={on ? "on" : "off"}
-            initial={{ scale: 0.6, opacity: 0, rotate: on ? -20 : 0 }}
+            initial={{ scale: 0.55, opacity: 0, rotate: on ? -18 : 0 }}
             animate={{ scale: 1, opacity: 1, rotate: 0 }}
-            exit={{ scale: 0.6, opacity: 0 }}
+            exit={{ scale: 0.55, opacity: 0 }}
             transition={TILE_CONFIRM}
           >
-            <Icon size={16} strokeWidth={2.4} style={{ color: on ? f.c : T.text4 }} />
+            <Icon size={14.5} strokeWidth={2.4} style={{ color: on ? f.c : T.text4 }} />
           </motion.span>
         </AnimatePresence>
       </span>
 
       <span className="flex min-w-0 flex-col gap-0.5">
         <span
-          className="truncate text-[11px] font-bold uppercase tracking-[0.08em]"
+          className="truncate text-[10.5px] font-bold uppercase tracking-[0.07em]"
           style={{ fontFamily: T.sans, color: on ? f.c : T.text4 }}
         >
           {f.label}
         </span>
-        <span className="text-[19px] font-black leading-none tabular-nums" style={{ fontFamily: T.mono, color: on ? T.text : T.text2 }}>
+        <span className="text-[17px] font-black leading-none tabular-nums" style={{ fontFamily: CHECK_MONO, color: on ? T.text : T.text2 }}>
           {n}
         </span>
       </span>
@@ -375,12 +375,11 @@ function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
   const has = active.length > 0;
 
   return (
-    <div className="px-5 py-4" style={{ borderBottom: `1px solid ${T.line}`, background: `linear-gradient(180deg, rgba(255,255,255,0.015), transparent)` }}>
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+    <div className="px-5 py-3.5" style={{ borderBottom: `1px solid ${T.line}` }}>
+      <div className="mb-2.5 flex items-center justify-between">
+        <span className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
           Швидкі фільтри
         </span>
-
         <div className="flex items-center gap-3">
           <AnimatePresence>
             {has && (
@@ -391,15 +390,12 @@ function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
                 transition={TILE_PRESS}
                 whileTap={{ scale: 0.94 }}
                 onClick={onClear}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-full py-1 pl-1 pr-2.5 text-[12px] font-bold"
-                style={{ color: T.text4, fontFamily: T.sans, background: T.sunken, border: `1px solid ${T.line}` }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
+                className="flex items-center gap-1 text-[12px] font-bold transition-colors"
+                style={{ color: T.text4, fontFamily: T.sans }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
+                onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
               >
-                <span className="grid h-4 w-4 place-items-center rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
-                  <X size={9} strokeWidth={3.2} />
-                </span>
-                Скинути
+                <X size={11} strokeWidth={3} /> Скинути
               </motion.button>
             )}
           </AnimatePresence>
@@ -409,7 +405,7 @@ function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-wrap gap-2">
         {QUICK.map((f) => (
           <QuickTile key={f.id} f={f} on={active.includes(f.id)} n={counts?.[f.id] ?? 0} onToggle={() => onToggle(f.id)} />
         ))}
