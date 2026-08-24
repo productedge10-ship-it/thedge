@@ -33,10 +33,13 @@ const MONO = "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, m
 const SPRING_UI = { type: 'spring', duration: 0.35, bounce: 0 };
 const SPRING_TAP = { type: 'spring', duration: 0.22, bounce: 0 };
 
+/* value — те, що йде в базу (лишається сумісним з рештою застосунку:
+   таблицею угод, фільтрами, статистикою); label — те, що бачить
+   трейдер тут: Take/Stop замість Win/Lose. */
 const RESULT_OPTS = [
-  { value: 'Win',  c: T.ok,   rgb: T.okRgb },
-  { value: 'Lose', c: T.bad,  rgb: T.badRgb },
-  { value: 'BE',   c: T.warn, rgb: T.warnRgb },
+  { value: 'Win',  label: 'Take', c: T.ok,   rgb: T.okRgb },
+  { value: 'Lose', label: 'Stop', c: T.bad,  rgb: T.badRgb },
+  { value: 'BE',   label: 'BE',   c: T.warn, rgb: T.warnRgb },
 ];
 
 const SESSIONS = ['Asia', 'London', 'New York'];
@@ -111,12 +114,12 @@ function YesNo({ value, onChange, editing, invert }) {
   );
 }
 
-function PillGroup({ options, value, onChange, editing, colorMap, groupId }) {
+function PillGroup({ options, value, onChange, editing, colorMap, groupId, labelMap }) {
   if (!editing) {
     const c = colorMap?.[value];
     return (
       <span className="text-[15.5px] font-semibold" style={{ color: c ? c.c : T.text2, fontFamily: MONO }}>
-        {value || '—'}
+        {value ? (labelMap?.[value] ?? value) : '—'}
       </span>
     );
   }
@@ -148,7 +151,7 @@ function PillGroup({ options, value, onChange, editing, colorMap, groupId }) {
                 style={{ background: c ? `rgba(${c.rgb},0.14)` : `rgba(${T.accRgb},0.14)` }}
               />
             )}
-            <span className="relative">{o}</span>
+            <span className="relative">{labelMap?.[o] ?? o}</span>
           </motion.button>
         );
       })}
@@ -391,6 +394,7 @@ export default function TradeDetailsModal({
   const rrColor = isNaN(rr) ? T.text4 : rr > 0 ? T.ok : rr < 0 ? T.bad : T.text3;
   const isLong = d.type === 'Long';
   const resultMap = Object.fromEntries(RESULT_OPTS.map((r) => [r.value, r]));
+  const resultLabelMap = Object.fromEntries(RESULT_OPTS.map((r) => [r.value, r.label]));
   const typeMap = { Long: { c: T.ok, rgb: T.okRgb }, Short: { c: T.bad, rgb: T.badRgb } };
 
   const rrDisplay = isNaN(rr) ? '—' : `${rr > 0 ? '+' : ''}${rr}R`;
@@ -464,7 +468,7 @@ export default function TradeDetailsModal({
                   className="rounded-md px-2.5 py-[3px] text-[11.5px] font-bold uppercase tracking-[0.1em]"
                   style={{ background: `rgba(${res.rgb},0.09)`, border: `1px solid rgba(${res.rgb},0.24)`, color: res.c, fontFamily: MONO }}
                 >
-                  {res.value}
+                  {res.label}
                 </span>
               )}
               <span className="rounded-md px-2.5 py-[3px] text-[11.5px] tracking-[0.08em]" style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text3, fontFamily: MONO }}>
@@ -661,7 +665,7 @@ export default function TradeDetailsModal({
 
               <div className="flex flex-col gap-2 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
                 <Eyebrow>РЕЗУЛЬТАТ</Eyebrow>
-                <PillGroup groupId="result" editing={editing} options={RESULT_OPTS.map((r) => r.value)} value={d.result} onChange={(v) => set({ result: v })} colorMap={resultMap} />
+                <PillGroup groupId="result" editing={editing} options={RESULT_OPTS.map((r) => r.value)} value={d.result} onChange={(v) => set({ result: v })} colorMap={resultMap} labelMap={resultLabelMap} />
               </div>
 
               <div className="grid grid-cols-2">

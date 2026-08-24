@@ -12,8 +12,8 @@ import {
   CartesianGrid,
 } from "recharts";
 import {
-  BookOpen, Plus, TrendingUp, AlertTriangle, X,
-  Filter, Calendar, ChevronDown, Check, Search,
+  BookOpen, Plus, TrendingUp, TrendingDown, Minus, AlertTriangle, X,
+  Filter, Calendar, ChevronDown, Check, Search, ShieldAlert, AlertOctagon, Zap,
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
@@ -37,14 +37,14 @@ const PAGE = 10;
    миттєвий пошук, бо список активів росте разом з журналом.
 ================================================================== */
 
-function FieldTrigger({ label, value, icon, active, open, onClick, minWidth = 172 }) {
+function FieldTrigger({ label, value, icon, active, open, onClick, minWidth = 148 }) {
   return (
     <motion.button
       onClick={onClick}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       transition={SPRING}
-      className="relative flex h-[54px] flex-col justify-center gap-1 rounded-2xl px-4 text-left"
+      className="relative flex h-[44px] flex-col justify-center gap-0.5 rounded-xl px-3 text-left"
       style={{
         minWidth,
         background: active
@@ -52,24 +52,24 @@ function FieldTrigger({ label, value, icon, active, open, onClick, minWidth = 17
           : T.sunken,
         border: `1px solid ${open || active ? T.lineAcc : T.line}`,
         boxShadow: open
-          ? `0 14px 34px -12px rgba(${T.accRgb},0.5)`
+          ? `0 10px 26px -10px rgba(${T.accRgb},0.5)`
           : active
-          ? `0 6px 18px -9px rgba(${T.accRgb},0.3)`
+          ? `0 4px 14px -7px rgba(${T.accRgb},0.3)`
           : "none",
       }}
     >
-      <span className="flex items-center justify-between gap-3">
+      <span className="flex items-center justify-between gap-2.5">
         <span
-          className="text-[10px] font-bold uppercase tracking-[0.16em]"
+          className="text-[9px] font-bold uppercase tracking-[0.14em]"
           style={{ fontFamily: T.sans, color: active ? T.acc : T.text4 }}
         >
           {label}
         </span>
         <motion.span animate={{ rotate: open ? 180 : 0 }} transition={SPRING} className="flex shrink-0">
-          <ChevronDown size={13} strokeWidth={2.6} style={{ color: active ? T.acc : T.text4 }} />
+          <ChevronDown size={11} strokeWidth={2.6} style={{ color: active ? T.acc : T.text4 }} />
         </motion.span>
       </span>
-      <span className="flex min-w-0 items-center gap-2 text-[15px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
+      <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
         {icon}
         <span className="truncate">{value}</span>
       </span>
@@ -147,11 +147,11 @@ function AssetSelect({ options, value, onChange, categories }) {
         onClick={() => setOpen((v) => !v)}
         icon={
           active ? (
-            <span className="flex w-6 shrink-0 items-center justify-start">
+            <span className="flex w-5 shrink-0 scale-[0.8] items-center justify-start">
               <AssetIcon symbol={value} category={categories[value]} />
             </span>
           ) : (
-            <Filter size={15} strokeWidth={2.4} style={{ color: T.text3 }} />
+            <Filter size={13} strokeWidth={2.4} style={{ color: T.text3 }} />
           )
         }
       />
@@ -240,9 +240,9 @@ function PeriodSelect({ value, onChange }) {
         value={current.label}
         active={active}
         open={open}
-        minWidth={156}
+        minWidth={132}
         onClick={() => setOpen((v) => !v)}
-        icon={<Calendar size={15} strokeWidth={2.4} style={{ color: active ? T.acc : T.text3 }} />}
+        icon={<Calendar size={13} strokeWidth={2.4} style={{ color: active ? T.acc : T.text3 }} />}
       />
       <AnimatePresence>
         {open && (
@@ -292,85 +292,80 @@ function periodToRange(id) {
    угод, тому реагують миттєво, без запиту на сервер.
 ================================================================== */
 const QUICK = [
-  { id: "win",     label: "Win",          c: T.ok,   rgb: T.okRgb,   test: (t) => t.result?.trim().toLowerCase() === "win" },
-  { id: "lose",    label: "Lose",         c: T.bad,  rgb: T.badRgb,  test: (t) => t.result?.trim().toLowerCase() === "lose" },
-  { id: "be",      label: "BE",           c: T.warn, rgb: T.warnRgb, test: (t) => t.result?.trim().toLowerCase() === "be" },
-  { id: "offplan", label: "Не за планом", c: T.bad,  rgb: T.badRgb,  test: (t) => !t.followed_plan },
-  { id: "mistake", label: "З помилкою",   c: T.warn, rgb: T.warnRgb, test: (t) => !!t.has_mistake },
-  { id: "rushed",  label: "Поспіх",       c: "#fb923c", rgb: "251,146,60", test: (t) => !!t.rushed },
+  { id: "win",     label: "Win",          icon: TrendingUp,   c: T.ok,   rgb: T.okRgb,   test: (t) => t.result?.trim().toLowerCase() === "win" },
+  { id: "lose",    label: "Lose",         icon: TrendingDown, c: T.bad,  rgb: T.badRgb,  test: (t) => t.result?.trim().toLowerCase() === "lose" },
+  { id: "be",      label: "BE",           icon: Minus,        c: T.warn, rgb: T.warnRgb, test: (t) => t.result?.trim().toLowerCase() === "be" },
+  { id: "offplan", label: "Не за планом", icon: ShieldAlert,  c: T.bad,  rgb: T.badRgb,  test: (t) => !t.followed_plan },
+  { id: "mistake", label: "З помилкою",   icon: AlertOctagon, c: T.warn, rgb: T.warnRgb, test: (t) => !!t.has_mistake },
+  { id: "rushed",  label: "Поспіх",       icon: Zap,          c: "#fb923c", rgb: "251,146,60", test: (t) => !!t.rushed },
 ];
 
-/* Критично затухаюча пружина — для натискань і кольору/фону
-   (без відскоку, бо це не жест з інерцією). Легкий bounce лишається
-   тільки на матеріалізації галочки — це момент підтвердження, тут
-   трошки «живості» доречне. */
-const CHIP_PRESS = { type: "spring", duration: 0.22, bounce: 0 };
-const CHIP_CONFIRM = { type: "spring", duration: 0.32, bounce: 0.3 };
+/* Критично затухаюча пружина для натискань/ховерів (без відскоку —
+   це не жест з інерцією), і окрема — з легким bounce — тільки для
+   моменту підтвердження вибору (іконка «оживає»). */
+const TILE_PRESS = { type: "spring", duration: 0.22, bounce: 0 };
+const TILE_CONFIRM = { type: "spring", duration: 0.36, bounce: 0.32 };
 
-function QuickChip({ f, on, n, onToggle }) {
+/* Швидкий фільтр — не пілюля, а компактна KPI-картка: та сама мова,
+   що й у StatCards вище на сторінці. Число — головне, воно й веде
+   око; іконка-бейдж «оживає» кольором лише коли фільтр активний. */
+function QuickTile({ f, on, n, onToggle }) {
+  const Icon = f.icon;
   const dim = !on && n === 0;
+
   return (
     <motion.button
       onClick={onToggle}
-      whileHover={dim ? undefined : { y: -1.5 }}
-      whileTap={{ scale: 0.95 }}
-      transition={CHIP_PRESS}
-      className="relative flex items-center gap-2 rounded-full py-2 pl-3 pr-2.5 text-[13px] font-bold"
+      disabled={dim}
+      whileHover={dim ? undefined : { y: -3 }}
+      whileTap={dim ? undefined : { scale: 0.97 }}
+      transition={TILE_PRESS}
+      className="group relative flex min-w-[128px] items-center gap-3 overflow-hidden rounded-2xl px-3.5 py-3 text-left"
       style={{
-        background: on ? `rgba(${f.rgb},0.15)` : T.sunken,
-        border: `1px solid ${on ? `rgba(${f.rgb},0.42)` : T.line}`,
-        color: on ? f.c : T.text3,
-        fontFamily: T.sans,
-        opacity: dim ? 0.42 : 1,
+        background: on ? `linear-gradient(165deg, rgba(${f.rgb},0.16), rgba(${f.rgb},0.04))` : T.sunken,
+        border: `1px solid ${on ? `rgba(${f.rgb},0.45)` : T.line}`,
+        opacity: dim ? 0.38 : 1,
         boxShadow: on
-          ? `inset 0 1px 0 rgba(255,255,255,0.06), 0 6px 18px -8px rgba(${f.rgb},0.55)`
+          ? `inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 26px -10px rgba(${f.rgb},0.6)`
           : "inset 0 1px 0 rgba(255,255,255,0.02)",
+        cursor: dim ? "default" : "pointer",
       }}
-      onMouseEnter={(e) => { if (!on) e.currentTarget.style.borderColor = T.lineHi; }}
+      onMouseEnter={(e) => { if (!on && !dim) e.currentTarget.style.borderColor = T.lineHi; }}
       onMouseLeave={(e) => { if (!on) e.currentTarget.style.borderColor = T.line; }}
     >
-      {/* Крапка «матеріалізується» в галочку при виборі — підтвердження
-          дії, а не просто зміна кольору. Стартує не з нуля (scale 0.5),
-          бо нічого в реальному світі не з'являється з нізвідки. */}
-      <span className="relative grid h-4 w-4 shrink-0 place-items-center">
+      {/* Верхня акцентна риска — тонкий сигнал стану, як у картках біржових терміналів */}
+      <span
+        className="absolute inset-x-0 top-0 h-[2px] origin-left transition-transform duration-300"
+        style={{ background: f.c, transform: on ? "scaleX(1)" : "scaleX(0)" }}
+      />
+
+      <span
+        className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl"
+        style={{ background: on ? `rgba(${f.rgb},0.22)` : "rgba(255,255,255,0.04)" }}
+      >
         <AnimatePresence mode="popLayout" initial={false}>
-          {on ? (
-            <motion.span
-              key="check"
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0 }}
-              transition={CHIP_CONFIRM}
-              className="absolute inset-0 grid place-items-center"
-            >
-              <Check size={12} strokeWidth={3.2} style={{ color: f.c }} />
-            </motion.span>
-          ) : (
-            <motion.span
-              key="dot"
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0 }}
-              transition={CHIP_PRESS}
-              className="absolute inset-0 grid place-items-center"
-            >
-              <span className="h-[6px] w-[6px] rounded-full" style={{ background: T.text4 }} />
-            </motion.span>
-          )}
+          <motion.span
+            key={on ? "on" : "off"}
+            initial={{ scale: 0.6, opacity: 0, rotate: on ? -20 : 0 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            exit={{ scale: 0.6, opacity: 0 }}
+            transition={TILE_CONFIRM}
+          >
+            <Icon size={16} strokeWidth={2.4} style={{ color: on ? f.c : T.text4 }} />
+          </motion.span>
         </AnimatePresence>
       </span>
 
-      {f.label}
-
-      <span
-        className="rounded-full px-1.5 py-0.5 text-[11px] tabular-nums"
-        style={{
-          fontFamily: T.mono,
-          background: on ? `rgba(${f.rgb},0.2)` : "rgba(255,255,255,0.05)",
-          color: on ? f.c : T.text4,
-        }}
-      >
-        {n}
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span
+          className="truncate text-[11px] font-bold uppercase tracking-[0.08em]"
+          style={{ fontFamily: T.sans, color: on ? f.c : T.text4 }}
+        >
+          {f.label}
+        </span>
+        <span className="text-[19px] font-black leading-none tabular-nums" style={{ fontFamily: T.mono, color: on ? T.text : T.text2 }}>
+          {n}
+        </span>
       </span>
     </motion.button>
   );
@@ -380,36 +375,45 @@ function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
   const has = active.length > 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5 px-5 py-4" style={{ borderBottom: `1px solid ${T.line}` }}>
-      {QUICK.map((f) => (
-        <QuickChip key={f.id} f={f} on={active.includes(f.id)} n={counts?.[f.id] ?? 0} onToggle={() => onToggle(f.id)} />
-      ))}
+    <div className="px-5 py-4" style={{ borderBottom: `1px solid ${T.line}`, background: `linear-gradient(180deg, rgba(255,255,255,0.015), transparent)` }}>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+          Швидкі фільтри
+        </span>
 
-      <AnimatePresence>
-        {has && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.85 }}
-            transition={CHIP_PRESS}
-            whileTap={{ scale: 0.92 }}
-            onClick={onClear}
-            className="flex items-center gap-1.5 whitespace-nowrap rounded-full py-1.5 pl-1.5 pr-3 text-[13px] font-bold transition-colors"
-            style={{ color: T.text4, fontFamily: T.sans, background: T.sunken, border: `1px solid ${T.line}` }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
-          >
-            <span className="grid h-5 w-5 place-items-center rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <X size={11} strokeWidth={3} />
-            </span>
-            Скинути
-          </motion.button>
-        )}
-      </AnimatePresence>
+        <div className="flex items-center gap-3">
+          <AnimatePresence>
+            {has && (
+              <motion.button
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+                transition={TILE_PRESS}
+                whileTap={{ scale: 0.94 }}
+                onClick={onClear}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full py-1 pl-1 pr-2.5 text-[12px] font-bold"
+                style={{ color: T.text4, fontFamily: T.sans, background: T.sunken, border: `1px solid ${T.line}` }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
+              >
+                <span className="grid h-4 w-4 place-items-center rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+                  <X size={9} strokeWidth={3.2} />
+                </span>
+                Скинути
+              </motion.button>
+            )}
+          </AnimatePresence>
+          <span className="text-[12px] font-bold tabular-nums" style={{ fontFamily: T.sans, color: T.text3 }}>
+            {has ? `${shown} з ${total}` : `${total} угод`}
+          </span>
+        </div>
+      </div>
 
-      <span className="ml-auto text-[13px] font-bold tabular-nums" style={{ fontFamily: T.sans, color: T.text3, letterSpacing: "0.01em" }}>
-        {has ? `${shown} з ${total}` : `${total} угод`}
-      </span>
+      <div className="flex flex-wrap gap-2.5">
+        {QUICK.map((f) => (
+          <QuickTile key={f.id} f={f} on={active.includes(f.id)} n={counts?.[f.id] ?? 0} onToggle={() => onToggle(f.id)} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -595,8 +599,25 @@ export default function TradingJournal() {
     if (!error && data) setGlobalStatsData(data);
   }, [applyFilters]);
 
+  /* Кеш сторінок у межах поточної сесії: раз завантажену сторінку
+     вдруге з сервера не тягнемо — 1→2→3→назад на 1 бере дані з
+     памʼяті миттєво. Ключ несе в собі фільтри, тому зміна активу чи
+     періоду просто працює з новим неймспейсом, а не плутається зі
+     старими сторінками. Мутації (додав/видалив/відредагував угоду)
+     скидають кеш повністю — свіжість даних важливіша за швидкість. */
+  const tradesCache = useRef({});
+  const cacheKey = (pageNum) => `${filterPair}|${dateFrom}|${dateTo}|${pageNum}`;
+
   const fetchTradesList = useCallback(
-    async (pageNum = 1) => {
+    async (pageNum = 1, { force = false } = {}) => {
+      const key = cacheKey(pageNum);
+      const cached = tradesCache.current[key];
+      if (cached && !force) {
+        setTrades(cached.data);
+        setTotalCount(cached.count);
+        return;
+      }
+
       setLoadingInitial(true);
       try {
         const from = (pageNum - 1) * PAGE;
@@ -610,6 +631,7 @@ export default function TradingJournal() {
         const { data, error, count } = await q;
         if (error) throw error;
 
+        tradesCache.current[key] = { data: data || [], count: count || 0 };
         setTrades(data || []);
         setTotalCount(count || 0);
       } catch (err) {
@@ -618,7 +640,7 @@ export default function TradingJournal() {
         setLoadingInitial(false);
       }
     },
-    [applyFilters]
+    [applyFilters, filterPair, dateFrom, dateTo]
   );
 
   /* Зміна фільтрів завжди повертає на першу сторінку — інакше
@@ -627,10 +649,17 @@ export default function TradingJournal() {
     setPage(1);
   }, [filterPair, dateFrom, dateTo]);
 
+  /* Статистика/графік не залежать від сторінки — рахуються з усього
+     відфільтрованого набору. Раніше цей запит висів у тому ж
+     ефекті, що й сторінка, тому летів у мережу при КОЖНІЙ навігації
+     між сторінками — саме це виглядало як «кожен раз підвантажує». */
   useEffect(() => {
     fetchGlobalData();
+  }, [fetchGlobalData]);
+
+  useEffect(() => {
     fetchTradesList(page);
-  }, [fetchGlobalData, fetchTradesList, page]);
+  }, [fetchTradesList, page]);
 
   /* ---------- Похідні дані ---------- */
   const stats = useMemo(() => {
@@ -700,12 +729,22 @@ export default function TradingJournal() {
     });
   }, [globalStatsData, accountsMap]);
 
-  /* Швидкі фільтри працюють локально — миттєво, без запиту */
+  /* Швидкі фільтри працюють локально — миттєво, без запиту.
+     Win/Lose/BE — взаємовиключні стани однієї угоди, тому між собою
+     вони об'єднуються через АБО (інакше вибір двох одразу завжди
+     давав порожній список). Решта прапорців (не за планом, з
+     помилкою, поспіх) — незалежні один від одного, тому лишаються
+     на І: угода має відповідати кожному з них. */
+  const RESULT_QUICK_IDS = ["win", "lose", "be"];
   const visibleTrades = useMemo(() => {
     if (!quick.length) return trades;
-    return trades.filter((t) =>
-      quick.every((id) => QUICK.find((f) => f.id === id)?.test(t))
-    );
+    const resultIds = quick.filter((id) => RESULT_QUICK_IDS.includes(id));
+    const otherIds = quick.filter((id) => !RESULT_QUICK_IDS.includes(id));
+    return trades.filter((t) => {
+      const resultOk = !resultIds.length || resultIds.some((id) => QUICK.find((f) => f.id === id)?.test(t));
+      const otherOk = otherIds.every((id) => QUICK.find((f) => f.id === id)?.test(t));
+      return resultOk && otherOk;
+    });
   }, [trades, quick]);
 
   const quickCounts = useMemo(() => {
@@ -722,11 +761,12 @@ export default function TradingJournal() {
     try {
       const { error } = await supabase.from("trades").delete().eq("id", id);
       if (error) throw error;
+      tradesCache.current = {};
       fetchGlobalData();
       /* Останній рядок на не першій сторінці — повертаємось на
          попередню, інакше лишимось на порожній сторінці. */
       if (trades.length === 1 && page > 1) setPage((p) => p - 1);
-      else fetchTradesList(page);
+      else fetchTradesList(page, { force: true });
     } catch {
       console.error("Не вдалося видалити угоду");
     }
@@ -1115,9 +1155,10 @@ export default function TradingJournal() {
         isOpen={isTradeModalOpen}
         onClose={() => {
           setIsTradeModalOpen(false);
+          tradesCache.current = {};
           fetchGlobalData();
           /* Нова угода спливає найновішою — показуємо першу сторінку. */
-          if (page === 1) fetchTradesList(1);
+          if (page === 1) fetchTradesList(1, { force: true });
           else setPage(1);
         }}
       />
@@ -1130,13 +1171,15 @@ export default function TradingJournal() {
             onClose={() => setSelectedTrade(null)}
             onDeleted={(id) => {
               setSelectedTrade(null);
+              tradesCache.current = {};
               fetchGlobalData();
               if (trades.length === 1 && page > 1) setPage((p) => p - 1);
-              else fetchTradesList(page);
+              else fetchTradesList(page, { force: true });
             }}
             onUpdated={() => {
+              tradesCache.current = {};
               fetchGlobalData();
-              fetchTradesList(page);
+              fetchTradesList(page, { force: true });
             }}
           />
         )}
