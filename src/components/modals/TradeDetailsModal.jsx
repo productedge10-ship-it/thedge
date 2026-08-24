@@ -5,8 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import TextareaAutosize from 'react-textarea-autosize';
 import {
   X, Pencil, Save, Trash2, Loader2, ExternalLink, ImagePlus,
-  ShieldCheck, ShieldAlert, AlertTriangle, Zap, Brain, FileText,
-  Wallet, Clock, ArrowUpRight, ArrowDownRight,
+  Check, AlertTriangle, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Clock,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
@@ -16,14 +15,23 @@ import { syncErrorFromTrade, fetchErrorForTrade, catsFromTrade } from '../../lib
 import { CATS } from '../errors/utils';
 import ErrorComposerModal from '../errors/ErrorComposerModal';
 import ImageSlider from '../ui/ImageSlider';
-import { T, EASE, SPRING } from '../../lib/theme';
+import { T } from '../../lib/theme';
 
 /* ==================================================================
-   Деталі угоди — редакційна двоколонка замість стосу однакових
-   карток. Зліва — розповідь (скріни, опис, процес, психологія),
-   справа — закріплена панель з результатом. Той, хто відкриває
-   картку, дивиться на цифру R, а не шукає її серед п'яти блоків.
+   Деталі угоди — термінальна фінтех-панель: JetBrains Mono для цифр,
+   розумне розкриття (за замовчуванням видно лише відхилення від
+   плану, решта ховається за «Показати все»), check/x замість
+   тексту «Так/Ні».
+
+   Редагування явно позначене: поля отримують пунктирну акцентну
+   рамку й теплуватий фон, а не просто стають клікабельними
+   непомітно. Розкриття/згортання — тільки growth за висотою й
+   opacity, ніколи translate — нічого не «виїжджає» збоку.
 ================================================================== */
+
+const MONO = "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace";
+const SPRING_UI = { type: 'spring', duration: 0.35, bounce: 0 };
+const SPRING_TAP = { type: 'spring', duration: 0.22, bounce: 0 };
 
 const RESULT_OPTS = [
   { value: 'Win',  c: T.ok,   rgb: T.okRgb },
@@ -32,109 +40,70 @@ const RESULT_OPTS = [
 ];
 
 const SESSIONS = ['Asia', 'London', 'New York'];
-const TYPES = ['Buy', 'Sell'];
+const TYPES = ['Long', 'Short'];
+
+/* Кожна сесія — свій відтінок, щоб бейдж впізнавався з першого
+   погляду, а не тільки за текстом. */
+const SESSION_COLORS = {
+  Asia: { c: '#fb7185', rgb: '251,113,133' },      // рожево-червоний
+  London: { c: '#60a5fa', rgb: '96,165,250' },     // синій
+  'New York': { c: '#34d399', rgb: '52,211,153' }, // зелений
+};
 
 /* ---------- примітиви ---------- */
 
-/* Головна цифра сайдбару. Одна на рядок, вертикально — тут немає
-   конкурентів за увагу. */
-function Metric({ label, value, color }) {
+function Eyebrow({ children }) {
   return (
-    <div className="min-w-0">
-      <span
-        className="block text-[11px] font-bold uppercase tracking-[0.09em]"
-        style={{ fontFamily: T.sans, color: T.text4 }}
-      >
-        {label}
-      </span>
-      <span
-        className="mt-1.5 block truncate text-[38px] font-black leading-none tabular-nums"
-        style={{ fontFamily: T.mono, color: color || T.text, letterSpacing: '-0.025em' }}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
-/* Рядок довідки в сайдбарі: лейбл ліворуч, значення праворуч. */
-function MetaRow({ icon: Icon, label, value, color }) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-2.5">
-      <span className="flex items-center gap-2 text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-        {Icon && <Icon size={13} strokeWidth={2.2} style={color ? { color } : undefined} />}
-        {label}
-      </span>
-      <span className="truncate text-[13.5px] font-bold tabular-nums" style={{ color: color || T.text2, fontFamily: T.mono }}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-/* Редакційний заголовок секції — eyebrow-лейбл, без коробки.
-   Розбір помилки лишається винятком: там колір несе тривогу, а
-   не просто ідентифікує розділ, тому там своя боксована картка. */
-function Section({ icon: Icon, title, sub, children }) {
-  return (
-    <section>
-      <div className="mb-3 flex items-baseline gap-2">
-        <Icon size={13} strokeWidth={2.5} style={{ color: T.text4 }} />
-        <h4 className="text-[12px] font-bold uppercase tracking-[0.09em]" style={{ fontFamily: T.sans, color: T.text3 }}>
-          {title}
-        </h4>
-        {sub && (
-          <span className="truncate text-[12px]" style={{ color: T.text4, fontFamily: T.sans }}>
-            · {sub}
-          </span>
-        )}
-      </div>
+    <span className="block text-[10.5px] font-bold uppercase tracking-[0.13em]" style={{ fontFamily: MONO, color: T.text4 }}>
       {children}
-    </section>
+    </span>
   );
 }
 
-function Toggle({ value, onChange, editing, invert }) {
+/* Check/X замість «Так/Ні» — просити прочитати слово повільніше,
+   ніж просто розпізнати зелену галку чи червоний хрестик. */
+function YesNoIcon({ good, size = 15 }) {
+  return good ? (
+    <Check size={size} strokeWidth={3} style={{ color: T.ok }} />
+  ) : (
+    <X size={size} strokeWidth={3} style={{ color: T.bad }} />
+  );
+}
+
+function YesNo({ value, onChange, editing, invert }) {
   const good = invert ? !value : value;
 
   if (!editing) {
     return (
-      <span
-        className="rounded-lg px-3 py-1.5 text-[13px] font-bold"
-        style={{
-          background: good ? `rgba(${T.okRgb},0.10)` : `rgba(${T.badRgb},0.10)`,
-          border: `1px solid ${good ? `rgba(${T.okRgb},0.24)` : `rgba(${T.badRgb},0.24)`}`,
-          color: good ? T.ok : T.bad,
-          fontFamily: T.sans,
-        }}
+      <div
+        className="grid h-6 w-6 place-items-center rounded-full"
+        style={{ background: good ? `rgba(${T.okRgb},0.12)` : `rgba(${T.badRgb},0.12)` }}
       >
-        {value ? 'Так' : 'Ні'}
-      </span>
+        <YesNoIcon good={good} size={13} />
+      </div>
     );
   }
 
   return (
     <div className="flex rounded-lg p-0.5" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
+      {/* Колір іде за формою іконки, а не за семантикою good/bad
+          конкретного поля: галочка завжди зелена, хрестик завжди
+          червоний — інакше на інвертованих полях (типу «Була
+          помилка») галочка ставала червоною, що плутало. */}
       {[true, false].map((v) => {
         const on = value === v;
-        const isGood = invert ? !v : v;
-        const c = isGood ? T.ok : T.bad;
-        const rgb = isGood ? T.okRgb : T.badRgb;
+        const c = v ? T.ok : T.bad;
+        const rgb = v ? T.okRgb : T.badRgb;
         return (
           <motion.button
             key={String(v)}
             onClick={() => onChange(v)}
-            whileTap={{ scale: 0.95 }}
-            transition={SPRING}
-            className="rounded-md px-5 py-1.5 text-[13px] font-bold transition-colors duration-150"
-            style={{
-              background: on ? `rgba(${rgb},0.12)` : 'transparent',
-              border: `1px solid ${on ? `rgba(${rgb},0.28)` : 'transparent'}`,
-              color: on ? c : T.text4,
-              fontFamily: T.sans,
-            }}
+            whileTap={{ scale: 0.92 }}
+            transition={SPRING_TAP}
+            className="grid h-6 w-8 place-items-center rounded-md transition-colors duration-150"
+            style={{ background: on ? `rgba(${rgb},0.16)` : 'transparent' }}
           >
-            {v ? 'Так' : 'Ні'}
+            {v ? <Check size={13} strokeWidth={3} style={{ color: on ? c : T.text4 }} /> : <X size={13} strokeWidth={3} style={{ color: on ? c : T.text4 }} />}
           </motion.button>
         );
       })}
@@ -142,25 +111,17 @@ function Toggle({ value, onChange, editing, invert }) {
   );
 }
 
-function PillGroup({ options, value, onChange, editing, colorMap }) {
+function PillGroup({ options, value, onChange, editing, colorMap, groupId }) {
   if (!editing) {
     const c = colorMap?.[value];
     return (
-      <span
-        className="inline-block rounded-lg px-3 py-1.5 text-[13px] font-bold"
-        style={
-          c
-            ? { background: `rgba(${c.rgb},0.10)`, border: `1px solid rgba(${c.rgb},0.24)`, color: c.c, fontFamily: T.mono }
-            : { background: 'var(--edge-hair)', border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.mono }
-        }
-      >
+      <span className="text-[13.5px] font-semibold" style={{ color: c ? c.c : T.text2, fontFamily: MONO }}>
         {value || '—'}
       </span>
     );
   }
-
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-2">
       {options.map((o) => {
         const on = value === o;
         const c = colorMap?.[o];
@@ -169,16 +130,25 @@ function PillGroup({ options, value, onChange, editing, colorMap }) {
             key={o}
             onClick={() => onChange(o)}
             whileTap={{ scale: 0.95 }}
-            transition={SPRING}
-            className="rounded-lg px-4 py-2 text-[13px] font-bold transition-colors duration-150"
+            className="relative overflow-hidden rounded-lg px-3 py-1.5 text-[12.5px] font-bold transition-colors duration-150"
             style={{
-              background: on ? (c ? `rgba(${c.rgb},0.12)` : `rgba(${T.accRgb},0.12)`) : T.bg,
-              border: `1px solid ${on ? (c ? `rgba(${c.rgb},0.30)` : T.lineAcc) : T.line}`,
+              border: `1px solid ${on ? (c ? `rgba(${c.rgb},0.32)` : T.lineAcc) : T.line}`,
               color: on ? (c ? c.c : T.acc) : T.text3,
-              fontFamily: T.mono,
+              fontFamily: MONO,
             }}
           >
-            {o}
+            {/* Спільний layoutId — фон плавно ковзає між пілюлями
+                замість того, щоб зникати на старій і зʼявлятись на
+                новій одночасно (це й читалось як «стрибає»). */}
+            {on && (
+              <motion.span
+                layoutId={`pill-bg-${groupId}`}
+                transition={SPRING_UI}
+                className="absolute inset-0 -z-10"
+                style={{ background: c ? `rgba(${c.rgb},0.14)` : `rgba(${T.accRgb},0.14)` }}
+              />
+            )}
+            <span className="relative">{o}</span>
           </motion.button>
         );
       })}
@@ -186,22 +156,85 @@ function PillGroup({ options, value, onChange, editing, colorMap }) {
   );
 }
 
+/* Час без нативного колеса прокрутки браузера — звичайний текстовий
+   інпут з іконкою годинника, як у мінімалістичних полях Apple. */
+/* Один сегмент HH або MM — велика цифра по центру, тонкі стрілки
+   вгору/вниз збоку. Клік — виділяє все, щоб просто ввести число з
+   клавіатури; колесо миші — теж крутить значення, як степер у
+   Health/Годиннику. Ніякого нативного колеса браузера. */
+function TimeSegment({ value, max, onChange }) {
+  const step = (dir) => onChange(((value + dir) % (max + 1) + (max + 1)) % (max + 1));
+  return (
+    <div className="flex items-center gap-[3px]">
+      <input
+        value={String(value).padStart(2, '0')}
+        onFocus={(e) => e.target.select()}
+        onWheel={(e) => { e.preventDefault(); step(e.deltaY < 0 ? 1 : -1); }}
+        onChange={(e) => {
+          const digits = e.target.value.replace(/\D/g, '').slice(-2);
+          if (digits === '') return onChange(0);
+          onChange(Math.min(max, parseInt(digits, 10)));
+        }}
+        className="w-[22px] border-none bg-transparent text-center outline-none"
+        style={{ color: T.text, fontFamily: MONO, fontSize: 15, fontWeight: 700 }}
+      />
+      <div className="flex flex-col">
+        <button
+          type="button"
+          onClick={() => step(1)}
+          className="grid h-[9px] w-[13px] place-items-center rounded-sm transition-colors"
+          style={{ color: T.text4 }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = T.acc)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
+        >
+          <ChevronUp size={9} strokeWidth={3} />
+        </button>
+        <button
+          type="button"
+          onClick={() => step(-1)}
+          className="grid h-[9px] w-[13px] place-items-center rounded-sm transition-colors"
+          style={{ color: T.text4 }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = T.acc)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
+        >
+          <ChevronDown size={9} strokeWidth={3} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TimeField({ value, onChange }) {
+  const [hh, mm] = (value || '').split(':');
+  const H = Math.min(23, Math.max(0, parseInt(hh, 10) || 0));
+  const M = Math.min(59, Math.max(0, parseInt(mm, 10) || 0));
+  const set = (nh, nm) => onChange(`${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`);
+
+  return (
+    <div
+      className="flex h-9 w-fit items-center gap-1.5 rounded-lg px-2.5"
+      style={{ background: T.sunken, border: `1px solid ${T.line}` }}
+    >
+      <Clock size={12} strokeWidth={2.4} style={{ color: T.text4 }} />
+      <TimeSegment value={H} max={23} onChange={(nh) => set(nh, M)} />
+      <span className="font-bold" style={{ color: T.text4, fontFamily: MONO, fontSize: 15 }}>:</span>
+      <TimeSegment value={M} max={59} onChange={(nm) => set(H, nm)} />
+    </div>
+  );
+}
+
 function Editable({ value, onChange, editing, placeholder, minRows = 4 }) {
   if (!editing) {
     return value?.trim() ? (
-      <p
-        className="whitespace-pre-wrap text-[15px]"
-        style={{ fontFamily: T.sans, lineHeight: 1.75, color: T.text2 }}
-      >
+      <p className="whitespace-pre-wrap text-[14px]" style={{ fontFamily: T.sans, lineHeight: 1.6, color: T.text2 }}>
         {value}
       </p>
     ) : (
-      <p className="text-[14px] italic" style={{ color: T.text4, fontFamily: T.sans }}>
+      <p className="text-[13.5px] italic" style={{ color: T.text4, fontFamily: T.sans }}>
         {placeholder}
       </p>
     );
   }
-
   return (
     <TextareaAutosize
       value={value || ''}
@@ -209,8 +242,8 @@ function Editable({ value, onChange, editing, placeholder, minRows = 4 }) {
       placeholder={placeholder}
       minRows={minRows}
       spellCheck={false}
-      className="w-full resize-none rounded-xl border-none px-3.5 py-3 outline-none"
-      style={{ fontFamily: T.sans, fontSize: 15, lineHeight: 1.75, color: T.text, background: T.sunken }}
+      className="w-full resize-none rounded-lg border-none px-3 py-2.5 outline-none"
+      style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.6, color: T.text, background: T.bg }}
     />
   );
 }
@@ -228,6 +261,8 @@ export default function TradeDetailsModal({
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [d, setD] = useState(trade);
+  const [processOpen, setProcessOpen] = useState(false);
+  const [psyOpen, setPsyOpen] = useState(false);
 
   /* Розбір помилки — те саме, що у формі запису: категорії, актив,
      посилання. Драфт лежить у стані й летить у журнал разом зі
@@ -244,6 +279,8 @@ export default function TradeDetailsModal({
     setEditing(false);
     setComposerOpen(false);
     setErrDraft(null);
+    setProcessOpen(false);
+    setPsyOpen(false);
     if (!trade?.id) return;
     fetchErrorForTrade(user?.id, trade.id)
       .then((e) => { if (e) setErrDraft({ cats: e.cats, tvLink: e.tvLink || '', reasons: e.reasons || [], pair: e.pair }); })
@@ -345,9 +382,37 @@ export default function TradeDetailsModal({
   const res = RESULT_OPTS.find((r) => r.value.toLowerCase() === d.result?.trim().toLowerCase());
   const rr = parseFloat(d.rr);
   const rrColor = isNaN(rr) ? T.text4 : rr > 0 ? T.ok : rr < 0 ? T.bad : T.text3;
-  const isBuy = d.type?.toLowerCase() === 'buy';
+  const isLong = d.type === 'Long';
   const resultMap = Object.fromEntries(RESULT_OPTS.map((r) => [r.value, r]));
-  const typeMap = { Buy: { c: T.ok, rgb: T.okRgb }, Sell: { c: T.bad, rgb: T.badRgb } };
+  const typeMap = { Long: { c: T.ok, rgb: T.okRgb }, Short: { c: T.bad, rgb: T.badRgb } };
+
+  const rrDisplay = isNaN(rr) ? '—' : `${rr > 0 ? '+' : ''}${rr}R`;
+  const profitDisplay = profit === null ? '—' : `${profit > 0 ? '+' : profit < 0 ? '−' : ''}$${Math.abs(profit).toFixed(2)}`;
+  const profitColor = profit === null ? T.text4 : profit > 0 ? T.ok : profit < 0 ? T.bad : T.text3;
+
+  /* Дисципліна — той самий чекліст, що й «Процес», але зведений в
+     оцінку для стрічки цифр: скільки з трьох пунктів пройдено без
+     відхилень. */
+  const processItems = [
+    { key: 'followed_plan', label: 'Торгував за планом', invert: false, value: !!d.followed_plan },
+    { key: 'has_mistake', label: 'Була помилка в аналізі', invert: true, value: !!d.has_mistake },
+    { key: 'rushed', label: 'Поспішив / FOMO', invert: true, value: !!d.rushed },
+  ].map((p) => ({ ...p, ok: p.invert ? !p.value : p.value }));
+  const okCount = processItems.filter((p) => p.ok).length;
+  const deviations = processItems.filter((p) => !p.ok);
+  const clean = deviations.length === 0;
+  const disciplineColor = clean ? T.ok : T.warn;
+
+  const psyItems = [
+    { key: 'psy_confident', label: 'Впевненість', invert: false, value: !!d.psy_confident },
+    { key: 'psy_fear', label: 'Страх', invert: true, value: !!d.psy_fear },
+    { key: 'psy_repeat', label: 'Повторний вхід', invert: true, value: !!d.psy_repeat },
+    { key: 'psy_revenge', label: 'Відіграш', invert: true, value: !!d.psy_revenge },
+  ].map((p) => ({ ...p, ok: p.invert ? !p.value : p.value }));
+
+  const psyExpanded = editing || psyOpen;
+
+  const timeRange = d.entry_time && d.exit_time ? `${d.entry_time.slice(0, 5)}–${d.exit_time.slice(0, 5)}` : null;
 
   const body = (
     <motion.div
@@ -360,52 +425,61 @@ export default function TradeDetailsModal({
       style={{ background: 'rgba(6,6,8,0.86)', backdropFilter: 'blur(14px)' }}
     >
       <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 20, scale: 0.97 }}
-        transition={{ duration: 0.32, ease: EASE }}
+        initial={{ opacity: 0, y: 16, scale: 0.97, filter: 'blur(4px)' }}
+        animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+        exit={{ opacity: 0, y: 16, scale: 0.97, filter: 'blur(4px)' }}
+        transition={SPRING_UI}
         onClick={(e) => e.stopPropagation()}
-        className="my-auto w-full max-w-[980px] overflow-hidden rounded-[28px]"
+        className="my-auto w-full max-w-[1180px] overflow-hidden rounded-[18px]"
         style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 50px 100px rgba(0,0,0,0.85)' }}
       >
-        {/* Смужка результату — колір видно ще до того, як прочитав цифри */}
-        <div className="h-[3px] w-full" style={{ background: res ? res.c : T.line }} />
+        {/* ---------- ШАПКА ---------- */}
+        <header className="flex items-center gap-4 px-6 py-4" style={{ borderBottom: `1px solid ${T.line}`, background: T.sunken }}>
+          <div
+            className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl"
+            style={{
+              background: isLong ? `rgba(${T.okRgb},0.09)` : `rgba(${T.badRgb},0.09)`,
+              border: `1px solid ${isLong ? `rgba(${T.okRgb},0.22)` : `rgba(${T.badRgb},0.22)`}`,
+            }}
+          >
+            {isLong
+              ? <ArrowUpRight size={17} strokeWidth={2.4} style={{ color: T.ok }} />
+              : <ArrowDownRight size={17} strokeWidth={2.4} style={{ color: T.bad }} />}
+          </div>
 
-        {/* Шапка — тільки ідентичність угоди й дії, без цифр */}
-        <header
-          className="sticky top-0 z-20 flex items-center justify-between gap-4 px-6 py-4"
-          style={{ background: T.surface, borderBottom: `1px solid ${T.line}` }}
-        >
-          <div className="flex min-w-0 items-baseline gap-2.5">
-            <h2
-              className="truncate text-[22px] font-black leading-none"
-              style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
-            >
-              {d.plan_pair || 'Угода'}
-            </h2>
-            {res && (
-              <span
-                className="flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.06em]"
-                style={{ background: `rgba(${res.rgb},0.10)`, color: res.c, fontFamily: T.sans }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: res.c }} />
-                {res.value}
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="truncate text-[21px] font-semibold leading-none" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
+                {d.plan_pair || 'Угода'}
+              </h2>
+              {res && (
+                <span
+                  className="rounded-md px-2.5 py-[3px] text-[10px] font-bold uppercase tracking-[0.1em]"
+                  style={{ background: `rgba(${res.rgb},0.09)`, border: `1px solid rgba(${res.rgb},0.24)`, color: res.c, fontFamily: MONO }}
+                >
+                  {res.value}
+                </span>
+              )}
+              <span className="rounded-md px-2.5 py-[3px] text-[10px] tracking-[0.08em]" style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text3, fontFamily: MONO }}>
+                {(d.type || '—').toUpperCase()}{d.session ? ` · ${d.session}` : ''}
               </span>
-            )}
-            <span className="hidden shrink-0 text-[13px] sm:inline" style={{ fontFamily: T.sans, color: T.text4 }}>
-              {d.plan_date}
+            </div>
+            <span className="text-[12px]" style={{ fontFamily: MONO, color: T.text4 }}>
+              {d.plan_date}{timeRange ? ` · ${timeRange}` : ''}
             </span>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex-1" />
+
+          <div className="flex shrink-0 items-center gap-2">
             {d.plan_date && d.plan_pair && (
               <motion.button
                 onClick={() => { onClose(); navigate(`/plan/${d.plan_date}/${encodeURIComponent(d.plan_pair)}`); }}
                 title="Відкрити план цього дня"
-                whileTap={{ scale: 0.93 }}
-                transition={SPRING}
-                className="grid h-8 w-8 place-items-center rounded-lg transition-colors"
-                style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text3 }}
+                whileTap={{ scale: 0.92 }}
+                transition={SPRING_TAP}
+                className="grid h-[34px] w-[34px] place-items-center rounded-lg transition-colors"
+                style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text3 }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text3; }}
               >
@@ -413,13 +487,27 @@ export default function TradeDetailsModal({
               </motion.button>
             )}
 
+            {editing && (
+              <motion.button
+                onClick={() => { setD(trade); setEditing(false); }}
+                whileTap={{ scale: 0.95 }}
+                transition={SPRING_TAP}
+                className="h-[34px] rounded-lg px-3 text-[13px] font-semibold transition-colors"
+                style={{ color: T.text3, fontFamily: T.sans }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
+                onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
+              >
+                Скасувати
+              </motion.button>
+            )}
+
             {editing ? (
               <motion.button
                 onClick={save}
                 disabled={saving}
-                whileTap={{ scale: 0.96 }}
-                transition={SPRING}
-                className="flex h-9 items-center gap-2 rounded-lg px-4 text-[13.5px] font-bold"
+                whileTap={{ scale: 0.95 }}
+                transition={SPRING_TAP}
+                className="flex h-[34px] items-center gap-2 rounded-lg px-4 text-[13px] font-bold"
                 style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} strokeWidth={2.6} />}
@@ -428,225 +516,280 @@ export default function TradeDetailsModal({
             ) : (
               <motion.button
                 onClick={() => setEditing(true)}
-                whileTap={{ scale: 0.96 }}
-                transition={SPRING}
-                className="flex h-9 items-center gap-2 rounded-lg px-4 text-[13.5px] font-bold transition-colors"
-                style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
+                whileTap={{ scale: 0.95 }}
+                transition={SPRING_TAP}
+                className="flex h-[34px] items-center gap-2 rounded-lg px-3.5 text-[13px] font-semibold transition-colors"
+                style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
               >
-                <Pencil size={13} strokeWidth={2.5} /> Редагувати
+                <Pencil size={13} strokeWidth={2.4} /> Редагувати
               </motion.button>
             )}
 
             <motion.button
               onClick={onClose}
               whileTap={{ scale: 0.9 }}
-              transition={SPRING}
-              className="grid h-8 w-8 place-items-center rounded-lg transition-colors"
-              style={{ color: T.text4 }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
-              onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
+              transition={SPRING_TAP}
+              className="grid h-[34px] w-[34px] place-items-center rounded-lg transition-colors"
+              style={{ background: 'transparent', color: T.text4 }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = T.bg; e.currentTarget.style.color = T.text; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text4; }}
             >
-              <X size={16} strokeWidth={2.4} />
+              <X size={16} strokeWidth={2.3} />
             </motion.button>
           </div>
         </header>
 
-        {/* Двоколонка: зліва розповідь про угоду, справа — закріплений
-            результат. На мобілці сайдбар падає під контент. */}
-        <div className="grid lg:grid-cols-[1fr_296px]">
-          {/* ---------- ГОЛОВНА КОЛОНКА ---------- */}
-          <div
-            className="flex flex-col gap-7 p-6 lg:p-7"
-            style={{ borderRight: 0 }}
-          >
-            {/* Параметри — тільки при редагуванні */}
-            <AnimatePresence initial={false}>
-              {editing && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.28, ease: EASE }}
-                  className="overflow-hidden"
+        {/* ---------- СТРІЧКА ЦИФР ---------- */}
+        <div className="flex items-stretch px-6" style={{ borderBottom: `1px solid ${T.line}` }}>
+          {[
+            { label: 'R', value: rrDisplay, color: rrColor, flex: 1 },
+            { label: 'Профіт', value: profitDisplay, color: profitColor, flex: 1 },
+            { label: 'Ризик', value: d.risk || '—', color: T.text2, flex: 1 },
+            { label: 'Акаунт', value: d.account_name || '—', color: T.text3, flex: 1.4, small: true },
+          ].map((cell, i) => (
+            <div key={cell.label} className="flex min-w-0" style={{ flex: cell.flex }}>
+              {i > 0 && <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />}
+              <div className="flex min-w-0 flex-col gap-1.5 py-3.5">
+                <Eyebrow>{cell.label.toUpperCase()}</Eyebrow>
+                <span
+                  className={`truncate font-bold tabular-nums ${cell.small ? 'text-[14px] pt-0.5' : 'text-[19px]'}`}
+                  style={{ fontFamily: MONO, color: cell.color }}
                 >
-                  <section className="overflow-hidden rounded-2xl" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
-                    <header className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
-                      <FileText size={15} strokeWidth={2.4} style={{ color: T.acc }} />
-                      <h4 className="text-[14px] font-bold" style={{ fontFamily: T.display, color: T.text }}>Параметри</h4>
-                    </header>
-                    <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
-                      <div className="flex flex-col gap-2">
-                        <span className="text-[12px] font-bold uppercase tracking-[0.06em]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                          Результат
-                        </span>
-                        <PillGroup
-                          editing
-                          options={RESULT_OPTS.map((r) => r.value)}
-                          value={d.result}
-                          onChange={(v) => set({ result: v })}
-                          colorMap={resultMap}
-                        />
-                      </div>
+                  {cell.value}
+                </span>
+              </div>
+            </div>
+          ))}
+          <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
+          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: 1 }}>
+            <Eyebrow>ДИСЦИПЛІНА</Eyebrow>
+            <div className="flex items-center gap-2 pt-0.5">
+              <span className="text-[19px] font-bold tabular-nums" style={{ fontFamily: MONO, color: disciplineColor }}>
+                {okCount}/{processItems.length}
+              </span>
+              <div className="flex items-center gap-[3px]">
+                {processItems.map((p) => (
+                  <div key={p.key} className="h-3.5 w-[5px] rounded-full" style={{ background: p.ok ? T.ok : T.bad }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
 
-                      <div className="flex flex-col gap-2">
-                        <span className="text-[12px] font-bold uppercase tracking-[0.06em]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                          Напрямок
-                        </span>
-                        <PillGroup editing options={TYPES} value={d.type} onChange={(v) => set({ type: v })} colorMap={typeMap} />
-                      </div>
+        {/* ---------- ТІЛО: зліва скрін+опис, справа деталі ---------- */}
+        {/* layout — при вході в редагування текст миттю змінюється на
+            інпути різної висоти (Процес/Психологія розкриваються теж).
+            Без layout уся картка стрибала б стрибком; з layout Framer
+            плавно донормовує розмір, і елемент під курсором нікуди не
+            «тікає». */}
+        <motion.div layout transition={SPRING_UI} className="grid lg:grid-cols-[1.55fr_1fr]">
+          {/* ЛІВА КОЛОНКА */}
+          <motion.div layout transition={SPRING_UI} className="flex flex-col gap-3 p-5" style={{ borderRight: `1px solid ${T.line}` }}>
+            {images.length > 0 ? (
+              <ImageSlider images={images} containerClassName="min-h-[420px] rounded-2xl" />
+            ) : editing ? (
+              <div
+                onPaste={(e) => handlePaste(e, 'trade')}
+                tabIndex={0}
+                className="flex min-h-[420px] cursor-text flex-col items-center justify-center gap-2 rounded-2xl outline-none"
+                style={{ background: T.bg, border: `1px dashed ${T.lineAcc}` }}
+              >
+                <ImagePlus size={22} strokeWidth={1.6} style={{ color: T.text4 }} />
+                <span className="text-[13px]" style={{ color: T.text4, fontFamily: T.sans }}>Ctrl+V — вставити лінк на скріншот</span>
+              </div>
+            ) : (
+              <div className="flex min-h-[420px] items-center justify-center rounded-2xl" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
+                <span className="text-[13px]" style={{ fontFamily: MONO, color: T.text4 }}>СКРІНШОТІВ НЕМАЄ</span>
+              </div>
+            )}
 
-                      <div className="flex flex-col gap-2">
-                        <span className="text-[12px] font-bold uppercase tracking-[0.06em]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                          Сесія
-                        </span>
-                        <PillGroup editing options={SESSIONS} value={d.session} onChange={(v) => set({ session: v })} />
-                      </div>
+            <div className="rounded-xl p-4" style={{ border: `1px solid ${T.line}`, background: T.bg }}>
+              <Eyebrow>ОПИС УГОДИ</Eyebrow>
+              <div className="mt-2">
+                <Editable editing={editing} value={d.trade_description} onChange={(v) => set({ trade_description: v })} placeholder="Опису немає" />
+              </div>
+            </div>
+          </motion.div>
 
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        {[['rr', 'R'], ['risk', 'Ризик']].map(([k, label]) => (
-                          <div key={k} className="flex flex-col gap-2">
-                            <span className="text-[12px] font-bold uppercase tracking-[0.06em]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                              {label}
-                            </span>
-                            <input
-                              value={d[k] ?? ''}
-                              onChange={(e) => set({ [k]: e.target.value })}
-                              className="h-[42px] rounded-lg px-3.5 outline-none"
-                              style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text, fontFamily: T.mono, fontSize: 15 }}
-                              onFocus={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
-                              onBlur={(e) => (e.currentTarget.style.borderColor = T.line)}
-                            />
+          {/* ПРАВА КОЛОНКА — довідка й чеклісти */}
+          <motion.div layout transition={SPRING_UI} className="flex flex-col gap-3 p-5">
+            {/* Параметри. Пілюльні групи (Напрямок/Сесія/Результат) —
+                кожна на свій повний рядок: у половині картки «New
+                York» переносилась окремо й ламала висоту рядка.
+                Вузькі поля (час, R, ризик) лишились по двоє в рядку. */}
+            <div className="overflow-hidden rounded-xl" style={{ border: `1px solid ${T.line}`, background: T.bg }}>
+              <div className="grid grid-cols-2" style={{ borderBottom: `1px solid ${T.line}` }}>
+                {[
+                  { label: 'ВХІД', field: 'entry_time' },
+                  { label: 'ВИХІД', field: 'exit_time' },
+                ].map((p, i) => (
+                  <div
+                    key={p.label}
+                    className="flex flex-col gap-1.5 px-3.5 py-3"
+                    style={{ borderRight: i === 0 ? `1px solid ${T.line}` : 'none' }}
+                  >
+                    <Eyebrow>{p.label}</Eyebrow>
+                    {editing ? (
+                      <TimeField value={d[p.field]} onChange={(v) => set({ [p.field]: v })} />
+                    ) : (
+                      <span className="text-[13.5px] font-semibold" style={{ fontFamily: MONO, color: T.text2 }}>
+                        {d[p.field] ? d[p.field].slice(0, 5) : '—'}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
+                <Eyebrow>НАПРЯМОК</Eyebrow>
+                <PillGroup groupId="type" editing={editing} options={TYPES} value={d.type} onChange={(v) => set({ type: v })} colorMap={typeMap} />
+              </div>
+
+              <div className="flex flex-col gap-2 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
+                <Eyebrow>СЕСІЯ</Eyebrow>
+                <PillGroup groupId="session" editing={editing} options={SESSIONS} value={d.session} onChange={(v) => set({ session: v })} colorMap={SESSION_COLORS} />
+              </div>
+
+              <div className="flex flex-col gap-2 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
+                <Eyebrow>РЕЗУЛЬТАТ</Eyebrow>
+                <PillGroup groupId="result" editing={editing} options={RESULT_OPTS.map((r) => r.value)} value={d.result} onChange={(v) => set({ result: v })} colorMap={resultMap} />
+              </div>
+
+              <div className="grid grid-cols-2">
+                <div className="flex flex-col gap-1.5 px-3.5 py-3" style={{ borderRight: `1px solid ${T.line}` }}>
+                  <Eyebrow>R</Eyebrow>
+                  {editing ? (
+                    <input
+                      value={d.rr ?? ''}
+                      onChange={(e) => set({ rr: e.target.value })}
+                      placeholder="напр. 2"
+                      className="h-7 w-full rounded-md px-2 outline-none"
+                      style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: MONO, fontSize: 13 }}
+                    />
+                  ) : (
+                    <span className="text-[13.5px] font-semibold tabular-nums" style={{ fontFamily: MONO, color: rrColor }}>{rrDisplay}</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5 px-3.5 py-3">
+                  <Eyebrow>РИЗИК</Eyebrow>
+                  {editing ? (
+                    <input
+                      value={d.risk ?? ''}
+                      onChange={(e) => set({ risk: e.target.value })}
+                      placeholder="напр. 1%"
+                      className="h-7 w-full rounded-md px-2 outline-none"
+                      style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: MONO, fontSize: 13 }}
+                    />
+                  ) : (
+                    <span className="text-[13.5px] font-semibold" style={{ fontFamily: MONO, color: T.text2 }}>{d.risk || '—'}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Процес — за замовчуванням тільки відхилення, решта за кліком */}
+            <div className="overflow-hidden rounded-xl" style={{ border: `1px solid ${clean ? T.line : `rgba(${T.badRgb},0.22)`}`, background: T.bg }}>
+              <div className="flex items-center gap-2.5 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
+                <div
+                  className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md"
+                  style={{ background: clean ? `rgba(${T.okRgb},0.10)` : `rgba(${T.badRgb},0.11)`, color: clean ? T.ok : T.bad }}
+                >
+                  {clean ? <Check size={12} strokeWidth={3} /> : <AlertTriangle size={12} strokeWidth={2.6} />}
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-[13px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>Процес</span>
+                  <span className="text-[11px]" style={{ fontFamily: T.sans, color: T.text4 }}>Дисципліна виконання</span>
+                </div>
+                <span className="text-[11px] font-semibold" style={{ fontFamily: MONO, color: clean ? T.ok : T.bad }}>
+                  {clean ? 'чисто' : `${deviations.length} відхил.`}
+                </span>
+              </div>
+
+              {/* Редагування: один стабільний список у фіксованому
+                  порядку — жоден пункт не переїжджає між «відхилення»
+                  і «решта» просто від того, що ти клацнув по ньому.
+                  Перегляд: розумне розкриття — спершу тільки
+                  відхилення, решта за кліком. */}
+              {editing ? (
+                processItems.map((p, i) => (
+                  <div
+                    key={p.key}
+                    className="flex items-center gap-2.5 px-3.5 py-2.5"
+                    style={{ borderBottom: i < processItems.length - 1 ? `1px solid ${T.line}` : 'none' }}
+                  >
+                    <span className="flex-1 text-[13px]" style={{ fontFamily: T.sans, color: T.text2 }}>{p.label}</span>
+                    <YesNo editing value={p.value} invert={p.invert} onChange={(v) => set({ [p.key]: v })} />
+                  </div>
+                ))
+              ) : (
+                <>
+                  {deviations.map((p) => (
+                    <div
+                      key={p.key}
+                      className="flex items-center gap-2.5 px-3.5 py-2.5"
+                      style={{ borderBottom: `1px solid ${T.line}`, background: `rgba(${T.badRgb},0.035)` }}
+                    >
+                      <div className="h-1 w-1 shrink-0 rounded-full" style={{ background: T.bad }} />
+                      <span className="flex-1 text-[13px]" style={{ fontFamily: T.sans, color: T.text2 }}>{p.label}</span>
+                      <YesNo editing={false} value={p.value} invert={p.invert} onChange={() => {}} />
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={() => setProcessOpen((v) => !v)}
+                    className="flex w-full items-center gap-2 px-3.5 py-2 transition-colors"
+                    style={{ background: 'transparent' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = T.sunken)}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <span className="flex-1" />
+                    <Check size={12} strokeWidth={3} style={{ color: T.ok }} />
+                    <motion.span animate={{ rotate: processOpen ? 180 : 0 }} transition={SPRING_TAP}>
+                      <ChevronDown size={13} strokeWidth={2.4} style={{ color: T.text4 }} />
+                    </motion.span>
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {processOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={SPRING_UI}
+                        className="overflow-hidden"
+                        style={{ borderTop: `1px solid ${T.line}` }}
+                      >
+                        {processItems.filter((p) => p.ok).map((p, i) => (
+                          <div key={p.key} className="flex items-center gap-2.5 px-3.5 py-2.5" style={{ borderTop: i ? `1px solid ${T.line}` : 'none' }}>
+                            <span className="flex-1 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>{p.label}</span>
+                            <YesNo editing={false} value={p.value} invert={p.invert} onChange={() => {}} />
                           </div>
                         ))}
-                      </div>
-                    </div>
-                  </section>
-                </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
               )}
-            </AnimatePresence>
+            </div>
 
-            {/* Скріншоти */}
-            <Section icon={ImagePlus} title="Скріншоти" sub={editing ? 'Ctrl+V — вставити посилання' : `${images.length} зображень`}>
-              {images.length > 0 ? (
-                <ImageSlider images={images} containerClassName="h-[320px] rounded-2xl" />
-              ) : editing ? (
-                <div
-                  onPaste={(e) => handlePaste(e, 'trade')}
-                  tabIndex={0}
-                  className="flex min-h-[110px] cursor-text flex-col items-center justify-center gap-2 rounded-2xl outline-none"
-                  style={{ background: T.sunken, border: `1px dashed ${T.line}` }}
-                >
-                  <ImagePlus size={20} strokeWidth={1.7} style={{ color: T.text4 }} />
-                  <span className="text-[13px]" style={{ color: T.text4, fontFamily: T.sans }}>
-                    Ctrl+V — вставити лінк
-                  </span>
-                </div>
-              ) : (
-                <div className="flex h-[140px] items-center justify-center rounded-2xl" style={{ background: T.sunken, border: `1px dashed ${T.line}` }}>
-                  <p className="text-[14px] italic" style={{ color: T.text4, fontFamily: T.sans }}>
-                    Скріншотів немає
-                  </p>
-                </div>
-              )}
-            </Section>
-
-            {/* Опис */}
-            <Section icon={FileText} title="Опис угоди" sub="Що бачив, чому зайшов">
-              <Editable
-                editing={editing}
-                value={d.trade_description}
-                onChange={(v) => set({ trade_description: v })}
-                placeholder="Опису немає"
-              />
-            </Section>
-
-            {/* Процес */}
-            <Section icon={ShieldCheck} title="Процес" sub="Дисципліна виконання">
-              <div className="flex flex-col" style={{ background: T.sunken, borderRadius: 16, border: `1px solid ${T.line}` }}>
-                {[
-                  { icon: d.followed_plan ? ShieldCheck : ShieldAlert, label: 'Торгував за планом', key: 'followed_plan', invert: false },
-                  { icon: AlertTriangle, label: 'Була помилка в аналізі', key: 'has_mistake', invert: true },
-                  { icon: Zap, label: 'Поспішив / FOMO', key: 'rushed', invert: true },
-                ].map((row, i) => {
-                  const RowIcon = row.icon;
-                  const good = row.invert ? !d[row.key] : d[row.key];
-                  return (
-                    <div
-                      key={row.key}
-                      className="flex items-center justify-between gap-3 px-4 py-3"
-                      style={{ borderTop: i ? `1px solid ${T.line}` : 'none' }}
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <RowIcon size={16} strokeWidth={2.4} style={{ color: good ? T.ok : T.bad }} />
-                        <span className="text-[14.5px] font-medium" style={{ color: T.text2, fontFamily: T.sans }}>
-                          {row.label}
-                        </span>
-                      </span>
-                      <Toggle
-                        editing={editing}
-                        value={!!d[row.key]}
-                        onChange={(v) => set({ [row.key]: v })}
-                        invert={row.invert}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </Section>
-
-            {/* Розбір помилки — виняток із редакційного стилю: тут
-                колір несе тривогу, тому лишається боксованою карткою */}
+            {/* Розбір помилки */}
             <AnimatePresence initial={false}>
               {d.has_mistake && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.28, ease: EASE }}
-                  className="overflow-hidden"
-                >
-                  <section
-                    className="overflow-hidden rounded-2xl"
-                    style={{ background: `rgba(${T.badRgb},0.03)`, border: `1px solid rgba(${T.badRgb},0.16)` }}
-                  >
-                    <header
-                      className="flex flex-wrap items-center gap-2.5 px-4 py-3"
-                      style={{ borderBottom: `1px solid rgba(${T.badRgb},0.12)` }}
-                    >
-                      <AlertTriangle size={13} strokeWidth={2.4} style={{ color: T.bad }} />
-                      <h4 className="text-[12px] font-semibold" style={{ fontFamily: T.display, color: T.text }}>
-                        Розбір помилки
-                      </h4>
-
-                      {errDraft?.cats?.length > 0 && (
-                        <span className="flex flex-wrap items-center gap-1.5">
-                          {errDraft.cats.map((id) => {
-                            const c = CATS.find((x) => x.id === id);
-                            if (!c) return null;
-                            return (
-                              <span
-                                key={id}
-                                className="rounded-md px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.08em]"
-                                style={{
-                                  fontFamily: T.sans,
-                                  color: c.color,
-                                  background: `${c.color}1a`,
-                                  border: `1px solid ${c.color}38`,
-                                }}
-                              >
-                                {c.label}
-                              </span>
-                            );
-                          })}
-                        </span>
-                      )}
-
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={SPRING_UI} className="overflow-hidden">
+                  <div className="rounded-xl p-3.5" style={{ border: `1px solid rgba(${T.badRgb},0.2)`, background: `rgba(${T.badRgb},0.03)` }}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{ fontFamily: MONO, color: T.bad }}>Розбір помилки</span>
+                      {errDraft?.cats?.length > 0 && errDraft.cats.map((id) => {
+                        const c = CATS.find((x) => x.id === id);
+                        if (!c) return null;
+                        return <span key={id} className="text-[11px] font-bold" style={{ fontFamily: T.sans, color: c.color }}>{c.label}</span>;
+                      })}
                       <motion.button
                         type="button"
                         whileTap={{ scale: 0.95 }}
-                        transition={SPRING}
+                        transition={SPRING_TAP}
                         onClick={() => {
                           setErrForm({
                             pair: errDraft?.pair || d.plan_pair || '',
@@ -657,124 +800,84 @@ export default function TradeDetailsModal({
                           });
                           setComposerOpen(true);
                         }}
-                        className="ml-auto flex h-7 items-center rounded-lg px-2.5 text-[11.5px] font-bold transition-colors"
-                        style={{
-                          fontFamily: T.sans,
-                          background: 'transparent',
-                          border: `1px solid rgba(${T.badRgb},0.3)`,
-                          color: T.bad,
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.1)`; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        className="ml-auto text-[11.5px] font-bold underline decoration-dotted underline-offset-2"
+                        style={{ fontFamily: T.sans, color: T.text3 }}
                       >
                         {errDraft ? 'Змінити розбір' : 'Розібрати детально'}
                       </motion.button>
-                    </header>
-                    <div className="px-4 py-3.5">
-                      <Editable
-                        editing={editing}
-                        value={d.mistake_description}
-                        onChange={(v) => set({ mistake_description: v })}
-                        placeholder="Помилку не описано"
-                      />
                     </div>
-                  </section>
+                    <div className="mt-2">
+                      <Editable editing={editing} value={d.mistake_description} onChange={(v) => set({ mistake_description: v })} placeholder="Помилку не описано" minRows={2} />
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Психологія */}
-            <Section icon={Brain} title="Психологія" sub="Стан під час угоди">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-2xl p-4 sm:grid-cols-4" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
-                {[
-                  ['psy_confident', 'Впевненість', false],
-                  ['psy_fear', 'Страх', true],
-                  ['psy_repeat', 'Повторний вхід', true],
-                  ['psy_revenge', 'Відіграш', true],
-                ].map(([key, label, invert]) => (
-                  <div key={key} className="flex flex-col gap-2">
-                    <span className="text-[12px] font-bold uppercase tracking-[0.06em]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                      {label}
-                    </span>
-                    <Toggle editing={editing} value={!!d[key]} onChange={(v) => set({ [key]: v })} invert={invert} />
-                  </div>
-                ))}
-              </div>
-
-              {(editing || d.psy_notes?.trim()) && (
-                <div className="mt-3">
-                  <Editable
-                    editing={editing}
-                    value={d.psy_notes}
-                    onChange={(v) => set({ psy_notes: v })}
-                    placeholder="Нотаток про стан немає"
-                    minRows={3}
-                  />
-                </div>
-              )}
-            </Section>
-          </div>
-
-          {/* ---------- САЙДБАР: результат і довідка ---------- */}
-          <aside
-            className="flex flex-col gap-6 p-6 lg:sticky lg:top-[65px] lg:self-start lg:p-7"
-            style={{ background: T.sunken, borderTop: `1px solid ${T.line}`, borderLeft: 0 }}
-          >
-            <div className="flex flex-col gap-5">
-              <Metric label="R" value={isNaN(rr) ? '—' : `${rr > 0 ? '+' : ''}${rr}R`} color={rrColor} />
-              <Metric
-                label="Профіт"
-                value={profit === null ? '—' : `${profit > 0 ? '+' : profit < 0 ? '−' : ''}$${Math.abs(profit).toFixed(2)}`}
-                color={profit === null ? T.text4 : profit > 0 ? T.ok : profit < 0 ? T.bad : T.text3}
-              />
-            </div>
-
-            <div className="h-px" style={{ background: T.line }} />
-
-            <div className="flex flex-col">
-              <MetaRow icon={AlertTriangle} label="Ризик" value={d.risk || '—'} />
-              <div className="h-px" style={{ background: T.line }} />
-              <MetaRow icon={Wallet} label="Акаунт" value={d.account_name || '—'} />
-              <div className="h-px" style={{ background: T.line }} />
-              <MetaRow icon={Clock} label="Сесія" value={d.session || '—'} />
-              <div className="h-px" style={{ background: T.line }} />
-              <MetaRow
-                icon={isBuy ? ArrowUpRight : ArrowDownRight}
-                label="Напрямок"
-                value={d.type || '—'}
-                color={d.type ? (isBuy ? T.ok : T.bad) : undefined}
-              />
-            </div>
-
-            <div className="mt-auto flex flex-col gap-3 pt-2" style={{ borderTop: `1px solid ${T.line}` }}>
-              {editing && (
-                <motion.button
-                  onClick={() => { setD(trade); setEditing(false); }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={SPRING}
-                  className="w-full rounded-xl py-2.5 text-[13.5px] font-bold"
-                  style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
-                >
-                  Скасувати зміни
-                </motion.button>
-              )}
-              <motion.button
-                onClick={() => setConfirmDel(true)}
-                whileTap={{ scale: 0.97 }}
-                transition={SPRING}
-                className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[13.5px] font-bold transition-colors"
-                style={{ color: T.text4, fontFamily: T.sans }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
+            {/* Психологія — теж згорнута за замовчуванням */}
+            <div className="overflow-hidden rounded-xl" style={{ border: `1px solid ${T.line}`, background: T.bg }}>
+              <button
+                onClick={() => !editing && setPsyOpen((v) => !v)}
+                className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left transition-colors"
+                style={{ cursor: editing ? 'default' : 'pointer' }}
+                onMouseEnter={(e) => { if (!editing) e.currentTarget.style.background = T.sunken; }}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <Trash2 size={14} strokeWidth={2.3} /> Видалити угоду
-              </motion.button>
-              <span className="text-center text-[12px]" style={{ color: T.text4, fontFamily: T.sans }}>
-                {editing ? 'Ctrl+S — зберегти' : 'Esc — закрити'}
-              </span>
+                <div className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md" style={{ background: `rgba(${T.accRgb},0.10)`, color: T.acc }}>
+                  <span className="text-[11px]">◈</span>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-[13px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>Психологія</span>
+                  <span className="whitespace-nowrap text-[11px]" style={{ fontFamily: T.sans, color: T.text4 }}>Стан під час угоди</span>
+                </div>
+                {!editing && (
+                  <motion.span animate={{ rotate: psyOpen ? 180 : 0 }} transition={SPRING_TAP}>
+                    <ChevronDown size={13} strokeWidth={2.4} style={{ color: T.text4 }} />
+                  </motion.span>
+                )}
+              </button>
+
+              <AnimatePresence initial={false}>
+                {psyExpanded && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={SPRING_UI} className="overflow-hidden" style={{ borderTop: `1px solid ${T.line}` }}>
+                    <div className="grid grid-cols-2">
+                      {psyItems.map((p, i) => (
+                        <div
+                          key={p.key}
+                          className="flex items-center gap-2 px-3.5 py-2.5"
+                          style={{ borderBottom: i < psyItems.length - 2 ? `1px solid ${T.line}` : 'none', borderRight: i % 2 === 0 ? `1px solid ${T.line}` : 'none' }}
+                        >
+                          <div className="h-1 w-1 shrink-0 rounded-full" style={{ background: p.ok ? T.text4 : T.bad }} />
+                          <span className="flex-1 truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>{p.label}</span>
+                          <YesNo editing={editing} value={p.value} invert={p.invert} onChange={(v) => set({ [p.key]: v })} />
+                        </div>
+                      ))}
+                    </div>
+                    {(editing || d.psy_notes?.trim()) && (
+                      <div className="px-3.5 py-3" style={{ borderTop: `1px solid ${T.line}` }}>
+                        <Editable editing={editing} value={d.psy_notes} onChange={(v) => set({ psy_notes: v })} placeholder="Нотаток про стан немає" minRows={2} />
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </aside>
-        </div>
+
+            <div className="flex-1" />
+
+            <motion.button
+              onClick={() => setConfirmDel(true)}
+              whileTap={{ scale: 0.97 }}
+              transition={SPRING_TAP}
+              className="flex items-center justify-center gap-1.5 rounded-lg py-2 text-[12.5px] font-semibold transition-colors"
+              style={{ color: T.text4, fontFamily: T.sans }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
+            >
+              <Trash2 size={13} strokeWidth={2.3} /> Видалити угоду
+            </motion.button>
+          </motion.div>
+        </motion.div>
       </motion.div>
 
       {/* Підтвердження видалення */}
@@ -789,43 +892,38 @@ export default function TradeDetailsModal({
             style={{ background: 'rgba(6,6,8,0.9)', backdropFilter: 'blur(10px)' }}
           >
             <motion.div
-              initial={{ scale: 0.96, y: 12, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.96, y: 12, opacity: 0 }}
-              transition={{ duration: 0.22, ease: EASE }}
+              initial={{ scale: 0.95, y: 10, opacity: 0, filter: 'blur(3px)' }}
+              animate={{ scale: 1, y: 0, opacity: 1, filter: 'blur(0px)' }}
+              exit={{ scale: 0.95, y: 10, opacity: 0, filter: 'blur(3px)' }}
+              transition={SPRING_UI}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-[360px] overflow-hidden rounded-2xl"
+              className="w-full max-w-[340px] overflow-hidden rounded-[20px]"
               style={{ background: T.surface, border: `1px solid ${T.lineHi}` }}
             >
-              <div className="flex flex-col items-center gap-3 px-6 pb-2 pt-7 text-center">
-                <div
-                  className="grid h-11 w-11 place-items-center rounded-xl"
-                  style={{ background: `rgba(${T.badRgb},0.10)`, border: `1px solid rgba(${T.badRgb},0.22)` }}
-                >
+              <div className="flex flex-col items-center gap-3 px-6 pb-2 pt-8 text-center">
+                <div className="grid h-11 w-11 place-items-center rounded-full" style={{ background: `rgba(${T.badRgb},0.10)` }}>
                   <Trash2 size={17} strokeWidth={2.3} style={{ color: T.bad }} />
                 </div>
-                <h3 className="text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text }}>
-                  Видалити назавжди?
-                </h3>
-                <p className="text-[14px] leading-relaxed" style={{ color: T.text3, fontFamily: T.sans }}>
+                <h3 className="text-[18px] font-bold" style={{ fontFamily: T.display, color: T.text }}>Видалити назавжди?</h3>
+                <p className="text-[13.5px] leading-relaxed" style={{ color: T.text3, fontFamily: T.sans }}>
                   Разом з угодою зникнуть скріншоти, опис і розбір помилки.
                 </p>
               </div>
               <div className="flex gap-2 p-5">
                 <motion.button
                   onClick={() => setConfirmDel(false)}
-                  whileTap={{ scale: 0.97 }}
-                  transition={SPRING}
-                  className="flex-1 rounded-xl py-3 text-[15px] font-bold"
+                  whileTap={{ scale: 0.96 }}
+                  transition={SPRING_TAP}
+                  className="flex-1 rounded-xl py-3 text-[14.5px] font-bold"
                   style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
                 >
                   Скасувати
                 </motion.button>
                 <motion.button
                   onClick={remove}
-                  whileTap={{ scale: 0.97 }}
-                  transition={SPRING}
-                  className="flex-1 rounded-xl py-3 text-[15px] font-bold"
+                  whileTap={{ scale: 0.96 }}
+                  transition={SPRING_TAP}
+                  className="flex-1 rounded-xl py-3 text-[14.5px] font-bold"
                   style={{ background: T.bad, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
                 >
                   Видалити

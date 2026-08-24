@@ -41,6 +41,13 @@ const resultTone = (r) => ({
 
 const dirTone = (d) => (d === 'Long' ? T.ok : T.bad);
 
+/* Кожна сесія — свій відтінок, щоб бейдж впізнавався з першого
+   погляду. Значення — сирий hex (не CSS-змінна), бо Seg нижче
+   доклеює до нього альфа-суфікс рядком. */
+const sessionTone = (s) => ({
+  Asia: '#fb7185', London: '#60a5fa', 'New York': '#34d399',
+}[s] || '#8b7bff');
+
 /* Локальна дата: toISOString() зсуває день на UTC і о другій ночі
    ставить угоді вчорашнє число */
 const todayLocal = () => {
@@ -994,7 +1001,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       <section className="grid gap-3.5 sm:grid-cols-2">
                         <div>
                           <Label>Session</Label>
-                          <Seg id="session" options={SESSIONS} value={session} onChange={setSession} />
+                          <Seg id="session" options={SESSIONS} value={session} onChange={setSession} colorOf={sessionTone} />
                         </div>
                         <div>
                           <Label>Direction</Label>
