@@ -302,6 +302,7 @@ export default function TradeDetailsModal({
   const images = useMemo(() => {
     if (Array.isArray(d?.mistake_images) && d.mistake_images.length) return d.mistake_images;
     if (d?.mistake_image) return [d.mistake_image];
+    if (Array.isArray(d?.trade_images) && d.trade_images.length) return d.trade_images;
     if (d?.trade_image) return [d.trade_image];
     return [];
   }, [d]);
@@ -323,7 +324,12 @@ export default function TradeDetailsModal({
   async function save() {
     setSaving(true);
     try {
-      const { id, ...payload } = d;
+      /* d могло прийти зі списку, де рядки доповнені обчисленими
+         полями для відображення (напр. _profit у таблиці угод) —
+         такого стовпця в БД нема, і update з ним падає з помилкою
+         schema cache. Відсікаємо все, що починається з «_». */
+      const { id, ...rest } = d;
+      const payload = Object.fromEntries(Object.entries(rest).filter(([k]) => !k.startsWith('_')));
       const { error } = await supabase.from('trades').update(payload).eq('id', id);
       if (error) throw error;
 
@@ -338,12 +344,12 @@ export default function TradeDetailsModal({
         console.error('sync error log', e);
       }
 
-      notify.success('Збережено', 'Зміни в угоді записані.');
+      notify.success('Saved', 'Trade changes recorded.');
       setEditing(false);
       onUpdated?.(d);
       onUpdateTrade?.(d);
     } catch (err) {
-      notify.error('Не вдалось зберегти', err.message);
+      notify.error('Failed to save', err.message);
     } finally {
       setSaving(false);
     }
@@ -353,12 +359,12 @@ export default function TradeDetailsModal({
     try {
       const { error } = await supabase.from('trades').delete().eq('id', d.id);
       if (error) throw error;
-      notify.success('Видалено', 'Угоду прибрано з журналу.');
+      notify.success('Deleted', 'Trade removed from journal.');
       onDeleted?.(d.id);
       onDeleteClick?.(d.id);
       if (!onDeleted && !onDeleteClick) onClose();
     } catch (err) {
-      notify.error('Помилка', err.message);
+      notify.error('Error', err.message);
     }
   }
 
@@ -405,9 +411,9 @@ export default function TradeDetailsModal({
      оцінку для стрічки цифр: скільки з трьох пунктів пройдено без
      відхилень. */
   const processItems = [
-    { key: 'followed_plan', label: 'Торгував за планом', invert: false, value: !!d.followed_plan },
-    { key: 'has_mistake', label: 'Була помилка в аналізі', invert: true, value: !!d.has_mistake },
-    { key: 'rushed', label: 'Поспішив / FOMO', invert: true, value: !!d.rushed },
+    { key: 'followed_plan', label: 'Followed the plan', invert: false, value: !!d.followed_plan },
+    { key: 'has_mistake', label: 'Analysis mistake', invert: true, value: !!d.has_mistake },
+    { key: 'rushed', label: 'Rushed / FOMO', invert: true, value: !!d.rushed },
   ].map((p) => ({ ...p, ok: p.invert ? !p.value : p.value }));
   const okCount = processItems.filter((p) => p.ok).length;
   const deviations = processItems.filter((p) => !p.ok);
@@ -415,10 +421,10 @@ export default function TradeDetailsModal({
   const disciplineColor = clean ? T.ok : T.warn;
 
   const psyItems = [
-    { key: 'psy_confident', label: 'Впевненість', invert: false, value: !!d.psy_confident },
-    { key: 'psy_fear', label: 'Страх', invert: true, value: !!d.psy_fear },
-    { key: 'psy_repeat', label: 'Повторний вхід', invert: true, value: !!d.psy_repeat },
-    { key: 'psy_revenge', label: 'Відіграш', invert: true, value: !!d.psy_revenge },
+    { key: 'psy_confident', label: 'Confidence', invert: false, value: !!d.psy_confident },
+    { key: 'psy_fear', label: 'Fear', invert: true, value: !!d.psy_fear },
+    { key: 'psy_repeat', label: 'Re-entry', invert: true, value: !!d.psy_repeat },
+    { key: 'psy_revenge', label: 'Revenge trading', invert: true, value: !!d.psy_revenge },
   ].map((p) => ({ ...p, ok: p.invert ? !p.value : p.value }));
 
   const psyExpanded = editing || psyOpen;
@@ -461,7 +467,7 @@ export default function TradeDetailsModal({
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="truncate text-[23.5px] font-semibold leading-none" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
-                {d.plan_pair || 'Угода'}
+                {d.plan_pair || 'Trade'}
               </h2>
               {res && (
                 <span
@@ -486,7 +492,7 @@ export default function TradeDetailsModal({
             {d.plan_date && d.plan_pair && (
               <motion.button
                 onClick={() => { onClose(); navigate(`/plan/${d.plan_date}/${encodeURIComponent(d.plan_pair)}`); }}
-                title="Відкрити план цього дня"
+                title="Open this day's plan"
                 whileTap={{ scale: 0.92 }}
                 transition={SPRING_TAP}
                 className="grid h-[34px] w-[34px] place-items-center rounded-lg transition-colors"
@@ -508,7 +514,7 @@ export default function TradeDetailsModal({
                 onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
                 onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
               >
-                Скасувати
+                Cancel
               </motion.button>
             )}
 
@@ -522,7 +528,7 @@ export default function TradeDetailsModal({
                 style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} strokeWidth={2.6} />}
-                Зберегти
+                Save
               </motion.button>
             ) : (
               <motion.button
@@ -534,7 +540,7 @@ export default function TradeDetailsModal({
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
               >
-                <Pencil size={13} strokeWidth={2.4} /> Редагувати
+                <Pencil size={13} strokeWidth={2.4} /> Edit
               </motion.button>
             )}
 
@@ -556,9 +562,9 @@ export default function TradeDetailsModal({
         <div className="flex items-stretch px-6" style={{ borderBottom: `1px solid ${T.line}` }}>
           {[
             { label: 'R', value: rrDisplay, color: rrColor, flex: 1 },
-            { label: 'Профіт', value: profitDisplay, color: profitColor, flex: 1 },
-            { label: 'Ризик', value: d.risk || '—', color: T.text2, flex: 1 },
-            { label: 'Акаунт', value: d.account_name || '—', color: T.text3, flex: 1.4, small: true },
+            { label: 'Profit', value: profitDisplay, color: profitColor, flex: 1 },
+            { label: 'Risk', value: d.risk || '—', color: T.text2, flex: 1 },
+            { label: 'Account', value: d.account_name || '—', color: T.text3, flex: 1.4, small: true },
           ].map((cell, i) => (
             <div key={cell.label} className="flex min-w-0" style={{ flex: cell.flex }}>
               {i > 0 && <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />}
@@ -575,7 +581,7 @@ export default function TradeDetailsModal({
           ))}
           <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
           <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: 1 }}>
-            <Eyebrow>ДИСЦИПЛІНА</Eyebrow>
+            <Eyebrow>DISCIPLINE</Eyebrow>
             <div className="flex items-center gap-2 pt-0.5">
               <span className="text-[21.5px] font-bold tabular-nums" style={{ fontFamily: MONO, color: disciplineColor }}>
                 {okCount}/{processItems.length}
@@ -608,18 +614,18 @@ export default function TradeDetailsModal({
                 style={{ background: T.bg, border: `1px dashed ${T.lineAcc}` }}
               >
                 <ImagePlus size={22} strokeWidth={1.6} style={{ color: T.text4 }} />
-                <span className="text-[14.5px]" style={{ color: T.text4, fontFamily: T.sans }}>Ctrl+V — вставити лінк на скріншот</span>
+                <span className="text-[14.5px]" style={{ color: T.text4, fontFamily: T.sans }}>Ctrl+V — paste a screenshot link</span>
               </div>
             ) : (
               <div className="flex min-h-[420px] items-center justify-center rounded-2xl" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
-                <span className="text-[14.5px]" style={{ fontFamily: MONO, color: T.text4 }}>СКРІНШОТІВ НЕМАЄ</span>
+                <span className="text-[14.5px]" style={{ fontFamily: MONO, color: T.text4 }}>NO SCREENSHOTS</span>
               </div>
             )}
 
             <div className="rounded-xl p-4" style={{ border: `1px solid ${T.line}`, background: T.bg }}>
-              <Eyebrow>ОПИС УГОДИ</Eyebrow>
+              <Eyebrow>TRADE DESCRIPTION</Eyebrow>
               <div className="mt-2">
-                <Editable editing={editing} value={d.trade_description} onChange={(v) => set({ trade_description: v })} placeholder="Опису немає" />
+                <Editable editing={editing} value={d.trade_description} onChange={(v) => set({ trade_description: v })} placeholder="No description" />
               </div>
             </div>
           </motion.div>
@@ -633,8 +639,8 @@ export default function TradeDetailsModal({
             <div className="overflow-hidden rounded-xl" style={{ border: `1px solid ${T.line}`, background: T.bg }}>
               <div className="grid grid-cols-2" style={{ borderBottom: `1px solid ${T.line}` }}>
                 {[
-                  { label: 'ВХІД', field: 'entry_time' },
-                  { label: 'ВИХІД', field: 'exit_time' },
+                  { label: 'ENTRY', field: 'entry_time' },
+                  { label: 'EXIT', field: 'exit_time' },
                 ].map((p, i) => (
                   <div
                     key={p.label}
@@ -654,17 +660,17 @@ export default function TradeDetailsModal({
               </div>
 
               <div className="flex flex-col gap-2 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
-                <Eyebrow>НАПРЯМОК</Eyebrow>
+                <Eyebrow>DIRECTION</Eyebrow>
                 <PillGroup groupId="type" editing={editing} options={TYPES} value={d.type} onChange={(v) => set({ type: v })} colorMap={typeMap} />
               </div>
 
               <div className="flex flex-col gap-2 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
-                <Eyebrow>СЕСІЯ</Eyebrow>
+                <Eyebrow>SESSION</Eyebrow>
                 <PillGroup groupId="session" editing={editing} options={SESSIONS} value={d.session} onChange={(v) => set({ session: v })} colorMap={SESSION_COLORS} />
               </div>
 
               <div className="flex flex-col gap-2 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
-                <Eyebrow>РЕЗУЛЬТАТ</Eyebrow>
+                <Eyebrow>RESULT</Eyebrow>
                 <PillGroup groupId="result" editing={editing} options={RESULT_OPTS.map((r) => r.value)} value={d.result} onChange={(v) => set({ result: v })} colorMap={resultMap} labelMap={resultLabelMap} />
               </div>
 
@@ -675,7 +681,7 @@ export default function TradeDetailsModal({
                     <input
                       value={d.rr ?? ''}
                       onChange={(e) => set({ rr: e.target.value })}
-                      placeholder="напр. 2"
+                      placeholder="e.g. 2"
                       className="h-7 w-full rounded-md px-2 outline-none"
                       style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: MONO, fontSize: 14.5 }}
                     />
@@ -684,12 +690,12 @@ export default function TradeDetailsModal({
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5 px-3.5 py-3">
-                  <Eyebrow>РИЗИК</Eyebrow>
+                  <Eyebrow>RISK</Eyebrow>
                   {editing ? (
                     <input
                       value={d.risk ?? ''}
                       onChange={(e) => set({ risk: e.target.value })}
-                      placeholder="напр. 1%"
+                      placeholder="e.g. 1%"
                       className="h-7 w-full rounded-md px-2 outline-none"
                       style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: MONO, fontSize: 14.5 }}
                     />
@@ -710,11 +716,11 @@ export default function TradeDetailsModal({
                   {clean ? <Check size={12} strokeWidth={3} /> : <AlertTriangle size={12} strokeWidth={2.6} />}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[14.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>Процес</span>
-                  <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>Дисципліна виконання</span>
+                  <span className="text-[14.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>Process</span>
+                  <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>Execution discipline</span>
                 </div>
                 <span className="text-[12.5px] font-semibold" style={{ fontFamily: MONO, color: clean ? T.ok : T.bad }}>
-                  {clean ? 'чисто' : `${deviations.length} відхил.`}
+                  {clean ? 'clean' : `${deviations.length} deviation${deviations.length === 1 ? '' : 's'}`}
                 </span>
               </div>
 
@@ -791,7 +797,7 @@ export default function TradeDetailsModal({
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={SPRING_UI} className="overflow-hidden">
                   <div className="rounded-xl p-3.5" style={{ border: `1px solid rgba(${T.badRgb},0.2)`, background: `rgba(${T.badRgb},0.03)` }}>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[12.5px] font-bold uppercase tracking-[0.08em]" style={{ fontFamily: MONO, color: T.bad }}>Розбір помилки</span>
+                      <span className="text-[12.5px] font-bold uppercase tracking-[0.08em]" style={{ fontFamily: MONO, color: T.bad }}>Mistake breakdown</span>
                       {errDraft?.cats?.length > 0 && errDraft.cats.map((id) => {
                         const c = CATS.find((x) => x.id === id);
                         if (!c) return null;
@@ -814,11 +820,11 @@ export default function TradeDetailsModal({
                         className="ml-auto text-[13px] font-bold underline decoration-dotted underline-offset-2"
                         style={{ fontFamily: T.sans, color: T.text3 }}
                       >
-                        {errDraft ? 'Змінити розбір' : 'Розібрати детально'}
+                        {errDraft ? 'Edit breakdown' : 'Break down in detail'}
                       </motion.button>
                     </div>
                     <div className="mt-2">
-                      <Editable editing={editing} value={d.mistake_description} onChange={(v) => set({ mistake_description: v })} placeholder="Помилку не описано" minRows={2} />
+                      <Editable editing={editing} value={d.mistake_description} onChange={(v) => set({ mistake_description: v })} placeholder="Mistake not described" minRows={2} />
                     </div>
                   </div>
                 </motion.div>
@@ -838,8 +844,8 @@ export default function TradeDetailsModal({
                   <span className="text-[12.5px]">◈</span>
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[14.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>Психологія</span>
-                  <span className="whitespace-nowrap text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>Стан під час угоди</span>
+                  <span className="text-[14.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>Psychology</span>
+                  <span className="whitespace-nowrap text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>State during the trade</span>
                 </div>
                 {!editing && (
                   <motion.span animate={{ rotate: psyOpen ? 180 : 0 }} transition={SPRING_TAP}>
@@ -866,7 +872,7 @@ export default function TradeDetailsModal({
                     </div>
                     {(editing || d.psy_notes?.trim()) && (
                       <div className="px-3.5 py-3" style={{ borderTop: `1px solid ${T.line}` }}>
-                        <Editable editing={editing} value={d.psy_notes} onChange={(v) => set({ psy_notes: v })} placeholder="Нотаток про стан немає" minRows={2} maxRows={5} />
+                        <Editable editing={editing} value={d.psy_notes} onChange={(v) => set({ psy_notes: v })} placeholder="No notes on state" minRows={2} maxRows={5} />
                       </div>
                     )}
                   </motion.div>
@@ -885,7 +891,7 @@ export default function TradeDetailsModal({
               onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
               onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
             >
-              <Trash2 size={13} strokeWidth={2.3} /> Видалити угоду
+              <Trash2 size={13} strokeWidth={2.3} /> Delete trade
             </motion.button>
           </motion.div>
         </motion.div>
@@ -915,9 +921,9 @@ export default function TradeDetailsModal({
                 <div className="grid h-11 w-11 place-items-center rounded-full" style={{ background: `rgba(${T.badRgb},0.10)` }}>
                   <Trash2 size={17} strokeWidth={2.3} style={{ color: T.bad }} />
                 </div>
-                <h3 className="text-[20.5px] font-bold" style={{ fontFamily: T.display, color: T.text }}>Видалити назавжди?</h3>
+                <h3 className="text-[20.5px] font-bold" style={{ fontFamily: T.display, color: T.text }}>Delete permanently?</h3>
                 <p className="text-[15.5px] leading-relaxed" style={{ color: T.text3, fontFamily: T.sans }}>
-                  Разом з угодою зникнуть скріншоти, опис і розбір помилки.
+                  Screenshots, description, and the mistake review will be deleted along with the trade.
                 </p>
               </div>
               <div className="flex gap-2 p-5">
@@ -928,7 +934,7 @@ export default function TradeDetailsModal({
                   className="flex-1 rounded-xl py-3 text-[16.5px] font-bold"
                   style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
                 >
-                  Скасувати
+                  Cancel
                 </motion.button>
                 <motion.button
                   onClick={remove}
@@ -937,7 +943,7 @@ export default function TradeDetailsModal({
                   className="flex-1 rounded-xl py-3 text-[16.5px] font-bold"
                   style={{ background: T.bad, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
                 >
-                  Видалити
+                  Delete
                 </motion.button>
               </div>
             </motion.div>

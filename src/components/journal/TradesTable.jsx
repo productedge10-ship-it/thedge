@@ -22,13 +22,13 @@ const RESULT = {
 };
 
 const COLUMNS = [
-  { key: 'plan_date',    label: 'Дата',      align: 'left',   sortable: true },
-  { key: 'plan_pair',    label: 'Актив',     align: 'left',   sortable: true },
-  { key: 'account_name', label: 'Акаунт',    align: 'left',   sortable: true, hide: true },
-  { key: 'risk',         label: 'Ризик',     align: 'right',  sortable: false, hide: true },
+  { key: 'plan_date',    label: 'Date',      align: 'left',   sortable: true },
+  { key: 'plan_pair',    label: 'Asset',     align: 'left',   sortable: true },
+  { key: 'account_name', label: 'Account',   align: 'left',   sortable: true, hide: true },
+  { key: 'risk',         label: 'Risk',      align: 'right',  sortable: false, hide: true },
   { key: 'rr',           label: 'R / $',     align: 'right',  sortable: true },
-  { key: 'result',       label: 'Статус',    align: 'left',   sortable: true },
-  { key: '_discipline',  label: 'Дисципліна',align: 'center', sortable: false },
+  { key: 'result',       label: 'Status',    align: 'left',   sortable: true },
+  { key: '_discipline',  label: 'Discipline',align: 'center', sortable: false },
   { key: '_actions',     label: '',          align: 'center', sortable: false },
 ];
 
@@ -44,9 +44,9 @@ const COLUMNS = [
    рядок читається одним поглядом без розшифровки. */
 function Discipline({ trade }) {
   const items = [
-    { ok: !!trade.followed_plan, okIcon: ShieldCheck, badIcon: ShieldAlert, okC: T.ok, badC: T.bad,    okT: 'Торгував за планом',  badT: 'Відхилився від плану' },
-    { ok: !trade.has_mistake,    okIcon: CircleCheck,  badIcon: AlertTriangle, okC: T.ok, badC: T.warn, okT: 'Без помилок',         badT: 'Була помилка в аналізі' },
-    { ok: !trade.rushed,         okIcon: CircleCheck,  badIcon: Zap,           okC: T.ok, badC: '#fb923c', okT: 'Вхід за правилами', badT: 'Поспішив / FOMO' },
+    { ok: !!trade.followed_plan, okIcon: ShieldCheck, badIcon: ShieldAlert, okC: T.ok, badC: T.bad,    okT: 'Followed the plan',  badT: 'Deviated from the plan' },
+    { ok: !trade.has_mistake,    okIcon: CircleCheck,  badIcon: AlertTriangle, okC: T.ok, badC: T.warn, okT: 'No mistakes',         badT: 'Mistake in analysis' },
+    { ok: !trade.rushed,         okIcon: CircleCheck,  badIcon: Zap,           okC: T.ok, badC: '#fb923c', okT: 'Entry by the rules', badT: 'Rushed / FOMO' },
   ];
 
   return (
@@ -164,8 +164,13 @@ export default function TradesTable({
   const [sort, setSort] = useState({ key: 'plan_date', dir: 'desc' });
   /* R і профіт — та сама угода в двох мірках, не два незалежних
      факти, тому не показуємо обидва одночасно: клік по числу
-     перемикає весь стовпець між ними. */
-  const [showProfit, setShowProfit] = useState(false);
+     перемикає лише той рядок, по якому клікнули, а не весь стовпець. */
+  const [profitIds, setProfitIds] = useState(() => new Set());
+  const toggleProfit = (id) => setProfitIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const toggleSort = (key) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: 'desc' }));
@@ -203,10 +208,10 @@ export default function TradesTable({
         <Inbox size={30} strokeWidth={1.6} style={{ color: T.text4 }} />
         <div className="flex flex-col gap-1">
           <span className="text-[15px] font-bold" style={{ color: T.text2, fontFamily: T.sans }}>
-            Угод не знайдено
+            No trades found
           </span>
           <span className="text-[13px]" style={{ color: T.text4, fontFamily: T.sans }}>
-            Спробуй змінити фільтри або період
+            Try changing the filters or period
           </span>
         </div>
       </div>
@@ -276,12 +281,13 @@ export default function TradesTable({
               const rr = t.rr === null || t.rr === '' ? null : parseFloat(t.rr);
               const rrColor = rr === null ? T.text4 : rr > 0 ? T.ok : rr < 0 ? T.bad : T.text3;
               const pColor = t._profit === null ? T.text4 : t._profit > 0 ? T.ok : t._profit < 0 ? T.bad : T.text3;
+              const rowShowProfit = profitIds.has(t.id);
               const zebra = idx % 2 === 1;
 
               return (
                 <tr
                   key={t.id}
-                  onClick={() => onOpen(t)}
+                  onClick={() => { const { _profit, ...orig } = t; onOpen(orig); }}
                   className="group cursor-pointer transition-colors duration-150"
                   style={{
                     borderBottom: `1px solid ${T.line}`,
@@ -329,7 +335,7 @@ export default function TradesTable({
                   </td>
 
                   {/* R і профіт — одна й та сама угода в двох мірках, тому
-                      не обидві одразу: клік перемикає весь стовпець.
+                      не обидві одразу: клік перемикає лише цей рядок.
                       Значення «перегортається» 3D-фліпом, як табло на
                       вокзалі — соковитіше за банальний fade, і сама
                       висота-обгортка для overflow тепер окрема від
@@ -337,24 +343,24 @@ export default function TradesTable({
                       текст просто обрізало). */}
                   <td className="px-4 py-0 text-right">
                     <button
-                      onClick={(e) => { e.stopPropagation(); setShowProfit((v) => !v); }}
-                      title={showProfit ? 'Показати R' : 'Показати профіт у $'}
+                      onClick={(e) => { e.stopPropagation(); toggleProfit(t.id); }}
+                      title={rowShowProfit ? 'Show R' : 'Show profit in $'}
                       className="ml-auto flex items-center justify-end rounded-md px-2 py-1.5 transition-colors"
                       style={{ perspective: 300 }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <span className="relative block h-[19px] overflow-hidden">
+                      <span className="relative block h-[19px] w-[104px] shrink-0 overflow-hidden text-right">
                         <AnimatePresence mode="popLayout" initial={false}>
-                          {showProfit ? (
+                          {rowShowProfit ? (
                             <motion.span
                               key="profit"
-                              initial={{ rotateX: -100, opacity: 0, y: -6 }}
-                              animate={{ rotateX: 0, opacity: 1, y: 0 }}
-                              exit={{ rotateX: 100, opacity: 0, y: 6 }}
-                              transition={{ type: 'spring', duration: 0.4, bounce: 0.28 }}
-                              className="block whitespace-nowrap text-[15.5px] font-bold tabular-nums"
-                              style={{ fontFamily: T.mono, color: pColor, lineHeight: '19px', transformOrigin: 'center' }}
+                              initial={{ rotateX: -90, opacity: 0 }}
+                              animate={{ rotateX: 0, opacity: 1 }}
+                              exit={{ rotateX: 90, opacity: 0 }}
+                              transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }}
+                              className="block whitespace-nowrap text-[14.5px] font-bold tabular-nums"
+                              style={{ fontFamily: T.mono, color: pColor, lineHeight: '19px', transformOrigin: 'center bottom' }}
                             >
                               {t._profit === null
                                 ? '—'
@@ -363,12 +369,12 @@ export default function TradesTable({
                           ) : (
                             <motion.span
                               key="rr"
-                              initial={{ rotateX: -100, opacity: 0, y: -6 }}
-                              animate={{ rotateX: 0, opacity: 1, y: 0 }}
-                              exit={{ rotateX: 100, opacity: 0, y: 6 }}
-                              transition={{ type: 'spring', duration: 0.4, bounce: 0.28 }}
-                              className="block whitespace-nowrap text-[15.5px] font-bold tabular-nums"
-                              style={{ fontFamily: T.mono, color: rrColor, lineHeight: '19px', transformOrigin: 'center' }}
+                              initial={{ rotateX: -90, opacity: 0 }}
+                              animate={{ rotateX: 0, opacity: 1 }}
+                              exit={{ rotateX: 90, opacity: 0 }}
+                              transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }}
+                              className="block whitespace-nowrap text-[14.5px] font-bold tabular-nums"
+                              style={{ fontFamily: T.mono, color: rrColor, lineHeight: '19px', transformOrigin: 'center bottom' }}
                             >
                               {rr === null ? '—' : `${rr > 0 ? '+' : ''}${rr}R`}
                             </motion.span>
@@ -388,7 +394,7 @@ export default function TradesTable({
                       }
                     >
                       <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: res ? res.c : T.text4 }} />
-                      {res ? res.label : 'Не вказано'}
+                      {res ? res.label : 'Not set'}
                     </span>
                   </td>
 
@@ -399,7 +405,7 @@ export default function TradesTable({
                   <td className="px-4 py-0 pr-6 text-center">
                     <button
                       onClick={(e) => { e.stopPropagation(); onDelete(t.id); }}
-                      title="Видалити угоду"
+                      title="Delete trade"
                       className="grid h-8 w-8 place-items-center rounded-lg opacity-0 transition-all duration-150 group-hover:opacity-100"
                       style={{ color: T.text4 }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; e.currentTarget.style.color = T.bad; }}

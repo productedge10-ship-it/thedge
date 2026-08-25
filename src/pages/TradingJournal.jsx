@@ -140,8 +140,8 @@ function AssetSelect({ options, value, onChange, categories }) {
   return (
     <div className="relative" ref={ref}>
       <FieldTrigger
-        label="Актив"
-        value={active ? value : "Усі активи"}
+        label="Asset"
+        value={active ? value : "All assets"}
         active={active}
         open={open}
         onClick={() => setOpen((v) => !v)}
@@ -165,7 +165,7 @@ function AssetSelect({ options, value, onChange, categories }) {
                   autoFocus
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="Пошук активу…"
+                  placeholder="Search asset…"
                   className="w-full border-none bg-transparent text-[13.5px] outline-none"
                   style={{ fontFamily: T.sans, color: T.text }}
                 />
@@ -177,7 +177,7 @@ function AssetSelect({ options, value, onChange, categories }) {
                 <OptionRow active={value === "All"} layoutId="asset-select-active" onClick={() => { onChange("All"); setOpen(false); setQ(""); }}>
                   <span className="flex items-center gap-2.5 pl-1.5 text-[14px] font-bold" style={{ fontFamily: T.sans, color: value === "All" ? T.acc : T.text2 }}>
                     <Filter size={14} strokeWidth={2.4} style={{ color: value === "All" ? T.acc : T.text4 }} />
-                    Усі активи
+                    All assets
                   </span>
                   {value === "All" && <Check size={14} strokeWidth={3} style={{ color: T.acc }} />}
                 </OptionRow>
@@ -202,7 +202,7 @@ function AssetSelect({ options, value, onChange, categories }) {
 
               {q && !filtered.length && (
                 <div className="px-3 py-8 text-center text-[13px]" style={{ color: T.text4, fontFamily: T.sans }}>
-                  Актив не знайдено
+                  Asset not found
                 </div>
               )}
             </div>
@@ -214,11 +214,11 @@ function AssetSelect({ options, value, onChange, categories }) {
 }
 
 const PERIODS = [
-  { id: "all", label: "Весь час" },
-  { id: "7d", label: "7 днів" },
-  { id: "30d", label: "30 днів" },
-  { id: "90d", label: "3 місяці" },
-  { id: "month", label: "Цей місяць" },
+  { id: "all", label: "All time" },
+  { id: "7d", label: "7 days" },
+  { id: "30d", label: "30 days" },
+  { id: "90d", label: "3 months" },
+  { id: "month", label: "This month" },
 ];
 
 function PeriodSelect({ value, onChange }) {
@@ -236,7 +236,7 @@ function PeriodSelect({ value, onChange }) {
   return (
     <div className="relative" ref={ref}>
       <FieldTrigger
-        label="Період"
+        label="Period"
         value={current.label}
         active={active}
         open={open}
@@ -301,9 +301,9 @@ const QUICK_RESULT = [
   { id: "be",   label: "BE",   icon: Minus,        c: T.warn, rgb: T.warnRgb, test: (t) => t.result?.trim().toLowerCase() === "be" },
 ];
 const QUICK_DISCIPLINE = [
-  { id: "offplan", label: "Не за планом", icon: ShieldAlert,  c: T.bad,  rgb: T.badRgb,  test: (t) => !t.followed_plan },
-  { id: "mistake", label: "З помилкою",   icon: AlertOctagon, c: T.warn, rgb: T.warnRgb, test: (t) => !!t.has_mistake },
-  { id: "rushed",  label: "Поспіх",       icon: Zap,          c: "#fb923c", rgb: "251,146,60", test: (t) => !!t.rushed },
+  { id: "offplan", label: "Off plan", icon: ShieldAlert,  c: T.bad,  rgb: T.badRgb,  test: (t) => !t.followed_plan },
+  { id: "mistake", label: "Mistake",   icon: AlertOctagon, c: T.warn, rgb: T.warnRgb, test: (t) => !!t.has_mistake },
+  { id: "rushed",  label: "Rushed",       icon: Zap,          c: "#fb923c", rgb: "251,146,60", test: (t) => !!t.rushed },
 ];
 const QUICK = [...QUICK_RESULT, ...QUICK_DISCIPLINE];
 
@@ -403,7 +403,7 @@ function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
     <div className="px-5 py-3.5" style={{ borderBottom: `1px solid ${T.line}` }}>
       <div className="mb-2.5 flex items-center justify-between">
         <span className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          Швидкі фільтри
+          Quick filters
         </span>
         <div className="flex items-center gap-3">
           <AnimatePresence>
@@ -420,12 +420,12 @@ function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
                 onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
                 onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
               >
-                <X size={11} strokeWidth={3} /> Скинути
+                <X size={11} strokeWidth={3} /> Reset
               </motion.button>
             )}
           </AnimatePresence>
           <span className="text-[12px] font-bold tabular-nums" style={{ fontFamily: T.sans, color: T.text3 }}>
-            {has ? `${shown} з ${total}` : `${total} угод`}
+            {has ? `${shown} of ${total}` : `${total} trades`}
           </span>
         </div>
       </div>
@@ -435,7 +435,7 @@ function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
       <div className="flex flex-wrap items-stretch justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <span className="text-[9px] font-bold uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-            Результат
+            Result
           </span>
           <div className="flex gap-1.5">
             {QUICK_RESULT.map((f) => (
@@ -448,7 +448,7 @@ function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
 
         <div className="flex flex-col items-start gap-1.5 sm:items-end">
           <span className="text-[9px] font-bold uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-            Дисципліна
+            Discipline
           </span>
           <div className="flex gap-1.5">
             {QUICK_DISCIPLINE.map((f) => (
@@ -472,20 +472,20 @@ function ChartTooltip({ active, payload }) {
 
   const rows = [
     {
-      label: "Накопичено",
+      label: "Accumulated",
       value: `${d.cumulativeRR > 0 ? "+" : ""}${d.cumulativeRR}R`,
       color: d.cumulativeRR >= 0 ? T.ok : T.bad,
       big: true,
     },
     {
-      label: "Гроші",
+      label: "Money",
       value: `${
         d.cumulativeProfit > 0 ? "+" : d.cumulativeProfit < 0 ? "−" : ""
       }$${Math.abs(d.cumulativeProfit).toFixed(2)}`,
       color: d.cumulativeProfit >= 0 ? T.ok : T.bad,
     },
     { label: "Win rate", value: `${d.winRate}%`, color: T.text2 },
-    { label: "За планом", value: `${d.planRate}%`, color: T.text2 },
+    { label: "Plan rate", value: `${d.planRate}%`, color: T.text2 },
   ];
 
   return (
@@ -513,7 +513,7 @@ function ChartTooltip({ active, payload }) {
           className="text-[12px] font-bold tabular-nums"
           style={{ fontFamily: T.sans, color: T.text4 }}
         >
-          угода №{d.trades}
+          trade #{d.trades}
         </span>
       </div>
 
@@ -678,7 +678,7 @@ export default function TradingJournal() {
         setTrades(data || []);
         setTotalCount(count || 0);
       } catch (err) {
-        console.error("Помилка завантаження угод:", err);
+        console.error("Error loading trades:", err);
       } finally {
         setLoadingInitial(false);
       }
@@ -811,7 +811,7 @@ export default function TradingJournal() {
       if (trades.length === 1 && page > 1) setPage((p) => p - 1);
       else fetchTradesList(page, { force: true });
     } catch {
-      console.error("Не вдалося видалити угоду");
+      console.error("Failed to delete trade");
     }
   };
 
@@ -846,7 +846,7 @@ export default function TradingJournal() {
                   letterSpacing: "-0.03em",
                 }}
               >
-                Історія угод
+                Trade History
               </h1>
             </div>
           </div>
@@ -876,7 +876,7 @@ export default function TradingJournal() {
                   strokeWidth={3}
                   className="!block !shrink-0 transition-transform duration-300 group-hover:rotate-90"
                 />
-                <span className="!whitespace-nowrap">Додати угоду</span>
+                <span className="!whitespace-nowrap">Add Trade</span>
               </Shine>
             </Magnetic>
           </div>
@@ -920,13 +920,13 @@ export default function TradingJournal() {
                   className="text-[17px] font-bold leading-tight"
                   style={{ fontFamily: T.display, color: T.text }}
                 >
-                  Крива капіталу
+                  Equity Curve
                 </h3>
                 <p
                   className="mt-1 text-[13px]"
                   style={{ color: T.text3, fontFamily: T.sans }}
                 >
-                  Накопичений R за період
+                  Accumulated R for the period
                 </p>
               </div>
             </div>
@@ -1022,7 +1022,7 @@ export default function TradingJournal() {
                   className="text-[14px]"
                   style={{ color: T.text4, fontFamily: T.sans }}
                 >
-                  Замало даних для графіка
+                  Not enough data for a chart
                 </span>
               </div>
             )}
@@ -1057,13 +1057,13 @@ export default function TradingJournal() {
                 className="text-[17px] font-bold leading-tight"
                 style={{ fontFamily: T.display, color: T.text }}
               >
-                Угоди
+                Trades
               </h3>
               <p
                 className="mt-1 text-[13px]"
                 style={{ color: T.text3, fontFamily: T.sans }}
               >
-                Клік по рядку — деталі
+                Click a row for details
               </p>
             </div>
           </div>
@@ -1142,13 +1142,13 @@ export default function TradingJournal() {
                   className="text-[18px] font-bold"
                   style={{ fontFamily: T.display, color: T.text }}
                 >
-                  Видалити угоду?
+                  Delete trade?
                 </h3>
                 <p
                   className="text-[14px] leading-relaxed"
                   style={{ color: T.text3, fontFamily: T.sans }}
                 >
-                  Запис зникне назавжди разом зі скріншотами й нотатками.
+                  The record will be permanently deleted along with screenshots and notes.
                 </p>
               </div>
 
@@ -1169,7 +1169,7 @@ export default function TradingJournal() {
                     (e.currentTarget.style.borderColor = T.line)
                   }
                 >
-                  Скасувати
+                  Cancel
                 </button>
                 <button
                   onClick={confirmDelete}
@@ -1184,7 +1184,7 @@ export default function TradingJournal() {
                   }
                   onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
                 >
-                  Видалити
+                  Delete
                 </button>
               </div>
             </motion.div>

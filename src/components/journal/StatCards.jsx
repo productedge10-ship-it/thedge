@@ -18,10 +18,10 @@ function SparkTip({ active, payload, primary }) {
   const d = payload[0].payload;
 
   const rows = [
-    { label: 'Угода',      value: `№${d.trades}` },
-    { label: 'Накопичено', value: `${d.cumulativeRR > 0 ? '+' : ''}${d.cumulativeRR}R`, color: d.cumulativeRR >= 0 ? T.ok : T.bad },
+    { label: 'Trade',      value: `#${d.trades}` },
+    { label: 'Accumulated', value: `${d.cumulativeRR > 0 ? '+' : ''}${d.cumulativeRR}R`, color: d.cumulativeRR >= 0 ? T.ok : T.bad },
     { label: 'Win rate',   value: `${d.winRate}%` },
-    { label: 'За планом',  value: `${d.planRate}%` },
+    { label: 'Plan rate',  value: `${d.planRate}%` },
   ];
 
   return (
@@ -180,10 +180,10 @@ export default function StatCards({ stats, chartData }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Card
-        label="Всього угод"
+        label="Total Trades"
         icon={Hash}
-        spark={<Spark data={chartData} dataKey="trades" color={T.text3} primary="Угода" />}
-        note={stats.total === 0 ? 'Ще немає записів' : null}
+        spark={<Spark data={chartData} dataKey="trades" color={T.text3} primary="Trade" />}
+        note={stats.total === 0 ? 'No records yet' : null}
       >
         <Num>{stats.total}</Num>
       </Card>
@@ -193,16 +193,16 @@ export default function StatCards({ stats, chartData }) {
         icon={Target}
         accent={wrLow ? T.warn : null}
         spark={<Spark data={chartData} dataKey="winRate" color={wrLow ? T.warn : T.text3} primary="Win rate" />}
-        note={stats.total > 0 ? `${Math.round((stats.winrate / 100) * stats.total)} з ${stats.total}` : null}
+        note={stats.total > 0 ? `${Math.round((stats.winrate / 100) * stats.total)} of ${stats.total}` : null}
       >
         <Num color={wrLow ? T.warn : T.text}>{stats.winrate}%</Num>
       </Card>
 
       <Card
-        label="Сумарний R / PnL"
+        label="Total R / PnL"
         icon={rrUp ? TrendingUp : TrendingDown}
         accent={stats.totalRR === 0 ? null : rrUp ? T.ok : T.bad}
-        spark={<Spark data={chartData} dataKey="cumulativeRR" color={rrUp ? T.ok : T.bad} primary="Накопичено" />}
+        spark={<Spark data={chartData} dataKey="cumulativeRR" color={rrUp ? T.ok : T.bad} primary="Accumulated" />}
       >
         <Num color={rrColor}>
           {stats.totalRR > 0 ? '+' : ''}{stats.totalRR}R
@@ -217,11 +217,11 @@ export default function StatCards({ stats, chartData }) {
       </Card>
 
       <Card
-        label="За планом"
+        label="Plan Adherence"
         icon={ShieldCheck}
         accent={planLow ? T.bad : null}
-        spark={<Spark data={chartData} dataKey="planRate" color={planLow ? T.bad : T.text3} primary="За планом" />}
-        note={stats.mistakeRate > 0 ? `помилки у ${stats.mistakeRate}% угод` : null}
+        spark={<Spark data={chartData} dataKey="planRate" color={planLow ? T.bad : T.text3} primary="Plan rate" />}
+        note={stats.mistakeRate > 0 ? `mistakes in ${stats.mistakeRate}% of trades` : null}
       >
         <Num color={planLow ? T.bad : T.text}>{stats.planRate}%</Num>
       </Card>
@@ -294,7 +294,7 @@ export function StreakBar({ streak }) {
       </div>
 
       <span className="relative ml-auto text-[13px]" style={{ color: T.text4, fontFamily: T.sans }}>
-        {win ? 'не розслабляйся з ризиком' : 'подумай про паузу'}
+        {win ? 'stay disciplined with risk' : 'consider taking a break'}
       </span>
     </motion.div>
   );

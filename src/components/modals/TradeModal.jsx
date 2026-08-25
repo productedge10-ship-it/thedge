@@ -7,8 +7,8 @@ import { uk } from 'date-fns/locale';
 import 'react-day-picker/dist/style.css';
 import {
   X, ImagePlus, Loader2, AlertCircle, AlertTriangle,
-  CalendarDays, ChevronDown, ChevronUp, ChevronRight, Search, Check, Plus, Pencil,
-  Wallet, Clock,
+  CalendarDays, ChevronDown, Search, Check, Plus, Pencil,
+  Wallet,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
@@ -20,6 +20,7 @@ import { syncErrorFromTrade, fetchErrorForTrade, catsFromTrade } from '../../lib
 import { CATS } from '../errors/utils';
 import ErrorComposerModal from '../errors/ErrorComposerModal';
 import AssetIcon from '../ui/AssetIcon';
+import ImageSlider from '../ui/ImageSlider';
 import Popover from '../ui/Popover';
 
 /* ==================================================================
@@ -61,19 +62,26 @@ const DIRECTIONS = ['Long', 'Short'];
    застосунку на них зав'язані), надпис — Take/Stop, як усюди в
    журналі. */
 const RESULT_CHIPS = ['Win', 'Lose', 'BE', 'In Progress', 'Missed'];
-const RESULT_LABEL = { Win: 'Take', Lose: 'Stop', BE: 'BE', 'In Progress': 'В процесі', Missed: 'Пропущено' };
+const RESULT_LABEL = { Win: 'Take', Lose: 'Stop', BE: 'BE', 'In Progress': 'In Progress', Missed: 'Missed' };
+const RESULT_COLORS = {
+  Win: { c: ACCENT, rgb: ACCENT_RGB },
+  Lose: { c: BAD, rgb: BAD_RGB },
+  BE: { c: AMBER, rgb: '245,181,74' },
+  'In Progress': { c: '#60a5fa', rgb: '96,165,250' },
+  Missed: { c: '#9a9aa3', rgb: '154,154,163' },
+};
 const DEFAULT_PAIRS = ['GER40', 'EURUSD', 'NQ100', 'S&P500', 'GOLD', 'NZD/USD', 'BTC', 'ETH', 'SOL'];
 
 /* Сім питань розбору — той самий порядок і той самий «good», що й у
    макеті, зіставлений з реальними полями психоблоку. */
 const QUESTIONS = [
-  { key: 'followedPlan', q: 'Дотримався торгового плану?', good: true },
-  { key: 'rushed', q: 'Спішив зі входом (FOMO)?', good: false },
-  { key: 'hasMistake', q: 'Припустився очевидної помилки?', good: false },
-  { key: 'psyConfident', q: 'Був упевнений у рішеннях?', good: true },
-  { key: 'psyFear', q: 'Чи був присутній страх?', good: false },
-  { key: 'psyRepeat', q: 'Повторив би цю угоду?', good: true },
-  { key: 'psyRevenge', q: 'Було бажання відігратися?', good: false },
+  { key: 'followedPlan', q: 'Did you follow the trading plan?', good: true },
+  { key: 'rushed', q: 'Did you rush the entry (FOMO)?', good: false },
+  { key: 'hasMistake', q: 'Did you make an obvious mistake?', good: false },
+  { key: 'psyConfident', q: 'Were you confident in your decisions?', good: true },
+  { key: 'psyFear', q: 'Was fear present?', good: false },
+  { key: 'psyRepeat', q: 'Would you repeat this trade?', good: true },
+  { key: 'psyRevenge', q: 'Did you feel the urge to revenge trade?', good: false },
 ];
 
 /* Локальна дата: toISOString() зсуває день на UTC і о другій ночі
@@ -86,70 +94,38 @@ const todayLocal = () => {
 
 /* ---------- дрібні цеглинки ---------- */
 
-/* Рядок форми: підпис + позначка обов'язковості зліва (150px),
-   поле — праворуч. Той самий рядок, що будує всю форму в макеті:
-   ніякого «блок над блоком», просто список рядків з розділювачами. */
+/* Блок форми: підпис зверху, поле під ним — структурно, а не
+   збоку. Той самий блок будує всю форму: підпис коротко називає,
+   що заповнюється нижче, і список таких блоків іде вертикально з
+   розділювачами. */
 function Row({ label, required, hint, children, noBorder }) {
   return (
     <div
-      className="grid items-center"
+      className="flex flex-col gap-3"
       style={{
-        gridTemplateColumns: '150px 1fr',
-        columnGap: 28,
-        rowGap: 12,
-        padding: '26px 0',
+        padding: '22px 0',
         borderBottom: noBorder ? 'none' : `1px solid ${line(0.05)}`,
       }}
     >
-      <div className="flex flex-col gap-1.5">
-        <div className="text-[14px] font-bold" style={{ fontFamily: T.sans, color: '#f2f4f3' }}>{label}</div>
-        <div className="text-[12px]" style={{ fontFamily: MONO, color: required ? ACCENT : txt(0.5) }}>
-          {required ? "обов'язково" : (hint || 'опційно')}
-        </div>
+      <div className="flex items-baseline gap-2">
+        <div className="text-[14px] font-bold uppercase tracking-[0.06em]" style={{ fontFamily: T.sans, color: txt(0.55) }}>{label}</div>
+        {hint && (
+          <div className="text-[11.5px]" style={{ fontFamily: MONO, color: txt(0.4) }}>{hint}</div>
+        )}
       </div>
       <div className="min-w-0">{children}</div>
     </div>
   );
 }
 
-/* Ряд-пігулок з рівномірною бірюзовою активністю — так само в
-   макеті виглядають і сесії, і статус: активний варіант завжди
-   один і той самий стиль, незалежно від того, яка саме опція. */
-function PillRow({ options, value, onChange, labelOf, wrap, equal }) {
-  return (
-    <div className={`flex gap-2 ${wrap ? 'flex-wrap' : ''}`}>
-      {options.map((o) => {
-        const on = value === o;
-        return (
-          <button
-            key={o}
-            type="button"
-            onClick={() => onChange(o)}
-            className={`rounded-xl text-center transition-colors duration-150 ${equal ? 'flex-1 py-3.5 text-[15px]' : 'px-[18px] py-3 text-[14px]'}`}
-            style={{
-              fontFamily: T.sans,
-              fontWeight: on ? 600 : 500,
-              background: on ? `rgba(${ACCENT_RGB},0.12)` : 'transparent',
-              border: `1px solid ${on ? `rgba(${ACCENT_RGB},0.4)` : line(0.08)}`,
-              color: on ? ACCENT : txt(0.6),
-            }}
-          >
-            {labelOf ? labelOf(o) : o}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
-/* Long/Short — не два рівнозначні перемикачі, а один бокс, де
-   активна сторона отримує власну кольорову пігулку всередині. */
+/* Long/Short — сегментований перемикач на всю ширину під активом:
+   заливка ковзає (layoutId) до активної сторони, а не два незалежних
+   боксери. Ні рамки, ні крапок — лише прозорий трек і кольорова
+   пігулка, яка сама каже, де зараз стоїш. */
 function DirectionToggle({ value, onChange }) {
   return (
-    <div
-      className="flex h-[52px] w-[150px] shrink-0 items-center overflow-hidden rounded-xl"
-      style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}` }}
-    >
+    <div className="relative flex h-14 w-full gap-1 rounded-2xl p-1" style={{ background: FIELD_BG }}>
       {DIRECTIONS.map((d) => {
         const on = value === d;
         const c = d === 'Long' ? ACCENT : BAD;
@@ -159,15 +135,18 @@ function DirectionToggle({ value, onChange }) {
             key={d}
             type="button"
             onClick={() => onChange(d)}
-            className="flex h-full flex-1 items-center justify-center text-[14px] transition-colors duration-150"
-            style={{ fontFamily: T.sans, fontWeight: on ? 600 : 500, color: on ? c : txt(0.6) }}
+            className="relative flex-1 text-[15px] transition-colors duration-150"
+            style={{ fontFamily: T.sans, fontWeight: on ? 700 : 500, color: on ? c : txt(0.45) }}
           >
-            <span
-              className="flex h-[34px] w-full items-center justify-center rounded-[9px]"
-              style={{ background: on ? `rgba(${rgb},0.14)` : 'transparent' }}
-            >
-              {d}
-            </span>
+            {on && (
+              <motion.span
+                layoutId="dir-thumb"
+                transition={{ type: 'spring', stiffness: 520, damping: 38 }}
+                className="absolute inset-0 -z-10 rounded-xl"
+                style={{ background: `rgba(${rgb},0.14)` }}
+              />
+            )}
+            {d}
           </button>
         );
       })}
@@ -219,36 +198,43 @@ function AssetPicker({ value, onChange }) {
     <Popover
       z={600}
       renderTrigger={({ toggle, open: o }) => (
-        <button
+        <motion.button
           type="button"
           onClick={toggle}
-          className="flex h-[52px] flex-1 items-center justify-between rounded-xl px-4 text-[17px] font-bold"
-          style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${value ? `rgba(${ACCENT_RGB},0.28)` : (o ? line(0.16) : line(0.08))}`, color: '#f2f4f3' }}
+          whileTap={{ scale: 0.99 }}
+          transition={SPRING}
+          className="flex h-14 w-full items-center justify-between rounded-2xl px-[18px] text-[18px] font-bold"
+          style={{
+            fontFamily: T.sans,
+            background: value ? `rgba(${ACCENT_RGB},0.07)` : FIELD_BG,
+            border: `1px solid ${value ? `rgba(${ACCENT_RGB},0.3)` : (o ? line(0.16) : 'transparent')}`,
+            color: '#f2f4f3',
+          }}
         >
           {value ? (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2.5">
               <AssetIcon symbol={value} />
               {value}
             </span>
           ) : (
-            <span className="flex items-center gap-2 text-[15px] font-semibold" style={{ color: txt(0.5) }}>
-              <Search size={14} strokeWidth={2.4} />
-              Обрати актив
+            <span className="flex items-center gap-2.5 text-[15.5px] font-semibold" style={{ color: txt(0.45) }}>
+              <Search size={15} strokeWidth={2.4} />
+              Select asset
             </span>
           )}
-          <span className="text-[13px] font-normal" style={{ color: txt(0.55) }}>▾</span>
-        </button>
+          <ChevronDown size={16} strokeWidth={2.4} style={{ color: value ? ACCENT : txt(0.4), transform: o ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+        </motion.button>
       )}
     >
       {({ close }) => (
-        <div className="w-[240px] overflow-hidden rounded-2xl" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}>
+        <div className="w-[320px] overflow-hidden rounded-2xl" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}>
           <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: `1px solid ${line(0.08)}` }}>
             <Search size={12} style={{ color: txt(0.5) }} />
             <input
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Пошук або новий актив…"
+              placeholder="Search or new asset…"
               className="w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:opacity-50"
               style={{ fontFamily: T.sans, color: '#f2f4f3' }}
             />
@@ -285,7 +271,7 @@ function AssetPicker({ value, onChange }) {
             })}
             {filtered.length === 0 && !showAdd && (
               <div className="px-3 py-5 text-center text-[12px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>
-                Нічого не знайдено
+                Nothing found
               </div>
             )}
           </div>
@@ -297,7 +283,7 @@ function AssetPicker({ value, onChange }) {
               style={{ borderTop: `1px solid ${line(0.08)}`, fontFamily: T.sans, color: ACCENT }}
             >
               <Plus size={13} strokeWidth={2.6} />
-              Додати «{search.trim().toUpperCase()}»
+              Add "{search.trim().toUpperCase()}"
             </button>
           )}
         </div>
@@ -368,94 +354,215 @@ function SessionPicker({ value, onChange }) {
         <button
           type="button"
           onClick={toggle}
-          className="flex h-[52px] w-full items-center justify-between rounded-xl px-4 text-[15px] font-semibold"
-          style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${o ? line(0.16) : line(0.08)}`, color: '#f2f4f3' }}
+          className="flex h-12 items-center gap-3 rounded-xl px-4 text-[16px] font-bold transition-colors duration-150"
+          style={{ fontFamily: T.sans, background: `rgba(${current.rgb},0.07)`, border: `1px solid rgba(${current.rgb},0.35)`, color: current.c }}
         >
-          <span className="flex items-center gap-2.5">
-            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: current.c }} />
-            {value}
-          </span>
-          <ChevronDown size={14} strokeWidth={2.4} style={{ color: txt(0.5), transform: o ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+          {value}
+          <ChevronDown size={14} strokeWidth={2.6} style={{ color: current.c, opacity: 0.6, transform: o ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
         </button>
       )}
     >
       {({ close }) => (
-        <div className="w-[240px] overflow-hidden rounded-2xl p-1.5" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}>
-          {all.map((s) => {
-            const on = s.name === value;
-            const sc = colorOf(s.name);
-            const isCustom = s.id !== null;
-            const editing = editingId === s.id && isCustom;
-            return (
-              <div key={s.id ?? s.name} className="group flex items-center">
-                {editing ? (
-                  <div className="flex flex-1 items-center gap-1.5 px-2.5 py-1.5">
-                    <input
-                      autoFocus
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') renameSession(s.id); if (e.key === 'Escape') setEditingId(null); }}
-                      className="w-full min-w-0 bg-transparent text-[13px] outline-none"
-                      style={{ fontFamily: T.sans, color: '#f2f4f3' }}
-                    />
-                    <button type="button" onClick={() => renameSession(s.id)}><Check size={13} strokeWidth={3} style={{ color: ACCENT }} /></button>
-                  </div>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => { onChange(s.name); close(); }}
-                      className="flex flex-1 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13.5px] font-semibold transition-colors duration-150"
-                      style={{ fontFamily: T.sans, color: on ? sc.c : txt(0.85), background: on ? `rgba(${sc.rgb},0.12)` : 'transparent' }}
-                    >
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: sc.c }} />
-                      {s.name}
-                    </button>
-                    {isCustom && (
-                      <span className="hidden shrink-0 items-center gap-0.5 pr-1 group-hover:flex">
-                        <button type="button" onClick={() => { setEditingId(s.id); setEditName(s.name); }} className="grid h-6 w-6 place-items-center rounded transition-colors" style={{ color: txt(0.45) }}>
-                          <Pencil size={11} strokeWidth={2.4} />
-                        </button>
-                        <button type="button" onClick={() => removeSession(s.id)} className="grid h-6 w-6 place-items-center rounded transition-colors" style={{ color: txt(0.45) }} onMouseEnter={(e) => { e.currentTarget.style.color = BAD; }} onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.45); }}>
-                          <X size={12} strokeWidth={2.6} />
-                        </button>
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
-            );
-          })}
+        <div className="w-[250px] overflow-hidden rounded-2xl p-2" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}>
+          <div className="flex flex-col gap-0.5">
+            {all.map((s) => {
+              const on = s.name === value;
+              const sc = colorOf(s.name);
+              const isCustom = s.id !== null;
+              const editing = editingId === s.id && isCustom;
+              return (
+                <div key={s.id ?? s.name} className="group flex items-center gap-1 rounded-xl">
+                  {editing ? (
+                    <div className="flex flex-1 items-center gap-2 py-1 pl-3 pr-1.5">
+                      <input
+                        autoFocus
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') renameSession(s.id); if (e.key === 'Escape') setEditingId(null); }}
+                        className="h-8 w-full min-w-0 bg-transparent text-[13.5px] outline-none"
+                        style={{ fontFamily: T.sans, color: '#f2f4f3' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => renameSession(s.id)}
+                        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors"
+                        style={{ background: `rgba(${ACCENT_RGB},0.14)`, color: ACCENT }}
+                      >
+                        <Check size={13} strokeWidth={3} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { onChange(s.name); close(); }}
+                        className="flex flex-1 items-center px-2 py-1.5 text-left"
+                      >
+                        <span
+                          className="rounded-lg px-3 py-1.5 text-[13px] font-bold transition-all duration-150"
+                          style={{ fontFamily: T.sans, color: sc.c, background: `rgba(${sc.rgb},${on ? 0.18 : 0.09})` }}
+                        >
+                          {s.name}
+                        </span>
+                      </button>
+                      {isCustom && (
+                        <span className="hidden shrink-0 items-center gap-1 pr-1.5 group-hover:flex">
+                          <button type="button" onClick={() => { setEditingId(s.id); setEditName(s.name); }} className="grid h-7 w-7 place-items-center rounded-lg transition-colors" style={{ color: txt(0.45) }} onMouseEnter={(e) => { e.currentTarget.style.background = line(0.06); e.currentTarget.style.color = txt(0.85); }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = txt(0.45); }}>
+                            <Pencil size={12} strokeWidth={2.4} />
+                          </button>
+                          <button type="button" onClick={() => removeSession(s.id)} className="grid h-7 w-7 place-items-center rounded-lg transition-colors" style={{ color: txt(0.45) }} onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${BAD_RGB},0.12)`; e.currentTarget.style.color = BAD; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = txt(0.45); }}>
+                            <X size={13} strokeWidth={2.6} />
+                          </button>
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-          <div className="mt-1 px-1 pt-1" style={{ borderTop: `1px solid ${line(0.06)}` }}>
+          <div className="mt-1.5 pt-1.5" style={{ borderTop: `1px solid ${line(0.07)}` }}>
             {adding ? (
-              <div className="flex items-center gap-1.5 px-2 py-1.5">
+              <div className="flex items-center gap-2 py-1 pl-3 pr-1.5">
                 <input
                   autoFocus
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') addSession(); if (e.key === 'Escape') { setAdding(false); setNewName(''); } }}
-                  placeholder="Нова сесія"
-                  className="w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:opacity-50"
+                  placeholder="Session name…"
+                  className="h-8 w-full min-w-0 bg-transparent text-[13.5px] outline-none placeholder:opacity-45"
                   style={{ fontFamily: T.sans, color: '#f2f4f3' }}
                 />
-                <button type="button" onClick={addSession}><Check size={14} strokeWidth={3} style={{ color: ACCENT }} /></button>
+                <button
+                  type="button"
+                  onClick={addSession}
+                  disabled={!newName.trim()}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors"
+                  style={{
+                    background: newName.trim() ? `rgba(${ACCENT_RGB},0.14)` : 'transparent',
+                    color: newName.trim() ? ACCENT : txt(0.3),
+                  }}
+                >
+                  <Check size={13} strokeWidth={3} />
+                </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => setAdding(true)}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-semibold transition-colors"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-colors"
                 style={{ fontFamily: T.sans, color: txt(0.6) }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = line(0.05); }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <Plus size={13} strokeWidth={2.6} />
-                Додати сесію
+                <span className="grid h-[18px] w-[18px] place-items-center rounded-md" style={{ background: line(0.07) }}>
+                  <Plus size={11} strokeWidth={2.8} />
+                </span>
+                Add session
               </button>
             )}
           </div>
         </div>
       )}
     </Popover>
+  );
+}
+
+/* ---------- статус угоди ---------- */
+
+/* Той самий випадний список, що й гео: жодної рамки, лише колір
+   тексту, що видає стан. Без додавання/видалення — статуси
+   фіксовані. */
+function StatusPicker({ value, onChange }) {
+  const tone = RESULT_COLORS[value] || { c: txt(0.4), rgb: '242,244,243' };
+  const placeholder = value === 'Not Selected' || !value;
+
+  return (
+    <Popover
+      z={600}
+      renderTrigger={({ toggle, open: o }) => (
+        <motion.button
+          type="button"
+          onClick={toggle}
+          whileTap={{ scale: 0.99 }}
+          transition={SPRING}
+          className="flex h-14 w-[250px] max-w-full items-center justify-between rounded-2xl px-5 text-[17px] font-bold transition-colors duration-150"
+          style={{
+            fontFamily: T.sans,
+            background: placeholder ? FIELD_BG : `rgba(${tone.rgb},0.1)`,
+            border: `1px solid ${placeholder ? (o ? line(0.16) : line(0.08)) : `rgba(${tone.rgb},0.4)`}`,
+            color: placeholder ? txt(0.45) : tone.c,
+          }}
+        >
+          <span className="flex items-center gap-2.5">
+            {!placeholder && <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: tone.c }} />}
+            {placeholder ? 'Select status' : RESULT_LABEL[value]}
+          </span>
+          <ChevronDown size={15} strokeWidth={2.6} style={{ color: placeholder ? txt(0.4) : tone.c, opacity: 0.7, transform: o ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+        </motion.button>
+      )}
+    >
+      {({ close }) => (
+        <div className="w-[280px] overflow-hidden rounded-2xl p-2" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}>
+          {RESULT_CHIPS.map((o) => {
+            const on = o === value;
+            const c = RESULT_COLORS[o];
+            return (
+              <button
+                key={o}
+                type="button"
+                onClick={() => { onChange(o); close(); }}
+                className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-[13.5px] font-bold"
+                style={{ fontFamily: T.sans, color: c.c, opacity: on ? 1 : 0.62 }}
+              >
+                {RESULT_LABEL[o]}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </Popover>
+  );
+}
+
+/* ---------- розкривні пункти сетапу ---------- */
+
+/* Три пункти сетапу (назва, скрін, логіка) — не завжди розгорнуті
+   стосом полів, а компактні заголовки, що розкриваються по кліку:
+   видно, що саме можна заповнити, а сама форма не займає екран,
+   поки там нема чого показувати. */
+function Disclosure({ title, summary, open, onToggle, children }) {
+  return (
+    <div className="overflow-hidden rounded-xl transition-colors duration-150" style={{ border: `1px solid ${open ? line(0.1) : line(0.06)}` }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex h-[42px] w-full items-center justify-between gap-3 px-4 text-left transition-colors duration-150"
+        style={{ background: open ? FIELD_BG : 'transparent' }}
+      >
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="shrink-0 text-[13px] font-semibold" style={{ fontFamily: T.sans, color: txt(0.45) }}>{title}</span>
+          {summary && !open && (
+            <span className="truncate text-[12px]" style={{ fontFamily: T.sans, color: txt(0.35) }}>{summary}</span>
+          )}
+        </span>
+        <ChevronDown size={13} strokeWidth={2.4} style={{ color: txt(0.4), transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s', flexShrink: 0 }} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: EASE }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4" style={{ borderTop: `1px solid ${line(0.06)}` }}>{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -544,7 +651,7 @@ function AccountPicker({ value, options, onChange }) {
         >
           <span className="flex min-w-0 items-center gap-2">
             <Wallet size={14} strokeWidth={2.2} style={{ color: txt(0.5) }} />
-            <span className="truncate">{value || 'Немає рахунків'}</span>
+            <span className="truncate">{value || 'No accounts'}</span>
           </span>
           <ChevronDown size={14} strokeWidth={2.4} style={{ color: txt(0.5), transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
         </button>
@@ -557,7 +664,7 @@ function AccountPicker({ value, options, onChange }) {
         >
           {options.length === 0 && (
             <div className="px-3 py-5 text-center text-[13px]" style={{ fontFamily: T.sans, color: txt(0.5) }}>
-              Спершу додай рахунок
+              Add an account first
             </div>
           )}
           {options.map((o) => {
@@ -586,8 +693,40 @@ function AccountPicker({ value, options, onChange }) {
 /* ---------- зона для скріншота ---------- */
 /* Горизонтальна дропзона з макета: іконка зліва, підпис справа, а не
    центрований квадрат. Коли є картинка — звичайний превʼю з хрестиком. */
-function ShotZone({ image, onPaste, onClear, label, tone }) {
-  const c = tone || ACCENT;
+function ShotZone({ image, onPaste, onClear, label, tone, compact }) {
+  if (compact) {
+    return (
+      <div onPaste={onPaste} tabIndex={0} className="outline-none">
+        {image ? (
+          <div className="group relative w-full overflow-hidden rounded-2xl" style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}` }}>
+            <img src={image} alt="" className="block max-h-[280px] w-full object-contain" />
+            <button
+              type="button"
+              onClick={onClear}
+              className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-xl opacity-0 transition-all duration-200 group-hover:opacity-100"
+              style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${line(0.14)}`, color: txt(0.85), backdropFilter: 'blur(8px)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = BAD; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.85); }}
+            >
+              <X size={15} strokeWidth={2.6} />
+            </button>
+          </div>
+        ) : (
+          <motion.div
+            whileTap={{ scale: 0.98 }}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold transition-colors duration-150"
+            style={{ fontFamily: T.sans, background: 'transparent', border: `1px dashed ${line(0.16)}`, color: txt(0.5) }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.4)`)}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = line(0.16))}
+          >
+            <ImagePlus size={13} strokeWidth={2} />
+            {label}
+          </motion.div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div onPaste={onPaste} tabIndex={0} className="w-full outline-none">
       {image ? (
@@ -616,7 +755,7 @@ function ShotZone({ image, onPaste, onClear, label, tone }) {
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-[14px] font-medium" style={{ fontFamily: T.sans, color: txt(0.72) }}>{label}</span>
-            <span className="text-[12px]" style={{ fontFamily: MONO, color: txt(0.5) }}>перетягни або вибери · PNG / JPG</span>
+            <span className="text-[12px]" style={{ fontFamily: MONO, color: txt(0.5) }}>drag & drop or choose · PNG / JPG</span>
           </div>
         </motion.div>
       )}
@@ -645,72 +784,12 @@ export const holdMinutes = (from, to) => {
 
 const holdText = (min) => {
   if (min === null) return '';
-  if (min < 60) return `${min} хв`;
+  if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return m ? `${h} год ${m} хв` : `${h} год`;
+  return m ? `${h} h ${m} min` : `${h} h`;
 };
 
-/* Один розряд часу (ГГ або ХХ): велика цифра по центру, тонкі
-   стрілки вгору/вниз збоку — клацання й колесо миші крутять
-   значення. Клік на цифру виділяє її, щоб просто набрати з
-   клавіатури. */
-function TimeStep({ value, max, placeholder, onChange }) {
-  const step = (dir) => {
-    const cur = value === '' ? (dir > 0 ? -1 : 0) : parseInt(value, 10);
-    const next = ((cur + dir) % (max + 1) + (max + 1)) % (max + 1);
-    onChange(String(next).padStart(2, '0'));
-  };
-  return (
-    <div className="flex items-center gap-[2px]">
-      <input
-        value={value}
-        placeholder={placeholder}
-        onFocus={(e) => e.target.select()}
-        onWheel={(e) => { e.preventDefault(); step(e.deltaY < 0 ? 1 : -1); }}
-        onChange={(e) => {
-          const digits = e.target.value.replace(/\D/g, '').slice(-2);
-          if (digits === '') return onChange('');
-          onChange(String(Math.min(max, parseInt(digits, 10))).padStart(2, '0'));
-        }}
-        className="w-[24px] border-none bg-transparent text-center outline-none placeholder:opacity-40"
-        style={{ color: value ? txt(0.9) : txt(0.5), fontFamily: MONO, fontSize: 15, fontWeight: 700 }}
-      />
-      <div className="flex flex-col">
-        <button type="button" onClick={() => step(1)} className="grid h-[8px] w-[12px] place-items-center rounded-sm transition-colors" style={{ color: txt(0.4) }} onMouseEnter={(e) => (e.currentTarget.style.color = ACCENT)} onMouseLeave={(e) => (e.currentTarget.style.color = txt(0.4))}>
-          <ChevronUp size={8} strokeWidth={3} />
-        </button>
-        <button type="button" onClick={() => step(-1)} className="grid h-[8px] w-[12px] place-items-center rounded-sm transition-colors" style={{ color: txt(0.4) }} onMouseEnter={(e) => (e.currentTarget.style.color = ACCENT)} onMouseLeave={(e) => (e.currentTarget.style.color = txt(0.4))}>
-          <ChevronDown size={8} strokeWidth={3} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* Бокс «Вхід»/«Вихід» з макета: підпис зліва, ГГ:ХХ справа, той
-   самий висувний degree-степер, що й раніше, лише перевдягнений у
-   рядок замість плашки з іконкою годинника. */
-function TimeField({ label, value, onChange }) {
-  const [hh = '', mm = ''] = (value || '').split(':');
-  const setPart = (h, m) => (h === '' && m === '' ? onChange('') : onChange(`${h || '00'}:${m || '00'}`));
-
-  return (
-    <div className="flex h-[52px] flex-1 items-center justify-between rounded-xl px-4" style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}` }}>
-      <span className="text-[12px] font-medium uppercase tracking-[0.1em]" style={{ fontFamily: MONO, color: txt(0.55) }}>{label}</span>
-      <div className="flex items-center gap-1">
-        <TimeStep value={hh} max={23} placeholder="––" onChange={(h) => setPart(h, mm)} />
-        <span className="font-bold" style={{ color: txt(0.5), fontFamily: MONO, fontSize: 15 }}>:</span>
-        <TimeStep value={mm} max={59} placeholder="––" onChange={(m) => setPart(hh, m)} />
-        {value && (
-          <button type="button" onClick={() => onChange('')} className="ml-1 shrink-0 transition-colors" style={{ color: txt(0.4) }}>
-            <X size={12} strokeWidth={2.6} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default function TradeModal({ isOpen, onClose, planDate, planPair, existingTrade = null }) {
   const { user } = useAuth();
@@ -732,7 +811,9 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const [result, setResult] = useState('Not Selected');
   const [session, setSession] = useState('London');
   const [tradeDescription, setTradeDescription] = useState('');
-  const [tradeImage, setTradeImage] = useState(null);
+  /* Скрінів сетапу може бути декілька — як в аналізі угоди: галерея
+     з лупою й фулскріном (ImageSlider), а не одна картинка. */
+  const [tradeImages, setTradeImages] = useState([]);
 
   /* Сетап і час — те, без чого три розділи аналітики показували
      порожнечу. Сетап вільним текстом: своя назва — частина системи
@@ -743,10 +824,11 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const [setupOptions, setSetupOptions] = useState([]);
   const [entryTime, setEntryTime] = useState('');
   const [exitTime, setExitTime] = useState('');
-  /* Час згорнутий за замовчуванням — це необов'язкові дані, і поки
-     їх нема, порожні «--:--» плашки лише займають місце. Розкривається
-     стрілкою вбік або сам, якщо в угоді час уже був заповнений. */
-  const [timeOpen, setTimeOpen] = useState(false);
+  /* Розкриті пункти сетапу — автоматично відкриті, якщо там уже щось
+     є (редагування угоди), інакше згорнуті. */
+  const [setupNameOpen, setSetupNameOpen] = useState(false);
+  const [setupShotOpen, setSetupShotOpen] = useState(false);
+  const [setupDescOpen, setSetupDescOpen] = useState(false);
 
   const [followedPlan, setFollowedPlan] = useState(null);
   const [rushed, setRushed] = useState(null);
@@ -802,12 +884,19 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       setResult(existingTrade.result || 'Not Selected');
       setSession(existingTrade.session || 'London');
       setTradeDescription(existingTrade.trade_description || '');
-      setTradeImage(existingTrade.trade_image || null);
+      setSetupDescOpen(Boolean(existingTrade.trade_description));
+      {
+        let tImgs = [];
+        if (Array.isArray(existingTrade.trade_images) && existingTrade.trade_images.length > 0) tImgs = existingTrade.trade_images;
+        else if (existingTrade.trade_image) tImgs = [existingTrade.trade_image];
+        setTradeImages(tImgs);
+        setSetupShotOpen(tImgs.length > 0);
+      }
       setSetupName(existingTrade.setup || '');
+      setSetupNameOpen(Boolean(existingTrade.setup));
       /* База віддає час як HH:MM:SS, полю input потрібні HH:MM */
       setEntryTime((existingTrade.entry_time || '').slice(0, 5));
       setExitTime((existingTrade.exit_time || '').slice(0, 5));
-      setTimeOpen(Boolean(existingTrade.entry_time || existingTrade.exit_time));
       setFollowedPlan(existingTrade.followed_plan ?? null);
       setRushed(existingTrade.rushed ?? null);
       setHasMistake(existingTrade.has_mistake ?? null);
@@ -839,8 +928,9 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       setTradeDate(planDate || todayLocal());
       setSelectedPair(planPair || '');
       setRisk('1%'); setRr(''); setTradeType('Long'); setResult('Not Selected'); setSession('London');
-      setTradeDescription(''); setTradeImage(null);
-      setSetupName(''); setEntryTime(''); setExitTime(''); setTimeOpen(false);
+      setTradeDescription(''); setTradeImages([]);
+      setSetupName(''); setEntryTime(''); setExitTime('');
+      setSetupNameOpen(false); setSetupShotOpen(false); setSetupDescOpen(false);
       setFollowedPlan(null); setRushed(null); setHasMistake(null);
       setMistakeText(''); setMistakeImages([]);
       setPsyConfident(null); setPsyFear(null); setPsyRepeat(null); setPsyRevenge(null); setPsyNotes('');
@@ -914,9 +1004,22 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const pasteMistake = pasteInto((src) => setMistakeImages((p) => [...p, src]));
   const removeMistakeImage = (i) => setMistakeImages((p) => p.filter((_, idx) => idx !== i));
 
-  /* ---------- перевірки ---------- */
+  /* Скрін сетапу — приймає і те, і те: звичайний скріншот
+     (Ctrl+V картинки) і посилання на графік з TradingView. */
+  const removeTradeImage = (i) => setTradeImages((p) => p.filter((_, idx) => idx !== i));
+  const [setupDropHot, setSetupDropHot] = useState(false);
 
-  const holdLabel = holdText(holdMinutes(entryTime, exitTime));
+  const pasteSetup = pasteInto((src) => setTradeImages((p) => [...p, src]));
+
+  const dropSetup = (e) => {
+    e.preventDefault();
+    setSetupDropHot(false);
+    const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text');
+    if (url && url.startsWith('http')) setTradeImages((p) => [...p, url]);
+    else notify.error('No luck', 'Drag a link, not a file.');
+  };
+
+  /* ---------- перевірки ---------- */
 
   const step1Missing = !selectedPair?.trim() || !tradeDate || !account || !risk?.trim();
 
@@ -939,7 +1042,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const goNext = () => {
     setTouched(true);
     if (step1Missing) {
-      setErrorMsg('Заповни актив, дату, рахунок і ризик.');
+      setErrorMsg('Fill in the asset, date, account and risk.');
       return;
     }
     setErrorMsg('');
@@ -960,10 +1063,10 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
 
     if (step1Missing) {
       setStep(0);
-      return setErrorMsg('Заповни актив, дату, рахунок і ризик.');
+      return setErrorMsg('Fill in the asset, date, account and risk.');
     }
-    if (psyMissing) return setErrorMsg('Дай відповідь на всі питання розбору — саме вони роблять журнал корисним.');
-    if (hasMistake && !mistakeText.trim()) return setErrorMsg('Опиши помилку — інакше через місяць не згадаєш, що сталось.');
+    if (psyMissing) return setErrorMsg('Answer all the review questions — they\'re what makes the journal useful.');
+    if (hasMistake && !mistakeText.trim()) return setErrorMsg('Describe the mistake — otherwise you won\'t remember it in a month.');
 
     setErrorMsg('');
     setLoading(true);
@@ -976,7 +1079,9 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
         setup: setupName.trim() || null,
         entry_time: entryTime || null,
         exit_time: exitTime || null,
-        trade_description: tradeDescription, trade_image: tradeImage,
+        trade_description: tradeDescription,
+        trade_image: tradeImages[0] || null,
+        trade_images: tradeImages.length ? tradeImages : null,
         followed_plan: followedPlan, rushed, has_mistake: hasMistake,
         mistake_description: mistakeText, mistake_images: mistakeImages,
         psy_confident: psyConfident, psy_fear: psyFear, psy_repeat: psyRepeat,
@@ -988,7 +1093,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       if (existingTrade) {
         const { error } = await supabase.from('trades').update(payload).eq('id', existingTrade.id);
         if (error) throw error;
-        notify.success('Оновлено', 'Трейд успішно оновлено.');
+        notify.success('Updated', 'Trade updated successfully.');
       } else {
         /* id потрібен одразу: за ним помилка знайде дорогу назад до
            угоди, з якої вона взялась */
@@ -996,8 +1101,8 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
         if (error) throw error;
         tradeId = data?.id || null;
 
-        if (hasMistake) notify.error('Помилка зафіксована', 'Вона вже чекає в Журналі помилок — там її можна розібрати.');
-        else notify.success('Трейд збережено', 'Трейд додано до журналу.');
+        if (hasMistake) notify.error('Mistake logged', 'It\'s already waiting in the Error Log — you can review it there.');
+        else notify.success('Trade saved', 'Trade added to the journal.');
       }
 
       /* Дзеркало помилки в журналі. Свідомо не в try того ж рівня:
@@ -1057,8 +1162,8 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                   </span>
                   <h2 className="text-[27px] font-bold leading-none sm:text-[34px]" style={{ fontFamily: T.display, color: '#f2f4f3', letterSpacing: '-0.025em' }}>
                     {step === 0
-                      ? (existingTrade ? 'Редагувати угоду' : 'Записати угоду')
-                      : 'Розбір виконання'}
+                      ? (existingTrade ? 'Edit Trade' : 'Log Trade')
+                      : 'Execution Review'}
                   </h2>
                 </div>
                 <button
@@ -1075,7 +1180,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
 
               {/* кроки */}
               <div className="flex gap-9">
-                {['Цифри', 'Розбір'].map((s, i) => {
+                {['Numbers', 'Review'].map((s, i) => {
                   const done = i < step;
                   const on = i === step;
                   return (
@@ -1113,20 +1218,28 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       transition={{ duration: 0.22, ease: EASE }}
                     >
                       {/* Актив і напрямок */}
-                      <Row label="Актив" required>
-                        <div className="flex gap-3">
-                          <AssetPicker value={selectedPair} onChange={setSelectedPair} />
-                          <DirectionToggle value={tradeType} onChange={setTradeType} />
+                      {/* Актив і напрямок — два блоки в одному рядку,
+                          кожен зі своїм підписом, на одному рівні. */}
+                      <Row label="Asset and Direction" required>
+                        <div className="grid grid-cols-2 items-center gap-4">
+                          <div className="flex flex-col gap-2">
+                            <span className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Asset</span>
+                            <AssetPicker value={selectedPair} onChange={setSelectedPair} />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <span className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Direction</span>
+                            <DirectionToggle value={tradeType} onChange={setTradeType} />
+                          </div>
                         </div>
                       </Row>
 
-                      {/* Сесія */}
-                      <Row label="Сесія" required>
+                      {/* Session */}
+                      <Row label="Session" required>
                         <SessionPicker value={session} onChange={setSession} />
                       </Row>
 
-                      {/* Ризик */}
-                      <Row label="Ризик" required>
+                      {/* Risk */}
+                      <Row label="Risk" required>
                         <div className="grid gap-3" style={{ gridTemplateColumns: '1.3fr 1fr 1fr' }}>
                           <AccountPicker value={account} options={accountOptions} onChange={setAccount} />
                           <div className="flex h-[52px] items-center justify-between rounded-xl px-4" style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}` }}>
@@ -1152,83 +1265,121 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         </div>
                       </Row>
 
-                      {/* Статус */}
-                      <Row label="Статус" required>
-                        <PillRow options={RESULT_CHIPS} value={result} onChange={setResult} labelOf={(o) => RESULT_LABEL[o]} wrap />
+                      {/* Status */}
+                      <Row label="Status" required>
+                        <StatusPicker value={result} onChange={setResult} />
                       </Row>
 
-                      {/* Сетап */}
-                      <Row label="Сетап" noBorder>
-                        <div className="flex flex-col gap-3">
-                          <input
-                            value={setupName}
-                            onChange={(e) => setSetupName(e.target.value)}
-                            placeholder="Назва — напр. Sweep + BOS"
-                            className="flex h-[52px] w-full items-center rounded-xl px-4 text-[16px] font-normal outline-none placeholder:opacity-100"
-                            style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}`, color: '#f2f4f3', fontFamily: T.sans }}
-                          />
-                          {setupOptions.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {setupOptions.map((o) => {
-                                const on = o === setupName;
-                                return (
-                                  <button
-                                    key={o}
-                                    type="button"
-                                    onClick={() => setSetupName(on ? '' : o)}
-                                    className="rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors duration-150"
-                                    style={{
-                                      fontFamily: T.sans,
-                                      background: on ? `rgba(${ACCENT_RGB},0.12)` : 'transparent',
-                                      border: `1px solid ${on ? `rgba(${ACCENT_RGB},0.4)` : line(0.08)}`,
-                                      color: on ? ACCENT : txt(0.55),
-                                    }}
-                                  >
-                                    {o}
-                                  </button>
-                                );
-                              })}
+                      {/* Setup */}
+                      <Row label="Setup" noBorder>
+                        <div className="flex flex-col gap-2">
+                          <Disclosure
+                            title="Setup name"
+                            summary={setupName || null}
+                            open={setupNameOpen}
+                            onToggle={() => setSetupNameOpen((v) => !v)}
+                          >
+                            <div className="flex flex-col gap-3 pt-2">
+                              <input
+                                autoFocus
+                                value={setupName}
+                                onChange={(e) => setSetupName(e.target.value)}
+                                placeholder="e.g. Sweep + BOS"
+                                className="flex h-11 w-full items-center border-0 border-b bg-transparent px-0 text-[15.5px] font-semibold outline-none transition-colors placeholder:font-normal placeholder:opacity-45"
+                                style={{ borderColor: line(0.08), color: '#f2f4f3', fontFamily: T.sans }}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.4)`; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = line(0.08); }}
+                              />
+                              {setupOptions.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {setupOptions.map((o) => {
+                                    const on = o === setupName;
+                                    return (
+                                      <button
+                                        key={o}
+                                        type="button"
+                                        onClick={() => setSetupName(on ? '' : o)}
+                                        className="rounded-full px-2.5 py-1 text-[11.5px] font-semibold transition-colors duration-150"
+                                        style={{
+                                          fontFamily: T.sans,
+                                          background: on ? `rgba(${ACCENT_RGB},0.12)` : line(0.04),
+                                          color: on ? ACCENT : txt(0.5),
+                                        }}
+                                      >
+                                        {o}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
-                          )}
-                          <div className="flex flex-col gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setTimeOpen((v) => !v)}
-                              className="flex h-11 w-full items-center justify-between rounded-xl px-4 text-[13.5px] font-semibold transition-colors"
-                              style={{ fontFamily: T.sans, background: timeOpen ? FIELD_BG : 'transparent', border: `1px solid ${line(0.08)}`, color: txt(0.7) }}
+                          </Disclosure>
+
+                          <Disclosure
+                            title="Screenshot"
+                            summary={tradeImages.length ? `${tradeImages.length} screenshot${tradeImages.length === 1 ? '' : 's'}` : null}
+                            open={setupShotOpen}
+                            onToggle={() => setSetupShotOpen((v) => !v)}
+                          >
+                            <div
+                              onPaste={pasteSetup}
+                              onDragOver={(e) => { e.preventDefault(); setSetupDropHot(true); }}
+                              onDragLeave={() => setSetupDropHot(false)}
+                              onDrop={dropSetup}
+                              tabIndex={0}
+                              className="mt-2 overflow-hidden rounded-2xl outline-none transition-colors duration-200"
+                              style={{ border: `1px solid ${setupDropHot ? `rgba(${ACCENT_RGB},0.45)` : line(0.08)}` }}
                             >
-                              <span className="flex items-center gap-2">
-                                <Clock size={13} strokeWidth={2.2} style={{ color: txt(0.5) }} />
-                                Час входу і виходу
-                                {holdLabel && <span style={{ fontFamily: MONO, color: ACCENT }}>· {holdLabel}</span>}
-                              </span>
-                              <ChevronRight size={14} strokeWidth={2.4} style={{ color: txt(0.5), transform: timeOpen ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }} />
-                            </button>
-                            <AnimatePresence initial={false}>
-                              {timeOpen && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: 'auto' }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  transition={{ duration: 0.22, ease: EASE }}
-                                  className="overflow-hidden"
-                                >
-                                  <div className="flex gap-3">
-                                    <TimeField label="Вхід" value={entryTime} onChange={setEntryTime} />
-                                    <TimeField label="Вихід" value={exitTime} onChange={setExitTime} />
+                              {tradeImages.length > 0 ? (
+                                <>
+                                  <ImageSlider images={tradeImages} containerClassName="h-[440px] w-full" />
+                                  <div className="flex flex-wrap items-center gap-2 p-2.5" style={{ background: FIELD_BG, borderTop: `1px solid ${line(0.06)}` }}>
+                                    {tradeImages.map((img, i) => (
+                                      <div key={i} className="group relative h-10 w-10 shrink-0 overflow-hidden rounded-lg" style={{ border: `1px solid ${line(0.08)}` }}>
+                                        <img src={img} alt="" className="h-full w-full object-cover" />
+                                        <button
+                                          type="button"
+                                          onClick={() => removeTradeImage(i)}
+                                          className="absolute inset-0 hidden items-center justify-center transition-colors group-hover:flex"
+                                          style={{ background: 'rgba(10,10,12,0.68)', color: '#fff' }}
+                                        >
+                                          <X size={12} strokeWidth={2.8} />
+                                        </button>
+                                      </div>
+                                    ))}
+                                    <span className="text-[11.5px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Ctrl+V or drag — add more</span>
                                   </div>
+                                </>
+                              ) : (
+                                <motion.div
+                                  animate={{ background: setupDropHot ? `rgba(${ACCENT_RGB},0.05)` : FIELD_BG }}
+                                  className="flex min-h-[300px] cursor-text flex-col items-center justify-center gap-2 text-center"
+                                >
+                                  <ImagePlus size={20} strokeWidth={1.8} style={{ color: setupDropHot ? ACCENT : txt(0.4) }} />
+                                  <span className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: setupDropHot ? ACCENT : txt(0.65) }}>
+                                    {setupDropHot ? 'Drop it' : 'Paste a chart screenshot'}
+                                  </span>
+                                  <span className="text-[12px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Ctrl+V — screenshot or a TradingView link, multiple allowed</span>
                                 </motion.div>
                               )}
-                            </AnimatePresence>
-                          </div>
-                          <ShotZone image={tradeImage} onPaste={pasteInto(setTradeImage)} onClear={() => setTradeImage(null)} label="Скрін графіка" />
-                          <textarea
-                            value={tradeDescription}
-                            onChange={(e) => setTradeDescription(e.target.value)}
-                            placeholder="Логіка входу, підтвердження, емоції в моменті… (опційно)"
-                            className="min-h-[80px] w-full resize-y rounded-xl p-4 text-[15px] outline-none placeholder:opacity-50"
-                            style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}`, color: txt(0.8), fontFamily: T.sans, lineHeight: 1.55 }}
-                          />
+                            </div>
+                          </Disclosure>
+
+                          <Disclosure
+                            title="Entry logic"
+                            summary={tradeDescription ? tradeDescription.slice(0, 40) + (tradeDescription.length > 40 ? '…' : '') : null}
+                            open={setupDescOpen}
+                            onToggle={() => setSetupDescOpen((v) => !v)}
+                          >
+                            <textarea
+                              autoFocus
+                              value={tradeDescription}
+                              onChange={(e) => setTradeDescription(e.target.value)}
+                              placeholder="Entry logic, confirmations, emotions in the moment…"
+                              className="mt-2 min-h-[80px] w-full resize-y border-0 bg-transparent p-0 text-[14.5px] outline-none placeholder:opacity-40"
+                              style={{ color: txt(0.8), fontFamily: T.sans, lineHeight: 1.55 }}
+                            />
+                          </Disclosure>
                         </div>
                       </Row>
                     </motion.div>
@@ -1243,7 +1394,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                     >
                       <div className="flex flex-wrap items-end justify-between gap-5">
                         <p className="max-w-[400px] text-[15px] leading-[1.5]" style={{ fontFamily: T.sans, color: txt(0.6) }}>
-                          Сім питань. Відповідай як було, а не як хотілося б.
+                          Seven questions. Answer how it really was, not how you wish it had been.
                         </p>
                         <div className="flex items-center gap-3">
                           <span className="text-[20px] font-bold" style={{ fontFamily: MONO, color: ACCENT }}>
@@ -1293,7 +1444,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                         color: active ? tone : txt(0.6),
                                       }}
                                     >
-                                      {v2 ? 'Так' : 'Ні'}
+                                      {v2 ? 'Yes' : 'No'}
                                     </button>
                                   );
                                 })}
@@ -1320,7 +1471,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                               <div className="flex flex-wrap items-center gap-2.5">
                                 <AlertTriangle size={14} strokeWidth={2.4} style={{ color: BAD }} />
                                 <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: BAD }}>
-                                  Аналіз помилки
+                                  Mistake analysis
                                 </span>
 
                                 {errDraft?.cats?.length > 0 && (
@@ -1348,7 +1499,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                       pair: errDraft?.pair || selectedPair || '',
                                       desc: mistakeText,
                                       reasons: errDraft?.reasons || [],
-                                      tvLink: errDraft?.tvLink || mistakeImages[0] || tradeImage || '',
+                                      tvLink: errDraft?.tvLink || mistakeImages[0] || tradeImages[0] || '',
                                       cats: errDraft?.cats?.length
                                         ? errDraft.cats
                                         : catsFromTrade({
@@ -1361,12 +1512,12 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                   className="ml-auto flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[12.5px] font-bold transition-colors"
                                   style={{ fontFamily: T.sans, background: 'transparent', border: `1px solid rgba(${BAD_RGB},0.3)`, color: BAD }}
                                 >
-                                  {errDraft ? 'Змінити розбір' : 'Розібрати детально'}
+                                  {errDraft ? 'Edit review' : 'Break it down'}
                                 </button>
                               </div>
 
                               {mistakeImages.length === 0 ? (
-                                <ShotZone image={null} onPaste={pasteMistake} label="Встав графіки помилки" tone={BAD} />
+                                <ShotZone image={null} onPaste={pasteMistake} label="Paste mistake screenshots" tone={BAD} />
                               ) : (
                                 <div onPaste={pasteMistake} tabIndex={0} className="grid grid-cols-2 gap-2.5 outline-none">
                                   {mistakeImages.map((img, i) => (
@@ -1383,7 +1534,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                     </div>
                                   ))}
                                   <div className="grid aspect-video place-items-center rounded-xl text-center text-[12px] font-semibold" style={{ border: `1px dashed rgba(${BAD_RGB},0.25)`, background: FIELD_BG, color: txt(0.5), fontFamily: T.sans }}>
-                                    ще один<br />Ctrl+V
+                                    one more<br />Ctrl+V
                                   </div>
                                 </div>
                               )}
@@ -1391,7 +1542,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                               <textarea
                                 value={mistakeText}
                                 onChange={(e) => setMistakeText(e.target.value)}
-                                placeholder="Детально опиши помилку, щоб не повторити її в майбутньому…"
+                                placeholder="Describe the mistake in detail so you don't repeat it…"
                                 className="min-h-[80px] w-full resize-y rounded-xl p-4 text-[14px] outline-none"
                                 style={{ background: FIELD_BG, border: `1px solid ${touched && !mistakeText.trim() ? `rgba(${BAD_RGB},0.4)` : line(0.08)}`, color: txt(0.8), fontFamily: T.sans, lineHeight: 1.55 }}
                               />
@@ -1400,19 +1551,15 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         )}
                       </AnimatePresence>
 
-                      <div className="grid items-start gap-7 pt-1.5" style={{ gridTemplateColumns: '150px 1fr' }}>
-                        <div className="flex flex-col gap-1.5">
-                          <div className="text-[14px] font-bold" style={{ fontFamily: T.sans, color: '#f2f4f3' }}>Нотатка</div>
-                          <div className="text-[12px]" style={{ fontFamily: MONO, color: txt(0.5) }}>опційно</div>
-                        </div>
-                        <textarea
-                          value={psyNotes}
-                          onChange={(e) => setPsyNotes(e.target.value)}
-                          placeholder="Що саме зіпсувало або зберегло цю угоду?"
-                          className="min-h-[80px] w-full resize-y rounded-xl p-4 text-[15px] outline-none placeholder:opacity-50"
-                          style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}`, color: txt(0.8), fontFamily: T.sans, lineHeight: 1.55 }}
-                        />
-                      </div>
+                      <textarea
+                        value={psyNotes}
+                        onChange={(e) => setPsyNotes(e.target.value)}
+                        placeholder="What exactly hurt or saved this trade?"
+                        className="mt-1.5 min-h-[96px] w-full resize-y rounded-2xl p-[18px] text-[15px] outline-none transition-colors duration-150 placeholder:opacity-40"
+                        style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}`, color: txt(0.85), fontFamily: T.sans, lineHeight: 1.6 }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.35)`; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = line(0.08); }}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1439,17 +1586,17 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                 {step === 0 ? (
                   <div className="flex items-center justify-between gap-4">
                     <span className="hidden text-[14px] sm:block" style={{ fontFamily: T.sans, color: txt(0.55) }}>
-                      Чернетка зберігається автоматично
+                      Draft saves automatically
                     </span>
                     <div className="ml-auto flex items-center gap-3.5">
-                      <span className="hidden text-[14px] sm:block" style={{ fontFamily: T.sans, color: txt(0.5) }}>Лишився розбір</span>
+                      <span className="hidden text-[14px] sm:block" style={{ fontFamily: T.sans, color: txt(0.5) }}>Review left</span>
                       <button
                         type="button"
                         onClick={goNext}
                         className="rounded-xl px-[26px] py-3.5 text-[15px] font-semibold transition-transform duration-150 active:scale-[0.98]"
                         style={{ fontFamily: T.sans, background: ACCENT, color: '#05201a' }}
                       >
-                        Далі →
+                        Next →
                       </button>
                     </div>
                   </div>
@@ -1461,11 +1608,11 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       className="rounded-[11px] px-5 py-3 text-[14px] font-medium transition-colors duration-150"
                       style={{ fontFamily: T.sans, border: `1px solid ${line(0.08)}`, color: txt(0.65) }}
                     >
-                      ← Назад
+                      ← Back
                     </button>
                     <div className="flex items-center gap-3.5">
                       <span className="hidden text-[14px] sm:block" style={{ fontFamily: T.sans, color: submitReady ? `rgba(${ACCENT_RGB},0.85)` : txt(0.5) }}>
-                        {submitReady ? 'Усі відповіді на місці' : `Лишилось ${7 - psyDoneAll}`}
+                        {submitReady ? 'All answers in place' : `${7 - psyDoneAll} left`}
                       </span>
                       <button
                         type="submit"
@@ -1484,7 +1631,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         {loading
                           ? <Loader2 size={15} strokeWidth={3} className="animate-spin" />
                           : null}
-                        {existingTrade ? 'Оновити трейд' : 'Записати трейд'}
+                        {existingTrade ? 'Update Trade' : 'Log Trade'}
                       </button>
                     </div>
                   </div>
