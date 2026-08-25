@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
@@ -92,13 +92,47 @@ const todayLocal = () => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
+/* ---------- кеш власних довідників браузера ----------
+
+   user_assets / user_sessions / prop_accounts — це не дані угоди, а
+   персональні налаштування трейдера (свої активи, сесії, рахунки).
+   Вони майже ніколи не змінюються між відкриттями модалки, тож без
+   кешу кожен клік «Log Trade» бив у Supabase трьома зайвими
+   запитами ще до того, як людина щось увела. Модульний кеш живе,
+   поки відкрита вкладка: перше відкриття тягне дані, наступні —
+   миттєві. Мутації (додав/перейменував/видалив) одразу оновлюють
+   і кеш, і UI, тому застарілих даних ніхто не бачить. */
+const refCache = { assets: null, sessions: null, accounts: null };
+
+function useCachedList(cacheKey, table, select, order) {
+  const [items, setItems] = useState(refCache[cacheKey] || []);
+
+  useEffect(() => {
+    if (refCache[cacheKey]) return;
+    supabase.from(table).select(select).order(order)
+      .then(({ data }) => {
+        if (data) {
+          refCache[cacheKey] = data;
+          setItems(data);
+        }
+      });
+  }, [cacheKey, table, select, order]);
+
+  const update = (next) => {
+    refCache[cacheKey] = next;
+    setItems(next);
+  };
+
+  return [items, update];
+}
+
 /* ---------- дрібні цеглинки ---------- */
 
 /* Блок форми: підпис зверху, поле під ним — структурно, а не
    збоку. Той самий блок будує всю форму: підпис коротко називає,
    що заповнюється нижче, і список таких блоків іде вертикально з
    розділювачами. */
-function Row({ label, required, hint, children, noBorder }) {
+function Row({ label, hint, children, noBorder }) {
   return (
     <div
       className="flex flex-col gap-3"
@@ -162,12 +196,8 @@ function DirectionToggle({ value, onChange }) {
    в списку з будь-якого пристрою. */
 function AssetPicker({ value, onChange }) {
   const [search, setSearch] = useState('');
-  const [userPairs, setUserPairs] = useState([]);
-
-  useEffect(() => {
-    supabase.from('user_assets').select('name').order('name')
-      .then(({ data }) => { if (data) setUserPairs(data.map((d) => d.name)); });
-  }, []);
+  const [userAssetRows, setUserAssetRows] = useCachedList('assets', 'user_assets', 'name', 'name');
+  const userPairs = userAssetRows.map((d) => d.name);
 
   const allPairs = [...new Set([...DEFAULT_PAIRS, ...userPairs])];
   const filtered = allPairs.filter((p) => p.toLowerCase().includes(search.toLowerCase()));
@@ -178,7 +208,7 @@ function AssetPicker({ value, onChange }) {
     if (!name) return;
     const { error } = await supabase.from('user_assets').insert([{ name }]);
     if (!error) {
-      setUserPairs((p) => [...p, name]);
+      setUserAssetRows([...userAssetRows, { name }]);
       onChange(name);
       setSearch('');
     }
@@ -189,7 +219,7 @@ function AssetPicker({ value, onChange }) {
     if (DEFAULT_PAIRS.includes(name)) return;
     const { error } = await supabase.from('user_assets').delete().eq('name', name);
     if (!error) {
-      setUserPairs((p) => p.filter((x) => x !== name));
+      setUserAssetRows(userAssetRows.filter((x) => x.name !== name));
       if (value === name) onChange('');
     }
   };
@@ -299,16 +329,11 @@ function AssetPicker({ value, onChange }) {
    ньому, а свої сесії живуть у user_sessions і додаються/
    перейменовуються/видаляються прямо тут, без кешу на клієнті. */
 function SessionPicker({ value, onChange }) {
-  const [customSessions, setCustomSessions] = useState([]);
+  const [customSessions, setCustomSessions] = useCachedList('sessions', 'user_sessions', 'id,name', 'created_at');
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
-
-  useEffect(() => {
-    supabase.from('user_sessions').select('id,name').order('created_at')
-      .then(({ data }) => { if (data) setCustomSessions(data); });
-  }, []);
 
   const all = [...DEFAULT_SESSIONS.map((name) => ({ id: null, name })), ...customSessions];
   const colorOf = (name) => SESSION_COLORS[name] || { c: ACCENT, rgb: ACCENT_RGB };
@@ -319,7 +344,7 @@ function SessionPicker({ value, onChange }) {
     if (!name) return;
     const { data, error } = await supabase.from('user_sessions').insert([{ name }]).select('id,name').single();
     if (!error && data) {
-      setCustomSessions((p) => [...p, data]);
+      setCustomSessions([...customSessions, data]);
       onChange(data.name);
     }
     setNewName('');
@@ -332,7 +357,7 @@ function SessionPicker({ value, onChange }) {
     const prevName = customSessions.find((s) => s.id === id)?.name;
     const { error } = await supabase.from('user_sessions').update({ name }).eq('id', id);
     if (!error) {
-      setCustomSessions((p) => p.map((s) => (s.id === id ? { ...s, name } : s)));
+      setCustomSessions(customSessions.map((s) => (s.id === id ? { ...s, name } : s)));
       if (value === prevName) onChange(name);
     }
     setEditingId(null);
@@ -342,7 +367,7 @@ function SessionPicker({ value, onChange }) {
     const sess = customSessions.find((s) => s.id === id);
     const { error } = await supabase.from('user_sessions').delete().eq('id', id);
     if (!error) {
-      setCustomSessions((p) => p.filter((s) => s.id !== id));
+      setCustomSessions(customSessions.filter((s) => s.id !== id));
       if (value === sess?.name) onChange(DEFAULT_SESSIONS[0]);
     }
   };
@@ -747,7 +772,7 @@ function ShotZone({ image, onPaste, onClear, label, tone, compact }) {
           transition={{ duration: 0.2, ease: EASE }}
           className="flex cursor-pointer items-center gap-3.5 rounded-xl p-4 transition-colors duration-200"
           style={{ border: `1px dashed ${line(0.14)}` }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.4)`)}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = tone ? `rgba(${BAD_RGB},0.4)` : `rgba(${ACCENT_RGB},0.4)`)}
           onMouseLeave={(e) => (e.currentTarget.style.borderColor = line(0.14))}
         >
           <div className="grid h-6 w-[30px] shrink-0 place-items-center rounded-[5px]" style={{ border: `1px solid ${txt(0.35)}` }}>
@@ -781,15 +806,6 @@ export const holdMinutes = (from, to) => {
   if (a === null || b === null) return null;
   return b >= a ? b - a : b + 1440 - a;
 };
-
-const holdText = (min) => {
-  if (min === null) return '';
-  if (min < 60) return `${min} min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m ? `${h} h ${m} min` : `${h} h`;
-};
-
 
 export default function TradeModal({ isOpen, onClose, planDate, planPair, existingTrade = null }) {
   const { user } = useAuth();
@@ -938,10 +954,18 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
     }
     setComposerOpen(false);
 
-    supabase.from('prop_accounts').select('firm_name').then(({ data }) => {
-      if (data) setAccounts(data);
-      if (data?.length > 0 && !accToSet) setAccount(data[0].firm_name);
-    });
+    if (refCache.accounts) {
+      setAccounts(refCache.accounts);
+      if (refCache.accounts.length > 0 && !accToSet) setAccount(refCache.accounts[0].firm_name);
+    } else {
+      supabase.from('prop_accounts').select('firm_name').then(({ data }) => {
+        if (data) {
+          refCache.accounts = data;
+          setAccounts(data);
+          if (data.length > 0 && !accToSet) setAccount(data[0].firm_name);
+        }
+      });
+    }
 
     /* Свої сетапи за останні пів року. Беремо частотою, а не
        алфавітом: у підказках першим має стояти те, чим людина
@@ -1125,8 +1149,6 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   };
 
   const accountOptions = accounts.map((a) => a.firm_name);
-  const dirColor = tradeType === 'Long' ? ACCENT : BAD;
-  const dirRgb = tradeType === 'Long' ? ACCENT_RGB : BAD_RGB;
   const submitReady = psyDoneAll === 7 && !psyMissing;
 
   if (typeof document === 'undefined') return null;
