@@ -291,14 +291,21 @@ function periodToRange(id) {
    Швидкі фільтри — пілюлі над таблицею. Працюють поверх завантажених
    угод, тому реагують миттєво, без запиту на сервер.
 ================================================================== */
-const QUICK = [
-  { id: "win",     label: "Win",          icon: TrendingUp,   c: T.ok,   rgb: T.okRgb,   test: (t) => t.result?.trim().toLowerCase() === "win" },
-  { id: "lose",    label: "Lose",         icon: TrendingDown, c: T.bad,  rgb: T.badRgb,  test: (t) => t.result?.trim().toLowerCase() === "lose" },
-  { id: "be",      label: "BE",           icon: Minus,        c: T.warn, rgb: T.warnRgb, test: (t) => t.result?.trim().toLowerCase() === "be" },
+/* Два смислові кластери, а не один ряд з шести однакових пілюль:
+   зліва — результат угоди (взаємовиключні стани), справа —
+   дисципліна виконання (незалежні прапорці). Розведення по різних
+   боках рядка саме й показує цю різницю значень, а не тільки колір. */
+const QUICK_RESULT = [
+  { id: "win",  label: "Take", icon: TrendingUp,   c: T.ok,   rgb: T.okRgb,   test: (t) => t.result?.trim().toLowerCase() === "win" },
+  { id: "lose", label: "Stop", icon: TrendingDown, c: T.bad,  rgb: T.badRgb,  test: (t) => t.result?.trim().toLowerCase() === "lose" },
+  { id: "be",   label: "BE",   icon: Minus,        c: T.warn, rgb: T.warnRgb, test: (t) => t.result?.trim().toLowerCase() === "be" },
+];
+const QUICK_DISCIPLINE = [
   { id: "offplan", label: "Не за планом", icon: ShieldAlert,  c: T.bad,  rgb: T.badRgb,  test: (t) => !t.followed_plan },
   { id: "mistake", label: "З помилкою",   icon: AlertOctagon, c: T.warn, rgb: T.warnRgb, test: (t) => !!t.has_mistake },
   { id: "rushed",  label: "Поспіх",       icon: Zap,          c: "#fb923c", rgb: "251,146,60", test: (t) => !!t.rushed },
 ];
+const QUICK = [...QUICK_RESULT, ...QUICK_DISCIPLINE];
 
 const TILE_PRESS = { type: "spring", duration: 0.22, bounce: 0 };
 const TILE_CONFIRM = { type: "spring", duration: 0.34, bounce: 0.3 };
@@ -320,7 +327,7 @@ function QuickTile({ f, on, n, onToggle }) {
       whileHover={dim ? undefined : { y: -2 }}
       whileTap={dim ? undefined : { scale: 0.96 }}
       transition={TILE_PRESS}
-      className="group relative flex min-w-[118px] items-center gap-2.5 overflow-hidden rounded-xl px-3.5 py-2.5 text-left"
+      className="group relative flex min-w-[92px] items-center gap-2 overflow-hidden rounded-lg px-2.5 py-2 text-left transition-colors duration-150"
       style={{
         background: on ? `linear-gradient(165deg, rgba(${f.rgb},0.15), rgba(${f.rgb},0.03))` : T.sunken,
         border: `1px solid ${on ? `rgba(${f.rgb},0.42)` : T.line}`,
@@ -330,8 +337,15 @@ function QuickTile({ f, on, n, onToggle }) {
           : "inset 0 1px 0 rgba(255,255,255,0.02)",
         cursor: dim ? "default" : "pointer",
       }}
-      onMouseEnter={(e) => { if (!on && !dim) e.currentTarget.style.borderColor = T.lineHi; }}
-      onMouseLeave={(e) => { if (!on) e.currentTarget.style.borderColor = T.line; }}
+      onMouseEnter={(e) => {
+        if (dim) return;
+        e.currentTarget.style.borderColor = on ? `rgba(${f.rgb},0.7)` : T.lineHi;
+        if (!on) e.currentTarget.style.background = T.surfaceHi;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = on ? `rgba(${f.rgb},0.42)` : T.line;
+        if (!on) e.currentTarget.style.background = T.sunken;
+      }}
     >
       {/* Верхня акцентна риска — сигнал стану ще до того, як прочитав число */}
       <span
@@ -339,9 +353,16 @@ function QuickTile({ f, on, n, onToggle }) {
         style={{ background: f.c, transform: on ? "scaleX(1)" : "scaleX(0)" }}
       />
 
+      {/* Сам бейдж — це і є чекбокс: вимкнено — помітна нейтральна
+          рамка з іконкою категорії; увімкнено — суцільна заливка
+          кольором з галочкою. Один чіткий елемент замість двох
+          слабких, тому видно одразу, а не треба придивлятись. */}
       <span
-        className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors duration-200"
-        style={{ background: on ? `rgba(${f.rgb},0.2)` : "rgba(255,255,255,0.04)" }}
+        className="relative grid h-7 w-7 shrink-0 place-items-center rounded-md border-[1.5px] transition-colors duration-150"
+        style={{
+          background: on ? f.c : "transparent",
+          borderColor: on ? f.c : T.text3,
+        }}
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span
@@ -351,19 +372,23 @@ function QuickTile({ f, on, n, onToggle }) {
             exit={{ scale: 0.55, opacity: 0 }}
             transition={TILE_CONFIRM}
           >
-            <Icon size={14.5} strokeWidth={2.4} style={{ color: on ? f.c : T.text4 }} />
+            {on ? (
+              <Check size={14} strokeWidth={3.2} style={{ color: T.bg }} />
+            ) : (
+              <Icon size={13} strokeWidth={2.4} style={{ color: T.text2 }} />
+            )}
           </motion.span>
         </AnimatePresence>
       </span>
 
-      <span className="flex min-w-0 flex-col gap-0.5">
+      <span className="flex min-w-0 flex-col gap-0">
         <span
-          className="truncate text-[10.5px] font-bold uppercase tracking-[0.07em]"
+          className="truncate text-[9.5px] font-bold uppercase tracking-[0.05em]"
           style={{ fontFamily: T.sans, color: on ? f.c : T.text4 }}
         >
           {f.label}
         </span>
-        <span className="text-[17px] font-black leading-none tabular-nums" style={{ fontFamily: CHECK_MONO, color: on ? T.text : T.text2 }}>
+        <span className="text-[14px] font-black leading-none tabular-nums" style={{ fontFamily: CHECK_MONO, color: on ? T.text : T.text2 }}>
           {n}
         </span>
       </span>
@@ -405,10 +430,32 @@ function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {QUICK.map((f) => (
-          <QuickTile key={f.id} f={f} on={active.includes(f.id)} n={counts?.[f.id] ?? 0} onToggle={() => onToggle(f.id)} />
-        ))}
+      {/* Результат зліва, дисципліна справа — просторовий поділ сам
+          читається як «це різні категорії», без додаткових пояснень. */}
+      <div className="flex flex-wrap items-stretch justify-between gap-4">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[9px] font-bold uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+            Результат
+          </span>
+          <div className="flex gap-1.5">
+            {QUICK_RESULT.map((f) => (
+              <QuickTile key={f.id} f={f} on={active.includes(f.id)} n={counts?.[f.id] ?? 0} onToggle={() => onToggle(f.id)} />
+            ))}
+          </div>
+        </div>
+
+        <div className="hidden w-px self-stretch sm:block" style={{ background: T.line }} />
+
+        <div className="flex flex-col items-start gap-1.5 sm:items-end">
+          <span className="text-[9px] font-bold uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+            Дисципліна
+          </span>
+          <div className="flex gap-1.5">
+            {QUICK_DISCIPLINE.map((f) => (
+              <QuickTile key={f.id} f={f} on={active.includes(f.id)} n={counts?.[f.id] ?? 0} onToggle={() => onToggle(f.id)} />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -838,11 +885,11 @@ export default function TradingJournal() {
         {/* ─────────── Статистика ─────────── */}
         <StatCards stats={stats} chartData={chartData} />
 
-        {streak && streak.count >= 2 && (
+        {/* {streak && streak.count >= 2 && (
           <div className="mt-3">
             <StreakBar streak={streak} />
           </div>
-        )}
+        )} */}
 
         {/* ─────────── Графік ─────────── */}
         <motion.div

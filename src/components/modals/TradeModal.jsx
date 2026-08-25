@@ -6,9 +6,9 @@ import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import 'react-day-picker/dist/style.css';
 import {
-  X, ImagePlus, Loader2, AlertCircle, Crosshair, Activity, AlertTriangle,
-  CalendarDays, ChevronDown, Search, Plus, BrainCircuit, Check, ArrowLeft,
-  ArrowRight, Wallet, Percent, Target, Clock,
+  X, ImagePlus, Loader2, AlertCircle, AlertTriangle,
+  CalendarDays, ChevronDown, ChevronUp, ChevronRight, Search, Check, Plus, Pencil,
+  Wallet, Clock,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
@@ -19,34 +19,62 @@ import { T, EASE, SPRING, useEdgeFonts } from '../../lib/theme';
 import { syncErrorFromTrade, fetchErrorForTrade, catsFromTrade } from '../../lib/errorsStore';
 import { CATS } from '../errors/utils';
 import ErrorComposerModal from '../errors/ErrorComposerModal';
+import AssetIcon from '../ui/AssetIcon';
 import Popover from '../ui/Popover';
 
 /* ==================================================================
-   Запис угоди.
-   Раніше це була одна довга стрічка, де психологія ховалась в
-   акордеон, і людина натискала «зберегти» лише щоб дізнатись, що
-   там ще чотири обовʼязкові питання. Тепер два чесні кроки:
-   спочатку цифри, потім розбір себе. Обидва видно згори.
+   Запис угоди — «Ledger»: редакційна одноколонна форма. Підпис зліва,
+   поле справа, один погляд згори вниз. Два чесні кроки — спочатку
+   цифри, потім розбір себе — а не акордеон, який ховає, що там ще
+   чотири обовʼязкові питання.
 ================================================================== */
 
-const SESSIONS = ['Asia', 'London', 'New York'];
+/* Літеральна гама макета, а не токени застосунку: момент запису
+   угоди — дія, а не навігація, тож він свідомо виглядає інакше за
+   решту UI. Кольори фіксовані (не CSS var(...)), тому alpha-суфікс
+   на кшталт `${ACCENT}22` — валідний 8-значний hex і безпечний. */
+const ACCENT = '#2FE3A8';
+const ACCENT_RGB = '47,227,168';
+const PURPLE = '#7C6CF6';
+const BAD = '#FF5C6E';
+const BAD_RGB = '255,92,110';
+const AMBER = '#F5B54A';
+const CARD_BG = '#101214';
+const FOOTER_BG = '#0c0e10';
+const FIELD_BG = '#15181b';
+const MONO = "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace";
+
+const txt = (a) => `rgba(242,244,243,${a})`;
+const line = (a) => `rgba(255,255,255,${a})`;
+
+const DEFAULT_SESSIONS = ['Asia', 'London', 'New York'];
+/* Той самий колірний код сесій, що й у деталях угоди: Азія —
+   рожево-червона (нічна, нервова), Лондон — синій, Нью-Йорк —
+   зелений. Свої сесії (з БД) підсвічуються акцентом. */
+const SESSION_COLORS = {
+  Asia: { c: '#fb7185', rgb: '251,113,133' },
+  London: { c: '#60a5fa', rgb: '96,165,250' },
+  'New York': { c: '#34d399', rgb: '52,211,153' },
+};
 const DIRECTIONS = ['Long', 'Short'];
-const RESULTS = ['Win', 'Lose', 'BE', 'In Progress', 'Missed', 'Not Selected'];
-const RISK_CHIPS = ['0.5%', '1%', '2%'];
+/* Внутрішні значення лишаються Win/Lose/… (модель даних і решта
+   застосунку на них зав'язані), надпис — Take/Stop, як усюди в
+   журналі. */
+const RESULT_CHIPS = ['Win', 'Lose', 'BE', 'In Progress', 'Missed'];
+const RESULT_LABEL = { Win: 'Take', Lose: 'Stop', BE: 'BE', 'In Progress': 'В процесі', Missed: 'Пропущено' };
 const DEFAULT_PAIRS = ['GER40', 'EURUSD', 'NQ100', 'S&P500', 'GOLD', 'NZD/USD', 'BTC', 'ETH', 'SOL'];
 
-const resultTone = (r) => ({
-  Win: T.ok, Lose: T.bad, BE: T.warn, 'In Progress': T.info,
-}[r] || T.text3);
-
-const dirTone = (d) => (d === 'Long' ? T.ok : T.bad);
-
-/* Кожна сесія — свій відтінок, щоб бейдж впізнавався з першого
-   погляду. Значення — сирий hex (не CSS-змінна), бо Seg нижче
-   доклеює до нього альфа-суфікс рядком. */
-const sessionTone = (s) => ({
-  Asia: '#fb7185', London: '#60a5fa', 'New York': '#34d399',
-}[s] || '#8b7bff');
+/* Сім питань розбору — той самий порядок і той самий «good», що й у
+   макеті, зіставлений з реальними полями психоблоку. */
+const QUESTIONS = [
+  { key: 'followedPlan', q: 'Дотримався торгового плану?', good: true },
+  { key: 'rushed', q: 'Спішив зі входом (FOMO)?', good: false },
+  { key: 'hasMistake', q: 'Припустився очевидної помилки?', good: false },
+  { key: 'psyConfident', q: 'Був упевнений у рішеннях?', good: true },
+  { key: 'psyFear', q: 'Чи був присутній страх?', good: false },
+  { key: 'psyRepeat', q: 'Повторив би цю угоду?', good: true },
+  { key: 'psyRevenge', q: 'Було бажання відігратися?', good: false },
+];
 
 /* Локальна дата: toISOString() зсуває день на UTC і о другій ночі
    ставить угоді вчорашнє число */
@@ -58,65 +86,55 @@ const todayLocal = () => {
 
 /* ---------- дрібні цеглинки ---------- */
 
-function Label({ children, tone }) {
+/* Рядок форми: підпис + позначка обов'язковості зліва (150px),
+   поле — праворуч. Той самий рядок, що будує всю форму в макеті:
+   ніякого «блок над блоком», просто список рядків з розділювачами. */
+function Row({ label, required, hint, children, noBorder }) {
   return (
-    <span
-      className="mb-1.5 block text-[12px] font-bold uppercase tracking-[0.12em]"
-      style={{ fontFamily: T.sans, color: tone || T.text4 }}
+    <div
+      className="grid items-center"
+      style={{
+        gridTemplateColumns: '150px 1fr',
+        columnGap: 28,
+        rowGap: 12,
+        padding: '26px 0',
+        borderBottom: noBorder ? 'none' : `1px solid ${line(0.05)}`,
+      }}
     >
-      {children}
-    </span>
-  );
-}
-
-function SectionTitle({ icon: Icon, children, hint }) {
-  return (
-    <div className="mb-3.5 flex items-center gap-2.5">
-      <Icon size={14} strokeWidth={2.3} style={{ color: T.acc }} />
-      <span
-        className="text-[12px] font-bold uppercase tracking-[0.14em]"
-        style={{ fontFamily: T.sans, color: T.text3 }}
-      >
-        {children}
-      </span>
-      {hint && (
-        <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          · {hint}
-        </span>
-      )}
+      <div className="flex flex-col gap-1.5">
+        <div className="text-[14px] font-bold" style={{ fontFamily: T.sans, color: '#f2f4f3' }}>{label}</div>
+        <div className="text-[12px]" style={{ fontFamily: MONO, color: required ? ACCENT : txt(0.5) }}>
+          {required ? "обов'язково" : (hint || 'опційно')}
+        </div>
+      </div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
 
-/* Сегментований перемикач — швидше за випадайку, і одразу видно варіанти */
-function Seg({ options, value, onChange, colorOf, id, wrap }) {
+/* Ряд-пігулок з рівномірною бірюзовою активністю — так само в
+   макеті виглядають і сесії, і статус: активний варіант завжди
+   один і той самий стиль, незалежно від того, яка саме опція. */
+function PillRow({ options, value, onChange, labelOf, wrap, equal }) {
   return (
-    <div
-      className={`flex items-center gap-1 rounded-xl p-1 ${wrap ? 'flex-wrap' : ''}`}
-      style={{ background: T.sunken, border: `1px solid ${T.line}` }}
-    >
+    <div className={`flex gap-2 ${wrap ? 'flex-wrap' : ''}`}>
       {options.map((o) => {
         const on = value === o;
-        const c = colorOf ? colorOf(o) : T.acc;
         return (
           <button
             key={o}
             type="button"
             onClick={() => onChange(o)}
-            className="relative flex-1 whitespace-nowrap rounded-lg px-2.5 py-2 text-[13px] font-bold transition-colors duration-200"
-            style={{ fontFamily: T.sans, color: on ? c : T.text3, zIndex: 1 }}
-            onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text; }}
-            onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
+            className={`rounded-xl text-center transition-colors duration-150 ${equal ? 'flex-1 py-3.5 text-[15px]' : 'px-[18px] py-3 text-[14px]'}`}
+            style={{
+              fontFamily: T.sans,
+              fontWeight: on ? 600 : 500,
+              background: on ? `rgba(${ACCENT_RGB},0.12)` : 'transparent',
+              border: `1px solid ${on ? `rgba(${ACCENT_RGB},0.4)` : line(0.08)}`,
+              color: on ? ACCENT : txt(0.6),
+            }}
           >
-            {on && (
-              <motion.span
-                layoutId={`trade-seg-${id}`}
-                transition={{ type: 'spring', stiffness: 460, damping: 36 }}
-                className="absolute inset-0 rounded-lg"
-                style={{ background: `${c}1f`, border: `1px solid ${c}3d`, zIndex: -1 }}
-              />
-            )}
-            {o}
+            {labelOf ? labelOf(o) : o}
           </button>
         );
       })}
@@ -124,156 +142,317 @@ function Seg({ options, value, onChange, colorOf, id, wrap }) {
   );
 }
 
-/* Так / Ні. Кольори залежать від того, яка відповідь «здорова» */
-function YesNo({ label, value, onChange, goodIsYes, missing }) {
-  const tone = (v) => (v === goodIsYes ? T.ok : T.bad);
-
+/* Long/Short — не два рівнозначні перемикачі, а один бокс, де
+   активна сторона отримує власну кольорову пігулку всередині. */
+function DirectionToggle({ value, onChange }) {
   return (
     <div
-      className="flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 transition-colors duration-200"
-      style={{
-        background: T.sunken,
-        border: `1px solid ${missing ? `rgba(${T.badRgb},0.32)` : T.line}`,
-      }}
+      className="flex h-[52px] w-[150px] shrink-0 items-center overflow-hidden rounded-xl"
+      style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}` }}
     >
-      <span className="min-w-0 text-[13.5px]" style={{ fontFamily: T.sans, color: T.text2 }}>
-        {label}
-      </span>
-      <div className="flex shrink-0 gap-1.5">
-        {[true, false].map((v) => {
-          const on = value === v;
-          const c = tone(v);
-          return (
-            <button
-              key={String(v)}
-              type="button"
-              onClick={() => onChange(on ? null : v)}
-              className="rounded-lg px-3.5 py-1.5 text-[12.5px] font-bold transition-all duration-200 active:scale-95"
-              style={{
-                fontFamily: T.sans,
-                background: on ? `${c}1f` : 'transparent',
-                border: `1px solid ${on ? `${c}52` : T.line}`,
-                color: on ? c : T.text4,
-              }}
-              onMouseEnter={(e) => { if (!on) { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.lineHi; } }}
-              onMouseLeave={(e) => { if (!on) { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; } }}
+      {DIRECTIONS.map((d) => {
+        const on = value === d;
+        const c = d === 'Long' ? ACCENT : BAD;
+        const rgb = d === 'Long' ? ACCENT_RGB : BAD_RGB;
+        return (
+          <button
+            key={d}
+            type="button"
+            onClick={() => onChange(d)}
+            className="flex h-full flex-1 items-center justify-center text-[14px] transition-colors duration-150"
+            style={{ fontFamily: T.sans, fontWeight: on ? 600 : 500, color: on ? c : txt(0.6) }}
+          >
+            <span
+              className="flex h-[34px] w-full items-center justify-center rounded-[9px]"
+              style={{ background: on ? `rgba(${rgb},0.14)` : 'transparent' }}
             >
-              {v ? 'Так' : 'Ні'}
-            </button>
-          );
-        })}
-      </div>
+              {d}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 /* ---------- вибір активу ---------- */
 
+/* Маленька випадашка з пошуком, як було спочатку — не повноекранна
+   модалка. Свій актив, якого нема в списку, не «кешується» на
+   клієнті, а одразу летить у user_assets: наступного разу він є
+   в списку з будь-якого пристрою. */
 function AssetPicker({ value, onChange }) {
   const [search, setSearch] = useState('');
   const [userPairs, setUserPairs] = useState([]);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    supabase.from('user_assets').select('name').then(({ data }) => {
-      if (data) setUserPairs(data.map((d) => d.name));
-    });
+    supabase.from('user_assets').select('name').order('name')
+      .then(({ data }) => { if (data) setUserPairs(data.map((d) => d.name)); });
   }, []);
 
-  const all = useMemo(() => [...new Set([...DEFAULT_PAIRS, ...userPairs])], [userPairs]);
-  const filtered = all.filter((p) => p.toLowerCase().includes(search.toLowerCase()));
-  const canAdd = search.trim() !== '' && !all.some((p) => p.toLowerCase() === search.trim().toLowerCase());
+  const allPairs = [...new Set([...DEFAULT_PAIRS, ...userPairs])];
+  const filtered = allPairs.filter((p) => p.toLowerCase().includes(search.toLowerCase()));
+  const showAdd = search.trim() !== '' && !allPairs.some((p) => p.toLowerCase() === search.trim().toLowerCase());
 
-  const addAsset = async (close) => {
+  const addAsset = async () => {
     const name = search.trim().toUpperCase();
-    setSaving(true);
-    try {
-      const { error } = await supabase.from('user_assets').insert([{ name }]);
-      if (!error) {
-        setUserPairs((p) => [...p, name]);
-        onChange(name);
-        setSearch('');
-        close();
-      }
-    } finally {
-      setSaving(false);
+    if (!name) return;
+    const { error } = await supabase.from('user_assets').insert([{ name }]);
+    if (!error) {
+      setUserPairs((p) => [...p, name]);
+      onChange(name);
+      setSearch('');
+    }
+  };
+
+  const removeAsset = async (e, name) => {
+    e.stopPropagation();
+    if (DEFAULT_PAIRS.includes(name)) return;
+    const { error } = await supabase.from('user_assets').delete().eq('name', name);
+    if (!error) {
+      setUserPairs((p) => p.filter((x) => x !== name));
+      if (value === name) onChange('');
     }
   };
 
   return (
     <Popover
       z={600}
-      renderTrigger={({ open, toggle }) => (
+      renderTrigger={({ toggle, open: o }) => (
         <button
           type="button"
           onClick={toggle}
-          className="flex h-9 items-center gap-2 rounded-xl px-3 text-[13.5px] font-bold transition-colors duration-200"
-          style={{
-            fontFamily: T.sans,
-            background: value ? `rgba(${T.accRgb},0.11)` : T.sunken,
-            border: `1px solid ${value || open ? T.lineAcc : T.line}`,
-            color: value ? T.acc : T.text3,
-          }}
+          className="flex h-[52px] flex-1 items-center justify-between rounded-xl px-4 text-[17px] font-bold"
+          style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${value ? `rgba(${ACCENT_RGB},0.28)` : (o ? line(0.16) : line(0.08))}`, color: '#f2f4f3' }}
         >
-          {value || 'Обрати актив'}
-          <ChevronDown size={13} strokeWidth={2.6} className="transition-transform duration-200" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
+          {value ? (
+            <span className="flex items-center gap-2">
+              <AssetIcon symbol={value} />
+              {value}
+            </span>
+          ) : (
+            <span className="flex items-center gap-2 text-[15px] font-semibold" style={{ color: txt(0.5) }}>
+              <Search size={14} strokeWidth={2.4} />
+              Обрати актив
+            </span>
+          )}
+          <span className="text-[13px] font-normal" style={{ color: txt(0.55) }}>▾</span>
         </button>
       )}
     >
       {({ close }) => (
-        <div
-          className="w-[248px] overflow-hidden rounded-2xl"
-          style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}
-        >
-          <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: `1px solid ${T.line}`, background: T.sunken }}>
-            <Search size={13} strokeWidth={2.4} style={{ color: T.text4 }} />
+        <div className="w-[240px] overflow-hidden rounded-2xl" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}>
+          <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: `1px solid ${line(0.08)}` }}>
+            <Search size={12} style={{ color: txt(0.5) }} />
             <input
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Пошук активу…"
-              className="w-full bg-transparent text-[13.5px] outline-none placeholder:opacity-60"
-              style={{ fontFamily: T.sans, color: T.text }}
+              placeholder="Пошук або новий актив…"
+              className="w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:opacity-50"
+              style={{ fontFamily: T.sans, color: '#f2f4f3' }}
             />
           </div>
-
           <div className="max-h-[220px] overflow-y-auto p-1.5">
             {filtered.map((p) => {
               const on = p === value;
+              const custom = userPairs.includes(p);
               return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => { onChange(p); close(); }}
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13.5px] font-semibold transition-colors duration-150"
-                  style={{ fontFamily: T.sans, color: on ? T.acc : T.text2, background: on ? `rgba(${T.accRgb},0.10)` : 'transparent' }}
-                  onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.surfaceHi; }}
-                  onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  {p}
-                  {on && <Check size={13} strokeWidth={3} />}
-                </button>
+                <div key={p} className="group flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => { onChange(p); close(); }}
+                    className="flex flex-1 items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13.5px] font-semibold transition-colors duration-150"
+                    style={{ fontFamily: T.sans, color: on ? ACCENT : txt(0.85), background: on ? `rgba(${ACCENT_RGB},0.1)` : 'transparent' }}
+                  >
+                    <AssetIcon symbol={p} />
+                    {p}
+                  </button>
+                  {custom && (
+                    <button
+                      type="button"
+                      onClick={(e) => removeAsset(e, p)}
+                      className="hidden shrink-0 pr-2 transition-colors group-hover:block"
+                      style={{ color: txt(0.4) }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = BAD; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.4); }}
+                    >
+                      <X size={12} strokeWidth={2.6} />
+                    </button>
+                  )}
+                </div>
               );
             })}
-            {filtered.length === 0 && !canAdd && (
-              <div className="px-3 py-6 text-center text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                Нічого не знайшлось
+            {filtered.length === 0 && !showAdd && (
+              <div className="px-3 py-5 text-center text-[12px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>
+                Нічого не знайдено
               </div>
             )}
           </div>
-
-          {canAdd && (
+          {showAdd && (
             <button
               type="button"
-              onClick={() => addAsset(close)}
-              disabled={saving}
-              className="flex w-full items-center gap-2 px-3.5 py-3 text-[13px] font-bold transition-colors duration-200"
-              style={{ fontFamily: T.sans, borderTop: `1px solid ${T.line}`, background: `rgba(${T.accRgb},0.08)`, color: T.acc }}
+              onClick={addAsset}
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-[12.5px] font-bold transition-colors"
+              style={{ borderTop: `1px solid ${line(0.08)}`, fontFamily: T.sans, color: ACCENT }}
             >
-              {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} strokeWidth={3} />}
+              <Plus size={13} strokeWidth={2.6} />
               Додати «{search.trim().toUpperCase()}»
             </button>
           )}
+        </div>
+      )}
+    </Popover>
+  );
+}
+
+/* ---------- вибір сесії ---------- */
+
+/* Той самий випадний список, що й раніше стояв трьома пігулками —
+   лише тепер це реальний список: Азія/Лондон/Нью-Йорк завжди в
+   ньому, а свої сесії живуть у user_sessions і додаються/
+   перейменовуються/видаляються прямо тут, без кешу на клієнті. */
+function SessionPicker({ value, onChange }) {
+  const [customSessions, setCustomSessions] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
+
+  useEffect(() => {
+    supabase.from('user_sessions').select('id,name').order('created_at')
+      .then(({ data }) => { if (data) setCustomSessions(data); });
+  }, []);
+
+  const all = [...DEFAULT_SESSIONS.map((name) => ({ id: null, name })), ...customSessions];
+  const colorOf = (name) => SESSION_COLORS[name] || { c: ACCENT, rgb: ACCENT_RGB };
+  const current = colorOf(value);
+
+  const addSession = async () => {
+    const name = newName.trim();
+    if (!name) return;
+    const { data, error } = await supabase.from('user_sessions').insert([{ name }]).select('id,name').single();
+    if (!error && data) {
+      setCustomSessions((p) => [...p, data]);
+      onChange(data.name);
+    }
+    setNewName('');
+    setAdding(false);
+  };
+
+  const renameSession = async (id) => {
+    const name = editName.trim();
+    if (!name) return setEditingId(null);
+    const prevName = customSessions.find((s) => s.id === id)?.name;
+    const { error } = await supabase.from('user_sessions').update({ name }).eq('id', id);
+    if (!error) {
+      setCustomSessions((p) => p.map((s) => (s.id === id ? { ...s, name } : s)));
+      if (value === prevName) onChange(name);
+    }
+    setEditingId(null);
+  };
+
+  const removeSession = async (id) => {
+    const sess = customSessions.find((s) => s.id === id);
+    const { error } = await supabase.from('user_sessions').delete().eq('id', id);
+    if (!error) {
+      setCustomSessions((p) => p.filter((s) => s.id !== id));
+      if (value === sess?.name) onChange(DEFAULT_SESSIONS[0]);
+    }
+  };
+
+  return (
+    <Popover
+      z={600}
+      renderTrigger={({ toggle, open: o }) => (
+        <button
+          type="button"
+          onClick={toggle}
+          className="flex h-[52px] w-full items-center justify-between rounded-xl px-4 text-[15px] font-semibold"
+          style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${o ? line(0.16) : line(0.08)}`, color: '#f2f4f3' }}
+        >
+          <span className="flex items-center gap-2.5">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: current.c }} />
+            {value}
+          </span>
+          <ChevronDown size={14} strokeWidth={2.4} style={{ color: txt(0.5), transform: o ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+        </button>
+      )}
+    >
+      {({ close }) => (
+        <div className="w-[240px] overflow-hidden rounded-2xl p-1.5" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}>
+          {all.map((s) => {
+            const on = s.name === value;
+            const sc = colorOf(s.name);
+            const isCustom = s.id !== null;
+            const editing = editingId === s.id && isCustom;
+            return (
+              <div key={s.id ?? s.name} className="group flex items-center">
+                {editing ? (
+                  <div className="flex flex-1 items-center gap-1.5 px-2.5 py-1.5">
+                    <input
+                      autoFocus
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') renameSession(s.id); if (e.key === 'Escape') setEditingId(null); }}
+                      className="w-full min-w-0 bg-transparent text-[13px] outline-none"
+                      style={{ fontFamily: T.sans, color: '#f2f4f3' }}
+                    />
+                    <button type="button" onClick={() => renameSession(s.id)}><Check size={13} strokeWidth={3} style={{ color: ACCENT }} /></button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { onChange(s.name); close(); }}
+                      className="flex flex-1 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13.5px] font-semibold transition-colors duration-150"
+                      style={{ fontFamily: T.sans, color: on ? sc.c : txt(0.85), background: on ? `rgba(${sc.rgb},0.12)` : 'transparent' }}
+                    >
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: sc.c }} />
+                      {s.name}
+                    </button>
+                    {isCustom && (
+                      <span className="hidden shrink-0 items-center gap-0.5 pr-1 group-hover:flex">
+                        <button type="button" onClick={() => { setEditingId(s.id); setEditName(s.name); }} className="grid h-6 w-6 place-items-center rounded transition-colors" style={{ color: txt(0.45) }}>
+                          <Pencil size={11} strokeWidth={2.4} />
+                        </button>
+                        <button type="button" onClick={() => removeSession(s.id)} className="grid h-6 w-6 place-items-center rounded transition-colors" style={{ color: txt(0.45) }} onMouseEnter={(e) => { e.currentTarget.style.color = BAD; }} onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.45); }}>
+                          <X size={12} strokeWidth={2.6} />
+                        </button>
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+
+          <div className="mt-1 px-1 pt-1" style={{ borderTop: `1px solid ${line(0.06)}` }}>
+            {adding ? (
+              <div className="flex items-center gap-1.5 px-2 py-1.5">
+                <input
+                  autoFocus
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') addSession(); if (e.key === 'Escape') { setAdding(false); setNewName(''); } }}
+                  placeholder="Нова сесія"
+                  className="w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:opacity-50"
+                  style={{ fontFamily: T.sans, color: '#f2f4f3' }}
+                />
+                <button type="button" onClick={addSession}><Check size={14} strokeWidth={3} style={{ color: ACCENT }} /></button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-semibold transition-colors"
+                style={{ fontFamily: T.sans, color: txt(0.6) }}
+              >
+                <Plus size={13} strokeWidth={2.6} />
+                Додати сесію
+              </button>
+            )}
+          </div>
         </div>
       )}
     </Popover>
@@ -300,15 +479,10 @@ function TradeDate({ value, onChange }) {
         <button
           type="button"
           onClick={toggle}
-          className="flex h-9 items-center gap-2 rounded-xl px-3 text-[13.5px] font-semibold transition-colors duration-200"
-          style={{
-            fontFamily: T.sans,
-            background: T.sunken,
-            border: `1px solid ${open ? T.lineHi : T.line}`,
-            color: T.text2,
-          }}
+          className="flex h-[52px] items-center gap-2 rounded-xl px-4 text-[14px] font-semibold"
+          style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${open ? line(0.16) : line(0.08)}`, color: txt(0.8) }}
         >
-          <CalendarDays size={13} strokeWidth={2.3} style={{ color: open ? T.acc : T.text4 }} />
+          <CalendarDays size={13} strokeWidth={2.3} style={{ color: open ? ACCENT : txt(0.5) }} />
           {format(selected, 'd MMM yyyy', { locale: uk })}
         </button>
       )}
@@ -316,7 +490,7 @@ function TradeDate({ value, onChange }) {
       {({ close }) => (
         <div
           className="rounded-2xl p-2"
-          style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}
+          style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}
         >
           <DayPicker
             mode="single"
@@ -328,26 +502,26 @@ function TradeDate({ value, onChange }) {
             className="edge-daypicker"
           />
           <style>{`
-            .edge-daypicker { --rdp-cell-size: 38px; --rdp-accent-color: ${T.acc};
-              --rdp-background-color: rgba(${T.accRgb},0.14); margin: 0;
-              font-family: ${T.sans}; color: ${T.text2}; }
+            .edge-daypicker { --rdp-cell-size: 38px; --rdp-accent-color: ${ACCENT};
+              --rdp-background-color: rgba(${ACCENT_RGB},0.14); margin: 0;
+              font-family: ${T.sans}; color: ${txt(0.8)}; }
             .edge-daypicker .rdp-months { margin: 0; }
             .edge-daypicker .rdp-caption_label { font-size: 14px; font-weight: 700;
-              color: ${T.text}; text-transform: capitalize; letter-spacing: -0.01em; }
-            .edge-daypicker .rdp-nav_button { color: ${T.text3}; border-radius: 10px;
+              color: #f2f4f3; text-transform: capitalize; letter-spacing: -0.01em; }
+            .edge-daypicker .rdp-nav_button { color: ${txt(0.6)}; border-radius: 10px;
               width: 32px; height: 32px; transition: background .2s, color .2s; }
-            .edge-daypicker .rdp-nav_button:hover { background: ${T.surfaceHi} !important; color: ${T.text}; }
+            .edge-daypicker .rdp-nav_button:hover { background: ${line(0.06)} !important; color: #f2f4f3; }
             .edge-daypicker .rdp-head_cell { font-size: 11.5px; font-weight: 700;
-              text-transform: uppercase; letter-spacing: .08em; color: ${T.text4}; }
+              text-transform: uppercase; letter-spacing: .08em; color: ${txt(0.4)}; }
             .edge-daypicker .rdp-day { border-radius: 10px; font-size: 13.5px; font-weight: 600;
-              color: ${T.text2}; border: 1px solid transparent;
+              color: ${txt(0.8)}; border: 1px solid transparent;
               transition: background .18s, color .18s, border-color .18s; }
             .edge-daypicker .rdp-day:hover:not(.rdp-day_selected) {
-              background: ${T.surfaceHi} !important; color: ${T.text}; border-color: ${T.line}; }
-            .edge-daypicker .rdp-day_today:not(.rdp-day_selected) { color: ${T.acc}; border-color: ${T.lineAcc}; }
+              background: ${line(0.06)} !important; color: #f2f4f3; border-color: ${line(0.08)}; }
+            .edge-daypicker .rdp-day_today:not(.rdp-day_selected) { color: ${ACCENT}; border-color: rgba(${ACCENT_RGB},0.35); }
             .edge-daypicker .rdp-day_selected, .edge-daypicker .rdp-day_selected:hover {
-              background: ${T.acc} !important; color: var(--edge-on-acc, #0A0A0C) !important; font-weight: 800; }
-            .edge-daypicker .rdp-day_outside { color: ${T.text4}; opacity: .55; }
+              background: ${ACCENT} !important; color: #05201a !important; font-weight: 800; }
+            .edge-daypicker .rdp-day_outside { color: ${txt(0.4)}; opacity: .55; }
           `}</style>
         </div>
       )}
@@ -365,29 +539,24 @@ function AccountPicker({ value, options, onChange }) {
         <button
           type="button"
           onClick={toggle}
-          className="flex h-[42px] w-full items-center justify-between gap-2 rounded-xl px-3.5 text-[14px] font-semibold transition-colors duration-200"
-          style={{
-            fontFamily: T.sans,
-            background: T.sunken,
-            border: `1px solid ${open ? T.lineHi : T.line}`,
-            color: value ? T.text : T.text4,
-          }}
+          className="flex h-[52px] w-full items-center justify-between gap-2 rounded-xl px-4 text-[15px] font-semibold"
+          style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${open ? line(0.16) : line(0.08)}`, color: value ? '#f2f4f3' : txt(0.5) }}
         >
           <span className="flex min-w-0 items-center gap-2">
-            <Wallet size={14} strokeWidth={2.2} style={{ color: T.text4 }} />
+            <Wallet size={14} strokeWidth={2.2} style={{ color: txt(0.5) }} />
             <span className="truncate">{value || 'Немає рахунків'}</span>
           </span>
-          <ChevronDown size={14} strokeWidth={2.4} style={{ color: T.text4, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+          <ChevronDown size={14} strokeWidth={2.4} style={{ color: txt(0.5), transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
         </button>
       )}
     >
       {({ close }) => (
         <div
           className="w-[240px] overflow-hidden rounded-2xl p-1.5"
-          style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}
+          style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}
         >
           {options.length === 0 && (
-            <div className="px-3 py-5 text-center text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+            <div className="px-3 py-5 text-center text-[13px]" style={{ fontFamily: T.sans, color: txt(0.5) }}>
               Спершу додай рахунок
             </div>
           )}
@@ -399,8 +568,8 @@ function AccountPicker({ value, options, onChange }) {
                 type="button"
                 onClick={() => { onChange(o); close(); }}
                 className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13.5px] font-semibold transition-colors duration-150"
-                style={{ fontFamily: T.sans, color: on ? T.acc : T.text2, background: on ? `rgba(${T.accRgb},0.10)` : 'transparent' }}
-                onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.surfaceHi; }}
+                style={{ fontFamily: T.sans, color: on ? ACCENT : txt(0.8), background: on ? `rgba(${ACCENT_RGB},0.10)` : 'transparent' }}
+                onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = line(0.06); }}
                 onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
               >
                 {o}
@@ -415,28 +584,20 @@ function AccountPicker({ value, options, onChange }) {
 }
 
 /* ---------- зона для скріншота ---------- */
-
+/* Горизонтальна дропзона з макета: іконка зліва, підпис справа, а не
+   центрований квадрат. Коли є картинка — звичайний превʼю з хрестиком. */
 function ShotZone({ image, onPaste, onClear, label, tone }) {
-  const c = tone || T.acc;
+  const c = tone || ACCENT;
   return (
-    <div
-      onPaste={onPaste}
-      tabIndex={0}
-      className="w-full outline-none"
-    >
+    <div onPaste={onPaste} tabIndex={0} className="w-full outline-none">
       {image ? (
-        <div
-          className="group relative w-full overflow-hidden rounded-2xl"
-          style={{ border: `1px solid ${T.line}`, background: T.sunken }}
-        >
+        <div className="group relative w-full overflow-hidden rounded-xl" style={{ border: `1px solid ${line(0.08)}`, background: FIELD_BG }}>
           <img src={image} alt="" className="block h-auto w-full" />
           <button
             type="button"
             onClick={onClear}
             className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-xl opacity-0 transition-all duration-200 group-hover:opacity-100"
-            style={{ background: 'rgba(10,10,12,0.8)', border: `1px solid ${T.lineHi}`, color: T.text2, backdropFilter: 'blur(8px)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.4)`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.lineHi; }}
+            style={{ background: 'rgba(10,10,12,0.8)', border: `1px solid ${line(0.14)}`, color: txt(0.8), backdropFilter: 'blur(8px)' }}
           >
             <X size={15} strokeWidth={2.6} />
           </button>
@@ -445,19 +606,17 @@ function ShotZone({ image, onPaste, onClear, label, tone }) {
         <motion.div
           whileHover={{ y: -1 }}
           transition={{ duration: 0.2, ease: EASE }}
-          className="grid min-h-[132px] cursor-pointer place-items-center rounded-2xl transition-colors duration-200"
-          style={{ background: T.sunken, border: `1px dashed ${T.line}` }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = c)}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
+          className="flex cursor-pointer items-center gap-3.5 rounded-xl p-4 transition-colors duration-200"
+          style={{ border: `1px dashed ${line(0.14)}` }}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.4)`)}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = line(0.14))}
         >
-          <div className="flex flex-col items-center gap-2.5 px-6 py-6 text-center">
-            <ImagePlus size={19} strokeWidth={1.9} style={{ color: T.text4 }} />
-            <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>
-              {label}
-            </span>
-            <span className="text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              Ctrl+V — скрін або посилання
-            </span>
+          <div className="grid h-6 w-[30px] shrink-0 place-items-center rounded-[5px]" style={{ border: `1px solid ${txt(0.35)}` }}>
+            <ImagePlus size={13} strokeWidth={1.9} style={{ color: txt(0.5) }} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[14px] font-medium" style={{ fontFamily: T.sans, color: txt(0.72) }}>{label}</span>
+            <span className="text-[12px]" style={{ fontFamily: MONO, color: txt(0.5) }}>перетягни або вибери · PNG / JPG</span>
           </div>
         </motion.div>
       )}
@@ -492,32 +651,63 @@ const holdText = (min) => {
   return m ? `${h} год ${m} хв` : `${h} год`;
 };
 
-function TimeField({ value, onChange }) {
+/* Один розряд часу (ГГ або ХХ): велика цифра по центру, тонкі
+   стрілки вгору/вниз збоку — клацання й колесо миші крутять
+   значення. Клік на цифру виділяє її, щоб просто набрати з
+   клавіатури. */
+function TimeStep({ value, max, placeholder, onChange }) {
+  const step = (dir) => {
+    const cur = value === '' ? (dir > 0 ? -1 : 0) : parseInt(value, 10);
+    const next = ((cur + dir) % (max + 1) + (max + 1)) % (max + 1);
+    onChange(String(next).padStart(2, '0'));
+  };
   return (
-    <div
-      className="flex h-12 items-center gap-2.5 rounded-2xl px-4 transition-colors duration-200"
-      style={{ background: T.sunken, border: `1px solid ${T.line}` }}
-    >
-      <Clock size={15} strokeWidth={2.2} style={{ color: T.text4 }} />
+    <div className="flex items-center gap-[2px]">
       <input
-        type="time"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full min-w-0 bg-transparent text-[14px] font-bold outline-none"
-        style={{ fontFamily: T.mono, color: value ? T.text : T.text4, colorScheme: 'dark' }}
+        placeholder={placeholder}
+        onFocus={(e) => e.target.select()}
+        onWheel={(e) => { e.preventDefault(); step(e.deltaY < 0 ? 1 : -1); }}
+        onChange={(e) => {
+          const digits = e.target.value.replace(/\D/g, '').slice(-2);
+          if (digits === '') return onChange('');
+          onChange(String(Math.min(max, parseInt(digits, 10))).padStart(2, '0'));
+        }}
+        className="w-[24px] border-none bg-transparent text-center outline-none placeholder:opacity-40"
+        style={{ color: value ? txt(0.9) : txt(0.5), fontFamily: MONO, fontSize: 15, fontWeight: 700 }}
       />
-      {value && (
-        <button
-          type="button"
-          onClick={() => onChange('')}
-          className="shrink-0 transition-colors"
-          style={{ color: T.text4 }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = T.text2)}
-          onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
-        >
-          <X size={13} strokeWidth={2.6} />
+      <div className="flex flex-col">
+        <button type="button" onClick={() => step(1)} className="grid h-[8px] w-[12px] place-items-center rounded-sm transition-colors" style={{ color: txt(0.4) }} onMouseEnter={(e) => (e.currentTarget.style.color = ACCENT)} onMouseLeave={(e) => (e.currentTarget.style.color = txt(0.4))}>
+          <ChevronUp size={8} strokeWidth={3} />
         </button>
-      )}
+        <button type="button" onClick={() => step(-1)} className="grid h-[8px] w-[12px] place-items-center rounded-sm transition-colors" style={{ color: txt(0.4) }} onMouseEnter={(e) => (e.currentTarget.style.color = ACCENT)} onMouseLeave={(e) => (e.currentTarget.style.color = txt(0.4))}>
+          <ChevronDown size={8} strokeWidth={3} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Бокс «Вхід»/«Вихід» з макета: підпис зліва, ГГ:ХХ справа, той
+   самий висувний degree-степер, що й раніше, лише перевдягнений у
+   рядок замість плашки з іконкою годинника. */
+function TimeField({ label, value, onChange }) {
+  const [hh = '', mm = ''] = (value || '').split(':');
+  const setPart = (h, m) => (h === '' && m === '' ? onChange('') : onChange(`${h || '00'}:${m || '00'}`));
+
+  return (
+    <div className="flex h-[52px] flex-1 items-center justify-between rounded-xl px-4" style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}` }}>
+      <span className="text-[12px] font-medium uppercase tracking-[0.1em]" style={{ fontFamily: MONO, color: txt(0.55) }}>{label}</span>
+      <div className="flex items-center gap-1">
+        <TimeStep value={hh} max={23} placeholder="––" onChange={(h) => setPart(h, mm)} />
+        <span className="font-bold" style={{ color: txt(0.5), fontFamily: MONO, fontSize: 15 }}>:</span>
+        <TimeStep value={mm} max={59} placeholder="––" onChange={(m) => setPart(hh, m)} />
+        {value && (
+          <button type="button" onClick={() => onChange('')} className="ml-1 shrink-0 transition-colors" style={{ color: txt(0.4) }}>
+            <X size={12} strokeWidth={2.6} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -553,6 +743,10 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const [setupOptions, setSetupOptions] = useState([]);
   const [entryTime, setEntryTime] = useState('');
   const [exitTime, setExitTime] = useState('');
+  /* Час згорнутий за замовчуванням — це необов'язкові дані, і поки
+     їх нема, порожні «--:--» плашки лише займають місце. Розкривається
+     стрілкою вбік або сам, якщо в угоді час уже був заповнений. */
+  const [timeOpen, setTimeOpen] = useState(false);
 
   const [followedPlan, setFollowedPlan] = useState(null);
   const [rushed, setRushed] = useState(null);
@@ -587,8 +781,6 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const [psyRepeat, setPsyRepeat] = useState(null);
   const [psyRevenge, setPsyRevenge] = useState(null);
   const [psyNotes, setPsyNotes] = useState('');
-  /* Розкриті додаткові питання в короткому режимі */
-  const [psyOpen, setPsyOpen] = useState(false);
 
   const scrollRef = useRef(null);
 
@@ -615,6 +807,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       /* База віддає час як HH:MM:SS, полю input потрібні HH:MM */
       setEntryTime((existingTrade.entry_time || '').slice(0, 5));
       setExitTime((existingTrade.exit_time || '').slice(0, 5));
+      setTimeOpen(Boolean(existingTrade.entry_time || existingTrade.exit_time));
       setFollowedPlan(existingTrade.followed_plan ?? null);
       setRushed(existingTrade.rushed ?? null);
       setHasMistake(existingTrade.has_mistake ?? null);
@@ -647,7 +840,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       setSelectedPair(planPair || '');
       setRisk('1%'); setRr(''); setTradeType('Long'); setResult('Not Selected'); setSession('London');
       setTradeDescription(''); setTradeImage(null);
-      setSetupName(''); setEntryTime(''); setExitTime('');
+      setSetupName(''); setEntryTime(''); setExitTime(''); setTimeOpen(false);
       setFollowedPlan(null); setRushed(null); setHasMistake(null);
       setMistakeText(''); setMistakeImages([]);
       setPsyConfident(null); setPsyFear(null); setPsyRepeat(null); setPsyRevenge(null); setPsyNotes('');
@@ -726,16 +919,22 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const holdLabel = holdText(holdMinutes(entryTime, exitTime));
 
   const step1Missing = !selectedPair?.trim() || !tradeDate || !account || !risk?.trim();
-  /* У короткому режимі обовʼязкові тільки три питання, з яких
-     будується статистика. Решта лишається доступною під розкриттям —
-     не питаємо, але й не забороняємо відповісти. */
+
+  /* Значення семи питань розбору, в порядку QUESTIONS */
+  const psyValues = { followedPlan, rushed, hasMistake, psyConfident, psyFear, psyRepeat, psyRevenge };
+  const psySetters = {
+    followedPlan: setFollowedPlan, rushed: setRushed, hasMistake: setHasMistake,
+    psyConfident: setPsyConfident, psyFear: setPsyFear, psyRepeat: setPsyRepeat, psyRevenge: setPsyRevenge,
+  };
+  /* У короткому режимі обовʼязкові тільки три перших питання, з яких
+     будується статистика; решта — відповідай, якщо хочеш, але
+     картки видно всі сім одразу, як у макеті. */
   const psyShort = psyMode === 'short';
-  const psyList = psyShort
-    ? [followedPlan, rushed, hasMistake]
-    : [followedPlan, rushed, hasMistake, psyConfident, psyFear, psyRepeat, psyRevenge];
-  const psyTotal = psyList.length;
-  const psyAnswered = psyList.filter((v) => v !== null).length;
+  const requiredKeys = psyShort ? ['followedPlan', 'rushed', 'hasMistake'] : QUESTIONS.map((q) => q.key);
+  const psyTotal = requiredKeys.length;
+  const psyAnswered = requiredKeys.filter((k) => psyValues[k] !== null).length;
   const psyMissing = psyAnswered < psyTotal;
+  const psyDoneAll = QUESTIONS.filter((q) => psyValues[q.key] !== null).length;
 
   const goNext = () => {
     setTouched(true);
@@ -821,6 +1020,9 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   };
 
   const accountOptions = accounts.map((a) => a.firm_name);
+  const dirColor = tradeType === 'Long' ? ACCENT : BAD;
+  const dirRgb = tradeType === 'Long' ? ACCENT_RGB : BAD_RGB;
+  const submitReady = psyDoneAll === 7 && !psyMissing;
 
   if (typeof document === 'undefined') return null;
 
@@ -841,49 +1043,38 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.985 }}
             transition={SPRING}
-            className="my-auto w-full max-w-[720px] overflow-hidden rounded-3xl"
-            style={{
-              background: T.surface,
-              border: `1px solid ${T.line}`,
-              boxShadow: '0 40px 100px -30px rgba(0,0,0,0.95)',
-            }}
+            className="my-auto w-full max-w-[760px] overflow-hidden rounded-[22px]"
+            style={{ background: CARD_BG, border: `1px solid ${line(0.08)}`, boxShadow: '0 40px 100px -14px rgba(0,0,0,0.65)' }}
           >
             {/* ─────────── Шапка ─────────── */}
-            <div
-              className="relative px-4 pb-3 pt-4 sm:px-6 sm:pt-5"
-              style={{ borderBottom: `1px solid ${T.line}`, background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.surface})` }}
-            >
-              <div className="mb-2.5 flex items-center gap-2">
-                <Crosshair size={12} strokeWidth={2.6} style={{ color: T.acc }} />
-                <span className="text-[11.5px] font-bold uppercase tracking-[0.2em]" style={{ fontFamily: T.sans, color: T.acc }}>
-                  Position Entry
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5 pr-11">
-                <h2
-                  className="mr-1 text-[22px] font-bold leading-none sm:text-[26px]"
-                  style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
+            <div className="flex flex-col gap-6 px-6 pb-6 pt-8 sm:px-10 sm:pt-[34px]" style={{ borderBottom: `1px solid ${line(0.06)}` }}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-2.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ fontFamily: MONO, color: PURPLE }}>
+                    {step === 0
+                      ? `Journal entry · ${tradeDate || todayLocal()}`
+                      : `Journal entry · ${selectedPair || '—'} · ${tradeType} · ${rr ? `${rr}R` : '—'}`}
+                  </span>
+                  <h2 className="text-[27px] font-bold leading-none sm:text-[34px]" style={{ fontFamily: T.display, color: '#f2f4f3', letterSpacing: '-0.025em' }}>
+                    {step === 0
+                      ? (existingTrade ? 'Редагувати угоду' : 'Записати угоду')
+                      : 'Розбір виконання'}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[15px] transition-colors duration-200 sm:h-9 sm:w-9"
+                  style={{ border: `1px solid ${line(0.09)}`, color: txt(0.6) }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#f2f4f3'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.6); }}
                 >
-                  {existingTrade ? 'Edit Trade' : 'Log Trade'}
-                </h2>
-                <AssetPicker value={selectedPair} onChange={setSelectedPair} />
-                <TradeDate value={tradeDate} onChange={setTradeDate} />
+                  <X size={15} strokeWidth={2.2} />
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-xl transition-colors duration-200 sm:right-6 sm:top-5"
-                style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = T.surface; e.currentTarget.style.color = T.text3; }}
-              >
-                <X size={16} strokeWidth={2.4} />
-              </button>
 
               {/* кроки */}
-              <div className="mt-4 flex items-center gap-2">
+              <div className="flex gap-9">
                 {['Цифри', 'Розбір'].map((s, i) => {
                   const done = i < step;
                   const on = i === step;
@@ -892,29 +1083,17 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       key={s}
                       type="button"
                       onClick={() => (i === 0 ? goBack() : goNext())}
-                      className="group flex flex-1 flex-col gap-1.5 text-left"
+                      className="flex flex-1 flex-col gap-2.5 text-left"
                     >
-                      <span className="h-[3px] w-full overflow-hidden rounded-full" style={{ background: T.line }}>
-                        <motion.span
-                          className="block h-full rounded-full"
-                          initial={false}
-                          animate={{ width: done || on ? '100%' : '0%' }}
-                          transition={{ duration: 0.4, ease: EASE }}
-                          style={{ background: T.acc, display: 'block' }}
-                        />
+                      <span className="flex items-center gap-2.5">
+                        <span className="text-[13px] font-semibold" style={{ fontFamily: MONO, color: on ? ACCENT : done ? ACCENT : txt(0.45) }}>
+                          {done ? '✓' : `0${i + 1}`}
+                        </span>
+                        <span className="text-[14px]" style={{ fontFamily: T.sans, fontWeight: on ? 600 : 500, color: on ? '#f2f4f3' : txt(0.5) }}>
+                          {s}
+                        </span>
                       </span>
-                      <span
-                        className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.1em] transition-colors duration-200"
-                        style={{ fontFamily: T.sans, color: on ? T.text2 : done ? T.acc : T.text4 }}
-                      >
-                        {done && <Check size={11} strokeWidth={3.4} />}
-                        {i + 1}. {s}
-                        {i === 1 && psyAnswered > 0 && (
-                          <span className="tabular-nums" style={{ fontFamily: T.mono, color: psyMissing ? T.text4 : T.ok }}>
-                            {psyAnswered}/{psyTotal}
-                          </span>
-                        )}
-                      </span>
+                      <span className="block h-[2px] rounded-[1px]" style={{ background: on ? ACCENT : done ? `rgba(${ACCENT_RGB},0.4)` : line(0.08) }} />
                     </button>
                   );
                 })}
@@ -923,267 +1102,227 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
 
             {/* ─────────── Тіло ─────────── */}
             <form onSubmit={handleSubmit} noValidate>
-              <div ref={scrollRef} className="max-h-[62vh] overflow-y-auto px-4 py-5 sm:px-6" style={{ scrollbarWidth: 'thin' }}>
+              <div ref={scrollRef} className="max-h-[62vh] overflow-y-auto px-6 py-2 sm:px-10" style={{ scrollbarWidth: 'thin' }}>
                 <AnimatePresence mode="wait">
                   {step === 0 ? (
                     <motion.div
                       key="step-1"
-                      initial={{ opacity: 0, x: -12 }}
+                      initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -12 }}
-                      transition={{ duration: 0.24, ease: EASE }}
-                      className="flex flex-col gap-6"
+                      exit={{ opacity: 0, x: -10 }}
+                      transition={{ duration: 0.22, ease: EASE }}
                     >
-                      {/* Core metrics */}
-                      <section>
-                        <SectionTitle icon={Activity}>Core metrics</SectionTitle>
-                        <div className="grid gap-3.5 sm:grid-cols-[1.4fr_1fr_1fr]">
-                          <div>
-                            <Label>Account</Label>
-                            <AccountPicker value={account} options={accountOptions} onChange={setAccount} />
-                          </div>
+                      {/* Актив і напрямок */}
+                      <Row label="Актив" required>
+                        <div className="flex gap-3">
+                          <AssetPicker value={selectedPair} onChange={setSelectedPair} />
+                          <DirectionToggle value={tradeType} onChange={setTradeType} />
+                        </div>
+                      </Row>
 
-                          <div>
-                            <Label>Risk</Label>
-                            <div
-                              className="flex h-[42px] items-center gap-1 rounded-xl px-1.5"
-                              style={{ background: T.sunken, border: `1px solid ${T.line}` }}
-                            >
-                              <Percent size={13} strokeWidth={2.4} style={{ color: T.text4 }} className="ml-1.5 shrink-0" />
-                              <input
-                                value={risk}
-                                onChange={(e) => setRisk(e.target.value)}
-                                className="w-full min-w-0 bg-transparent text-[14px] font-semibold outline-none"
-                                style={{ fontFamily: T.mono, color: T.text }}
-                              />
-                              <span className="flex shrink-0 gap-0.5">
-                                {RISK_CHIPS.map((c) => (
+                      {/* Сесія */}
+                      <Row label="Сесія" required>
+                        <SessionPicker value={session} onChange={setSession} />
+                      </Row>
+
+                      {/* Ризик */}
+                      <Row label="Ризик" required>
+                        <div className="grid gap-3" style={{ gridTemplateColumns: '1.3fr 1fr 1fr' }}>
+                          <AccountPicker value={account} options={accountOptions} onChange={setAccount} />
+                          <div className="flex h-[52px] items-center justify-between rounded-xl px-4" style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}` }}>
+                            <input
+                              value={risk}
+                              onChange={(e) => setRisk(e.target.value)}
+                              className="w-full min-w-0 bg-transparent text-[16px] font-bold outline-none"
+                              style={{ fontFamily: MONO, color: '#f2f4f3' }}
+                            />
+                            <span className="shrink-0 text-[13px] font-medium" style={{ fontFamily: MONO, color: txt(0.55) }}>%</span>
+                          </div>
+                          <div className="flex h-[52px] items-center justify-between rounded-xl px-4" style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}` }}>
+                            <input
+                              value={rr}
+                              onChange={(e) => setRr(e.target.value.replace(',', '.'))}
+                              inputMode="decimal"
+                              placeholder="2.5"
+                              className="w-full min-w-0 bg-transparent text-[16px] font-bold outline-none placeholder:opacity-40"
+                              style={{ fontFamily: MONO, color: rr ? ACCENT : '#f2f4f3' }}
+                            />
+                            <span className="shrink-0 text-[13px] font-medium" style={{ fontFamily: MONO, color: txt(0.55) }}>R</span>
+                          </div>
+                        </div>
+                      </Row>
+
+                      {/* Статус */}
+                      <Row label="Статус" required>
+                        <PillRow options={RESULT_CHIPS} value={result} onChange={setResult} labelOf={(o) => RESULT_LABEL[o]} wrap />
+                      </Row>
+
+                      {/* Сетап */}
+                      <Row label="Сетап" noBorder>
+                        <div className="flex flex-col gap-3">
+                          <input
+                            value={setupName}
+                            onChange={(e) => setSetupName(e.target.value)}
+                            placeholder="Назва — напр. Sweep + BOS"
+                            className="flex h-[52px] w-full items-center rounded-xl px-4 text-[16px] font-normal outline-none placeholder:opacity-100"
+                            style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}`, color: '#f2f4f3', fontFamily: T.sans }}
+                          />
+                          {setupOptions.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {setupOptions.map((o) => {
+                                const on = o === setupName;
+                                return (
                                   <button
-                                    key={c}
+                                    key={o}
                                     type="button"
-                                    onClick={() => setRisk(c)}
-                                    className="rounded-md px-1.5 py-1 text-[11.5px] font-bold transition-colors duration-150"
+                                    onClick={() => setSetupName(on ? '' : o)}
+                                    className="rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors duration-150"
                                     style={{
-                                      fontFamily: T.mono,
-                                      color: risk === c ? T.acc : T.text4,
-                                      background: risk === c ? `rgba(${T.accRgb},0.12)` : 'transparent',
+                                      fontFamily: T.sans,
+                                      background: on ? `rgba(${ACCENT_RGB},0.12)` : 'transparent',
+                                      border: `1px solid ${on ? `rgba(${ACCENT_RGB},0.4)` : line(0.08)}`,
+                                      color: on ? ACCENT : txt(0.55),
                                     }}
                                   >
-                                    {c.replace('%', '')}
+                                    {o}
                                   </button>
-                                ))}
-                              </span>
+                                );
+                              })}
                             </div>
-                          </div>
-
-                          <div>
-                            <Label tone={T.acc}>Result RR</Label>
-                            <div
-                              className="flex h-[42px] items-center gap-2 rounded-xl px-3.5"
-                              style={{ background: T.sunken, border: `1px solid ${rr ? T.lineAcc : T.line}` }}
+                          )}
+                          <div className="flex flex-col gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setTimeOpen((v) => !v)}
+                              className="flex h-11 w-full items-center justify-between rounded-xl px-4 text-[13.5px] font-semibold transition-colors"
+                              style={{ fontFamily: T.sans, background: timeOpen ? FIELD_BG : 'transparent', border: `1px solid ${line(0.08)}`, color: txt(0.7) }}
                             >
-                              <Target size={13} strokeWidth={2.4} style={{ color: rr ? T.acc : T.text4 }} />
-                              <input
-                                value={rr}
-                                onChange={(e) => setRr(e.target.value.replace(',', '.'))}
-                                inputMode="decimal"
-                                placeholder="2.5"
-                                className="w-full min-w-0 bg-transparent text-[14px] font-bold outline-none placeholder:opacity-50"
-                                style={{ fontFamily: T.mono, color: T.text }}
-                              />
-                              <span className="shrink-0 text-[12.5px] font-bold" style={{ fontFamily: T.mono, color: T.text4 }}>R</span>
-                            </div>
-                          </div>
-                        </div>
-                      </section>
-
-                      {/* Execution */}
-                      <section className="grid gap-3.5 sm:grid-cols-2">
-                        <div>
-                          <Label>Session</Label>
-                          <Seg id="session" options={SESSIONS} value={session} onChange={setSession} colorOf={sessionTone} />
-                        </div>
-                        <div>
-                          <Label>Direction</Label>
-                          <Seg id="dir" options={DIRECTIONS} value={tradeType} onChange={setTradeType} colorOf={dirTone} />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <Label>Result</Label>
-                          <Seg id="res" options={RESULTS} value={result} onChange={setResult} colorOf={resultTone} wrap />
-                        </div>
-
-                        {/* Два моменти часу, а не тривалість: обидва
-                            видно в терміналі, а «скільки тримав»
-                            рахується з них саме. Обидва не обовʼязкові —
-                            угода без них зберігається як раніше. */}
-                        <div>
-                          <Label>Вхід</Label>
-                          <TimeField value={entryTime} onChange={setEntryTime} />
-                        </div>
-                        <div>
-                          <Label>
-                            Вихід
-                            {holdLabel && (
-                              <span className="ml-2 font-normal normal-case tracking-normal" style={{ color: T.text4 }}>
-                                {holdLabel}
+                              <span className="flex items-center gap-2">
+                                <Clock size={13} strokeWidth={2.2} style={{ color: txt(0.5) }} />
+                                Час входу і виходу
+                                {holdLabel && <span style={{ fontFamily: MONO, color: ACCENT }}>· {holdLabel}</span>}
                               </span>
-                            )}
-                          </Label>
-                          <TimeField value={exitTime} onChange={setExitTime} />
-                        </div>
-                      </section>
-
-                      {/* Setup */}
-                      <section>
-                        <SectionTitle icon={Crosshair} hint="що саме ти побачив">Trade setup</SectionTitle>
-                        <div className="flex flex-col gap-3">
-                          <div>
-                            <input
-                              value={setupName}
-                              onChange={(e) => setSetupName(e.target.value)}
-                              placeholder="Назва сетапу — напр. Sweep + BOS"
-                              className="h-12 w-full rounded-2xl px-4 text-[14px] font-semibold outline-none transition-colors duration-200 placeholder:font-normal placeholder:opacity-60"
-                              style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: T.sans }}
-                              onFocus={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
-                              onBlur={(e) => (e.currentTarget.style.borderColor = T.line)}
-                            />
-
-                            {/* Підказки — власні сетапи, за частотою. Це і
-                                економить набір, і тримає назви однаковими:
-                                «OB retest» та «ОБ ретест» у статистиці
-                                розʼїжджаються на два різні сетапи. */}
-                            {setupOptions.length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-1.5">
-                                {setupOptions.map((o) => {
-                                  const on = o === setupName;
-                                  return (
-                                    <button
-                                      key={o}
-                                      type="button"
-                                      onClick={() => setSetupName(on ? '' : o)}
-                                      className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors duration-150"
-                                      style={{
-                                        fontFamily: T.sans,
-                                        background: on ? `rgba(${T.accRgb},0.12)` : T.sunken,
-                                        border: `1px solid ${on ? T.lineAcc : T.line}`,
-                                        color: on ? T.acc : T.text3,
-                                      }}
-                                    >
-                                      {o}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
+                              <ChevronRight size={14} strokeWidth={2.4} style={{ color: txt(0.5), transform: timeOpen ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }} />
+                            </button>
+                            <AnimatePresence initial={false}>
+                              {timeOpen && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  transition={{ duration: 0.22, ease: EASE }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="flex gap-3">
+                                    <TimeField label="Вхід" value={entryTime} onChange={setEntryTime} />
+                                    <TimeField label="Вихід" value={exitTime} onChange={setExitTime} />
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
-
-                          <ShotZone
-                            image={tradeImage}
-                            onPaste={pasteInto(setTradeImage)}
-                            onClear={() => setTradeImage(null)}
-                            label="Встав графік сетапу"
-                          />
+                          <ShotZone image={tradeImage} onPaste={pasteInto(setTradeImage)} onClear={() => setTradeImage(null)} label="Скрін графіка" />
                           <textarea
                             value={tradeDescription}
                             onChange={(e) => setTradeDescription(e.target.value)}
-                            placeholder="Логіка входу, підтвердження, емоції в моменті…"
-                            className="min-h-[92px] w-full resize-y rounded-2xl p-4 text-[14px] outline-none transition-colors duration-200 placeholder:opacity-60"
-                            style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans, lineHeight: 1.65 }}
-                            onFocus={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
-                            onBlur={(e) => (e.currentTarget.style.borderColor = T.line)}
+                            placeholder="Логіка входу, підтвердження, емоції в моменті… (опційно)"
+                            className="min-h-[80px] w-full resize-y rounded-xl p-4 text-[15px] outline-none placeholder:opacity-50"
+                            style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}`, color: txt(0.8), fontFamily: T.sans, lineHeight: 1.55 }}
                           />
                         </div>
-                      </section>
+                      </Row>
                     </motion.div>
                   ) : (
                     <motion.div
                       key="step-2"
-                      initial={{ opacity: 0, x: 12 }}
+                      initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 12 }}
-                      transition={{ duration: 0.24, ease: EASE }}
-                      className="flex flex-col gap-6"
+                      exit={{ opacity: 0, x: 10 }}
+                      transition={{ duration: 0.22, ease: EASE }}
+                      className="flex flex-col gap-[22px] py-[30px]"
                     >
-                      {/* Психологія. У короткому режимі обовʼязкові
-                          тільки три питання, з яких аналітика справді
-                          щось будує. Решта не зникає — вона під
-                          розкриттям: не питаємо, але й не забороняємо
-                          відповісти тому, хто хоче. */}
-                      <section>
-                        <SectionTitle
-                          icon={BrainCircuit}
-                          hint={psyShort ? 'три головні — обовʼязкові' : 'усі сім — обовʼязкові'}
-                        >
-                          Psychology
-                        </SectionTitle>
-                        <div className="flex flex-col gap-2">
-                          <YesNo label="Дотримався торгового плану?" value={followedPlan} onChange={setFollowedPlan} goodIsYes missing={touched && followedPlan === null} />
-                          <YesNo label="Спішив зі входом (FOMO)?" value={rushed} onChange={setRushed} goodIsYes={false} missing={touched && rushed === null} />
-                          <YesNo label="Припустився очевидної помилки?" value={hasMistake} onChange={setHasMistake} goodIsYes={false} missing={touched && hasMistake === null} />
-
-                          {(!psyShort || psyOpen) && (
-                            <>
-                              <YesNo label="Був упевнений у рішеннях?" value={psyConfident} onChange={setPsyConfident} goodIsYes missing={!psyShort && touched && psyConfident === null} />
-                              <YesNo label="Чи був присутній страх?" value={psyFear} onChange={setPsyFear} goodIsYes={false} missing={!psyShort && touched && psyFear === null} />
-                              <YesNo label="Повторив би цю угоду?" value={psyRepeat} onChange={setPsyRepeat} goodIsYes missing={!psyShort && touched && psyRepeat === null} />
-                              <YesNo label="Було бажання відігратися?" value={psyRevenge} onChange={setPsyRevenge} goodIsYes={false} missing={!psyShort && touched && psyRevenge === null} />
-                            </>
-                          )}
-                        </div>
-
-                        {psyShort && (
-                          <button
-                            type="button"
-                            onClick={() => setPsyOpen((v) => !v)}
-                            className="mt-2 flex items-center gap-1.5 text-[12.5px] font-semibold transition-colors"
-                            style={{ fontFamily: T.sans, color: T.text3 }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
-                          >
-                            <ChevronDown
-                              size={13}
-                              strokeWidth={2.6}
-                              style={{ transform: psyOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
+                      <div className="flex flex-wrap items-end justify-between gap-5">
+                        <p className="max-w-[400px] text-[15px] leading-[1.5]" style={{ fontFamily: T.sans, color: txt(0.6) }}>
+                          Сім питань. Відповідай як було, а не як хотілося б.
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[20px] font-bold" style={{ fontFamily: MONO, color: ACCENT }}>
+                            {psyDoneAll}<span style={{ color: txt(0.4) }}>/7</span>
+                          </span>
+                          <span className="h-1 w-[88px] overflow-hidden rounded-full" style={{ background: line(0.07) }}>
+                            <motion.span
+                              className="block h-full rounded-full"
+                              initial={false}
+                              animate={{ width: `${(psyDoneAll / 7) * 100}%` }}
+                              transition={{ duration: 0.25 }}
+                              style={{ background: ACCENT }}
                             />
-                            {psyOpen ? 'Сховати решту' : 'Ще чотири питання — за бажанням'}
-                          </button>
-                        )}
+                          </span>
+                        </div>
+                      </div>
 
-                        <textarea
-                          value={psyNotes}
-                          onChange={(e) => setPsyNotes(e.target.value)}
-                          placeholder="Психологічні нотатки (опціонально)…"
-                          className="mt-3 min-h-[80px] w-full resize-y rounded-2xl p-4 text-[14px] outline-none transition-colors duration-200 placeholder:opacity-60"
-                          style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans, lineHeight: 1.65 }}
-                          onFocus={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
-                          onBlur={(e) => (e.currentTarget.style.borderColor = T.line)}
-                        />
-                      </section>
+                      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                        {QUESTIONS.map((qq) => {
+                          const v = psyValues[qq.key];
+                          const on = v !== null;
+                          const tone = !on ? ACCENT : (v === qq.good ? ACCENT : AMBER);
+                          const set = psySetters[qq.key];
+                          return (
+                            <div
+                              key={qq.key}
+                              className="flex flex-col justify-between gap-3 rounded-[13px] p-3.5 transition-colors duration-200"
+                              style={{ background: on ? '#15181a' : '#131517', border: `1px solid ${on ? `${tone}3d` : line(0.06)}` }}
+                            >
+                              <span className="min-h-[38px] text-[14px] leading-[1.35] font-medium" style={{ fontFamily: T.sans, color: '#f2f4f3' }}>
+                                {qq.q}
+                              </span>
+                              <div className="flex gap-1.5">
+                                {[true, false].map((v2) => {
+                                  const active = v === v2;
+                                  return (
+                                    <button
+                                      key={String(v2)}
+                                      type="button"
+                                      onClick={() => set(active ? null : v2)}
+                                      className="flex h-8 min-w-[48px] items-center justify-center rounded-[10px] text-[12px] transition-all duration-150"
+                                      style={{
+                                        fontFamily: T.sans,
+                                        fontWeight: active ? 600 : 500,
+                                        border: `1px solid ${active ? tone : line(0.09)}`,
+                                        background: active ? `${tone}22` : 'transparent',
+                                        color: active ? tone : txt(0.6),
+                                      }}
+                                    >
+                                      {v2 ? 'Так' : 'Ні'}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
 
-                      {/* Розбір помилки */}
+                      {/* Розбір помилки — функціональний блок понад
+                          макет: помилка з угоди летить у Журнал
+                          помилок, і без детального опису та категорій
+                          там залишилась би тільки автовгадана картка. */}
                       <AnimatePresence>
                         {hasMistake === true && (
-                          <motion.section
+                          <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.28, ease: EASE }}
+                            transition={{ duration: 0.25, ease: EASE }}
                             className="overflow-hidden"
                           >
-                            <div
-                              className="flex flex-col gap-3 rounded-2xl p-4"
-                              style={{ background: `rgba(${T.badRgb},0.05)`, border: `1px solid rgba(${T.badRgb},0.22)` }}
-                            >
+                            <div className="flex flex-col gap-3 rounded-xl p-4" style={{ background: `rgba(${BAD_RGB},0.05)`, border: `1px solid rgba(${BAD_RGB},0.22)` }}>
                               <div className="flex flex-wrap items-center gap-2.5">
-                                <AlertTriangle size={14} strokeWidth={2.4} style={{ color: T.bad }} />
-                                <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.bad }}>
+                                <AlertTriangle size={14} strokeWidth={2.4} style={{ color: BAD }} />
+                                <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: BAD }}>
                                   Аналіз помилки
                                 </span>
 
-                                {/* Категорії з розбору — коротко, прямо в
-                                    шапці: інакше про те, що розбір узагалі
-                                    зроблено, було б видно тільки в іншому
-                                    розділі. */}
                                 {errDraft?.cats?.length > 0 && (
                                   <span className="flex flex-wrap items-center gap-1.5">
                                     {errDraft.cats.map((id) => {
@@ -1193,12 +1332,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                         <span
                                           key={id}
                                           className="rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em]"
-                                          style={{
-                                            fontFamily: T.sans,
-                                            color: c.color,
-                                            background: `${c.color}1a`,
-                                            border: `1px solid ${c.color}38`,
-                                          }}
+                                          style={{ fontFamily: T.sans, color: c.color, background: `${c.color}1a`, border: `1px solid ${c.color}38` }}
                                         >
                                           {c.label}
                                         </span>
@@ -1210,17 +1344,11 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    /* Композер відкриваємо з тим, що вже
-                                       відомо: актив і опис людина щойно
-                                       ввела, категорії — або з минулого
-                                       розбору, або вгадані з психоблоку.
-                                       Порожня форма тут означала б просити
-                                       втретє те саме. */
                                     setErrForm({
                                       pair: errDraft?.pair || selectedPair || '',
                                       desc: mistakeText,
                                       reasons: errDraft?.reasons || [],
-                          tvLink: errDraft?.tvLink || mistakeImages[0] || tradeImage || '',
+                                      tvLink: errDraft?.tvLink || mistakeImages[0] || tradeImage || '',
                                       cats: errDraft?.cats?.length
                                         ? errDraft.cats
                                         : catsFromTrade({
@@ -1231,49 +1359,30 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                     setComposerOpen(true);
                                   }}
                                   className="ml-auto flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[12.5px] font-bold transition-colors"
-                                  style={{
-                                    fontFamily: T.sans,
-                                    background: 'transparent',
-                                    border: `1px solid rgba(${T.badRgb},0.3)`,
-                                    color: T.bad,
-                                  }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.1)`; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                  style={{ fontFamily: T.sans, background: 'transparent', border: `1px solid rgba(${BAD_RGB},0.3)`, color: BAD }}
                                 >
                                   {errDraft ? 'Змінити розбір' : 'Розібрати детально'}
                                 </button>
                               </div>
 
                               {mistakeImages.length === 0 ? (
-                                <ShotZone
-                                  image={null}
-                                  onPaste={pasteMistake}
-                                  label="Встав графіки помилки"
-                                  tone={T.bad}
-                                />
+                                <ShotZone image={null} onPaste={pasteMistake} label="Встав графіки помилки" tone={BAD} />
                               ) : (
                                 <div onPaste={pasteMistake} tabIndex={0} className="grid grid-cols-2 gap-2.5 outline-none">
                                   {mistakeImages.map((img, i) => (
-                                    <div
-                                      key={i}
-                                      className="group relative aspect-video overflow-hidden rounded-xl"
-                                      style={{ border: `1px solid rgba(${T.badRgb},0.25)`, background: T.sunken }}
-                                    >
+                                    <div key={i} className="group relative aspect-video overflow-hidden rounded-xl" style={{ border: `1px solid rgba(${BAD_RGB},0.25)`, background: FIELD_BG }}>
                                       <img src={img} alt="" className="h-full w-full object-cover" />
                                       <button
                                         type="button"
                                         onClick={() => removeMistakeImage(i)}
                                         className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                                        style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${T.lineHi}`, color: T.bad }}
+                                        style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${line(0.14)}`, color: BAD }}
                                       >
                                         <X size={13} strokeWidth={2.8} />
                                       </button>
                                     </div>
                                   ))}
-                                  <div
-                                    className="grid aspect-video place-items-center rounded-xl text-center text-[12px] font-semibold"
-                                    style={{ border: `1px dashed rgba(${T.badRgb},0.25)`, background: T.sunken, color: T.text4, fontFamily: T.sans }}
-                                  >
+                                  <div className="grid aspect-video place-items-center rounded-xl text-center text-[12px] font-semibold" style={{ border: `1px dashed rgba(${BAD_RGB},0.25)`, background: FIELD_BG, color: txt(0.5), fontFamily: T.sans }}>
                                     ще один<br />Ctrl+V
                                   </div>
                                 </div>
@@ -1283,27 +1392,34 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                 value={mistakeText}
                                 onChange={(e) => setMistakeText(e.target.value)}
                                 placeholder="Детально опиши помилку, щоб не повторити її в майбутньому…"
-                                className="min-h-[92px] w-full resize-y rounded-2xl p-4 text-[14px] outline-none transition-colors duration-200 placeholder:opacity-60"
-                                style={{
-                                  background: T.sunken,
-                                  border: `1px solid ${touched && !mistakeText.trim() ? `rgba(${T.badRgb},0.4)` : T.line}`,
-                                  color: T.text2, fontFamily: T.sans, lineHeight: 1.65,
-                                }}
+                                className="min-h-[80px] w-full resize-y rounded-xl p-4 text-[14px] outline-none"
+                                style={{ background: FIELD_BG, border: `1px solid ${touched && !mistakeText.trim() ? `rgba(${BAD_RGB},0.4)` : line(0.08)}`, color: txt(0.8), fontFamily: T.sans, lineHeight: 1.55 }}
                               />
                             </div>
-                          </motion.section>
+                          </motion.div>
                         )}
                       </AnimatePresence>
+
+                      <div className="grid items-start gap-7 pt-1.5" style={{ gridTemplateColumns: '150px 1fr' }}>
+                        <div className="flex flex-col gap-1.5">
+                          <div className="text-[14px] font-bold" style={{ fontFamily: T.sans, color: '#f2f4f3' }}>Нотатка</div>
+                          <div className="text-[12px]" style={{ fontFamily: MONO, color: txt(0.5) }}>опційно</div>
+                        </div>
+                        <textarea
+                          value={psyNotes}
+                          onChange={(e) => setPsyNotes(e.target.value)}
+                          placeholder="Що саме зіпсувало або зберегло цю угоду?"
+                          className="min-h-[80px] w-full resize-y rounded-xl p-4 text-[15px] outline-none placeholder:opacity-50"
+                          style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}`, color: txt(0.8), fontFamily: T.sans, lineHeight: 1.55 }}
+                        />
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
 
               {/* ─────────── Підвал ─────────── */}
-              <div
-                className="flex flex-col gap-3 px-4 py-3.5 sm:px-6"
-                style={{ borderTop: `1px solid ${T.line}`, background: T.surfaceHi }}
-              >
+              <div className="flex flex-col gap-3 px-6 py-5 sm:px-10" style={{ borderTop: `1px solid ${line(0.06)}`, background: FOOTER_BG }}>
                 <AnimatePresence>
                   {errorMsg && (
                     <motion.div
@@ -1312,7 +1428,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       exit={{ opacity: 0, y: -6 }}
                       transition={{ duration: 0.2, ease: EASE }}
                       className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-[13px] font-semibold"
-                      style={{ background: `rgba(${T.badRgb},0.09)`, border: `1px solid rgba(${T.badRgb},0.25)`, color: T.bad, fontFamily: T.sans }}
+                      style={{ background: `rgba(${BAD_RGB},0.09)`, border: `1px solid rgba(${BAD_RGB},0.25)`, color: BAD, fontFamily: T.sans }}
                     >
                       <AlertCircle size={14} strokeWidth={2.4} className="shrink-0" />
                       {errorMsg}
@@ -1320,56 +1436,59 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                   )}
                 </AnimatePresence>
 
-                <div className="flex items-center gap-2.5">
-                  {step === 1 && (
+                {step === 0 ? (
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="hidden text-[14px] sm:block" style={{ fontFamily: T.sans, color: txt(0.55) }}>
+                      Чернетка зберігається автоматично
+                    </span>
+                    <div className="ml-auto flex items-center gap-3.5">
+                      <span className="hidden text-[14px] sm:block" style={{ fontFamily: T.sans, color: txt(0.5) }}>Лишився розбір</span>
+                      <button
+                        type="button"
+                        onClick={goNext}
+                        className="rounded-xl px-[26px] py-3.5 text-[15px] font-semibold transition-transform duration-150 active:scale-[0.98]"
+                        style={{ fontFamily: T.sans, background: ACCENT, color: '#05201a' }}
+                      >
+                        Далі →
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-4">
                     <button
                       type="button"
                       onClick={goBack}
-                      className="flex h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-[13.5px] font-semibold transition-colors duration-200"
-                      style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3, fontFamily: T.sans }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
+                      className="rounded-[11px] px-5 py-3 text-[14px] font-medium transition-colors duration-150"
+                      style={{ fontFamily: T.sans, border: `1px solid ${line(0.08)}`, color: txt(0.65) }}
                     >
-                      <ArrowLeft size={15} strokeWidth={2.4} />
-                      Назад
+                      ← Назад
                     </button>
-                  )}
-
-                  <span className="ml-auto hidden text-[12.5px] sm:block" style={{ fontFamily: T.sans, color: T.text4 }}>
-                    {step === 0 ? 'Далі — розбір угоди' : psyMissing ? `Лишилось ${psyTotal - psyAnswered} питань` : 'Усе готово'}
-                  </span>
-
-                  {step === 0 ? (
-                    <button
-                      type="button"
-                      onClick={goNext}
-                      className="group ml-auto flex h-11 flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.99] sm:ml-0 sm:flex-none"
-                      style={{
-                        background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans,
-                        boxShadow: `0 8px 22px -10px rgba(${T.accRgb},0.7)`,
-                      }}
-                    >
-                      Далі
-                      <ArrowRight size={15} strokeWidth={2.8} className="transition-transform duration-300 group-hover:translate-x-0.5" />
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.99] sm:flex-none"
-                      style={{
-                        background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans,
-                        boxShadow: `0 8px 22px -10px rgba(${T.accRgb},0.7)`,
-                        opacity: loading ? 0.6 : 1,
-                      }}
-                    >
-                      {loading
-                        ? <Loader2 size={16} strokeWidth={3} className="animate-spin" />
-                        : <Check size={16} strokeWidth={3} />}
-                      {existingTrade ? 'Оновити трейд' : 'Записати трейд'}
-                    </button>
-                  )}
-                </div>
+                    <div className="flex items-center gap-3.5">
+                      <span className="hidden text-[14px] sm:block" style={{ fontFamily: T.sans, color: submitReady ? `rgba(${ACCENT_RGB},0.85)` : txt(0.5) }}>
+                        {submitReady ? 'Усі відповіді на місці' : `Лишилось ${7 - psyDoneAll}`}
+                      </span>
+                      <button
+                        type="submit"
+                        disabled={loading || !submitReady}
+                        className="flex items-center gap-2 rounded-xl px-[26px] py-3.5 text-[15px] font-semibold transition-all duration-150"
+                        style={{
+                          fontFamily: T.sans,
+                          cursor: submitReady ? 'pointer' : 'not-allowed',
+                          background: submitReady ? ACCENT : line(0.06),
+                          color: submitReady ? '#05201a' : txt(0.4),
+                          border: `1px solid ${submitReady ? ACCENT : line(0.08)}`,
+                          boxShadow: submitReady ? `0 0 40px rgba(${ACCENT_RGB},0.28)` : 'none',
+                          opacity: loading ? 0.7 : 1,
+                        }}
+                      >
+                        {loading
+                          ? <Loader2 size={15} strokeWidth={3} className="animate-spin" />
+                          : null}
+                        {existingTrade ? 'Оновити трейд' : 'Записати трейд'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </form>
           </motion.div>
@@ -1379,7 +1498,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
               по цій формі.
 
               Зберігає в стан, а не в базу: угоди може ще не існувати.
-              Усе долетить разом при збереженні.
+              Усе долетить разом при збереженні угоди.
 
               stopPropagation потрібен і в порталі: React пускає події
               вгору по своєму дереву, а не по DOM, тож без нього клік
