@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Building2, Trophy, Loader2, Check, Trash2, Lock,
-  TrendingUp, TrendingDown, Activity, Target, ArrowDownToLine,
+  X, Building2, Loader2, Check, Trash2, Lock,
+  TrendingUp, TrendingDown,
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
@@ -34,35 +34,11 @@ const fmtDay = (iso) => {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 };
 
-function Stat({ label, value, hint, tone, hue, icon: Icon }) {
-  return (
-    <div
-      className="ad-tile relative min-w-0 overflow-hidden rounded-2xl px-4 py-3.5"
-      style={{ '--hue': hue || T.accRgb, background: T.surface, border: `1px solid ${T.line}` }}
-    >
-      <div className="relative z-10 mb-1.5 flex items-center gap-2">
-        {Icon && <Icon size={12.5} strokeWidth={2.3} style={{ color: `rgb(${hue || T.accRgb})` }} />}
-        <span
-          className="truncate text-[11px] font-semibold uppercase tracking-[0.13em]"
-          style={{ fontFamily: T.sans, color: T.text4 }}
-        >
-          {label}
-        </span>
-      </div>
-      <div
-        className="relative z-10 text-[22px] font-semibold tabular-nums"
-        style={{ fontFamily: T.mono, color: tone || T.text, letterSpacing: '-0.02em' }}
-      >
-        {value}
-      </div>
-      {hint && (
-        <div className="relative z-10 mt-0.5 truncate text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          {hint}
-        </div>
-      )}
-    </div>
-  );
-}
+const fmtDayShort = (iso) => {
+  const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+};
 
 /* Кістяк на час завантаження. Займає рівно стільки ж місця, скільки
    готовий вміст, тому вікно не міняє висоту, коли дані прилітають. */
@@ -142,12 +118,35 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
   const hasAmount = !isNaN(rawAmount) && rawAmount > 0;
   const overLimit = hasAmount && rawAmount > Math.max(openProfit, 0);
 
-  const history = useMemo(() => [...events].reverse(), [events]);
+  /* Дельта від попередньої точки по кожному запису — рахуємо тут раз,
+     а не гадаємо по kind: withdrawn завжди мінус, а прибуток/збиток
+     від угоди залежить від того, вгору чи вниз пішов баланс. */
+  const history = useMemo(() => {
+    const rev = [...events].reverse();
+    return rev.map((e, i) => {
+      const prev = rev[i + 1];
+      const delta = e.kind === 'start' ? null : e.balance_after - (prev ? Number(prev.balance_after) : initial);
+      return { ...e, delta };
+    });
+  }, [events, initial]);
   const lastId = events.length ? events[events.length - 1].id : null;
   const filteredHistory = useMemo(
     () => (histFilter === 'all' ? history : history.filter((e) => e.kind === histFilter)),
     [history, histFilter],
   );
+
+  /* Групи по місяцях — рядки під заголовком з назвою місяця. */
+  const historyGroups = useMemo(() => {
+    const out = [];
+    filteredHistory.forEach((e) => {
+      const d = new Date(`${String(e.happened_at).slice(0, 10)}T12:00:00`);
+      const key = isNaN(d) ? 'Unknown' : d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).toUpperCase();
+      let g = out[out.length - 1];
+      if (!g || g.key !== key) { g = { key, rows: [] }; out.push(g); }
+      g.rows.push(e);
+    });
+    return out;
+  }, [filteredHistory]);
 
   /* Просадка від піку: найвищий баланс, який колись бачив акаунт,
      проти поточного. Не «максимальний лосс за день» проп-фірми (ми
@@ -182,7 +181,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
     const days = first && last
       ? Math.max(1, Math.round((new Date(`${last}T00:00:00`) - new Date(`${first}T00:00:00`)) / 86400000) + 1)
       : 1;
-    return { peak, low, days };
+    return { peak, low, days, count: chartEvents.length, firstDate: first };
   }, [chartEvents, initial]);
 
   const submit = async () => {
@@ -286,6 +285,22 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
           background-color: rgba(255,255,255,0.018);
         }
 
+        /* Рядок у боковій панелі графіка (Peak/Win rate/Net R/
+           Drawdown) — тихо світлішає під курсором, як у макеті. */
+        .ad-tile-row { transition: background-color .2s ease; }
+        .ad-tile-row:hover { background-color: rgba(255,255,255,0.022); }
+
+        /* Рядок історії — легкий фіолетовий градієнт, тонке кільце
+           всередині і зсув вправо на 3px, як у макеті. */
+        .ad-hist-row {
+          transition: background .22s ease, box-shadow .22s ease, transform .22s ease;
+        }
+        .ad-hist-row:hover {
+          background: linear-gradient(90deg, rgba(${T.accRgb},0.07) 0%, rgba(255,255,255,0.02) 45%, rgba(255,255,255,0) 100%);
+          box-shadow: inset 0 0 0 1px ${T.lineHi};
+          transform: translateX(3px);
+        }
+
         /* ─────────── Панель виплати: тонка градієнтна рамка навколо
            темної картки й повільний відблиск, що пропливає по ній
            раз на кілька секунд — «преміальна» картка ─────────── */
@@ -294,26 +309,6 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
             rgba(${T.accRgb},0.6) 0%, rgba(${T.accRgb},0.1) 32%,
             rgba(255,255,255,0.05) 60%, rgba(${T.accRgb},0.3) 100%);
         }
-        .ad-payout-sheen {
-          position: absolute;
-          inset: 0 auto 0 0;
-          width: 40%;
-          background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,.05) 50%, transparent 100%);
-          animation: ad-payout-sheen-move 7s ease-in-out infinite;
-          pointer-events: none;
-        }
-        @keyframes ad-payout-sheen-move {
-          0% { transform: translateX(-120%); }
-          55%, 100% { transform: translateX(240%); }
-        }
-        .ad-payout-ping {
-          animation: ad-payout-pulse 2.8s ease-out infinite;
-        }
-        @keyframes ad-payout-pulse {
-          0% { opacity: .55; transform: scale(1); }
-          70%, 100% { opacity: 0; transform: scale(2.6); }
-        }
-
         /* Кнопка «Log payout» — скляна пігулка: ледь тонований
            фіолетовий, тонка рамка, розмиття позаду. На ховері тло і
            рамка яскравіють, зʼявляється сяйво й легкий підйом. */
@@ -336,16 +331,12 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
         .ad-payout-cta:disabled {
           background: ${T.surfaceHi};
           border-color: ${T.line};
-          color: ${T.text4};
+          color: ${T.text3};
           box-shadow: none;
           cursor: not-allowed;
         }
 
         .ad-quick-pick:hover:not(:disabled) { border-color: ${T.lineAcc} !important; color: ${T.acc} !important; }
-
-        @media (prefers-reduced-motion: reduce) {
-          .ad-payout-sheen, .ad-payout-ping { animation: none; }
-        }
 
         /* Поле, що підсвічує рамку під курсором */
         .ad-field {
@@ -419,11 +410,11 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
             >
               {acc.firm_name}
             </h2>
-            <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: isClosed ? T.text4 : T.ok }}>
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: isClosed ? T.text4 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
+            <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: isClosed ? T.text3 : T.ok }}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: isClosed ? T.text3 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
               {isClosed ? 'Closed' : 'Active'}
-              <span style={{ color: T.text4 }}>· {money(initial)} account</span>
-              {isClosed && acc.closed_reason && <span style={{ color: T.text4 }}>· {acc.closed_reason}</span>}
+              <span style={{ color: T.text3 }}>· {money(initial)} account</span>
+              {isClosed && acc.closed_reason && <span style={{ color: T.text3 }}>· {acc.closed_reason}</span>}
             </div>
           </div>
 
@@ -450,9 +441,9 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
           <button
             onClick={onClose}
             className="ad-close grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-            style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
+            style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2 }}
             onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = T.surface; e.currentTarget.style.color = T.text3; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = T.surface; e.currentTarget.style.color = T.text2; }}
           >
             <X size={17} strokeWidth={2.4} />
           </button>
@@ -494,7 +485,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                         fontFamily: T.sans,
                         background: on ? `rgba(${T.badRgb},0.14)` : T.surface,
                         border: `1px solid ${on ? `rgba(${T.badRgb},0.4)` : T.line}`,
-                        color: on ? T.bad : T.text3,
+                        color: on ? T.bad : T.text2,
                       }}
                     >
                       {r}
@@ -522,7 +513,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                 <button
                   onClick={() => setClosePanel(false)}
                   className="text-[13px] font-semibold"
-                  style={{ fontFamily: T.sans, color: T.text4 }}
+                  style={{ fontFamily: T.sans, color: T.text3 }}
                 >
                   Cancel
                 </button>
@@ -538,7 +529,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               headline numbers of the account in one glance. */}
           <div className="grid grid-cols-1 sm:grid-cols-3" style={{ borderBottom: `1px solid ${T.line}`, background: T.surface }}>
             <div className="flex flex-col gap-2 px-5 py-5 sm:px-7" style={{ borderRight: `1px solid ${T.line}` }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
                 Current balance
               </p>
               <span
@@ -561,7 +552,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               </span>
             </div>
             <div className="flex flex-col gap-2 px-5 py-5 sm:px-7" style={{ borderRight: `1px solid ${T.line}` }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
                 Withdrawn
               </p>
               <span
@@ -570,12 +561,12 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               >
                 {money2(totalPaid)}
               </span>
-              <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
                 {payouts.length ? `${payouts.length} payout${payouts.length === 1 ? '' : 's'}` : 'none yet'}
               </span>
             </div>
             <div className="flex flex-col gap-2 px-5 py-5 sm:px-7">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
                 Total earned
               </p>
               <span
@@ -584,7 +575,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               >
                 {money(earned)}
               </span>
-              <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
                 payouts + open profit
               </span>
             </div>
@@ -600,24 +591,19 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                 className="ad-payout relative overflow-hidden rounded-[19px] p-5"
                 style={{ background: 'linear-gradient(180deg, #14141c 0%, #0d0d11 100%)' }}
               >
-                <span aria-hidden className="ad-payout-sheen" />
-
                 <div className="relative z-10 flex flex-col gap-4">
                   {isClosed ? (
-                    <div className="flex items-center gap-2 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text4 }}>
+                    <div className="flex items-center gap-2 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>
                       <Lock size={13} strokeWidth={2.3} /> Account is closed — nothing can be logged anymore
                     </div>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <span className="relative grid h-2 w-2 place-items-center">
-                        <span className="absolute h-2 w-2 rounded-full" style={{ background: T.acc }} />
-                        <span className="ad-payout-ping absolute h-2 w-2 rounded-full" style={{ background: T.acc }} />
-                      </span>
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: T.acc }} />
                       <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.sans, color: T.acc, letterSpacing: '0.2em' }}>
                         Payout
                       </span>
                       <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, rgba(${T.accRgb},0.3), transparent)` }} />
-                      <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                      <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text2 }}>
                         available{' '}
                         <b className="font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
                           {money2(Math.max(openProfit, 0))}
@@ -631,7 +617,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                       className="ad-field relative flex h-[48px] items-center gap-3 rounded-[15px] px-5"
                       style={{ background: T.bg, border: `1px solid ${T.line}` }}
                     >
-                      <span className="text-[18px] font-semibold" style={{ fontFamily: T.mono, color: T.text4 }}>
+                      <span className="text-[18px] font-semibold" style={{ fontFamily: T.mono, color: T.text2 }}>
                         $
                       </span>
                       <input
@@ -652,9 +638,9 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                           onClick={() => setAmount('')}
                           aria-label="Clear"
                           className="shrink-0 rounded-lg p-1 transition-colors"
-                          style={{ color: T.text4 }}
+                          style={{ color: T.text3 }}
                           onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
                         >
                           <X size={14} strokeWidth={2.4} />
                         </button>
@@ -702,7 +688,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                               fontFamily: T.mono,
                               background: active ? `rgba(${T.accRgb},0.12)` : 'transparent',
                               border: `1px solid ${active ? T.lineAcc : T.line}`,
-                              color: active ? T.acc : T.text3,
+                              color: active ? T.acc : T.text2,
                             }}
                           >
                             {pct === 100 ? 'Max' : `${pct}%`}
@@ -715,7 +701,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                   {!isClosed && (
                     <div className="flex flex-wrap items-start gap-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                       <div className="flex min-w-[120px] flex-col gap-1">
-                        <span className="text-[10px] font-semibold uppercase" style={{ fontFamily: T.sans, color: T.text4, letterSpacing: '0.13em' }}>
+                        <span className="text-[10px] font-semibold uppercase" style={{ fontFamily: T.sans, color: T.text3, letterSpacing: '0.13em' }}>
                           Balance after
                         </span>
                         <span className="text-[16px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text }}>
@@ -723,7 +709,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                         </span>
                       </div>
                       <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-                        <span className="text-[10px] font-semibold uppercase" style={{ fontFamily: T.sans, color: T.text4, letterSpacing: '0.13em' }}>
+                        <span className="text-[10px] font-semibold uppercase" style={{ fontFamily: T.sans, color: T.text3, letterSpacing: '0.13em' }}>
                           {hasAmount && !overLimit ? `Share of available · ${Math.round((rawAmount / (openProfit || 1)) * 100)}%` : 'Share of available'}
                         </span>
                         <span className="block h-1.5 overflow-hidden rounded-full" style={{ background: T.sunken }}>
@@ -743,7 +729,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                             can be paid out
                           </span>
                         ) : (
-                          <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                          <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
                             {hasAmount
                               ? 'Balance goes down, the payout stays in history'
                               : <>Balance goes down, stays in history — up to <b className="font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>{money2(Math.max(openProfit, 0))}</b> available</>}
@@ -759,134 +745,135 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
 
           <div className="px-4 py-5 sm:px-6">
 
-            {/* ─────────── Chart + quick stats ─────────── */}
-            <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
-              <div
-                className="ad-tile relative overflow-hidden rounded-[18px] px-[22px] pb-4 pt-5"
-                style={{
-                  '--hue': openProfit >= 0 ? T.okRgb : T.badRgb,
-                  background: `linear-gradient(180deg, ${T.surfaceHi} 0%, ${T.surface} 100%)`,
-                  border: `1px solid ${T.line}`,
-                }}
-              >
-                <div className="relative z-10">
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        Balance curve
-                      </span>
-                      <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        every point is a movement
-                      </span>
-                    </div>
-                    <div className="flex shrink-0 gap-[3px] rounded-[10px] p-[3px]" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
-                      {[['all', 'All'], ['30d', '30d']].map(([k, l]) => {
-                        const on = chartRange === k;
-                        return (
-                          <button
-                            key={k}
-                            onClick={() => setChartRange(k)}
-                            className="rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
-                            style={{
-                              fontFamily: T.sans,
-                              background: on ? `rgba(${T.accRgb},0.16)` : 'transparent',
-                              color: on ? T.acc : T.text3,
-                            }}
-                          >
-                            {l}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  {loading ? <Skeleton h={206} className="border-0" /> : <BalanceChart events={chartEvents} initial={initial} />}
-
-                  {!loading && chartSummary && (
-                    <div
-                      className="mt-1 flex items-center gap-4 pt-3"
-                      style={{ borderTop: `1px solid ${T.line}` }}
-                    >
-                      <span className="flex items-baseline gap-1.5 text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        Peak
-                        <b className="text-[12.5px] font-semibold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
-                          {money(chartSummary.peak)}
-                        </b>
-                      </span>
-                      <span className="h-3 w-px" style={{ background: T.line }} />
-                      <span className="flex items-baseline gap-1.5 text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        Low
-                        <b className="text-[12.5px] font-semibold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
-                          {money(chartSummary.low)}
-                        </b>
-                      </span>
-                      <span className="h-3 w-px" style={{ background: T.line }} />
-                      <span className="flex items-baseline gap-1.5 text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        Span
-                        <b className="text-[12.5px] font-semibold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
-                          {chartSummary.days}d
-                        </b>
-                      </span>
-                    </div>
-                  )}
+            {/* ─────────── Chart + side stats — 1:1 з макетом ─────────── */}
+            <div
+              className="relative -mx-4 mb-5 overflow-hidden sm:-mx-6"
+              style={{
+                background: `
+                  radial-gradient(70% 90% at 10% 0%, rgba(${T.accRgb},0.16) 0%, rgba(10,10,12,0) 60%),
+                  radial-gradient(55% 70% at 100% 100%, rgba(${T.okRgb},0.09) 0%, rgba(10,10,12,0) 58%),
+                  radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+                  linear-gradient(180deg, ${T.surfaceHi} 0%, ${T.bg} 100%)`,
+                backgroundSize: 'auto, auto, 22px 22px, auto',
+                borderTop: `1px solid ${T.line}`,
+                borderBottom: `1px solid ${T.line}`,
+              }}
+            >
+              <div className="flex flex-wrap items-end justify-between gap-6 px-4 pt-[26px] sm:px-6">
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-[22px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}>
+                    Balance curve
+                  </h3>
+                  <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                    {loading
+                      ? 'every point is a movement'
+                      : chartSummary
+                        ? `${chartSummary.count} movement${chartSummary.count === 1 ? '' : 's'} since ${fmtDayShort(chartSummary.firstDate)} · hover the line for details`
+                        : 'every point is a movement'}
+                  </span>
+                </div>
+                <div className="flex shrink-0 gap-[3px] rounded-[10px] p-[3px]" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
+                  {[['all', 'All'], ['30d', '30d']].map(([k, l]) => {
+                    const on = chartRange === k;
+                    return (
+                      <button
+                        key={k}
+                        onClick={() => setChartRange(k)}
+                        className="rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+                        style={{
+                          fontFamily: T.sans,
+                          background: on ? `rgba(${T.accRgb},0.16)` : 'transparent',
+                          color: on ? T.acc : T.text2,
+                        }}
+                      >
+                        {l}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 grid-rows-2 gap-2.5">
-                {loading ? (
-                  [0, 1, 2, 3].map((i) => <Skeleton key={i} h={92} />)
-                ) : (
-                  <>
-                    <Stat
-                      icon={Activity}
-                      hue="110,168,254"
-                      label="Trades"
-                      value={stats.total || '—'}
-                      hint={stats.total ? `${stats.wins}W · ${stats.losses}L` : 'none in journal yet'}
-                    />
-                    <Stat
-                      icon={Target}
-                      hue={T.okRgb}
-                      label="Win rate"
-                      value={stats.total ? `${stats.winrate}%` : '—'}
-                      hint={stats.total ? 'break-even excluded' : 'nothing to count'}
-                      tone={stats.total ? (stats.winrate >= 50 ? T.ok : T.text) : T.text4}
-                    />
-                    <Stat
-                      icon={TrendingUp}
-                      hue={stats.netR >= 0 ? T.okRgb : T.badRgb}
-                      label="Net R"
-                      value={stats.total ? `${stats.netR > 0 ? '+' : ''}${stats.netR}R` : '—'}
-                      hint={stats.total ? `avg ${stats.avgR > 0 ? '+' : ''}${stats.avgR}R` : '—'}
-                      tone={stats.total ? (stats.netR >= 0 ? T.ok : T.bad) : T.text4}
-                    />
-                    <Stat
-                      icon={TrendingDown}
-                      hue={T.warnRgb}
-                      label="Drawdown"
-                      value={`${drawdownPct.toFixed(1)}%`}
-                      hint="from peak balance"
-                      tone={drawdownPct > 0 ? T.warn : T.text4}
-                    />
-                  </>
-                )}
+              <div className="mt-5 grid grid-cols-1 items-stretch gap-0 lg:grid-cols-[1fr_260px]" style={{ borderTop: `1px solid ${T.line}` }}>
+                <div className="flex flex-col justify-center px-4 pb-4 pt-[18px] sm:px-6 lg:border-r" style={{ borderColor: T.line }}>
+                  {loading ? <Skeleton h={264} className="border-0" /> : <BalanceChart events={chartEvents} initial={initial} />}
+                </div>
+
+                <div style={{ background: `linear-gradient(180deg, rgba(${T.accRgb},0.06) 0%, rgba(10,10,12,0) 55%)` }}>
+                  {loading ? (
+                    <div className="flex flex-col gap-2.5 p-4">
+                      {[0, 1, 2, 3].map((i) => <Skeleton key={i} h={58} />)}
+                    </div>
+                  ) : (
+                    [
+                      { label: 'Peak', value: money(chartSummary?.peak ?? initial), color: T.text, hint: 'highest balance' },
+                      {
+                        label: 'Win rate',
+                        value: stats.total ? `${stats.winrate}%` : '—',
+                        color: stats.total ? T.ok : T.text3,
+                        hint: stats.total ? `${stats.wins} of ${stats.total} closed green` : 'nothing in journal yet',
+                      },
+                      {
+                        label: 'Net R',
+                        value: stats.total ? `${stats.netR > 0 ? '+' : ''}${stats.netR}R` : '—',
+                        color: stats.total ? T.acc : T.text3,
+                        hint: 'risk-adjusted result',
+                      },
+                      {
+                        label: 'Drawdown',
+                        value: `${drawdownPct.toFixed(1)}%`,
+                        color: drawdownPct > 0 ? T.bad : T.text3,
+                        hint: 'from peak balance',
+                      },
+                    ].map((t) => (
+                      <div
+                        key={t.label}
+                        className="ad-tile-row flex flex-col justify-center gap-1.5 px-4 py-4 sm:px-6"
+                        style={{ borderBottom: `1px solid ${T.line}` }}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: t.color }} />
+                          <span className="text-[10.5px] font-semibold uppercase tracking-[0.15em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                            {t.label}
+                          </span>
+                        </span>
+                        <span className="flex items-baseline justify-between gap-3">
+                          <span className="text-[22px] font-semibold leading-none tabular-nums" style={{ fontFamily: T.mono, color: t.color, letterSpacing: '-0.02em' }}>
+                            {t.value}
+                          </span>
+                          <span className="truncate text-right text-[11px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                            {t.hint}
+                          </span>
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* ─────────── History ─────────── */}
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 pb-2.5" style={{ borderBottom: `1px solid ${T.line}` }}>
-              <h3 className="flex items-center gap-2 text-[11.5px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                <Trophy size={12.5} strokeWidth={2.3} style={{ color: T.warn }} /> Account history
-                {!loading && <span style={{ color: T.text4, opacity: 0.7 }}>· {events.length}</span>}
-              </h3>
-              <div className="flex gap-1 rounded-lg p-1" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
-                {[['all', 'All'], ['payout', 'Payouts'], ['deposit', 'Deposits'], ['adjust', 'Adjustments']].map(([k, l]) => {
+            {/* ─────────── History — 1:1 з макетом ─────────── */}
+          <div
+            className="relative -mx-4 px-4 pb-7 pt-6 sm:-mx-6 sm:px-6"
+            style={{ background: `radial-gradient(80% 120% at 100% 0%, rgba(${T.accRgb},0.06) 0%, rgba(10,10,12,0) 60%)` }}
+          >
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-5">
+              <div className="flex flex-col gap-1.5">
+                <h3 className="text-[18px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.015em' }}>
+                  History
+                </h3>
+                <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                  {loading ? '' : `${filteredHistory.length} ${filteredHistory.length === 1 ? 'entry' : 'entries'} · newest first`}
+                </span>
+              </div>
+              <div className="flex shrink-0 gap-[3px] rounded-[10px] p-[3px]" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
+                {[['all', 'All'], ['payout', 'Payouts'], ['trade', 'Profit']].map(([k, l]) => {
                   const on = histFilter === k;
                   return (
                     <button
                       key={k}
                       onClick={() => setHistFilter(k)}
-                      className="whitespace-nowrap rounded-md px-2.5 py-1 text-[12px] font-semibold transition-colors duration-150"
-                      style={{ fontFamily: T.sans, background: on ? `rgba(${T.accRgb},0.14)` : 'transparent', color: on ? T.acc : T.text3 }}
+                      className="whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+                      style={{ fontFamily: T.sans, background: on ? `rgba(${T.accRgb},0.16)` : 'transparent', color: on ? T.acc : T.text2 }}
                     >
                       {l}
                     </button>
@@ -895,89 +882,108 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 pb-2">
-              {loading ? (
-                [0, 1].map((i) => <Skeleton key={i} h={68} />)
-              ) : filteredHistory.length === 0 ? (
-                <p className="py-6 text-center text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  Nothing here yet.
-                </p>
-              ) : (
-                <AnimatePresence initial={false}>
-                  {filteredHistory.map((e) => {
-                    const isPayout = e.kind === 'payout';
-                    const tone = isPayout ? T.warn : e.kind === 'deposit' ? T.info : T.text3;
-                    const hue = isPayout ? T.warnRgb : T.accRgb;
+            {loading ? (
+              <div className="flex flex-col gap-2">
+                {[0, 1].map((i) => <Skeleton key={i} h={68} />)}
+              </div>
+            ) : filteredHistory.length === 0 ? (
+              <p className="py-6 text-center text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                Nothing here yet.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-[18px]">
+                {historyGroups.map((g) => (
+                  <div key={g.key} className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3 px-2.5 pb-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                        {g.key}
+                      </span>
+                      <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${T.line}, transparent)` }} />
+                    </div>
 
-                    return (
-                      <motion.div
-                        key={e.id}
-                        layout
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        transition={{ duration: 0.22, ease: EASE }}
-                        className="ad-row group relative flex items-center gap-3.5 overflow-hidden rounded-2xl px-4 py-3"
-                        style={{ '--hue': hue, background: T.surface, border: `1px solid ${T.line}` }}
-                      >
+                    <AnimatePresence initial={false}>
+                      {g.rows.map((e) => {
+                        const isStart = e.kind === 'start';
+                        const isPayout = e.kind === 'payout';
+                        const isLoss = !isStart && !isPayout && (e.delta || 0) < 0;
 
-                        <span
-                          className="relative z-10 grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-transform duration-300 group-hover:scale-105"
-                          style={{ background: `rgba(${hue},0.09)`, border: `1px solid rgba(${hue},0.22)` }}
-                        >
-                          {isPayout
-                            ? <ArrowDownToLine size={15} strokeWidth={2.3} style={{ color: T.warn }} />
-                            : <Check size={15} strokeWidth={2.6} style={{ color: T.acc }} />}
-                        </span>
+                        let glyph = '•';
+                        let color = T.text3;
+                        let chipBg = 'rgba(255,255,255,0.07)';
+                        let tag = 'start';
+                        if (isPayout) { glyph = '↓'; color = T.acc; chipBg = `rgba(${T.accRgb},0.15)`; tag = 'payout'; }
+                        else if (e.kind === 'trade') {
+                          glyph = isLoss ? '↓' : '↑'; color = isLoss ? T.bad : T.ok;
+                          chipBg = isLoss ? `rgba(${T.badRgb},0.13)` : `rgba(${T.okRgb},0.13)`;
+                          tag = isLoss ? 'loss' : 'profit';
+                        } else if (e.kind === 'deposit') { glyph = '+'; color = T.info; chipBg = `rgba(${T.infoRgb},0.13)`; tag = 'deposit'; }
+                        else if (e.kind === 'adjust') { glyph = '='; color = T.text2; chipBg = T.surfaceHi; tag = 'adjust'; }
 
-                        <div className="relative z-10 min-w-0 flex-1">
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
-                              {KINDS_EN[e.kind]?.label || e.kind}
-                            </span>
-                            {e.kind !== 'start' && Number(e.amount) > 0 && (
-                              <span className="text-[13.5px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: tone }}>
-                                {isPayout ? '−' : '+'}{money2(e.amount)}
-                              </span>
-                            )}
-                          </div>
-                          <div className="truncate text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                            {fmtDay(e.happened_at)}
-                            {e.note ? ` · ${e.note}` : ''}
-                          </div>
-                        </div>
-
-                        <span className="relative z-10 shrink-0 text-right">
-                          <span className="block text-[13.5px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
-                            {money2(e.balance_after)}
-                          </span>
-                          <span className="text-[11px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                            balance
-                          </span>
-                        </span>
-
-                        {/* Undo лише для останньої події — інакше баланси
-                            всіх наступних стали б брехнею */}
-                        {!isClosed && e.id === lastId && e.kind !== 'start' && (
-                          <button
-                            onClick={() => undo(e)}
-                            disabled={busy}
-                            title="Undo last movement"
-                            className="relative z-10 grid h-8 w-8 shrink-0 place-items-center rounded-lg opacity-0 transition-all duration-200 group-hover:opacity-100"
-                            style={{ border: `1px solid ${T.line}`, color: T.text4 }}
-                            onMouseEnter={(ev) => { ev.currentTarget.style.color = T.bad; ev.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; ev.currentTarget.style.background = `rgba(${T.badRgb},0.08)`; }}
-                            onMouseLeave={(ev) => { ev.currentTarget.style.color = T.text4; ev.currentTarget.style.borderColor = T.line; ev.currentTarget.style.background = 'transparent'; }}
+                        return (
+                          <motion.div
+                            key={e.id}
+                            layout
+                            initial={{ opacity: 0, y: -6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                            transition={{ duration: 0.22, ease: EASE }}
+                            className="ad-hist-row group relative flex items-center justify-between gap-4 rounded-2xl py-3 pl-3 pr-11"
                           >
-                            <Trash2 size={13} strokeWidth={2.2} />
-                          </button>
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              )}
-            </div>
+                            <span className="flex min-w-0 items-center gap-3.5">
+                              <span
+                                className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[11px] text-[15px] font-semibold"
+                                style={{ color, background: chipBg }}
+                              >
+                                {glyph}
+                              </span>
+                              <span className="flex min-w-0 flex-col gap-1">
+                                <span className="flex flex-wrap items-center gap-2">
+                                  <span className="text-[14.5px] font-medium" style={{ fontFamily: T.sans, color: T.text }}>
+                                    {KINDS_EN[e.kind]?.label || e.kind}
+                                  </span>
+                                  <span
+                                    className="rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em]"
+                                    style={{ color, background: chipBg }}
+                                  >
+                                    {tag}
+                                  </span>
+                                </span>
+                                <span className="truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                                  {fmtDay(e.happened_at)}{e.note ? ` · ${e.note}` : ''}
+                                </span>
+                              </span>
+                            </span>
+
+                            <span className="text-[14.5px] font-medium tabular-nums" style={{ fontFamily: T.mono, color, letterSpacing: '-0.02em' }}>
+                              {isStart ? money2(e.balance_after) : `${(e.delta || 0) >= 0 ? '+' : '−'}${money2(Math.abs(e.delta || 0))}`}
+                            </span>
+
+                            {/* Undo лише для останньої події — інакше
+                                баланси всіх наступних стали б брехнею.
+                                Абсолютно позиційована в кутку, а не в
+                                ряд із сумою — інакше сума їздила туди-
+                                сюди щоразу, як кнопка зʼявлялась. */}
+                            {!isClosed && e.id === lastId && !isStart && (
+                              <button
+                                onClick={() => undo(e)}
+                                disabled={busy}
+                                title="Undo last movement"
+                                className="absolute right-2 top-2 grid h-6 w-6 shrink-0 place-items-center rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                                style={{ color: T.bad, background: `rgba(${T.badRgb},0.12)` }}
+                              >
+                                <Trash2 size={12} strokeWidth={2.2} />
+                              </button>
+                            )}
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+        </div>
         </div>
       </motion.div>
     </motion.div>,
