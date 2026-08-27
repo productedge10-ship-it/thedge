@@ -34,6 +34,11 @@ import useCloudState from '../hooks/useCloudState';
    двох, які реально розгорнуть, було б безглуздям.
 ================================================================== */
 
+/* Порядок валют у фільтрі. Алфавіт тут ні до чого: він ставить
+   першими AUD і «All», яких ніхто не шукає, а EUR з USD ховає в
+   середину. Спершу те, чим торгують найчастіше, решта за абеткою. */
+const CCY_ORDER = ['EUR', 'USD', 'GBP', 'JPY'];
+
 const isPast = (at) => !!at && at.getTime() < Date.now();
 
 const countdown = (at) => {
@@ -117,14 +122,14 @@ function Flag({ ccy }) {
 /* ---------- значення ----------
    Оголошено зовні: компонент, створений усередині рендера, щоразу
    монтується наново і губить свій стан. */
-function Val({ label, value, tone }) {
+function Val({ label, value, tone, big }) {
   return (
     <div className="flex min-w-[62px] flex-col">
       <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text3 }}>
         {label}
       </span>
       <span
-        className="text-[13.5px] font-bold tabular-nums"
+        className={`font-bold tabular-nums ${big ? 'text-[16px]' : 'text-[13.5px]'}`}
         style={{ fontFamily: T.mono, color: tone || (value ? T.text : T.text3) }}
       >
         {value || '—'}
@@ -246,61 +251,82 @@ function Row({ ev, watched, onWatch, canWatch }) {
             transition={{ duration: 0.24, ease: EASE }}
             style={{ overflow: 'hidden' }}
           >
-            <div className="flex flex-col gap-3 px-3 pb-3.5 pt-1">
-              {/* значення для вузьких екранів */}
-              <div className="flex gap-6 md:hidden">
-                <Val label="факт" value={ev.actual} tone={sur > 0 ? T.ok : sur < 0 ? T.bad : undefined} />
-                <Val label="прогноз" value={ev.forecast} />
-                <Val label="було" value={ev.previous} />
-              </div>
-
-              {/* Спершу «що з цим робити» — це відповідь на питання,
-                  з яким людина сюди прийшла. Енциклопедичний опис
-                  нижче: він пояснює, що це взагалі таке. */}
-              {mine && (
-                <p className="text-[14px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text }}>
-                  {mine}
-                </p>
-              )}
-
-              {loading && (
-                <span className="flex items-center gap-2 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                  <Loader2 size={13} className="animate-spin" />
-                  шукаю опис…
-                </span>
-              )}
-
-              {ext && (
-                <div
-                  className="rounded-lg p-3"
-                  style={{ background: 'rgba(255,255,255,0.03)' }}
-                >
-                  <p className="text-[13.5px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text2 }}>
-                    {ext.text}
-                  </p>
-                  {ext.url && (
-                    <a
-                      href={ext.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold transition-colors duration-150"
-                      style={{ fontFamily: T.sans, color: T.text3 }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
-                    >
-                      {ext.title || ext.source}
-                      <ExternalLink size={11} strokeWidth={2.4} />
-                    </a>
+            {/* Розгорнутий блок відступає зліва рівно на ширину
+                колонки часу — так видно, що це продовження свого
+                рядка, а не нова сутність під ним. */}
+            <div className="pb-4 pl-3 pr-3 pt-1 sm:pl-[62px]">
+              <div
+                className="flex flex-col gap-3.5 rounded-xl p-3.5"
+                style={{ background: 'rgba(255,255,255,0.035)' }}
+              >
+                {/* значення — окремим рядком, великим кеглем.
+                    У згорнутому вигляді вони тиснуться праворуч і
+                    майже не читаються, тому тут дублюються нормально. */}
+                <div className="flex flex-wrap gap-x-8 gap-y-2">
+                  <Val label="факт" value={ev.actual} tone={sur > 0 ? T.ok : sur < 0 ? T.bad : undefined} big />
+                  <Val label="прогноз" value={ev.forecast} big />
+                  <Val label="було" value={ev.previous} big />
+                  {ev.impact && (
+                    <div className="flex min-w-[62px] flex-col">
+                      <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                        вплив
+                      </span>
+                      <span className="flex items-center gap-1.5 text-[15px] font-bold" style={{ fontFamily: T.sans, color: imp.color }}>
+                        <span className="h-2 w-2 rounded-full" style={{ background: imp.color }} />
+                        {imp.label}
+                      </span>
+                    </div>
                   )}
                 </div>
-              )}
 
-              {ext === false && !mine && (
-                <p className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                  Опису для цієї події знайти не вдалось.
-                </p>
-              )}
+                {/* Спершу «що з цим робити» — це відповідь на питання,
+                    з яким людина сюди прийшла. Енциклопедичний опис
+                    нижче: він пояснює, що це взагалі таке. */}
+                {mine && (
+                  <p
+                    className="border-l-2 pl-3 text-[14.5px] leading-relaxed"
+                    style={{ fontFamily: T.sans, color: T.text, borderColor: T.lineAcc }}
+                  >
+                    {mine}
+                  </p>
+                )}
+
+                {/* Без підпису «шукаю опис»: слово тримається на
+                    екрані пів секунди й лишає по собі стрибок
+                    висоти. Кружечок каже те саме тихіше. */}
+                {loading && (
+                  <Loader2 size={15} className="animate-spin" style={{ color: T.text3 }} />
+                )}
+
+                {ext && (
+                  <div>
+                    <p className="text-[13.5px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text2 }}>
+                      {ext.text}
+                    </p>
+                    {ext.url && (
+                      <a
+                        href={ext.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold transition-colors duration-150"
+                        style={{ fontFamily: T.sans, color: T.text3 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
+                      >
+                        {ext.title || ext.source}
+                        <ExternalLink size={11} strokeWidth={2.4} />
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {ext === false && !mine && (
+                  <p className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                    Опису для цієї події знайти не вдалось.
+                  </p>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -360,9 +386,9 @@ export default function News() {
      тижню чи по оновленню. Ефект тільки забирає дані й розкладає
      результат. Якщо ставити прапорець тут, React справедливо лається
      на каскад: ефект міняє стан, стан викликає ефект. */
-  const load = useCallback(async (w) => {
+  const load = useCallback(async (w, force = false) => {
     try {
-      const data = await fetchWeek(w);
+      const data = await fetchWeek(w, force);
       setRows(data);
       setErr(null);
     } catch (e) {
@@ -375,7 +401,7 @@ export default function News() {
   useEffect(() => { load(week); }, [week, load]);
 
   const pickWeek = (w) => { setBusy(true); setWeek(w); };
-  const refresh = () => { setBusy(true); load(week); };
+  const refresh = () => { setBusy(true); load(week, true); };
 
   /* Планувальник дивиться на актуальний список через функцію, тому
      його не треба перепідписувати щоразу, коли натиснули дзвіночок. */
@@ -387,10 +413,12 @@ export default function News() {
 
   useEffect(() => startNewsWatcher(() => watchRef.current), []);
 
-  const currencies = useMemo(
-    () => [...new Set(rows.map((r) => r.ccy).filter(Boolean))].sort(),
-    [rows],
-  );
+  const currencies = useMemo(() => {
+    const all = [...new Set(rows.map((r) => r.ccy).filter(Boolean))];
+    const head = CCY_ORDER.filter((c) => all.includes(c));
+    const tail = all.filter((c) => !CCY_ORDER.includes(c)).sort();
+    return [...head, ...tail];
+  }, [rows]);
 
   /* Прогріваємо кеш прапорів, коли стало відомо, які валюти взагалі
      є на екрані. Качається тільки те, чого ще немає в localStorage,
@@ -554,9 +582,17 @@ export default function News() {
           </div>
         )}
 
+        {/* Порожньо буває з двох різних причин, і плутати їх не варто:
+            або фільтри занадто вузькі, або ForexFactory ще не виклав
+            наступний тиждень. Друге — не помилка, і виглядати як
+            помилка не має. */}
         {!busy && !err && !days.length && (
-          <p className="py-16 text-center text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            Під ці фільтри нічого не підпадає.
+          <p className="py-16 text-center text-[14px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text3 }}>
+            {rows.length
+              ? 'Під ці фільтри нічого не підпадає.'
+              : week === 'next'
+                ? <>ForexFactory ще не опублікував наступний тиждень.<br />Зазвичай розклад зʼявляється ближче до пʼятниці.</>
+                : 'На цей тиждень подій немає.'}
           </p>
         )}
 
@@ -614,11 +650,18 @@ export default function News() {
                   </span>
                 </div>
 
-                <div className="flex flex-col px-1.5 py-1">
+                {/* Зебра замість ліній.
+
+                    Лінія розділяє сусідів, але не допомагає вести
+                    око через увесь рядок — а рядок тут широкий, від
+                    часу зліва до значень справа. Смуга тримає погляд
+                    на своїй горизонталі й не додає жодної рамки. */}
+                <div className="flex flex-col p-1.5">
                   {list.map((ev, i) => (
                     <div
                       key={ev.id}
-                      style={i ? { borderTop: `1px solid ${T.line}` } : undefined}
+                      className="rounded-lg"
+                      style={{ background: i % 2 ? 'transparent' : 'rgba(255,255,255,0.028)' }}
                     >
                       <Row
                         ev={ev}

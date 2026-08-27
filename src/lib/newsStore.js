@@ -98,8 +98,11 @@ async function grab(url) {
   return raw;
 }
 
-export async function fetchWeek(week) {
-  const cached = readCache(week);
+/* force — для кнопки оновлення. Без неї кеш живе пів години, і в
+   найважливішому випадку («наступний тиждень FF ще не виклав») людина
+   тиснула б оновлення марно: відповідь приходила б зі сховища. */
+export async function fetchWeek(week, force = false) {
+  const cached = force ? null : readCache(week);
   if (cached) return cached.map((r, i) => ({ ...toApp(r, i) }));
 
   let raw = null;

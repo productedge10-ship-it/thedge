@@ -33,10 +33,38 @@
    індекс, машина сама не здогадається.
 ================================================================== */
 
+const HOST = 'https://nfs.faireconomy.media';
+
+/* Для кожного тижня — список кандидатів по порядку.
+
+   Наступний тиждень окремий випадок: ff_calendar_nextweek.json
+   зʼявляється не одразу, а коли FF добʼє розклад — зазвичай ближче
+   до кінця поточного тижня. До того моменту файл віддає помилку, і
+   раніше це вилітало користувачу як «Календар не завантажився»,
+   хоча ламатись тут нічому.
+
+   Тому запасний шлях: місячні фіди, з яких вирізається потрібний
+   діапазон дат. Вони існують завжди. */
 const FEEDS = {
-  last: 'https://nfs.faireconomy.media/ff_calendar_lastweek.json',
-  this: 'https://nfs.faireconomy.media/ff_calendar_thisweek.json',
-  next: 'https://nfs.faireconomy.media/ff_calendar_nextweek.json',
+  last: [`${HOST}/ff_calendar_lastweek.json`],
+  this: [`${HOST}/ff_calendar_thisweek.json`],
+  next: [
+    `${HOST}/ff_calendar_nextweek.json`,
+    `${HOST}/ff_calendar_thismonth.json`,
+    `${HOST}/ff_calendar_nextmonth.json`,
+  ],
+};
+
+/* Понеділок наступного тижня і неділя після нього. */
+const nextWeekRange = () => {
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7;               // 0 = понеділок
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - dow + 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  return [start.getTime(), end.getTime()];
 };
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -47,24 +75,57 @@ const DESC_TTL = 30 * 24 * 3600 * 1000;   // опис індикатора не 
 
 /* ---------- тижневий фід ---------- */
 
-async function feed(week) {
-  const url = FEEDS[week] || FEEDS.this;
-  const hit = cache.get(url);
-  if (hit && Date.now() - hit.at < TTL) return { body: hit.body, state: 'hit' };
+async function grab(url) {
+  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+  if (!res.ok) throw new Error(`${res.status}`);
+  const rows = await res.json();
+  if (!Array.isArray(rows)) throw new Error('не масив');
+  return rows;
+}
 
-  try {
-    const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
-    if (!res.ok) throw new Error(`feed ${res.status}`);
-    const body = await res.text();
-    cache.set(url, { at: Date.now(), body });
-    return { body, state: 'miss' };
-  } catch (e) {
-    /* Фід ліг, а в памʼяті лишилось старе — краще старе, ніж порожній
-       екран: календар на тиждень уперед не псується від того, що йому
-       двадцять хвилин. */
-    if (hit) return { body: hit.body, state: 'stale' };
-    throw e;
+async function feed(week) {
+  const key = `w:${week}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < TTL) return { rows: hit.rows, state: 'hit' };
+
+  const urls = FEEDS[week] || FEEDS.this;
+  const monthly = week === 'next';
+  const [from, to] = monthly ? nextWeekRange() : [0, Infinity];
+  let last = null;
+
+  for (const url of urls) {
+    try {
+      let rows = await grab(url);
+
+      /* Місячний фід містить зайве — лишаємо тільки потрібний
+         тиждень. Тижневий фільтрувати не треба, він уже такий. */
+      if (monthly && !url.includes('week')) {
+        rows = rows.filter((r) => {
+          const t = new Date(r.date).getTime();
+          return !Number.isNaN(t) && t >= from && t < to;
+        });
+        /* Порожньо — цей місяць просто не покриває потрібні дні,
+           пробуємо наступний. */
+        if (!rows.length) continue;
+      }
+
+      cache.set(key, { at: Date.now(), rows });
+      return { rows, state: 'miss' };
+    } catch (e) {
+      last = e;
+    }
   }
+
+  /* Усе впало, але в памʼяті лишилось старе — краще старе, ніж
+     порожній екран: календар на тиждень уперед не псується від
+     того, що йому двадцять хвилин. */
+  if (hit) return { rows: hit.rows, state: 'stale' };
+
+  /* Наступний тиждень FF просто ще не опублікував. Це не помилка й
+     не має виглядати як помилка — віддаємо порожньо з поясненням. */
+  if (week === 'next') return { rows: [], state: 'empty' };
+
+  throw last || new Error('фід недоступний');
 }
 
 /* ---------- від назви події до поняття ----------
@@ -261,11 +322,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { body, state } = await feed(String(week));
-    res.setHeader('Content-Type', 'application/json');
+    const { rows, state } = await feed(String(week));
     res.setHeader('Cache-Control', 's-maxage=1200, stale-while-revalidate=600');
     res.setHeader('X-Cache', state);
-    return res.status(200).send(body);
+    return res.status(200).json(rows);
   } catch (e) {
     return res.status(502).json({ error: String(e?.message || e) });
   }
