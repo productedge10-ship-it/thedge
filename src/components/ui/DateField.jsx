@@ -156,7 +156,7 @@ function QuickDateMenu({ value, onChange, close, lang, accent, accentRgb, accent
 
   const options = [
     { key: 'today', icon: Sun, label: w.todayBtn, sub: shortDay(today, loc), iso: todayKey },
-    { key: 'yesterday', icon: History, label: w.yesterday === 'yesterday' ? 'Yesterday' : 'Вчора', sub: shortDay(yesterday, loc), iso: yestKey },
+    { key: 'yesterday', icon: History, label: w.yesterdayBtn, sub: shortDay(yesterday, loc), iso: yestKey },
   ];
 
   return (
