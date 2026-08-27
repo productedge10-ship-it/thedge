@@ -25,12 +25,10 @@ const fmtDay = (iso) => {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 };
 
-const DOT = {
-  start: T.text3,
-  payout: T.warn,
-  deposit: T.info,
-  adjust: T.text2,
-};
+/* Проміжні точки — світло-фіолетові, остання (найсвіжіша) — зелена,
+   як і сама лінія на своєму кінці. Один узгоджений градієнт на все:
+   фіолетовий → лавандовий → зелений, зліва направо. */
+const NODE = '#a99bff';
 
 export default function BalanceChart({ events, initial }) {
   const uid = useRef(Math.random().toString(36).slice(2, 8)).current;
@@ -94,7 +92,6 @@ export default function BalanceChart({ events, initial }) {
 
   const up = model.last.value >= (initial || 0);
   const stroke = up ? T.ok : T.bad;
-  const strokeRgb = up ? T.okRgb : T.badRgb;
 
   return (
     <div className="relative w-full">
@@ -105,13 +102,15 @@ export default function BalanceChart({ events, initial }) {
       >
         <defs>
           <linearGradient id={`fill${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={stroke} stopOpacity="0.26" />
-            <stop offset="100%" stopColor={stroke} stopOpacity="0" />
+            <stop offset="0%" stopColor={T.acc} stopOpacity="0.3" />
+            <stop offset="100%" stopColor={T.acc} stopOpacity="0" />
           </linearGradient>
-          {/* Лінія розгорається зліва направо — свіже завжди яскравіше */}
+          {/* Одна тепла подорож кольору зліва направо: фіолетовий
+             старт → лавандова середина → зелений фініш. */}
           <linearGradient id={`line${uid}`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={stroke} stopOpacity="0.45" />
-            <stop offset="100%" stopColor={stroke} stopOpacity="1" />
+            <stop offset="0%" stopColor="#5a4fd6" />
+            <stop offset="60%" stopColor={NODE} />
+            <stop offset="100%" stopColor={T.ok} />
           </linearGradient>
         </defs>
 
@@ -179,23 +178,48 @@ export default function BalanceChart({ events, initial }) {
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 0.9, ease: EASE }}
-          style={model.flat === null ? { filter: `drop-shadow(0 0 8px rgba(${strokeRgb},0.45))` } : undefined}
         />
 
-        {model.nodes.map((n, i) => (
-          <motion.circle
-            key={i}
-            cx={n.cx}
-            cy={n.cy}
-            r={4.5}
-            fill={T.bg}
-            stroke={DOT[n.kind] || stroke}
-            strokeWidth="2.5"
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: 0.45 + i * 0.05, ease: EASE }}
-          />
-        ))}
+        {model.nodes.map((n, i) => {
+          const isLast = i === model.nodes.length - 1;
+          const color = isLast ? T.ok : NODE;
+          const s = isLast ? 8 : 5.5;
+          return (
+            <motion.g
+              key={i}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, delay: 0.45 + i * 0.05, ease: EASE }}
+              style={{ transformOrigin: `${n.cx}px ${n.cy}px` }}
+            >
+              {isLast && (
+                <motion.circle
+                  cx={n.cx}
+                  cy={n.cy}
+                  r={s}
+                  fill={color}
+                  initial={{ opacity: 0.4, scale: 1 }}
+                  animate={{ opacity: 0, scale: 2.4 }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+                  style={{ transformOrigin: `${n.cx}px ${n.cy}px` }}
+                />
+              )}
+              {/* Ромб замість кружечка — вужчий і виразніший силует на
+                 самій лінії, легко масштабується для головної точки. */}
+              <rect
+                x={n.cx - s / 2}
+                y={n.cy - s / 2}
+                width={s}
+                height={s}
+                rx={1.6}
+                fill={isLast ? color : T.bg}
+                stroke={color}
+                strokeWidth={isLast ? 0 : 2}
+                transform={`rotate(45 ${n.cx} ${n.cy})`}
+              />
+            </motion.g>
+          );
+        })}
 
         <text x={PAD.l} y={H - 8} fill={T.text4} fontSize="10.5" style={{ fontFamily: T.sans }}>
           {fmtDay(model.nodes[0].date)}

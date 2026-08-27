@@ -83,8 +83,6 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
 
   const [amount, setAmount] = useState('');
   const [when, setWhen] = useState(todayLocal());
-  const [note, setNote] = useState('');
-  const [noteOpen, setNoteOpen] = useState(false);
   const [histFilter, setHistFilter] = useState('all');
   const [chartRange, setChartRange] = useState('all');
   const [closePanel, setClosePanel] = useState(false);
@@ -137,6 +135,12 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
 
   const openProfit = balance - initial;
   const earned = totalPaid + openProfit;
+
+  /* Похідні від поля суми — для quick-picks, смуги «частка від
+     доступного» і стану кнопки в панелі виплати. */
+  const rawAmount = parseFloat(String(amount).replace(',', '.'));
+  const hasAmount = !isNaN(rawAmount) && rawAmount > 0;
+  const overLimit = hasAmount && rawAmount > Math.max(openProfit, 0);
 
   const history = useMemo(() => [...events].reverse(), [events]);
   const lastId = events.length ? events[events.length - 1].id : null;
@@ -200,12 +204,11 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
     setBusy(true);
     try {
       const { event, account: next } = await addEvent(user.id, acc, {
-        kind: 'payout', amount: value, happened_at: when, note,
+        kind: 'payout', amount: value, happened_at: when, note: '',
       });
       setEvents((list) => [...list, event]);
       onUpdate(next);
       setAmount('');
-      setNote('');
       notify.success(
         'Payout logged',
         `Balance is now ${money(next.balance)}`,
@@ -283,69 +286,65 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
           background-color: rgba(255,255,255,0.018);
         }
 
-        /* ─────────── Панель виплати: тонка світла риска зверху,
-           амбієнтне сяйво у кутку — «преміальна» картка ─────────── */
-        .ad-payout-topline {
+        /* ─────────── Панель виплати: тонка градієнтна рамка навколо
+           темної картки й повільний відблиск, що пропливає по ній
+           раз на кілька секунд — «преміальна» картка ─────────── */
+        .ad-payout-frame {
+          background: linear-gradient(140deg,
+            rgba(${T.accRgb},0.6) 0%, rgba(${T.accRgb},0.1) 32%,
+            rgba(255,255,255,0.05) 60%, rgba(${T.accRgb},0.3) 100%);
+        }
+        .ad-payout-sheen {
           position: absolute;
-          top: 0; left: 12%; right: 12%;
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(${T.warnRgb},0.65), transparent);
-          opacity: 0.7;
+          inset: 0 auto 0 0;
+          width: 40%;
+          background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,.05) 50%, transparent 100%);
+          animation: ad-payout-sheen-move 7s ease-in-out infinite;
           pointer-events: none;
         }
-        .ad-payout-ambient {
-          position: absolute;
-          width: 260px; height: 260px;
-          right: -140px; top: -170px;
-          background: rgba(${T.warnRgb},0.075);
-          filter: blur(80px);
-          pointer-events: none;
+        @keyframes ad-payout-sheen-move {
+          0% { transform: translateX(-120%); }
+          55%, 100% { transform: translateX(240%); }
+        }
+        .ad-payout-ping {
+          animation: ad-payout-pulse 2.8s ease-out infinite;
+        }
+        @keyframes ad-payout-pulse {
+          0% { opacity: .55; transform: scale(1); }
+          70%, 100% { opacity: 0; transform: scale(2.6); }
         }
 
-        /* Кнопка «Log it» — той самий прийом, що на «Add Account»
-           картках, тільки повільніше: блиск і рамка йдуть по колу
-           неспішно, не відволікаючи від форми. */
+        /* Кнопка «Log payout» — скляна пігулка: ледь тонований
+           фіолетовий, тонка рамка, розмиття позаду. На ховері тло і
+           рамка яскравіють, зʼявляється сяйво й легкий підйом. */
         .ad-payout-cta {
-          isolation: isolate;
-          background: linear-gradient(135deg, ${T.warn}, #d99b08);
-          box-shadow: 0 8px 25px -14px rgba(${T.warnRgb}, 0.5);
-          transition: transform .25s ease, box-shadow .25s ease, background .25s ease;
+          background: rgba(${T.accRgb},0.08);
+          color: #c4b5fd;
+          border: 1px solid rgba(${T.accRgb},0.4);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease;
         }
-        .ad-payout-cta:hover {
+        .ad-payout-cta:hover:not(:disabled) {
+          background: rgba(${T.accRgb},0.18);
+          color: #fff;
+          border-color: rgba(${T.accRgb},0.8);
+          box-shadow: 0 0 20px rgba(${T.accRgb},0.3);
           transform: translateY(-2px);
-          background: linear-gradient(135deg, #fcd34d, ${T.warn});
-          box-shadow: 0 12px 32px -12px rgba(${T.warnRgb}, 0.55);
         }
-        .ad-payout-cta:active { transform: translateY(0); }
-        .ad-payout-cta::before {
-          content: '';
-          position: absolute;
-          top: 0; left: -130%;
-          width: 70%; height: 100%;
-          transform: skewX(-20deg);
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent);
-          animation: ad-payout-shine 6s ease-in-out infinite;
+        .ad-payout-cta:active:not(:disabled) { transform: translateY(0); }
+        .ad-payout-cta:disabled {
+          background: ${T.surfaceHi};
+          border-color: ${T.line};
+          color: ${T.text4};
+          box-shadow: none;
+          cursor: not-allowed;
         }
-        @keyframes ad-payout-shine {
-          0% { left: -130%; }
-          35% { left: 150%; }
-          100% { left: 150%; }
-        }
-        .ad-payout-cta::after {
-          content: '';
-          position: absolute;
-          inset: -1px;
-          z-index: -1;
-          border-radius: inherit;
-          background: linear-gradient(90deg,
-            transparent 0%, transparent 35%, rgba(255,255,255,.7) 50%, transparent 65%, transparent 100%);
-          background-size: 250% 100%;
-          animation: ad-payout-sweep 5.5s linear infinite;
-          opacity: 0.6;
-        }
-        @keyframes ad-payout-sweep {
-          0% { background-position: 250% 0; }
-          100% { background-position: -250% 0; }
+
+        .ad-quick-pick:hover:not(:disabled) { border-color: ${T.lineAcc} !important; color: ${T.acc} !important; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .ad-payout-sheen, .ad-payout-ping { animation: none; }
         }
 
         /* Поле, що підсвічує рамку під курсором */
@@ -357,14 +356,6 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
         .ad-field:focus-within {
           border-color: ${T.lineAcc} !important;
           box-shadow: 0 0 0 3px rgba(${T.accRgb}, 0.08);
-        }
-
-        /* Поле суми в панелі виплати — золотистий ховер/фокус замість
-           фіолетового, у тон самій панелі. */
-        .ad-field--warn:hover { border-color: rgba(${T.warnRgb}, 0.4) !important; }
-        .ad-field--warn:focus-within {
-          border-color: rgba(${T.warnRgb}, 0.55) !important;
-          box-shadow: 0 0 0 3px rgba(${T.warnRgb}, 0.1);
         }
 
         .ad-seg:hover { background-color: ${T.surfaceHi} !important; }
@@ -387,7 +378,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
         @keyframes ad-shimmer { to { transform: translateX(100%); } }
 
         @media (prefers-reduced-motion: reduce) {
-          .ad-payout-cta::before, .ad-payout-cta::after, .ad-skeleton::after { animation: none; transition: none; }
+          .ad-skeleton::after { animation: none; transition: none; }
         }
       `}</style>
 
@@ -396,9 +387,11 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 18, scale: 0.985 }}
         transition={SPRING}
-        /* Висота задана, а не виведена з вмісту: інакше вікно росло б
-           у момент, коли долітають дані, і стрибало під курсором */
-        className="flex h-[min(760px,94vh)] w-full max-w-[1120px] flex-col overflow-hidden rounded-3xl"
+        /* max-h, а не h: вікно росте під висоту вмісту (короткій
+           історії не лишає порожнечі знизу), і лише впирається у
+           стелю 94vh на великих екранах, де вмісту справді багато —
+           тоді вже вмикається внутрішня прокрутка тіла. */
+        className="flex max-h-[94vh] w-full max-w-[1120px] flex-col overflow-hidden rounded-3xl"
         style={{
           background: T.bg,
           border: `1px solid ${T.line}`,
@@ -466,69 +459,77 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
         </div>
 
         {/* ─────────── Close account panel ─────────── */}
-        <AnimatePresence initial={false}>
-          {closePanel && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.22, ease: EASE }}
-              className="overflow-hidden"
-              style={{ borderBottom: `1px solid ${T.line}`, background: `rgba(${T.badRgb},0.04)` }}
+        {/*
+          grid-template-rows 0fr → 1fr замість framer height:'auto' —
+          той спосіб вимірював висоту вручну й одного разу обрізав
+          панель, коли зовнішнє вікно стало max-h. Цей трюк суто CSS:
+          браузер сам плавно інтерполює висоту без жодного виміру,
+          тому зламатись так само вже не може, і водночас це
+          виглядає як «висувається», а не просто проявляється. */}
+        <div
+          className="grid transition-[grid-template-rows] duration-300 ease-out"
+          style={{
+            gridTemplateRows: closePanel ? '1fr' : '0fr',
+            borderBottom: closePanel ? `1px solid ${T.line}` : 'none',
+            background: `rgba(${T.badRgb},0.04)`,
+          }}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div
+              className="flex flex-col gap-3 px-5 py-4 transition-opacity duration-200 sm:px-7"
+              style={{ opacity: closePanel ? 1 : 0, transitionDelay: closePanel ? '80ms' : '0ms' }}
             >
-              <div className="flex flex-col gap-3 px-5 py-4 sm:px-7">
-                <p className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.bad }}>
-                  Why are you closing this account?
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {CLOSE_REASONS.map((r) => {
-                    const on = closeReason === r;
-                    return (
-                      <button
-                        key={r}
-                        onClick={() => setCloseReason(r)}
-                        className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors duration-150"
-                        style={{
-                          fontFamily: T.sans,
-                          background: on ? `rgba(${T.badRgb},0.14)` : T.surface,
-                          border: `1px solid ${on ? `rgba(${T.badRgb},0.4)` : T.line}`,
-                          color: on ? T.bad : T.text3,
-                        }}
-                      >
-                        {r}
-                      </button>
-                    );
-                  })}
-                </div>
-                <input
-                  value={closeNote}
-                  onChange={(e) => setCloseNote(e.target.value)}
-                  placeholder="Details (optional)"
-                  className="h-10 w-full rounded-xl px-3.5 text-[13.5px] outline-none"
-                  style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text, fontFamily: T.sans }}
-                />
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={confirmClose}
-                    disabled={closing}
-                    className="flex h-10 items-center gap-2 rounded-xl px-4 text-[13px] font-bold transition-colors"
-                    style={{ background: T.bad, color: '#fff', fontFamily: T.sans, opacity: closing ? 0.6 : 1 }}
-                  >
-                    {closing ? <Loader2 size={14} className="animate-spin" /> : <Lock size={13} strokeWidth={2.4} />}
-                    Confirm close
-                  </button>
-                  <button
-                    onClick={() => setClosePanel(false)}
-                    className="text-[13px] font-semibold"
-                    style={{ fontFamily: T.sans, color: T.text4 }}
-                  >
-                    Cancel
-                  </button>
-                </div>
+              <p className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.bad }}>
+                Why are you closing this account?
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {CLOSE_REASONS.map((r) => {
+                  const on = closeReason === r;
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => setCloseReason(r)}
+                      className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors duration-150"
+                      style={{
+                        fontFamily: T.sans,
+                        background: on ? `rgba(${T.badRgb},0.14)` : T.surface,
+                        border: `1px solid ${on ? `rgba(${T.badRgb},0.4)` : T.line}`,
+                        color: on ? T.bad : T.text3,
+                      }}
+                    >
+                      {r}
+                    </button>
+                  );
+                })}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <input
+                value={closeNote}
+                onChange={(e) => setCloseNote(e.target.value)}
+                placeholder="Details (optional)"
+                className="h-10 w-full rounded-xl px-3.5 text-[13.5px] outline-none"
+                style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text, fontFamily: T.sans }}
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={confirmClose}
+                  disabled={closing}
+                  className="flex h-10 items-center gap-2 rounded-xl px-4 text-[13px] font-bold transition-colors"
+                  style={{ background: T.bad, color: '#fff', fontFamily: T.sans, opacity: closing ? 0.6 : 1 }}
+                >
+                  {closing ? <Loader2 size={14} className="animate-spin" /> : <Lock size={13} strokeWidth={2.4} />}
+                  Confirm close
+                </button>
+                <button
+                  onClick={() => setClosePanel(false)}
+                  className="text-[13px] font-semibold"
+                  style={{ fontFamily: T.sans, color: T.text4 }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* ─────────── Body ─────────── */}
         <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
@@ -592,178 +593,166 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
           {/* ─────────── Log a payout — premium panel ─────────── */}
           <div className="px-4 py-4 sm:px-6" style={{ borderBottom: `1px solid ${T.line}` }}>
             <div
-              className="ad-payout relative overflow-hidden rounded-[20px] p-5"
-              style={{
-                border: `1px solid ${T.line}`,
-                background: `linear-gradient(145deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012)), ${T.surface}`,
-                boxShadow: '0 30px 80px -40px rgba(0,0,0,0.55), 0 8px 25px -12px rgba(0,0,0,0.25)',
-                opacity: isClosed ? 0.45 : 1,
-                pointerEvents: isClosed ? 'none' : 'auto',
-              }}
+              className="ad-payout-frame relative rounded-[20px] p-px"
+              style={{ boxShadow: '0 26px 60px -34px rgba(139,123,255,0.5)', opacity: isClosed ? 0.5 : 1, pointerEvents: isClosed ? 'none' : 'auto' }}
             >
-              <span aria-hidden className="ad-payout-topline" />
-              <span aria-hidden className="ad-payout-ambient" />
+              <div
+                className="ad-payout relative overflow-hidden rounded-[19px] p-5"
+                style={{ background: 'linear-gradient(180deg, #14141c 0%, #0d0d11 100%)' }}
+              >
+                <span aria-hidden className="ad-payout-sheen" />
 
-              <div className="relative z-10 flex flex-col gap-4">
-                {isClosed ? (
-                  <div className="flex items-center gap-2 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text4 }}>
-                    <Lock size={13} strokeWidth={2.3} /> Account is closed — nothing can be logged anymore
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div
-                      className="flex items-center gap-2 text-[11px] font-bold uppercase"
-                      style={{ fontFamily: T.sans, color: T.warn, letterSpacing: '0.15em' }}
-                    >
-                      <span
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ background: T.warn, boxShadow: `0 0 0 4px rgba(${T.warnRgb},0.12), 0 0 14px rgba(${T.warnRgb},0.55)` }}
-                      />
-                      Payout transaction
+                <div className="relative z-10 flex flex-col gap-4">
+                  {isClosed ? (
+                    <div className="flex items-center gap-2 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text4 }}>
+                      <Lock size={13} strokeWidth={2.3} /> Account is closed — nothing can be logged anymore
                     </div>
-                    <div className="flex items-center gap-1.5 text-[12.5px] font-medium" style={{ fontFamily: T.sans, color: T.text3 }}>
-                      <span className="h-[5px] w-[5px] rounded-full" style={{ background: T.ok, boxShadow: `0 0 8px rgba(${T.okRgb},0.5)` }} />
-                      <b className="font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text }}>
-                        {money2(Math.max(openProfit, 0))}
-                      </b>
-                      available
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[145px_1fr_180px_140px]">
-                  <div
-                    className="flex h-[58px] items-center gap-2.5 whitespace-nowrap rounded-[14px] px-4 text-[13px] font-semibold"
-                    style={{
-                      background: `linear-gradient(145deg, rgba(${T.warnRgb},0.09), rgba(255,255,255,0.012))`,
-                      border: `1px solid rgba(${T.warnRgb},0.22)`,
-                      fontFamily: T.sans,
-                    }}
-                  >
-                    <ArrowDownToLine size={17} strokeWidth={1.8} style={{ color: T.warn, opacity: 0.9 }} />
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[9px] font-bold uppercase" style={{ color: T.text4, letterSpacing: '0.1em' }}>
-                        Transaction
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="relative grid h-2 w-2 place-items-center">
+                        <span className="absolute h-2 w-2 rounded-full" style={{ background: T.acc }} />
+                        <span className="ad-payout-ping absolute h-2 w-2 rounded-full" style={{ background: T.acc }} />
                       </span>
-                      <span style={{ color: T.text2 }}>Payout</span>
+                      <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.sans, color: T.acc, letterSpacing: '0.2em' }}>
+                        Payout
+                      </span>
+                      <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, rgba(${T.accRgb},0.3), transparent)` }} />
+                      <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                        available{' '}
+                        <b className="font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
+                          {money2(Math.max(openProfit, 0))}
+                        </b>
+                      </span>
                     </div>
-                  </div>
-
-                  <div
-                    className="ad-field ad-field--warn relative flex h-[58px] items-center rounded-[14px] px-4"
-                    style={{
-                      background: 'linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01))',
-                      border: `1px solid ${T.line}`,
-                    }}
-                  >
-                    <span className="mr-2 text-[16px] font-semibold" style={{ fontFamily: T.mono, color: T.warn }}>
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && !busy && !isClosed && submit()}
-                      disabled={isClosed}
-                      placeholder="Amount"
-                      className="h-full w-full bg-transparent text-[14px] font-medium tabular-nums outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                      style={{ color: T.text, fontFamily: T.sans }}
-                    />
-                  </div>
-
-                  <DateField
-                    value={when}
-                    onChange={setWhen}
-                    align="right"
-                    lang="en"
-                    height={58}
-                    alwaysNumeric
-                    accent={T.warn}
-                    accentRgb={T.warnRgb}
-                    accentBorder={`rgba(${T.warnRgb},0.5)`}
-                    hoverBorder={`rgba(${T.warnRgb},0.32)`}
-                  />
-
-                  <button
-                    onClick={submit}
-                    disabled={busy || isClosed}
-                    className="ad-payout-cta relative flex h-[58px] items-center justify-center gap-2 overflow-hidden rounded-[14px] text-[15px] font-black uppercase"
-                    style={{
-                      fontFamily: T.sans,
-                      letterSpacing: '0.04em',
-                      color: '#16120a',
-                      opacity: busy ? 0.7 : 1,
-                    }}
-                  >
-                    <span className="relative z-10 flex items-center gap-2">
-                      {busy
-                        ? <Loader2 size={18} className="animate-spin" />
-                        : <><Check size={18} strokeWidth={3} /> Log it</>}
-                    </span>
-                  </button>
-                </div>
-
-                {openProfit > 0 && !isClosed && (
-                  <button
-                    onClick={() => setAmount(String(Math.round(openProfit * 100) / 100))}
-                    className="-mt-1.5 w-fit rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors duration-200"
-                    style={{ background: T.surface, border: `1px dashed ${T.lineHi}`, color: T.text3, fontFamily: T.sans }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = T.warn; e.currentTarget.style.borderColor = `rgba(${T.warnRgb},0.4)`; e.currentTarget.style.background = `rgba(${T.warnRgb},0.07)`; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.background = T.surface; }}
-                  >
-                    Full profit — {money2(openProfit)}
-                  </button>
-                )}
-
-                <div className="flex items-start gap-2.5 pt-3.5 text-[12.5px] leading-relaxed" style={{ borderTop: `1px solid ${T.line}`, fontFamily: T.sans }}>
-                  <button
-                    onClick={() => setNoteOpen((v) => !v)}
-                    className="shrink-0 rounded-md px-2 py-1 text-[10px] font-bold uppercase transition-colors duration-200"
-                    style={{
-                      letterSpacing: '0.07em',
-                      background: noteOpen ? `rgba(${T.warnRgb},0.1)` : `rgba(${T.warnRgb},0.045)`,
-                      border: `1px solid rgba(${T.warnRgb},0.16)`,
-                      color: T.warn,
-                    }}
-                  >
-                    {noteOpen ? '− note' : '+ note'}
-                  </button>
-                  <span style={{ color: T.text3 }}>
-                    Balance goes down, stays in history — up to{' '}
-                    <b className="font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text }}>
-                      {money2(Math.max(openProfit, 0))}
-                    </b>{' '}
-                    available
-                  </span>
-                </div>
-
-                <AnimatePresence initial={false}>
-                  {noteOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2, ease: EASE }}
-                      className="overflow-hidden"
-                    >
-                      <div className="ad-field ad-field--warn rounded-xl" style={{ background: T.surface, border: `1px solid ${T.line}` }}>
-                        <input
-                          value={note}
-                          onChange={(e) => setNote(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && !busy && !isClosed && submit()}
-                          placeholder="Note (optional)"
-                          className="h-11 w-full bg-transparent px-3.5 text-[14px] outline-none"
-                          style={{ color: T.text, fontFamily: T.sans }}
-                        />
-                      </div>
-                      <div className="mt-1.5 text-[11px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        Just a label for this movement — press Enter or hit «Log it» to save it together with the amount.
-                      </div>
-                    </motion.div>
                   )}
-                </AnimatePresence>
+
+                  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-[minmax(240px,1.4fr)_auto_auto] sm:items-stretch">
+                    <div
+                      className="ad-field relative flex h-[48px] items-center gap-3 rounded-[15px] px-5"
+                      style={{ background: T.bg, border: `1px solid ${T.line}` }}
+                    >
+                      <span className="text-[18px] font-semibold" style={{ fontFamily: T.mono, color: T.text4 }}>
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && !busy && !isClosed && submit()}
+                        disabled={isClosed}
+                        placeholder="0.00"
+                        className="h-full w-full bg-transparent text-[20px] font-semibold tabular-nums outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        style={{ color: T.text, fontFamily: T.mono, letterSpacing: '-0.02em' }}
+                      />
+                      {amount && (
+                        <button
+                          type="button"
+                          onClick={() => setAmount('')}
+                          aria-label="Clear"
+                          className="shrink-0 rounded-lg p-1 transition-colors"
+                          style={{ color: T.text4 }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
+                        >
+                          <X size={14} strokeWidth={2.4} />
+                        </button>
+                      )}
+                    </div>
+
+                    <DateField
+                      value={when}
+                      onChange={setWhen}
+                      align="right"
+                      lang="en"
+                      height={48}
+                      monthStyle="short"
+                      quickPicks
+                      fontSize={14.5}
+                      fontWeight={600}
+                    />
+
+                    <button
+                      onClick={submit}
+                      disabled={busy || isClosed || !hasAmount || overLimit}
+                      className="ad-payout-cta relative flex h-[48px] min-w-[122px] items-center justify-center gap-1.5 self-center overflow-hidden rounded-xl px-4 text-[12.5px] font-semibold"
+                      style={{ fontFamily: T.sans, opacity: busy ? 0.7 : 1 }}
+                    >
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        {busy
+                          ? <Loader2 size={14} className="animate-spin" />
+                          : <><Check size={14} strokeWidth={2.8} /> Log payout</>}
+                      </span>
+                    </button>
+                  </div>
+
+                  {!isClosed && (
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {[25, 50, 100].map((pct) => {
+                        const amt = Math.round((Math.max(openProfit, 0) * pct) / 100 * 100) / 100;
+                        const active = hasAmount && Math.abs(rawAmount - amt) < 0.005;
+                        return (
+                          <button
+                            key={pct}
+                            onClick={() => setAmount(amt.toFixed(2))}
+                            disabled={amt <= 0}
+                            className="ad-quick-pick rounded-full px-3 py-1.5 text-[12px] font-semibold tabular-nums transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+                            style={{
+                              fontFamily: T.mono,
+                              background: active ? `rgba(${T.accRgb},0.12)` : 'transparent',
+                              border: `1px solid ${active ? T.lineAcc : T.line}`,
+                              color: active ? T.acc : T.text3,
+                            }}
+                          >
+                            {pct === 100 ? 'Max' : `${pct}%`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {!isClosed && (
+                    <div className="flex flex-wrap items-start gap-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div className="flex min-w-[120px] flex-col gap-1">
+                        <span className="text-[10px] font-bold uppercase" style={{ fontFamily: T.sans, color: T.text4, letterSpacing: '0.13em' }}>
+                          Balance after
+                        </span>
+                        <span className="text-[16px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text }}>
+                          {money2(hasAmount && !overLimit ? balance - rawAmount : balance)}
+                        </span>
+                      </div>
+                      <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+                        <span className="text-[10px] font-bold uppercase" style={{ fontFamily: T.sans, color: T.text4, letterSpacing: '0.13em' }}>
+                          {hasAmount && !overLimit ? `Share of available · ${Math.round((rawAmount / (openProfit || 1)) * 100)}%` : 'Share of available'}
+                        </span>
+                        <span className="block h-1.5 overflow-hidden rounded-full" style={{ background: T.sunken }}>
+                          <motion.span
+                            className="block h-full rounded-full"
+                            style={{ background: 'linear-gradient(90deg, #5a4fd6 0%, #a99bff 100%)' }}
+                            initial={false}
+                            animate={{ width: `${hasAmount && !overLimit && openProfit > 0 ? Math.min(rawAmount / openProfit, 1) * 100 : 0}%` }}
+                            transition={{ duration: 0.25, ease: EASE }}
+                          />
+                        </span>
+                        {overLimit ? (
+                          <span className="flex items-center gap-2 text-[12.5px]" style={{ fontFamily: T.sans, color: T.bad }}>
+                            <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: T.bad }} />
+                            Over the balance — up to{' '}
+                            <b className="font-bold tabular-nums" style={{ fontFamily: T.mono }}>{money2(Math.max(openProfit, 0))}</b>{' '}
+                            can be paid out
+                          </span>
+                        ) : (
+                          <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                            {hasAmount
+                              ? 'Balance goes down, the payout stays in history'
+                              : <>Balance goes down, stays in history — up to <b className="font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>{money2(Math.max(openProfit, 0))}</b> available</>}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -773,30 +762,34 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
             {/* ─────────── Chart + quick stats ─────────── */}
             <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
               <div
-                className="ad-tile relative overflow-hidden rounded-2xl px-4 py-3.5"
-                style={{ '--hue': openProfit >= 0 ? T.okRgb : T.badRgb, background: T.surface, border: `1px solid ${T.line}` }}
+                className="ad-tile relative overflow-hidden rounded-[18px] px-[22px] pb-4 pt-5"
+                style={{
+                  '--hue': openProfit >= 0 ? T.okRgb : T.badRgb,
+                  background: `linear-gradient(180deg, ${T.surfaceHi} 0%, ${T.surface} 100%)`,
+                  border: `1px solid ${T.line}`,
+                }}
               >
                 <div className="relative z-10">
-                  <div className="mb-2 flex items-center justify-between">
-                    <div className="flex flex-col gap-0.5">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-1">
                       <span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
                         Balance curve
                       </span>
-                      <span className="text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                      <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
                         every point is a movement
                       </span>
                     </div>
-                    <div className="flex gap-1 rounded-lg p-1" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
+                    <div className="flex shrink-0 gap-[3px] rounded-[10px] p-[3px]" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
                       {[['all', 'All'], ['30d', '30d']].map(([k, l]) => {
                         const on = chartRange === k;
                         return (
                           <button
                             key={k}
                             onClick={() => setChartRange(k)}
-                            className="rounded-md px-2.5 py-1 text-[12px] font-semibold transition-colors duration-150"
+                            className="rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
                             style={{
                               fontFamily: T.sans,
-                              background: on ? `rgba(${T.accRgb},0.14)` : 'transparent',
+                              background: on ? `rgba(${T.accRgb},0.16)` : 'transparent',
                               color: on ? T.acc : T.text3,
                             }}
                           >

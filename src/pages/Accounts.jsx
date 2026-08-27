@@ -71,17 +71,18 @@ function topCenterRoundedRectPath(w, h, r) {
     L ${cx} ${y0}`;
 }
 
-function AccCard({ children, hue = T.accRgb, onClick, className = '', style, ...rest }) {
+function AccCard({ children, hue = T.accRgb, onClick, hoverable = false, className = '', style, ...rest }) {
   const [boxRef, { w, h }] = useBoxRatio(!!onClick);
   const path = topCenterRoundedRectPath(w, h, 16);
+  const soft = !onClick && hoverable;
 
   return (
     <motion.div
       ref={boxRef}
       onClick={onClick}
-      whileHover={onClick ? { y: -4 } : undefined}
+      whileHover={onClick ? { y: -4 } : soft ? { y: -2 } : undefined}
       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-      className={`acc-card group relative overflow-hidden rounded-2xl ${onClick ? 'acc-card--live cursor-pointer' : ''} ${className}`}
+      className={`acc-card group relative overflow-hidden rounded-2xl ${onClick ? 'acc-card--live cursor-pointer' : ''} ${soft ? 'acc-card--soft' : ''} ${className}`}
       style={{ '--hue': hue, border: `1px solid ${T.line}`, ...style }}
       {...rest}
     >
@@ -301,53 +302,58 @@ return (
         stroke-dasharray: 100 0;
       }
 
-      /* Кнопка «Add Account» — обертова рамка-акцент навколо темної
-         кнопки, у фірмовому фіолетовому замість лаймового. */
-      .acc-add-wrap {
-        position: relative;
-        padding: 2px;
-        border-radius: 18px;
-        overflow: hidden;
-        background: var(--edge-line, #232328);
-        isolation: isolate;
-      }
-      .acc-add-wrap::before {
-        content: '';
-        position: absolute;
-        width: 220%;
-        height: 220%;
-        left: -60%;
-        top: -60%;
-        background: conic-gradient(from 0deg,
-          transparent 0deg, transparent 250deg,
-          rgba(139,123,255,0.9) 285deg, #fff 300deg, rgba(139,123,255,0.9) 315deg,
-          transparent 340deg, transparent 360deg);
-        animation: acc-add-spin 9s linear infinite;
-        z-index: -2;
-      }
-      .acc-add-wrap::after {
-        content: '';
-        position: absolute;
-        inset: -8px;
-        border-radius: inherit;
-        background: #8b7bff;
-        filter: blur(16px);
-        opacity: 0.16;
-        z-index: -3;
-      }
-      @keyframes acc-add-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
+      /* Кнопка «Add Account» — без анімації: статична рамка того ж
+         фіолетового, що раніше було обертовим акцентом, і мінімальний
+         ховер (рамка й тло ледь світлішають). */
       .acc-add-btn {
-        position: relative;
-        overflow: hidden;
         background: #17151f;
-        transition: background-color .3s ease, transform .3s ease;
+        border: 1px solid rgba(139,123,255,0.5);
+        transition: background-color .2s ease, border-color .2s ease;
       }
-      .acc-add-wrap:hover { box-shadow: 0 0 22px rgba(139,123,255,0.18); }
-      .acc-add-wrap:hover .acc-add-btn { background: #1c1a26; transform: scale(0.99); }
-      .acc-add-wrap:active .acc-add-btn { transform: scale(0.97); }
-      .acc-add-btn svg { transition: transform .45s cubic-bezier(.34,1.56,.64,1); }
-      .acc-add-wrap:hover .acc-add-btn svg { transform: rotate(90deg) scale(1.1); }
+      .acc-add-btn:hover {
+        background: #1c1a26;
+        border-color: rgba(139,123,255,0.85);
+      }
+
+      /* Кнопка «Archive» — та сама скляна панель, що інші преміальні
+         блоки: градієнтне тло, іконка в колі, м'який ховер. */
+      .acc-archive-btn {
+        transition: border-color .25s ease, background-color .25s ease, color .25s ease;
+      }
+      .acc-archive-btn:hover {
+        border-color: rgba(139,123,255,0.4) !important;
+        color: var(--edge-text2, #B4B4BD) !important;
+      }
+      .acc-archive-icon {
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 9px;
+        background: rgba(139,123,255,0.1);
+        transition: background-color .25s ease;
+      }
+
+      /* Ховер на плашках статистики — без обводки-рідини, але
+         помітніший: тепла рамка, легка тінь у кольорі картки й
+         іконка + число трохи виступають. */
+      .acc-card--soft {
+        transition: border-color .3s ease, background-color .3s ease, box-shadow .3s ease;
+      }
+      .acc-card--soft:hover {
+        border-color: rgba(var(--hue), 0.4);
+        background-color: rgba(255,255,255,0.028);
+        box-shadow: 0 14px 30px -18px rgba(var(--hue), 0.55), 0 2px 8px -4px rgba(0,0,0,0.4);
+      }
+      .acc-card--soft .acc-soft-icon { transition: transform .3s cubic-bezier(.22,1,.36,1); }
+      .acc-card--soft:hover .acc-soft-icon { transform: scale(1.12); }
+      .acc-card--soft .acc-soft-value { transition: transform .3s cubic-bezier(.22,1,.36,1); }
+      .acc-card--soft:hover .acc-soft-value { transform: translateX(2px); }
+
+      /* «Details» — маленька пігулка замість голого слова зі
+         стрілкою: стрілка трохи їде вперед при наведенні. */
+      .acc-details-chip svg { transition: transform .2s ease; }
+      .group:hover .acc-details-chip svg { transform: translateX(2px); }
     `}</style>
 
     {/* ГОЛОВНИЙ КОНТЕЙНЕР (Каскадна анімація появи всього контенту) */}
@@ -393,15 +399,19 @@ return (
         <div className="flex shrink-0 items-center gap-2.5">
           <button
             onClick={() => setShowArchive((v) => !v)}
-            className="inline-flex h-[54px] shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl px-5 text-[14px] font-bold transition-colors duration-200"
+            className="acc-archive-btn inline-flex h-[54px] shrink-0 items-center gap-2.5 whitespace-nowrap rounded-2xl pl-2.5 pr-5 text-[14px] font-bold"
             style={{
-              background: showArchive ? 'rgba(139,123,255,0.14)' : 'var(--edge-surface)',
-              border: `1px solid ${showArchive ? 'var(--edge-acc, #8b7bff)' : 'var(--edge-line, #232328)'}`,
+              background: showArchive
+                ? 'linear-gradient(145deg, rgba(139,123,255,0.16), rgba(139,123,255,0.05))'
+                : 'linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01))',
+              border: `1px solid ${showArchive ? 'rgba(139,123,255,0.45)' : 'var(--edge-line, #232328)'}`,
               color: showArchive ? 'var(--edge-acc, #8b7bff)' : 'var(--edge-text3, #7A7A85)',
               fontFamily: T.sans,
             }}
           >
-            <Archive size={15} strokeWidth={2.4} />
+            <span className="acc-archive-icon">
+              <Archive size={13.5} strokeWidth={2.4} style={{ color: 'var(--edge-acc, #8b7bff)' }} />
+            </span>
             {showArchive ? 'Back to accounts' : 'Archive'}
             {!showArchive && closedAccounts.length > 0 && (
               <span
@@ -413,16 +423,14 @@ return (
             )}
           </button>
 
-          <div className="acc-add-wrap ml-1 shrink-0">
-            <button
-              onClick={openAddModal}
-              className="acc-add-btn inline-flex h-[50px] shrink-0 items-center justify-center gap-2 rounded-2xl px-6 text-[14.5px] font-bold"
-              style={{ color: '#fff', fontFamily: T.sans }}
-            >
-              <Plus size={16} strokeWidth={3} className="relative z-10 shrink-0" style={{ color: '#8b7bff' }} />
-              <span className="relative z-10 whitespace-nowrap">Add Account</span>
-            </button>
-          </div>
+          <button
+            onClick={openAddModal}
+            className="acc-add-btn ml-1 inline-flex h-[54px] shrink-0 items-center justify-center gap-2 rounded-2xl px-6 text-[14.5px] font-bold"
+            style={{ color: '#fff', fontFamily: T.sans }}
+          >
+            <Plus size={16} strokeWidth={3} className="shrink-0" style={{ color: '#8b7bff' }} />
+            <span className="whitespace-nowrap">Add Account</span>
+          </button>
         </div>
       </motion.div>
 
@@ -438,39 +446,32 @@ return (
           {
             label: 'Total capital', icon: Wallet, hue: T.accRgb, color: T.text,
             value: formatBalance(totals.capital),
-            hint: `across ${activeAccounts.length} account${activeAccounts.length === 1 ? '' : 's'}`,
           },
           {
             label: 'Account size', icon: Activity, hue: '110,168,254', color: T.text2,
             value: formatBalance(totals.size),
-            hint: "how much is under management by terms",
           },
           {
             label: 'Unwithdrawn profit', icon: TrendingUp, hue: T.okRgb,
             color: totals.open >= 0 ? T.ok : T.bad,
             value: `${totals.open >= 0 ? '+' : '−'}${formatBalance(Math.abs(totals.open))}`,
-            hint: 'above the starting size',
           },
           {
             label: 'Withdrawn', icon: Trophy, hue: T.warnRgb,
             color: totals.paid ? T.warn : T.text4,
             value: formatBalance(totals.paid),
-            hint: totals.payoutsCount ? `${totals.payoutsCount} payout${totals.payoutsCount === 1 ? '' : 's'}` : 'no payouts yet',
           },
         ].map((k) => (
           <motion.div key={k.label} variants={{ hidden: { opacity: 0, y: 15, filter: "blur(4px)" }, visible: { opacity: 1, y: 0, filter: "blur(0px)" } }}>
-            <AccCard hue={k.hue} className="h-full p-5">
+            <AccCard hue={k.hue} hoverable className="h-full p-5">
               <div className="relative z-10 mb-3.5 flex items-center gap-2">
-                <k.icon size={14} strokeWidth={2.2} style={{ color: `rgb(${k.hue})` }} />
+                <k.icon size={14} strokeWidth={2.2} className="acc-soft-icon" style={{ color: `rgb(${k.hue})` }} />
                 <p className="text-[12px] font-semibold uppercase tracking-[0.09em]" style={{ fontFamily: T.sans, color: T.text4 }}>
                   {k.label}
                 </p>
               </div>
-              <p className="relative z-10 text-[27px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: k.color, letterSpacing: '-0.02em' }}>
+              <p className="acc-soft-value relative z-10 text-[27px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: k.color, letterSpacing: '-0.02em' }}>
                 {k.value}
-              </p>
-              <p className="relative z-10 mt-1 truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                {k.hint}
               </p>
             </AccCard>
           </motion.div>
@@ -605,7 +606,7 @@ return (
                           <span className="uppercase tracking-[0.09em]" style={{ color: T.text4 }}>
                             To 10% goal · {money(goal)}
                           </span>
-                          <span style={{ color: pct >= 100 ? T.ok : T.text3 }}>
+                          <span className="uppercase tracking-[0.05em]" style={{ color: pct >= 100 ? T.ok : T.text3 }}>
                             {pct >= 100 ? 'goal hit' : `${Math.round(pct)}%`}
                           </span>
                         </div>
@@ -620,12 +621,15 @@ return (
                         </div>
 
                         <div className="mt-3.5 flex items-center justify-between gap-3 pt-3.5" style={{ borderTop: `1px solid ${T.line}` }}>
-                          <span className="flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: paid ? T.warn : T.text4 }}>
+                          <span className="flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: paid ? T.acc : T.text4 }}>
                             <ArrowDownToLine size={12.5} strokeWidth={2.4} />
                             {paid ? `withdrawn ${money(paid)}` : 'no payouts yet'}
                           </span>
-                          <span className="flex items-center gap-1 text-[12.5px] font-semibold opacity-0 transition-opacity duration-200 group-hover:opacity-100" style={{ fontFamily: T.sans, color: T.acc }}>
-                            details
+                          <span
+                            className="acc-details-chip flex items-center gap-1 text-[12.5px] font-semibold opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                            style={{ fontFamily: T.sans, color: T.acc }}
+                          >
+                            Details
                             <ArrowRight size={12.5} strokeWidth={2.6} />
                           </span>
                         </div>
