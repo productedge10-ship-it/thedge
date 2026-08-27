@@ -351,7 +351,7 @@ export default function TradesTable({
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                     >
                       <span className="relative block h-[19px] w-[104px] shrink-0 overflow-hidden text-right">
-                        <AnimatePresence mode="popLayout" initial={false}>
+                        <AnimatePresence initial={false}>
                           {rowShowProfit ? (
                             <motion.span
                               key="profit"
@@ -359,7 +359,7 @@ export default function TradesTable({
                               animate={{ rotateX: 0, opacity: 1 }}
                               exit={{ rotateX: 90, opacity: 0 }}
                               transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }}
-                              className="block whitespace-nowrap text-[14.5px] font-bold tabular-nums"
+                              className="absolute inset-0 whitespace-nowrap text-[14.5px] font-bold tabular-nums"
                               style={{ fontFamily: T.mono, color: pColor, lineHeight: '19px', transformOrigin: 'center bottom' }}
                             >
                               {t._profit === null
@@ -373,7 +373,7 @@ export default function TradesTable({
                               animate={{ rotateX: 0, opacity: 1 }}
                               exit={{ rotateX: 90, opacity: 0 }}
                               transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }}
-                              className="block whitespace-nowrap text-[14.5px] font-bold tabular-nums"
+                              className="absolute inset-0 whitespace-nowrap text-[14.5px] font-bold tabular-nums"
                               style={{ fontFamily: T.mono, color: rrColor, lineHeight: '19px', transformOrigin: 'center bottom' }}
                             >
                               {rr === null ? '—' : `${rr > 0 ? '+' : ''}${rr}R`}

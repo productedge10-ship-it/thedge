@@ -1,7 +1,7 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { T, EASE } from '../../lib/theme';
-import { KINDS_EN, money, money2 } from '../../lib/accountsStore';
+import { money } from '../../lib/accountsStore';
 
 /* ==================================================================
    Balance chart.
@@ -25,12 +25,6 @@ const fmtDay = (iso) => {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 };
 
-const fmtFull = (iso) => {
-  const d = new Date(`${iso}T12:00:00`);
-  if (isNaN(d)) return iso;
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-
 const DOT = {
   start: T.text3,
   payout: T.warn,
@@ -39,8 +33,6 @@ const DOT = {
 };
 
 export default function BalanceChart({ events, initial }) {
-  const [hover, setHover] = useState(null);
-  const svgRef = useRef(null);
   const uid = useRef(Math.random().toString(36).slice(2, 8)).current;
 
   const model = useMemo(() => {
@@ -104,28 +96,12 @@ export default function BalanceChart({ events, initial }) {
   const stroke = up ? T.ok : T.bad;
   const strokeRgb = up ? T.okRgb : T.badRgb;
 
-  const onMove = (e) => {
-    if (model.flat !== null) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const px = ((e.clientX - rect.left) / rect.width) * W;
-    let best = 0;
-    model.nodes.forEach((n, i) => {
-      if (Math.abs(n.cx - px) < Math.abs(model.nodes[best].cx - px)) best = i;
-    });
-    setHover(best);
-  };
-
-  const hovered = hover === null ? null : model.nodes[hover];
-
   return (
     <div className="relative w-full">
       <svg
-        ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
         className="h-[206px] w-full"
-        onMouseMove={onMove}
-        onMouseLeave={() => setHover(null)}
       >
         <defs>
           <linearGradient id={`fill${uid}`} x1="0" y1="0" x2="0" y2="1">
@@ -206,37 +182,19 @@ export default function BalanceChart({ events, initial }) {
           style={model.flat === null ? { filter: `drop-shadow(0 0 8px rgba(${strokeRgb},0.45))` } : undefined}
         />
 
-        {hovered && (
-          <>
-            <line
-              x1={hovered.cx} y1={PAD.t - 8} x2={hovered.cx} y2={H - PAD.b}
-              stroke={T.lineHi} strokeWidth="1"
-            />
-            <line
-              x1={PAD.l} y1={hovered.cy} x2={W - PAD.r} y2={hovered.cy}
-              stroke={T.lineHi} strokeWidth="1" strokeDasharray="2 4"
-            />
-          </>
-        )}
-
         {model.nodes.map((n, i) => (
-          <g key={i}>
-            {hover === i && (
-              <circle cx={n.cx} cy={n.cy} r="11" fill={DOT[n.kind] || stroke} fillOpacity="0.14" />
-            )}
-            <motion.circle
-              cx={n.cx}
-              cy={n.cy}
-              r={hover === i ? 6 : 4.5}
-              fill={T.bg}
-              stroke={DOT[n.kind] || stroke}
-              strokeWidth="2.5"
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.45 + i * 0.05, ease: EASE }}
-              style={{ transition: 'r .15s ease' }}
-            />
-          </g>
+          <motion.circle
+            key={i}
+            cx={n.cx}
+            cy={n.cy}
+            r={4.5}
+            fill={T.bg}
+            stroke={DOT[n.kind] || stroke}
+            strokeWidth="2.5"
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: 0.45 + i * 0.05, ease: EASE }}
+          />
         ))}
 
         <text x={PAD.l} y={H - 8} fill={T.text4} fontSize="10.5" style={{ fontFamily: T.sans }}>
@@ -267,35 +225,6 @@ export default function BalanceChart({ events, initial }) {
         </div>
       )}
 
-      {hovered && (
-        <div
-          className="pointer-events-none absolute z-10 min-w-[152px] rounded-xl px-3 py-2.5"
-          style={{
-            left: `${(hovered.cx / W) * 100}%`,
-            top: `${(hovered.cy / H) * 100}%`,
-            transform: `translate(${hovered.cx > W * 0.66 ? '-108%' : '14px'}, -50%)`,
-            background: 'rgba(10,10,12,0.94)',
-            border: `1px solid ${T.lineHi}`,
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 20px 50px -24px rgba(0,0,0,0.95)',
-          }}
-        >
-          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: DOT[hovered.kind] || T.text3 }}>
-            {KINDS_EN[hovered.kind]?.label || hovered.kind}
-          </div>
-          <div className="mt-1 text-[16px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text }}>
-            {money2(hovered.value)}
-          </div>
-          {hovered.kind !== 'start' && hovered.amount > 0 && (
-            <div className="text-[12.5px] font-semibold tabular-nums" style={{ fontFamily: T.mono, color: hovered.kind === 'payout' ? T.warn : T.info }}>
-              {hovered.kind === 'payout' ? '−' : '+'}{money2(hovered.amount)}
-            </div>
-          )}
-          <div className="mt-1 text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-            {fmtFull(hovered.date)}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

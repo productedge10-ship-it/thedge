@@ -24,22 +24,29 @@ const WORDS = {
   en: { pick: 'pick a date', today: 'today', yesterday: 'yesterday', todayBtn: 'Today', loc: 'en-GB' },
 };
 
-const label = (iso, lang) => {
+const label = (iso, lang, alwaysNumeric) => {
   const w = WORDS[lang] || WORDS.uk;
   if (!iso) return w.pick;
   const d = new Date(`${iso}T12:00:00`);
   if (isNaN(d)) return iso;
 
-  const today = dayKey(new Date());
-  const yest = dayKey(new Date(Date.now() - 86400000));
-  if (iso === today) return w.today;
-  if (iso === yest) return w.yesterday;
+  if (!alwaysNumeric) {
+    const today = dayKey(new Date());
+    const yest = dayKey(new Date(Date.now() - 86400000));
+    if (iso === today) return w.today;
+    if (iso === yest) return w.yesterday;
+  }
+
+  if (alwaysNumeric) {
+    const pad2 = (n) => String(n).padStart(2, '0');
+    return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+  }
 
   return d.toLocaleDateString(w.loc, { day: 'numeric', month: 'long', year: 'numeric' })
     .replace(/\sр\./, '');
 };
 
-export default function DateField({ value, onChange, align = 'left', lang = 'uk' }) {
+export default function DateField({ value, onChange, align = 'left', lang = 'uk', height = 44, alwaysNumeric = false, accent = T.acc, accentRgb = T.accRgb, accentBorder = T.lineAcc, hoverBorder = T.lineHi }) {
   const selected = value ? new Date(`${value}T12:00:00`) : undefined;
   const w = WORDS[lang] || WORDS.uk;
 
@@ -51,18 +58,19 @@ export default function DateField({ value, onChange, align = 'left', lang = 'uk'
         <button
           type="button"
           onClick={toggle}
-          className="flex h-11 w-full items-center gap-2.5 rounded-xl px-3.5 text-[14px] transition-colors duration-200"
+          className="flex w-full items-center gap-2.5 rounded-xl px-3.5 text-[14px] transition-colors duration-200"
           style={{
+            height,
             fontFamily: T.sans,
             background: T.sunken,
-            border: `1px solid ${open ? T.lineAcc : T.line}`,
+            border: `1px solid ${open ? accentBorder : T.line}`,
             color: value ? T.text : T.text4,
           }}
-          onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = T.lineHi; }}
+          onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = hoverBorder; }}
           onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = T.line; }}
         >
-          <CalendarDays size={15} strokeWidth={2.2} style={{ color: open ? T.acc : T.text4 }} />
-          <span className="min-w-0 flex-1 truncate text-left">{label(value, lang)}</span>
+          <CalendarDays size={15} strokeWidth={2.2} style={{ color: open ? accent : T.text4 }} />
+          <span className="min-w-0 flex-1 truncate text-left">{label(value, lang, alwaysNumeric)}</span>
           <ChevronDown
             size={14}
             strokeWidth={2.4}
@@ -97,7 +105,7 @@ export default function DateField({ value, onChange, align = 'left', lang = 'uk'
             onClick={() => { onChange(dayKey(new Date())); close(); }}
             className="mt-1 h-9 w-full rounded-xl text-[13px] font-semibold transition-colors duration-200"
             style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text3, fontFamily: T.sans }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = T.lineAcc; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = accent; e.currentTarget.style.borderColor = accentBorder; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
           >
             {w.todayBtn}
@@ -106,8 +114,8 @@ export default function DateField({ value, onChange, align = 'left', lang = 'uk'
           <style>{`
             .edge-daypicker {
               --rdp-cell-size: 38px;
-              --rdp-accent-color: ${T.acc};
-              --rdp-background-color: rgba(${T.accRgb},0.14);
+              --rdp-accent-color: ${accent};
+              --rdp-background-color: rgba(${accentRgb},0.14);
               margin: 0;
               font-family: ${T.sans};
               color: ${T.text2};
@@ -138,11 +146,11 @@ export default function DateField({ value, onChange, align = 'left', lang = 'uk'
               border-color: ${T.line};
             }
             .edge-daypicker .rdp-day_today:not(.rdp-day_selected) {
-              color: ${T.acc}; border-color: ${T.lineAcc};
+              color: ${accent}; border-color: ${accentBorder};
             }
             .edge-daypicker .rdp-day_selected,
             .edge-daypicker .rdp-day_selected:hover {
-              background: ${T.acc} !important; color: #0A0A0C !important; font-weight: 800;
+              background: ${accent} !important; color: #0A0A0C !important; font-weight: 800;
             }
             .edge-daypicker .rdp-day_outside { color: ${T.text4}; opacity: .55; }
           `}</style>

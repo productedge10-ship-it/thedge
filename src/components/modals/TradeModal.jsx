@@ -17,6 +17,8 @@ import { useSettings } from '../../context/SettingsContext';
 import { notify } from '../../utils/notify';
 import { T, EASE, SPRING, useEdgeFonts } from '../../lib/theme';
 import { syncErrorFromTrade, fetchErrorForTrade, catsFromTrade } from '../../lib/errorsStore';
+import { logTradeMovement } from '../../lib/accountsStore';
+import { getTradeProfit } from '../../utils/journalUtils';
 import { CATS } from '../errors/utils';
 import ErrorComposerModal from '../errors/ErrorComposerModal';
 import AssetIcon from '../ui/AssetIcon';
@@ -958,7 +960,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       setAccounts(refCache.accounts);
       if (refCache.accounts.length > 0 && !accToSet) setAccount(refCache.accounts[0].firm_name);
     } else {
-      supabase.from('prop_accounts').select('firm_name').then(({ data }) => {
+      supabase.from('prop_accounts').select('id, firm_name, balance, status').then(({ data }) => {
         if (data) {
           refCache.accounts = data;
           setAccounts(data);
@@ -1127,6 +1129,31 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
 
         if (hasMistake) notify.error('Mistake logged', 'It\'s already waiting in the Error Log — you can review it there.');
         else notify.success('Trade saved', 'Trade added to the journal.');
+
+        /* Авто-рух балансу проп-акаунта — тільки для нових угод, щоб
+           не порахувати той самий трейд двічі й не чіпати заднім
+           числом угоди, залоговані до цієї фічі. Не блокує збереження
+           трейду: якщо акаунт не знайдено чи профіт не рахується —
+           просто нічого не рухаємо. */
+        try {
+          const accRow = accounts.find((a) => a.firm_name === account);
+          if (accRow) {
+            const accountsMap = { [account]: Number(accRow.balance) || 0 };
+            const profit = getTradeProfit(payload, accountsMap);
+            if (profit) {
+              const { account: updatedAcc } = await logTradeMovement(user?.id, accRow, {
+                profit,
+                happened_at: tradeDate,
+                note: `${selectedPair} · ${tradeType} · ${result}`,
+              });
+              if (refCache.accounts) {
+                refCache.accounts = refCache.accounts.map((a) => (a.id === updatedAcc.id ? updatedAcc : a));
+              }
+            }
+          }
+        } catch (e) {
+          console.error('auto account balance', e);
+        }
       }
 
       /* Дзеркало помилки в журналі. Свідомо не в try того ж рівня:

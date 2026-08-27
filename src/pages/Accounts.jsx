@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Building2, Wallet, Plus, Trash2, X, Activity,
-  Loader2, Pencil, Trophy, ArrowDownToLine, TrendingUp, ArrowRight,
+  Loader2, Pencil, Trophy, ArrowDownToLine, TrendingUp, ArrowRight, Archive, Lock,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -32,47 +32,70 @@ const FIRM_DOMAINS = {
 // Швидкі баланси для вибору
 const QUICK_BALANCES = [10000, 25000, 50000, 100000, 200000];
 
-/* Ховер зроблено як у колекційної картки: фольга, що ловить світло
-   під кутом, різкий блік під самим курсором і неонова кромка. Блок
-   при цьому не рухається — рух завжди читається як затримка.
-
-   Усе на CSS-змінних, які пишемо прямо у вузол повз React: браузер
-   малює це на композиторі, тому світло не відстає від миші. */
-function track(e) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const x = e.clientX - r.left;
-  const y = e.clientY - r.top;
-
-  el.style.setProperty('--mx', `${x}px`);
-  el.style.setProperty('--my', `${y}px`);
-  /* 0…1 по кожній осі — зсув фольги */
-  el.style.setProperty('--px', (x / r.width).toFixed(3));
-  el.style.setProperty('--py', (y / r.height).toFixed(3));
-  /* кут від центру — нахил бліку */
-  const ang = (Math.atan2(y - r.height / 2, x - r.width / 2) * 180) / Math.PI;
-  el.style.setProperty('--ang', ang.toFixed(1));
+/* Рамка-«рідина» на ховері: лінія стартує рівно з центру верхнього
+   краю і обтікає весь периметр по колу назад у ту саму точку.
+   Шлях будується по реальних пропорціях картки (ResizeObserver), але
+   сам SVG намальований через CSS width/height:100% + preserveAspectRatio
+   "none" — тобто малюнок ЗАВЖДИ розтягується рівно по картці, навіть
+   якщо виміряні пропорції трохи неточні. Раніше SVG мав фіксовані
+   пікселі width/height — будь-яка похибка вимірювання одразу давала
+   маленький прямокутник в кутку картки замість повного контуру. */
+function useBoxRatio(active) {
+  const ref = useRef(null);
+  const [size, setSize] = useState({ w: 100, h: 100 });
+  useEffect(() => {
+    if (!active) return undefined;
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) setSize({ w: r.width, h: r.height });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [active]);
+  return [ref, size];
 }
 
-function AccCard({ children, hue = T.accRgb, onClick, className = '', ...rest }) {
+function topCenterRoundedRectPath(w, h, r) {
+  const x0 = 1, y0 = 1, x1 = w - 1, y1 = h - 1;
+  const rr = Math.max(0, Math.min(r, (x1 - x0) / 2, (y1 - y0) / 2));
+  const cx = w / 2;
+  return `M ${cx} ${y0}
+    L ${x1 - rr} ${y0} A ${rr} ${rr} 0 0 1 ${x1} ${y0 + rr}
+    L ${x1} ${y1 - rr} A ${rr} ${rr} 0 0 1 ${x1 - rr} ${y1}
+    L ${x0 + rr} ${y1} A ${rr} ${rr} 0 0 1 ${x0} ${y1 - rr}
+    L ${x0} ${y0 + rr} A ${rr} ${rr} 0 0 1 ${x0 + rr} ${y0}
+    L ${cx} ${y0}`;
+}
+
+function AccCard({ children, hue = T.accRgb, onClick, className = '', style, ...rest }) {
+  const [boxRef, { w, h }] = useBoxRatio(!!onClick);
+  const path = topCenterRoundedRectPath(w, h, 16);
+
   return (
     <motion.div
+      ref={boxRef}
       onClick={onClick}
-      onPointerMove={track}
-      className={`acc-card group relative overflow-hidden rounded-2xl ${onClick ? 'cursor-pointer' : ''} ${className}`}
-      style={{ '--hue': hue, border: `1px solid ${T.line}` }}
+      whileHover={onClick ? { y: -4 } : undefined}
+      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+      className={`acc-card group relative overflow-hidden rounded-2xl ${onClick ? 'acc-card--live cursor-pointer' : ''} ${className}`}
+      style={{ '--hue': hue, border: `1px solid ${T.line}`, ...style }}
       {...rest}
     >
-      <span aria-hidden className="acc-grid" />
-      <span aria-hidden className="acc-foil" />
-      <span aria-hidden className="acc-gloss" />
-      <span aria-hidden className="acc-bloom" />
-      <span aria-hidden className="acc-spec" />
-      <span aria-hidden className="acc-edge" />
-      <span aria-hidden className="acc-tick acc-tick-tl" />
-      <span aria-hidden className="acc-tick acc-tick-tr" />
-      <span aria-hidden className="acc-tick acc-tick-bl" />
-      <span aria-hidden className="acc-tick acc-tick-br" />
+      {onClick && (
+        <svg
+          className="acc-liquid-svg absolute inset-0 h-full w-full"
+          viewBox={`0 0 ${w} ${h}`}
+          preserveAspectRatio="none"
+          aria-hidden
+        >
+          <path d={path} pathLength="100" className="acc-liquid-soft" vectorEffect="non-scaling-stroke" />
+          <path d={path} pathLength="100" className="acc-liquid-main" vectorEffect="non-scaling-stroke" />
+        </svg>
+      )}
       {children}
     </motion.div>
   );
@@ -90,8 +113,16 @@ export default function Accounts() {
   const [editingId, setEditingId] = useState(null);
   const [newFirm, setNewFirm] = useState('');
   const [newBalance, setNewBalance] = useState('');
+  /* Ліміти проп-фірми — просто зберігаємо, як каже кабінет пропа
+     (FTMO і подібні: 5% денний, 10% загальний). Нікуди не рахується
+     автоматично, це майданчик під майбутню перевірку. */
+  const [newDailyLoss, setNewDailyLoss] = useState('');
+  const [newTotalLoss, setNewTotalLoss] = useState('');
 
   const [selectedAcc, setSelectedAcc] = useState(null);
+  /* «Архів» тут — це вигляд екрана, не окреме поле в БД: перемикає,
+     які акаунти показує сітка — активні чи закриті. */
+  const [showArchive, setShowArchive] = useState(false);
 
   const submitBtnRef = useRef(null);
 
@@ -118,27 +149,33 @@ export default function Accounts() {
       setAccounts(accRes.data || []);
       if (!payRes.error) setPayouts(payRes.data || []);
     } catch (error) {
-      notify.error('Не вдалось завантажити акаунти', error.message);
+      notify.error('Could not load accounts', error.message);
     } finally {
       setLoading(false);
     }
   }
 
-  const closeModal = () => { setIsModalOpen(false); setEditingId(null); setNewFirm(''); setNewBalance(''); };
-  const openAddModal = () => { setEditingId(null); setNewFirm(''); setNewBalance(''); setIsModalOpen(true); };
-  const openEditModal = (e, acc) => { 
-    e.stopPropagation(); 
-    setEditingId(acc.id); 
-    setNewFirm(acc.firm_name); 
-    setNewBalance(acc.balance); 
-    setIsModalOpen(true); 
+  const closeModal = () => { setIsModalOpen(false); setEditingId(null); setNewFirm(''); setNewBalance(''); setNewDailyLoss(''); setNewTotalLoss(''); };
+  const openAddModal = () => { setEditingId(null); setNewFirm(''); setNewBalance(''); setNewDailyLoss(''); setNewTotalLoss(''); setIsModalOpen(true); };
+  const openEditModal = (e, acc) => {
+    e.stopPropagation();
+    setEditingId(acc.id);
+    setNewFirm(acc.firm_name);
+    setNewBalance(acc.balance);
+    setNewDailyLoss(acc.max_daily_loss_pct ?? '');
+    setNewTotalLoss(acc.max_total_loss_pct ?? '');
+    setIsModalOpen(true);
   };
   async function handleSubmitAccount(e) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const riskFields = {
+        max_daily_loss_pct: newDailyLoss === '' ? null : Number(newDailyLoss),
+        max_total_loss_pct: newTotalLoss === '' ? null : Number(newTotalLoss),
+      };
       if (editingId) {
-        const { data, error } = await supabase.from('prop_accounts').update({ firm_name: newFirm, balance: Number(newBalance) }).eq('id', editingId).select();
+        const { data, error } = await supabase.from('prop_accounts').update({ firm_name: newFirm, balance: Number(newBalance), ...riskFields }).eq('id', editingId).select();
         if (error) throw error;
         if (data && data.length > 0) {
           setAccounts(accounts.map(acc => acc.id === editingId ? data[0] : acc));
@@ -149,7 +186,7 @@ export default function Accounts() {
            нього повертається рахунок після виплати прибутку */
         const { data, error } = await supabase
           .from('prop_accounts')
-          .insert([{ firm_name: newFirm, balance: Number(newBalance), initial_balance: Number(newBalance), status: 'Active' }])
+          .insert([{ firm_name: newFirm, balance: Number(newBalance), initial_balance: Number(newBalance), status: 'Active', ...riskFields }])
           .select();
         if (error) throw error;
         if (data && data.length > 0) {
@@ -157,17 +194,17 @@ export default function Accounts() {
           closeModal();
         }
       }
-    } catch (error) { notify.error('Помилка при збереженні', error.message); } finally { setIsSubmitting(false); }
+    } catch (error) { notify.error('Save failed', error.message); } finally { setIsSubmitting(false); }
   }
 
   async function deleteAccount(e, id) {
     e.stopPropagation();
-    if (!confirm("Точно видалити цей акаунт? Разом з ним зникне вся історія виплат.")) return;
+    if (!confirm("Delete this account for good? Its whole payout history goes with it.")) return;
     try {
       const { error } = await supabase.from('prop_accounts').delete().eq('id', id);
       if (error) throw error;
       setAccounts(accounts.filter(a => a.id !== id));
-    } catch (error) { notify.error('Помилка при видаленні', error.message); }
+    } catch (error) { notify.error('Delete failed', error.message); }
   }
 
   const patchAccount = (next) => {
@@ -181,14 +218,24 @@ export default function Accounts() {
 
   const formatBalance = money;
 
+  /* Закритий акаунт — це архів: ховається з активної сітки й зі
+     статистики капіталу (баланс закритого акаунта більше не «в
+     роботі»), але лишається в списку — просто за перемикачем. */
+  const activeAccounts = useMemo(() => accounts.filter((a) => a.status !== 'Closed'), [accounts]);
+  const closedAccounts = useMemo(() => accounts.filter((a) => a.status === 'Closed'), [accounts]);
+
   const totals = useMemo(() => {
-    const capital = accounts.reduce((s, a) => s + Number(a.balance || 0), 0);
-    const size = accounts.reduce((s, a) => s + Number(a.initial_balance ?? a.balance ?? 0), 0);
-    const paid = payouts.reduce((s, p) => s + Number(p.amount || 0), 0);
+    const activeIds = new Set(activeAccounts.map((a) => a.id));
+    const activePayouts = payouts.filter((p) => activeIds.has(p.account_id));
+    const capital = activeAccounts.reduce((s, a) => s + Number(a.balance || 0), 0);
+    const size = activeAccounts.reduce((s, a) => s + Number(a.initial_balance ?? a.balance ?? 0), 0);
+    const paid = activePayouts.reduce((s, p) => s + Number(p.amount || 0), 0);
     const byAcc = {};
     payouts.forEach((p) => { byAcc[p.account_id] = (byAcc[p.account_id] || 0) + Number(p.amount || 0); });
-    return { capital, size, paid, open: capital - size, byAcc };
-  }, [accounts, payouts]);
+    return { capital, size, paid, open: capital - size, byAcc, payoutsCount: activePayouts.length };
+  }, [activeAccounts, payouts]);
+
+  const shownAccounts = showArchive ? closedAccounts : activeAccounts;
 
   const noSpinnerClass = "[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]";
 
@@ -197,145 +244,110 @@ return (
     {/* Фон тут більше не свій: крапкова підкладка йде з Layout, і
         сторінка нарешті стоїть на тому самому тлі, що решта сайту. */}
     <style>{`
-      /* ==========================================================
-         Картка акаунта.
-
-         Шари знизу вгору: сітка → голографічна фольга → скляний
-         блиск → внутрішнє світло → різкий блік → неонова кромка →
-         кутові засічки. Кожен окремо ледь помітний, разом дають
-         відчуття, що поверхня має товщину і ловить світло.
-      ========================================================== */
       .acc-card {
-        --mx: 50%;
-        --my: 50%;
-        --px: .5;
-        --py: .5;
-        --ang: 0;
         --hue: ${T.accRgb};
-        isolation: isolate;
         background-color: rgba(255,255,255,0.014);
-        transition: background-color .4s ease, box-shadow .5s ease, border-color .4s ease;
       }
-      .acc-card:hover {
-        background-color: rgba(255,255,255,0.03);
-        border-color: rgba(var(--hue), 0.22) !important;
+
+      /* Ховер картки акаунта: рамка тепліє, тінь густішає, картка
+         ледь підіймається (робить motion), і за нею проявляється
+         м'яке фіолетове сяйво — того ж кольору, що ховер і акценти
+         сторінки. box-shadow не обрізається власним overflow-hidden
+         картки, тому сяйво спокійно виходить за її межі. */
+      .acc-card--live {
+        transition: border-color .3s ease, box-shadow .45s ease, background-color .3s ease;
+      }
+      .acc-card--live:hover {
+        border-color: rgba(var(--hue), 0.32);
+        background-color: rgba(255,255,255,0.024);
         box-shadow:
-          0 0 0 1px rgba(var(--hue), 0.10),
-          0 34px 70px -40px rgba(var(--hue), 0.75),
-          0 16px 36px -28px rgba(0,0,0,0.92);
+          0 16px 32px -18px rgba(0,0,0,0.55),
+          0 0 70px -18px rgba(139,123,255,0.45),
+          0 0 130px -30px rgba(139,123,255,0.28);
+      }
+      /* SVG завжди розтягнутий рівно по картці (width/height:100% +
+         preserveAspectRatio="none"), тому лінія ніколи не обрізається,
+         навіть якщо виміряні пропорції для viewBox трохи неточні.
+         Стартує з центру верхнього краю (шлях побудований так у JS)
+         і «витікає» по периметру назад у ту саму точку. */
+      .acc-liquid-svg { overflow: visible; }
+      .acc-liquid-main {
+        fill: none;
+        stroke: #8b7bff;
+        stroke-width: 1.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 0 100;
+        opacity: 0;
+        filter:
+          drop-shadow(0 0 4px rgba(139,123,255,.9))
+          drop-shadow(0 0 10px rgba(139,123,255,.5))
+          drop-shadow(0 0 20px rgba(139,123,255,.22));
+        transition: stroke-dasharray 1.1s ease, opacity .35s ease;
+      }
+      .acc-liquid-soft {
+        fill: none;
+        stroke: rgba(139,123,255,.22);
+        stroke-width: 3.5;
+        stroke-linecap: round;
+        stroke-dasharray: 0 100;
+        opacity: 0;
+        filter: blur(5px);
+        transition: stroke-dasharray 1.1s ease, opacity .9s ease;
+      }
+      .acc-card--live:hover .acc-liquid-main,
+      .acc-card--live:hover .acc-liquid-soft {
+        opacity: 1;
+        stroke-dasharray: 100 0;
       }
 
-      .acc-grid, .acc-foil, .acc-gloss, .acc-bloom, .acc-spec, .acc-edge {
+      /* Кнопка «Add Account» — обертова рамка-акцент навколо темної
+         кнопки, у фірмовому фіолетовому замість лаймового. */
+      .acc-add-wrap {
+        position: relative;
+        padding: 2px;
+        border-radius: 18px;
+        overflow: hidden;
+        background: var(--edge-line, #232328);
+        isolation: isolate;
+      }
+      .acc-add-wrap::before {
+        content: '';
         position: absolute;
-        inset: 0;
+        width: 220%;
+        height: 220%;
+        left: -60%;
+        top: -60%;
+        background: conic-gradient(from 0deg,
+          transparent 0deg, transparent 250deg,
+          rgba(139,123,255,0.9) 285deg, #fff 300deg, rgba(139,123,255,0.9) 315deg,
+          transparent 340deg, transparent 360deg);
+        animation: acc-add-spin 9s linear infinite;
+        z-index: -2;
+      }
+      .acc-add-wrap::after {
+        content: '';
+        position: absolute;
+        inset: -8px;
         border-radius: inherit;
-        pointer-events: none;
+        background: #8b7bff;
+        filter: blur(16px);
+        opacity: 0.16;
+        z-index: -3;
       }
+      @keyframes acc-add-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-      /* Тонка сітка — поверхня, а не порожнеча */
-      .acc-grid {
-        background:
-          linear-gradient(rgba(255,255,255,.014) 1px, transparent 1px) 0 0 / 100% 26px,
-          linear-gradient(90deg, rgba(255,255,255,.014) 1px, transparent 1px) 0 0 / 26px 100%;
-        opacity: .8;
+      .acc-add-btn {
+        position: relative;
+        overflow: hidden;
+        background: #17151f;
+        transition: background-color .3s ease, transform .3s ease;
       }
-
-      /* Голографічна фольга. Смуги їдуть за курсором, але тримаються
-         ледь помітно: райдуга на весь блок відволікала від цифр,
-         а це картка з грошима, а не наліпка. Тому вузька маска,
-         приглушена яскравість і низька непрозорість — ефект видно
-         краєм ока, читати він не заважає. */
-      .acc-foil {
-        background: repeating-linear-gradient(112deg,
-          rgba(255,119,115,.55) 4%,
-          rgba(255,237,95,.5) 9%,
-          rgba(168,255,95,.5) 14%,
-          rgba(131,255,247,.5) 19%,
-          rgba(120,148,255,.5) 24%,
-          rgba(216,117,255,.55) 29%,
-          rgba(255,119,115,.55) 34%);
-        background-size: 320% 320%;
-        background-position: calc(var(--px) * 120%) calc(var(--py) * 120%);
-        /* screen, а не color-dodge: dodge на майже чорному тлі дає
-           майже чорне — фольга просто не з'явилась би */
-        mix-blend-mode: screen;
-        filter: brightness(.22) saturate(1.1);
-        -webkit-mask: radial-gradient(190px circle at var(--mx) var(--my), #000 0%, rgba(0,0,0,.3) 40%, transparent 62%);
-        mask: radial-gradient(190px circle at var(--mx) var(--my), #000 0%, rgba(0,0,0,.3) 40%, transparent 62%);
-        opacity: 0;
-        transition: opacity .45s ease;
-      }
-      .acc-card:hover .acc-foil { opacity: calc(.34 * var(--edge-fx, 1)); }
-
-      /* Замість діагональної смуги — фаска по верхній кромці, що
-         ловить світло рівно там, де курсор. Смуга через увесь блок
-         читалась як зайвий предмет поверх картки; фаска читається
-         як край самої поверхні. */
-      .acc-gloss {
-        inset: 0 0 auto 0;
-        height: 1px;
-        border-radius: 0;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
-        -webkit-mask: radial-gradient(170px circle at var(--mx) 0, #000 0%, transparent 72%);
-        mask: radial-gradient(170px circle at var(--mx) 0, #000 0%, transparent 72%);
-        opacity: 0;
-        transition: opacity .35s ease;
-      }
-      .acc-card:hover .acc-gloss { opacity: calc(1 * var(--edge-fx, 1)); }
-
-      /* Внутрішнє світло у кольорі стану акаунта */
-      .acc-bloom {
-        background: radial-gradient(280px circle at var(--mx) var(--my),
-          rgba(var(--hue), .12), transparent 62%);
-        opacity: 0;
-        transition: opacity .35s ease;
-      }
-      .acc-card:hover .acc-bloom { opacity: calc(1 * var(--edge-fx, 1)); }
-
-      /* Різкий блік просто під курсором — крапка, від якої все
-         й здається мокрим */
-      .acc-spec {
-        background: radial-gradient(70px circle at var(--mx) var(--my),
-          rgba(255,255,255,.16), transparent 70%);
-        opacity: 0;
-        transition: opacity .25s ease;
-      }
-      .acc-card:hover .acc-spec { opacity: calc(1 * var(--edge-fx, 1)); }
-
-      /* Неонова кромка. Маска лишає від градієнта тільки рамку в
-         один піксель, тому світиться саме контур. */
-      .acc-edge {
-        padding: 1px;
-        background: radial-gradient(220px circle at var(--mx) var(--my),
-          rgba(var(--hue), 1), rgba(var(--hue), .3) 34%, transparent 68%);
-        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-        -webkit-mask-composite: xor;
-        mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-        mask-composite: exclude;
-        opacity: 0;
-        transition: opacity .3s ease;
-      }
-      .acc-card:hover .acc-edge { opacity: calc(1 * var(--edge-fx, 1)); }
-
-      /* Кутові засічки — приціл, що зводиться на картці */
-      .acc-tick {
-        position: absolute;
-        width: 12px;
-        height: 12px;
-        pointer-events: none;
-        border: 1.5px solid rgba(var(--hue), .8);
-        opacity: 0;
-        transition: opacity .3s ease, transform .38s cubic-bezier(.22,1,.36,1);
-      }
-      .acc-tick-tl { top: 8px; left: 8px;    border-right: 0; border-bottom: 0; border-radius: 5px 0 0 0; transform: translate(-6px,-6px); }
-      .acc-tick-tr { top: 8px; right: 8px;   border-left: 0;  border-bottom: 0; border-radius: 0 5px 0 0; transform: translate(6px,-6px); }
-      .acc-tick-bl { bottom: 8px; left: 8px; border-right: 0; border-top: 0;    border-radius: 0 0 0 5px; transform: translate(-6px,6px); }
-      .acc-tick-br { bottom: 8px; right: 8px;border-left: 0;  border-top: 0;    border-radius: 0 0 5px 0; transform: translate(6px,6px); }
-      .acc-card:hover .acc-tick { opacity: 1; transform: translate(0,0); }
-
-      @media (prefers-reduced-motion: reduce) {
-        .acc-tick { transition: opacity .2s ease; }
-      }
+      .acc-add-wrap:hover { box-shadow: 0 0 22px rgba(139,123,255,0.18); }
+      .acc-add-wrap:hover .acc-add-btn { background: #1c1a26; transform: scale(0.99); }
+      .acc-add-wrap:active .acc-add-btn { transform: scale(0.97); }
+      .acc-add-btn svg { transition: transform .45s cubic-bezier(.34,1.56,.64,1); }
+      .acc-add-wrap:hover .acc-add-btn svg { transform: rotate(90deg) scale(1.1); }
     `}</style>
 
     {/* ГОЛОВНИЙ КОНТЕЙНЕР (Каскадна анімація появи всього контенту) */}
@@ -365,34 +377,53 @@ return (
             className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]"
             style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-acc, #8b7bff)' }}
           >
-            Капітал
+            Capital
           </div>
           <h1
             className="text-[34px] font-bold leading-none sm:text-[42px]"
             style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-text, #FAFAFA)', letterSpacing: '-0.03em' }}
           >
-            Акаунти
+            Accounts
           </h1>
           <p className="mt-2.5 text-[14px]" style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-text3, #7A7A85)' }}>
-            Скільки капіталу під керуванням і як він поводиться
+            How much capital is at work and how it's behaving
           </p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="group inline-flex h-[46px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-          style={{
-            background: 'var(--edge-acc, #8b7bff)',
-            color: 'var(--edge-bg, #0A0A0C)',
-            fontFamily: "'Roboto', system-ui, sans-serif",
-            boxShadow: '0 6px 18px -8px rgba(139,123,255,0.6)',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 10px 26px -8px rgba(139,123,255,0.75)')}
-          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 6px 18px -8px rgba(139,123,255,0.6)')}
-        >
-          <Plus size={17} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
-          Додати акаунт
-        </button>
+        <div className="flex shrink-0 items-center gap-2.5">
+          <button
+            onClick={() => setShowArchive((v) => !v)}
+            className="inline-flex h-[54px] shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl px-5 text-[14px] font-bold transition-colors duration-200"
+            style={{
+              background: showArchive ? 'rgba(139,123,255,0.14)' : 'var(--edge-surface)',
+              border: `1px solid ${showArchive ? 'var(--edge-acc, #8b7bff)' : 'var(--edge-line, #232328)'}`,
+              color: showArchive ? 'var(--edge-acc, #8b7bff)' : 'var(--edge-text3, #7A7A85)',
+              fontFamily: T.sans,
+            }}
+          >
+            <Archive size={15} strokeWidth={2.4} />
+            {showArchive ? 'Back to accounts' : 'Archive'}
+            {!showArchive && closedAccounts.length > 0 && (
+              <span
+                className="grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold"
+                style={{ background: 'rgba(139,123,255,0.18)', color: 'var(--edge-acc, #8b7bff)' }}
+              >
+                {closedAccounts.length}
+              </span>
+            )}
+          </button>
+
+          <div className="acc-add-wrap ml-1 shrink-0">
+            <button
+              onClick={openAddModal}
+              className="acc-add-btn inline-flex h-[50px] shrink-0 items-center justify-center gap-2 rounded-2xl px-6 text-[14.5px] font-bold"
+              style={{ color: '#fff', fontFamily: T.sans }}
+            >
+              <Plus size={16} strokeWidth={3} className="relative z-10 shrink-0" style={{ color: '#8b7bff' }} />
+              <span className="relative z-10 whitespace-nowrap">Add Account</span>
+            </button>
+          </div>
+        </div>
       </motion.div>
 
       {/* СТАТИСТИКА */}
@@ -405,26 +436,26 @@ return (
       >
         {[
           {
-            label: 'Всього капіталу', icon: Wallet, hue: T.accRgb, color: T.text,
+            label: 'Total capital', icon: Wallet, hue: T.accRgb, color: T.text,
             value: formatBalance(totals.capital),
-            hint: `на ${accounts.length} ${accounts.length === 1 ? 'акаунті' : 'акаунтах'}`,
+            hint: `across ${activeAccounts.length} account${activeAccounts.length === 1 ? '' : 's'}`,
           },
           {
-            label: 'Розмір рахунків', icon: Activity, hue: '110,168,254', color: T.text2,
+            label: 'Account size', icon: Activity, hue: '110,168,254', color: T.text2,
             value: formatBalance(totals.size),
-            hint: 'скільки під керуванням за умовами',
+            hint: "how much is under management by terms",
           },
           {
-            label: 'Незнятий прибуток', icon: TrendingUp, hue: T.okRgb,
+            label: 'Unwithdrawn profit', icon: TrendingUp, hue: T.okRgb,
             color: totals.open >= 0 ? T.ok : T.bad,
             value: `${totals.open >= 0 ? '+' : '−'}${formatBalance(Math.abs(totals.open))}`,
-            hint: 'понад стартовий розмір',
+            hint: 'above the starting size',
           },
           {
-            label: 'Виведено', icon: Trophy, hue: T.warnRgb,
+            label: 'Withdrawn', icon: Trophy, hue: T.warnRgb,
             color: totals.paid ? T.warn : T.text4,
             value: formatBalance(totals.paid),
-            hint: payouts.length ? `${payouts.length} ${payouts.length === 1 ? 'виплата' : 'виплат'}` : 'ще жодної виплати',
+            hint: totals.payoutsCount ? `${totals.payoutsCount} payout${totals.payoutsCount === 1 ? '' : 's'}` : 'no payouts yet',
           },
         ].map((k) => (
           <motion.div key={k.label} variants={{ hidden: { opacity: 0, y: 15, filter: "blur(4px)" }, visible: { opacity: 1, y: 0, filter: "blur(0px)" } }}>
@@ -455,18 +486,20 @@ return (
       >
         {loading ? (
           <div className="flex justify-center py-32"><Loader2 className="animate-spin text-[#4A4A52]" size={40} /></div>
-        ) : accounts.length === 0 ? (
-          <motion.div 
+        ) : shownAccounts.length === 0 ? (
+          <motion.div
             variants={{ hidden: { opacity: 0, scale: 0.96 }, visible: { opacity: 1, scale: 1 } }}
             className="flex flex-col items-center justify-center py-32 bg-[var(--edge-surface)]/60 backdrop-blur-sm border border-dashed border-[#33333A] rounded-[2rem]"
           >
             <Building2 className="text-[#4A4A52] mb-4 opacity-50" size={48} />
-            <p className="text-[#7A7A85] font-black text-xs uppercase tracking-widest">Ще немає акаунтів</p>
+            <p className="text-[#7A7A85] font-black text-xs uppercase tracking-widest">
+              {showArchive ? 'No closed accounts' : 'No accounts yet'}
+            </p>
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <AnimatePresence mode="popLayout">
-              {accounts.map((acc) => {
+              {shownAccounts.map((acc) => {
                 const size = Number(acc.initial_balance ?? acc.balance) || 0;
                 const bal = Number(acc.balance) || 0;
                 const open = bal - size;
@@ -474,7 +507,8 @@ return (
                 /* Прогрес до типової цілі пропа — 10% від розміру рахунку */
                 const goal = size * 0.1;
                 const pct = goal > 0 ? Math.max(0, Math.min(100, (open / goal) * 100)) : 0;
-                const hue = open >= 0 ? T.okRgb : T.badRgb;
+                const isClosed = acc.status === 'Closed';
+                const hue = isClosed ? '242,244,243' : open >= 0 ? T.okRgb : T.badRgb;
 
                 return (
                   <motion.div
@@ -483,25 +517,39 @@ return (
                     initial={{ opacity: 0, y: 16, filter: "blur(5px)" }}
                     animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                     exit={{ opacity: 0, scale: 0.95, filter: "blur(6px)" }}
-                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                     className="h-full"
                   >
-                    <AccCard hue={hue} onClick={() => setSelectedAcc(acc)} className="flex h-full flex-col gap-5 p-6">
+                    <AccCard hue={hue} onClick={() => setSelectedAcc(acc)} className="flex h-full flex-col gap-5 p-6" style={{ opacity: isClosed ? 0.72 : 1 }}>
+                      {isClosed && (
+                        <span
+                          className="absolute right-5 top-5 z-20 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-black uppercase tracking-[0.08em]"
+                          style={{
+                            background: 'rgba(10,10,12,0.85)',
+                            border: `1px solid rgba(${T.badRgb},0.4)`,
+                            color: T.bad,
+                            fontFamily: T.sans,
+                            backdropFilter: 'blur(6px)',
+                          }}
+                        >
+                          <Lock size={11} strokeWidth={2.6} /> Closed
+                        </span>
+                      )}
                       <div className="relative z-10 flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3.5">
                           <div
                             className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
                             style={{ background: T.sunken, border: `1px solid ${T.line}` }}
                           >
-                            <Building2 size={21} strokeWidth={2} style={{ color: T.acc }} />
+                            <Building2 size={21} strokeWidth={2} style={{ color: isClosed ? T.text4 : T.acc }} />
                           </div>
                           <div className="min-w-0">
                             <h3 className="truncate text-[18px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.015em' }}>
                               {acc.firm_name}
                             </h3>
-                            <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold" style={{ fontFamily: T.sans, color: T.ok }}>
-                              <span className="h-1.5 w-1.5 rounded-full" style={{ background: T.ok, boxShadow: `0 0 8px ${T.ok}` }} />
-                              рахунок {formatBalance(size)}
+                            <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold" style={{ fontFamily: T.sans, color: isClosed ? T.text4 : T.ok }}>
+                              <span className="h-1.5 w-1.5 rounded-full" style={{ background: isClosed ? T.text4 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
+                              {isClosed ? 'closed' : `account ${formatBalance(size)}`}
                             </div>
                           </div>
                         </div>
@@ -529,7 +577,7 @@ return (
 
                       <div className="relative z-10">
                         <p className="text-[12px] font-semibold uppercase tracking-[0.09em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                          Поточний баланс
+                          Current balance
                         </p>
                         <div className="mt-1 flex flex-wrap items-baseline gap-2.5">
                           <h2 className="text-[32px] font-bold tabular-nums" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.035em' }}>
@@ -555,10 +603,10 @@ return (
                       <div className="relative z-10 mt-auto">
                         <div className="mb-2 flex items-center justify-between gap-3 text-[12px] font-semibold" style={{ fontFamily: T.sans }}>
                           <span className="uppercase tracking-[0.09em]" style={{ color: T.text4 }}>
-                            До цілі 10% · {money(goal)}
+                            To 10% goal · {money(goal)}
                           </span>
                           <span style={{ color: pct >= 100 ? T.ok : T.text3 }}>
-                            {pct >= 100 ? 'ціль узято' : `${Math.round(pct)}%`}
+                            {pct >= 100 ? 'goal hit' : `${Math.round(pct)}%`}
                           </span>
                         </div>
                         <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: T.sunken }}>
@@ -574,10 +622,10 @@ return (
                         <div className="mt-3.5 flex items-center justify-between gap-3 pt-3.5" style={{ borderTop: `1px solid ${T.line}` }}>
                           <span className="flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: paid ? T.warn : T.text4 }}>
                             <ArrowDownToLine size={12.5} strokeWidth={2.4} />
-                            {paid ? `виведено ${money(paid)}` : 'виплат ще не було'}
+                            {paid ? `withdrawn ${money(paid)}` : 'no payouts yet'}
                           </span>
                           <span className="flex items-center gap-1 text-[12.5px] font-semibold opacity-0 transition-opacity duration-200 group-hover:opacity-100" style={{ fontFamily: T.sans, color: T.acc }}>
-                            деталі
+                            details
                             <ArrowRight size={12.5} strokeWidth={2.6} />
                           </span>
                         </div>
@@ -615,7 +663,7 @@ return (
             <div className="flex justify-between items-center px-6 py-5 border-b border-[#232328] bg-[var(--edge-sunken)]">
               <h2 className="text-sm font-bold text-[var(--edge-text)] uppercase tracking-wider flex items-center gap-2.5">
                 <span className="w-2 h-2 rounded-full bg-[#8b7bff] shadow-[0_0_10px_rgba(139,123,255,0.6)]"></span>
-                {editingId ? 'Редагування акаунта' : 'Новий акаунт'}
+                {editingId ? 'Edit account' : 'New account'}
               </h2>
               <button 
                 onClick={closeModal} 
@@ -631,7 +679,7 @@ return (
               {/* Секція: Вибір Фірми */}
               <div className="flex flex-col gap-4">
                 <label className="text-[10px] font-black tracking-widest text-[#7A7A85] uppercase">
-                  Оберіть фірму
+                  Choose a firm
                 </label>
                 
                 <div className="grid grid-cols-3 gap-2.5">
@@ -772,8 +820,43 @@ return (
                     placeholder="100000" 
                     value={newBalance} 
                     onChange={(e) => setNewBalance(e.target.value)} 
-                    className={`w-full bg-[#0D0E13] border border-[#232328] group-focus-within:border-emerald-500/40 pl-9 pr-4 py-4 rounded-xl text-xl text-emerald-400 outline-none font-mono font-bold transition-all duration-300 placeholder:text-[#4A4A52] shadow-inner shadow-black/50 ${noSpinnerClass}`} 
+                    className={`w-full bg-[#0D0E13] border border-[#232328] group-focus-within:border-emerald-500/40 pl-9 pr-4 py-4 rounded-xl text-xl text-emerald-400 outline-none font-mono font-bold transition-all duration-300 placeholder:text-[#4A4A52] shadow-inner shadow-black/50 ${noSpinnerClass}`}
                   />
+                </div>
+              </div>
+
+              {/* Секція: Ліміти проп-фірми — просто зберігаємо, як у
+                  кабінеті брокера (FTMO і подібні: 5% денний, 10%
+                  загальний). Поки що ніде не рахується автоматично. */}
+              <div className="flex flex-col gap-4">
+                <label className="text-[10px] font-black tracking-widest text-[#7A7A85] uppercase">
+                  Risk limits <span className="normal-case font-medium tracking-normal text-[#4A4A52]">(optional, from your prop's rules)</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative group">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      placeholder="5"
+                      value={newDailyLoss}
+                      onChange={(e) => setNewDailyLoss(e.target.value)}
+                      className={`w-full bg-[#111218] border border-[#232328] focus:border-[#8b7bff]/40 pl-4 pr-9 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-mono font-bold transition-all duration-300 placeholder:text-[#4A4A52] placeholder:font-normal ${noSpinnerClass}`}
+                    />
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4A4A52]">% / day</span>
+                  </div>
+                  <div className="relative group">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      placeholder="10"
+                      value={newTotalLoss}
+                      onChange={(e) => setNewTotalLoss(e.target.value)}
+                      className={`w-full bg-[#111218] border border-[#232328] focus:border-[#8b7bff]/40 pl-4 pr-9 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-mono font-bold transition-all duration-300 placeholder:text-[#4A4A52] placeholder:font-normal ${noSpinnerClass}`}
+                    />
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4A4A52]">% total</span>
+                  </div>
                 </div>
               </div>
 
