@@ -43,14 +43,14 @@ function Stat({ label, value, hint, tone, hue, icon: Icon }) {
       <div className="relative z-10 mb-1.5 flex items-center gap-2">
         {Icon && <Icon size={12.5} strokeWidth={2.3} style={{ color: `rgb(${hue || T.accRgb})` }} />}
         <span
-          className="truncate text-[11px] font-bold uppercase tracking-[0.13em]"
+          className="truncate text-[11px] font-semibold uppercase tracking-[0.13em]"
           style={{ fontFamily: T.sans, color: T.text4 }}
         >
           {label}
         </span>
       </div>
       <div
-        className="relative z-10 text-[22px] font-bold tabular-nums"
+        className="relative z-10 text-[22px] font-semibold tabular-nums"
         style={{ fontFamily: T.mono, color: tone || T.text, letterSpacing: '-0.02em' }}
       >
         {value}
@@ -479,7 +479,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               className="flex flex-col gap-3 px-5 py-4 transition-opacity duration-200 sm:px-7"
               style={{ opacity: closePanel ? 1 : 0, transitionDelay: closePanel ? '80ms' : '0ms' }}
             >
-              <p className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.bad }}>
+              <p className="text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.bad }}>
                 Why are you closing this account?
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -538,11 +538,11 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               headline numbers of the account in one glance. */}
           <div className="grid grid-cols-1 sm:grid-cols-3" style={{ borderBottom: `1px solid ${T.line}`, background: T.surface }}>
             <div className="flex flex-col gap-2 px-5 py-5 sm:px-7" style={{ borderRight: `1px solid ${T.line}` }}>
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
                 Current balance
               </p>
               <span
-                className="text-[32px] font-bold tabular-nums leading-none sm:text-[38px]"
+                className="text-[32px] font-semibold tabular-nums leading-none sm:text-[38px]"
                 style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
               >
                 {money2(balance)}
@@ -561,11 +561,11 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               </span>
             </div>
             <div className="flex flex-col gap-2 px-5 py-5 sm:px-7" style={{ borderRight: `1px solid ${T.line}` }}>
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
                 Withdrawn
               </p>
               <span
-                className="text-[32px] font-bold tabular-nums leading-none sm:text-[38px]"
+                className="text-[32px] font-semibold tabular-nums leading-none sm:text-[38px]"
                 style={{ fontFamily: T.display, color: totalPaid ? T.warn : T.text, letterSpacing: '-0.03em' }}
               >
                 {money2(totalPaid)}
@@ -575,11 +575,11 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               </span>
             </div>
             <div className="flex flex-col gap-2 px-5 py-5 sm:px-7">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
                 Total earned
               </p>
               <span
-                className="text-[32px] font-bold tabular-nums leading-none sm:text-[38px]"
+                className="text-[32px] font-semibold tabular-nums leading-none sm:text-[38px]"
                 style={{ fontFamily: T.display, color: earned >= 0 ? T.acc : T.bad, letterSpacing: '-0.03em' }}
               >
                 {money(earned)}
@@ -715,7 +715,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                   {!isClosed && (
                     <div className="flex flex-wrap items-start gap-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                       <div className="flex min-w-[120px] flex-col gap-1">
-                        <span className="text-[10px] font-bold uppercase" style={{ fontFamily: T.sans, color: T.text4, letterSpacing: '0.13em' }}>
+                        <span className="text-[10px] font-semibold uppercase" style={{ fontFamily: T.sans, color: T.text4, letterSpacing: '0.13em' }}>
                           Balance after
                         </span>
                         <span className="text-[16px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text }}>
@@ -723,7 +723,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                         </span>
                       </div>
                       <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-                        <span className="text-[10px] font-bold uppercase" style={{ fontFamily: T.sans, color: T.text4, letterSpacing: '0.13em' }}>
+                        <span className="text-[10px] font-semibold uppercase" style={{ fontFamily: T.sans, color: T.text4, letterSpacing: '0.13em' }}>
                           {hasAmount && !overLimit ? `Share of available · ${Math.round((rawAmount / (openProfit || 1)) * 100)}%` : 'Share of available'}
                         </span>
                         <span className="block h-1.5 overflow-hidden rounded-full" style={{ background: T.sunken }}>
@@ -772,7 +772,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                 <div className="relative z-10">
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div className="flex flex-col gap-1">
-                      <span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
                         Balance curve
                       </span>
                       <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
@@ -808,21 +808,21 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                     >
                       <span className="flex items-baseline gap-1.5 text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
                         Peak
-                        <b className="text-[12.5px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2, fontWeight: 700 }}>
+                        <b className="text-[12.5px] font-semibold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
                           {money(chartSummary.peak)}
                         </b>
                       </span>
                       <span className="h-3 w-px" style={{ background: T.line }} />
                       <span className="flex items-baseline gap-1.5 text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
                         Low
-                        <b className="text-[12.5px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2, fontWeight: 700 }}>
+                        <b className="text-[12.5px] font-semibold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
                           {money(chartSummary.low)}
                         </b>
                       </span>
                       <span className="h-3 w-px" style={{ background: T.line }} />
                       <span className="flex items-baseline gap-1.5 text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
                         Span
-                        <b className="text-[12.5px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2, fontWeight: 700 }}>
+                        <b className="text-[12.5px] font-semibold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
                           {chartSummary.days}d
                         </b>
                       </span>
@@ -874,7 +874,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
 
             {/* ─────────── History ─────────── */}
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3 pb-2.5" style={{ borderBottom: `1px solid ${T.line}` }}>
-              <h3 className="flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              <h3 className="flex items-center gap-2 text-[11.5px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
                 <Trophy size={12.5} strokeWidth={2.3} style={{ color: T.warn }} /> Account history
                 {!loading && <span style={{ color: T.text4, opacity: 0.7 }}>· {events.length}</span>}
               </h3>
@@ -932,7 +932,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
 
                         <div className="relative z-10 min-w-0 flex-1">
                           <div className="flex items-baseline gap-2">
-                            <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
+                            <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
                               {KINDS_EN[e.kind]?.label || e.kind}
                             </span>
                             {e.kind !== 'start' && Number(e.amount) > 0 && (

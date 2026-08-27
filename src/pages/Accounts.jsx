@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Building2, Wallet, Plus, Trash2, X, Activity,
-  Loader2, Pencil, Trophy, ArrowDownToLine, TrendingUp, ArrowRight, Archive, Lock,
+  Loader2, Pencil, Trophy, ArrowDownToLine, TrendingUp, TrendingDown, ArrowRight, Archive, Lock,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -505,9 +505,17 @@ return (
                 const bal = Number(acc.balance) || 0;
                 const open = bal - size;
                 const paid = totals.byAcc[acc.id] || 0;
-                /* Прогрес до типової цілі пропа — 10% від розміру рахунку */
-                const goal = size * 0.1;
-                const pct = goal > 0 ? Math.max(0, Math.min(100, (open / goal) * 100)) : 0;
+                /* Прогрес до типової цілі пропа — 10% від розміру
+                   рахунку, рахується сама, нічого не вводиться. */
+                const goalPct = 10;
+                const goal = size * (goalPct / 100);
+                const rawPct = goal > 0 ? (open / goal) * 100 : 0;
+                const pct = Math.max(0, Math.min(100, rawPct));
+                /* Колір смужки міняється по дорозі до цілі: щойно
+                   почав — червоний, на півдорозі — жовтий, ближче до
+                   кінця (80%+) — зелений. */
+                const goalHue = rawPct >= 80 ? T.okRgb : rawPct >= 33 ? T.warnRgb : T.badRgb;
+                const goalColor = rawPct >= 80 ? T.ok : rawPct >= 33 ? T.warn : T.bad;
                 const isClosed = acc.status === 'Closed';
                 const hue = isClosed ? '242,244,243' : open >= 0 ? T.okRgb : T.badRgb;
 
@@ -550,7 +558,7 @@ return (
                             </h3>
                             <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold" style={{ fontFamily: T.sans, color: isClosed ? T.text4 : T.ok }}>
                               <span className="h-1.5 w-1.5 rounded-full" style={{ background: isClosed ? T.text4 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
-                              {isClosed ? 'closed' : `account ${formatBalance(size)}`}
+                              {isClosed ? 'Closed' : 'Active'}
                             </div>
                           </div>
                         </div>
@@ -576,38 +584,51 @@ return (
                         </div>
                       </div>
 
-                      <div className="relative z-10">
-                        <p className="text-[12px] font-semibold uppercase tracking-[0.09em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                          Current balance
-                        </p>
+                      <div
+                        className="relative z-10 overflow-hidden rounded-2xl px-4 py-3.5"
+                        style={{
+                          background: 'rgba(255,255,255,0.02)',
+                          border: `1px solid ${T.line}`,
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.11em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                            Current balance
+                          </p>
+                          {open !== 0 && (
+                            <span
+                              className="flex items-center gap-1 text-[12px] font-bold tabular-nums"
+                              style={{ fontFamily: T.mono, color: open >= 0 ? T.ok : T.bad }}
+                            >
+                              {open >= 0 ? <TrendingUp size={12} strokeWidth={2.8} /> : <TrendingDown size={12} strokeWidth={2.8} />}
+                              {open >= 0 ? '+' : '−'}{Math.abs(size) > 0 ? Math.round((Math.abs(open) / size) * 1000) / 10 : 0}%
+                            </span>
+                          )}
+                        </div>
                         <div className="mt-1 flex flex-wrap items-baseline gap-2.5">
-                          <h2 className="text-[32px] font-bold tabular-nums" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.035em' }}>
+                          <h2 className="text-[32px] font-bold tabular-nums" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}>
                             {money2(bal)}
                           </h2>
                           {open !== 0 && (
-                            <span
-                              className="rounded-lg px-2 py-0.5 text-[12.5px] font-bold tabular-nums"
-                              style={{
-                                fontFamily: T.mono,
-                                background: `rgba(${hue},0.10)`,
-                                border: `1px solid rgba(${hue},0.24)`,
-                                color: open >= 0 ? T.ok : T.bad,
-                              }}
-                            >
+                            <span className="text-[13px] font-semibold tabular-nums" style={{ fontFamily: T.mono, color: open >= 0 ? T.ok : T.bad }}>
                               {open >= 0 ? '+' : '−'}{money(Math.abs(open))}
                             </span>
                           )}
                         </div>
                       </div>
 
-                      {/* Прогрес до виплати замість вигаданих 75% */}
+                      {/* Прогрес до типової цілі пропа — 10% від
+                          розміру рахунку, рахується сама. Колір
+                          показує, наскільки близько: щойно почав —
+                          червоний, на півдорозі — жовтий, 80%+ —
+                          зелений. */}
                       <div className="relative z-10 mt-auto">
                         <div className="mb-2 flex items-center justify-between gap-3 text-[12px] font-semibold" style={{ fontFamily: T.sans }}>
                           <span className="uppercase tracking-[0.09em]" style={{ color: T.text4 }}>
-                            To 10% goal · {money(goal)}
+                            To {goalPct}% goal · {money(goal)}
                           </span>
-                          <span className="uppercase tracking-[0.05em]" style={{ color: pct >= 100 ? T.ok : T.text3 }}>
-                            {pct >= 100 ? 'goal hit' : `${Math.round(pct)}%`}
+                          <span className="uppercase tracking-[0.05em]" style={{ color: goalColor }}>
+                            {Math.round(pct)}%
                           </span>
                         </div>
                         <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: T.sunken }}>
@@ -616,7 +637,7 @@ return (
                             initial={{ width: 0 }}
                             animate={{ width: `${pct}%` }}
                             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                            style={{ background: pct >= 100 ? T.ok : T.acc }}
+                            style={{ background: `rgb(${goalHue})` }}
                           />
                         </div>
 
