@@ -809,19 +809,19 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                       {
                         label: 'Win rate',
                         value: stats.total ? `${stats.winrate}%` : '—',
-                        color: stats.total ? T.ok : T.text3,
+                        color: stats.total ? T.ok : T.text2,
                         hint: stats.total ? `${stats.wins} of ${stats.total} closed green` : 'nothing in journal yet',
                       },
                       {
                         label: 'Net R',
                         value: stats.total ? `${stats.netR > 0 ? '+' : ''}${stats.netR}R` : '—',
-                        color: stats.total ? T.acc : T.text3,
+                        color: stats.total ? T.acc : T.text2,
                         hint: 'risk-adjusted result',
                       },
                       {
                         label: 'Drawdown',
                         value: `${drawdownPct.toFixed(1)}%`,
-                        color: drawdownPct > 0 ? T.bad : T.text3,
+                        color: drawdownPct > 0 ? T.bad : T.text2,
                         hint: 'from peak balance',
                       },
                     ].map((t) => (
@@ -832,7 +832,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                       >
                         <span className="flex items-center gap-2">
                           <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: t.color }} />
-                          <span className="text-[10.5px] font-semibold uppercase tracking-[0.15em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.15em]" style={{ fontFamily: T.sans, color: T.text2 }}>
                             {t.label}
                           </span>
                         </span>
@@ -840,7 +840,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                           <span className="text-[22px] font-semibold leading-none tabular-nums" style={{ fontFamily: T.mono, color: t.color, letterSpacing: '-0.02em' }}>
                             {t.value}
                           </span>
-                          <span className="truncate text-right text-[11px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                          <span className="truncate text-right text-[11.5px]" style={{ fontFamily: T.sans, color: T.text2 }}>
                             {t.hint}
                           </span>
                         </span>
