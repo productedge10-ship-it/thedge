@@ -98,8 +98,11 @@ async function grab(url) {
   return raw;
 }
 
-export async function fetchWeek(week) {
-  const cached = readCache(week);
+/* force — для кнопки оновлення. Без неї кеш живе пів години, і в
+   найважливішому випадку («наступний тиждень FF ще не виклав») людина
+   тиснула б оновлення марно: відповідь приходила б зі сховища. */
+export async function fetchWeek(week, force = false) {
+  const cached = force ? null : readCache(week);
   if (cached) return cached.map((r, i) => ({ ...toApp(r, i) }));
 
   let raw = null;
@@ -118,20 +121,41 @@ export async function fetchWeek(week) {
   return raw.map(toApp);
 }
 
-/* Опис події з FF — через ту саму функцію. Не обовʼязковий: якщо
-   не дістався, лишається власний словник нижче. */
+/* ---------- опис показника ----------
+
+   Тягнеться з зовнішнього джерела через ту саму функцію: назву події
+   зводять до економічного поняття і беруть перший абзац статті про
+   нього (Вікіпедія, для доларових — ще й FRED). Повертається разом із
+   джерелом і посиланням, бо чужий текст без підпису — погана манера.
+
+   Кешуємо в памʼяті вкладки: описи не змінюються, а розгортати той
+   самий рядок двічі за сесію — звичайна справа. */
+const descCache = new Map();
+
 export async function fetchDescription(title, ccy) {
+  const ck = `${ccy}|${title}`;
+  if (descCache.has(ck)) return descCache.get(ck);
+
+  let out = null;
   try {
     const res = await fetch(`${FN}?desc=${encodeURIComponent(title)}&ccy=${encodeURIComponent(ccy || '')}`);
-    if (!res.ok) return null;
-    const j = await res.json();
-    return j?.text || null;
+    if (res.ok) {
+      const j = await res.json();
+      out = j?.text ? { text: j.text, source: j.source || '', url: j.url || '', title: j.title || '' } : null;
+    }
   } catch {
-    return null;
+    out = null;
   }
+
+  descCache.set(ck, out);
+  return out;
 }
 
-/* ---------- словник ----------
+/* ---------- «що це для трейдера» ----------
+
+   Це НЕ заміна опису й не його дублікат. Опис вище пояснює, що таке
+   показник; цей текст відповідає на інше питання — що з цією цифрою
+   робити в терміналі. Енциклопедія такого не пише і не має писати.
 
    Ключі — фрагменти назви. Порядок має значення: довші й точніші
    зверху, бо перемагає перший збіг. «Core CPI» має спрацювати раніше
@@ -186,16 +210,15 @@ export function describe(title) {
 }
 
 /* ---------- сповіщення ----------
-   Поки що зберігаємо тільки намір: подія і за скільки хвилин
-   попередити. Доставку зробить бот, коли зʼявиться — але правила
-   мають накопичуватись уже зараз, інакше вмикати бота буде нічому. */
-export const LEADS = [
-  { id: 5, label: 'за 5 хв' },
-  { id: 15, label: 'за 15 хв' },
-  { id: 30, label: 'за 30 хв' },
-  { id: 60, label: 'за годину' },
-];
 
+   Зберігаємо намір: за якими подіями стежимо. Показує їх поки що сам
+   браузер за 10 хвилин до початку (див. lib/newsAlerts.js) — це
+   працює, доки сайт відкритий хоча б у фоновій вкладці.
+
+   Поле lead лишається на майбутнє: коли зʼявиться бот, у кожної
+   події зможе бути свій запас часу. Зараз усі десять хвилин, тому
+   вибір інтервалу в інтерфейсі не показуємо — не варто питати про
+   те, на що поки не можеш вплинути. */
 export const ALERTS_KEY = 'news_alerts';
 
 export function normalizeAlerts(v) {
@@ -206,8 +229,9 @@ export function normalizeAlerts(v) {
       id: a.id,
       key: typeof a.key === 'string' ? a.key : '',
       title: typeof a.title === 'string' ? a.title : '',
+      ccy: typeof a.ccy === 'string' ? a.ccy : '',
       at: typeof a.at === 'string' ? a.at : '',
-      lead: LEADS.some((l) => l.id === a.lead) ? a.lead : 15,
+      lead: Number.isFinite(a.lead) ? a.lead : 10,
     }))
     .slice(0, 200);
 }
