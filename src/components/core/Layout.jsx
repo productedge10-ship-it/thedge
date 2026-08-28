@@ -13,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import PlanBackdrop from '../trading/PlanBackdrop';
 import OnboardingModal from '../modals/OnboardingModal';
+import VerifyEmailModal from '../modals/VerifyEmailModal';
 import SettingsModal from '../modals/SettingsModal';
 import Tour from './Tour';
 import CatChat from './CatChat';
@@ -1119,6 +1120,11 @@ export default function Layout() {
           сторінці: людина може зайти одразу за посиланням у журнал, і
           питання мають зустріти її будь-де. */}
       <OnboardingModal />
+      {/* Нагадування підтвердити пошту. Теж живе тут, а не на сторінці
+          входу: з вимкненим «Confirm email» реєстрація одразу видає
+          сесію, і людина потрапляє в застосунок, не побачивши жодного
+          екрана авторизації після кнопки «Зареєструватись». */}
+      <VerifyEmailModal />
       <SettingsModal />
       <Tour />
       <CatChat />

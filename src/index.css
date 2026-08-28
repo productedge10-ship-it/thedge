@@ -246,3 +246,57 @@ body {
   --edge-mono-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
+
+/* ------------------------------------------------------------------
+   Повзунок у налаштуваннях.
+
+   Рідний accent-color фарбує лише заповнену частину й лишає доріжку
+   системною — на темному фоні вона майже не видно. Тут доріжка й
+   бігунок малюються самі, тому вигляд однаковий у всіх браузерах.
+   Заповнення йде через --p: єдине число, яке задає компонент.
+------------------------------------------------------------------ */
+.edge-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 4px;
+}
+.edge-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 99px;
+  background: linear-gradient(
+    90deg,
+    var(--edge-acc, #8b7bff) 0%,
+    var(--edge-acc, #8b7bff) var(--p, 40%),
+    var(--edge-line-hi, #33333a) var(--p, 40%),
+    var(--edge-line-hi, #33333a) 100%
+  );
+}
+.edge-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 99px;
+  background: var(--edge-text, #fafafa);
+  border: 3px solid var(--edge-acc, #8b7bff);
+  cursor: pointer;
+}
+.edge-range::-moz-range-track {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--edge-line-hi, #33333a);
+}
+.edge-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--edge-acc, #8b7bff);
+}
+.edge-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  background: var(--edge-text, #fafafa);
+  border: 3px solid var(--edge-acc, #8b7bff);
+  cursor: pointer;
+}

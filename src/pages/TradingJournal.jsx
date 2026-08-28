@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
+import useEmailGate from "../hooks/useEmailGate";
 import { getTradeProfit } from "../utils/journalUtils";
 import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
 
@@ -547,6 +548,11 @@ function ChartTooltip({ active, payload }) {
 export default function TradingJournal() {
   useEdgeFonts();
 
+  /* Створювати угоди можна лише з підтвердженою поштою. Кнопка при
+     цьому лишається клікабельною — guard покаже пояснення замість
+     мовчазної відмови. */
+  const { guard } = useEmailGate();
+
   const [trades, setTrades] = useState([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [page, setPage] = useState(1);
@@ -861,7 +867,7 @@ export default function TradingJournal() {
             <PeriodSelect value={period} onChange={setPeriod} />
 
             <Magnetic
-              onClick={() => setIsTradeModalOpen(true)}
+              onClick={guard(() => setIsTradeModalOpen(true))}
               className="group ml-1 inline-flex h-[54px] shrink-0 items-center justify-center rounded-2xl px-6 text-[14.5px] font-bold transition-all duration-200 hover:-translate-y-[2px]"
               style={{
                 background: "#00C896",

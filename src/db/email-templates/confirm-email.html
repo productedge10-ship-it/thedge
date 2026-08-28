@@ -1,0 +1,172 @@
+<!--
+  ==================================================================
+  «Magic link or OTP» — вставляти у Supabase → Authentication →
+  Emails → Templates → Magic link or OTP → Body.
+
+  Верстка навмисно «зі старих часів»: таблиці, атрибути width, усі
+  стилі інлайном. Це не недбалість — поштові клієнти живуть за своїми
+  правилами:
+
+    • Outlook рендерить листи движком Word — flexbox і grid там немає;
+    • <svg> Gmail вирізає повністю, тому котик — PNG за посиланням;
+    • data: URI в картинках Gmail блокує, тому файл лежить у public/
+      і віддається доменом сайту;
+    • padding на <a> Outlook ігнорує, тому кнопка зроблена таблицею,
+      а відступи висять на самому посиланні.
+
+  Ховер — прогресивне покращення. <style> у <head> розуміє вебовий
+  Gmail і більшість десктопних клієнтів; мобільні застосунки його
+  зріжуть, і кнопка просто лишиться статичною. Тому базовий колір
+  заданий інлайном, а :hover лише доповнює.
+
+  ⚠️ Адреса котика має бути абсолютною й публічно доступною: поштовий
+  клієнт тягне картинку зі своїх серверів, і localhost для нього не
+  існує. Змінюється домен сайту — міняється й цей рядок.
+
+  ⚠️ І головне: посилання веде на /api/verify-email, а НЕ на
+  ConfirmationURL, як у решті шаблонів. Дефолтний ConfirmationURL
+  віддав би токен самому Supabase — той перевірив би його й просто
+  повернув людину в застосунок, а прапорець email_verified лишився б
+  незмінним: сервер, який єдиний має право його ставити, узагалі не
+  дізнався б про підтвердження.
+
+  Тому токен передається нам сирим (TokenHash), і перевіряє його
+  api/verify-email.js — там же й проставляє прапорець службовим ключем.
+  ==================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="supported-color-schemes" content="dark light">
+<title>Confirm your email — The Edge</title>
+<style>
+  .edge-btn a {
+    transition: background-color .2s ease, box-shadow .2s ease;
+  }
+  .edge-btn:hover {
+    background-color: #a08ff0 !important;
+    box-shadow: 0 8px 24px -8px rgba(143,124,224,.65);
+  }
+  .edge-fallback a:hover {
+    color: #c4b5fd !important;
+    text-decoration: underline !important;
+  }
+</style>
+<!--[if mso]>
+<style>body, table, td, a { font-family: Arial, Helvetica, sans-serif !important; }</style>
+<![endif]-->
+</head>
+<body style="margin:0; padding:0; background-color:#15151a; -webkit-text-size-adjust:100%;">
+<span style="display:none; font-size:1px; color:#15151a; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">A link to confirm your email for The Edge. Valid for one hour.</span>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#15151a;">
+<tr>
+<td align="center" style="padding:40px 16px;">
+
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px; max-width:600px;">
+
+    <!-- Wordmark -->
+    <tr>
+      <td align="center" style="padding:0 0 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td width="34" height="34" align="center" valign="middle" style="width:34px; height:34px; background-color:#232329; border:1px solid #35353f; border-radius:9px;">
+              <img src="https://imaginative-babka-bdc19b.netlify.app/cat.png" width="24" height="24" alt="" style="display:block; border:0;" />
+            </td>
+            <td width="12" style="width:12px;">&nbsp;</td>
+            <td align="left" valign="middle" style="font-family:'Courier New', Courier, monospace; font-size:15px; letter-spacing:3px; color:#eeecf4; font-weight:bold; mso-line-height-rule:exactly; line-height:20px;">THE&nbsp;EDGE</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Card -->
+    <tr>
+      <td style="background-color:#1c1c23; border:1px solid #2a2a33; border-radius:18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;">
+
+          <tr>
+            <td height="3" style="height:3px; line-height:3px; font-size:0; background-color:#8f7ce0; border-radius:18px 18px 0 0;">&nbsp;</td>
+          </tr>
+
+          <tr>
+            <td style="padding:44px 48px 0 48px;" align="left">
+              <div style="font-family:'Courier New', Courier, monospace; font-size:11px; letter-spacing:2.5px; color:#a693f0; text-transform:uppercase; mso-line-height-rule:exactly; line-height:14px;">WELCOME ABOARD</div>
+              <div style="height:14px; line-height:14px; font-size:0;">&nbsp;</div>
+              <h1 style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:32px; font-weight:bold; color:#f2f0f8; mso-line-height-rule:exactly; line-height:38px; letter-spacing:-0.5px;">Confirm your email</h1>
+              <div style="height:16px; line-height:16px; font-size:0;">&nbsp;</div>
+              <p style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:16px; color:#c8c6d4; mso-line-height-rule:exactly; line-height:26px;">One last step to unlock everything in The&nbsp;Edge — confirm this address is yours.</p>
+            </td>
+          </tr>
+
+          <!-- Button -->
+          <tr>
+            <td style="padding:32px 48px 0 48px;" align="center">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+                <tr>
+                  <td class="edge-btn" align="center" bgcolor="#8f7ce0" style="background-color:#8f7ce0; border-radius:12px;">
+                    <a href="{{ .SiteURL }}/api/verify-email?token_hash={{ .TokenHash }}&amp;type=magiclink" style="display:block; padding:16px 34px; font-family:Arial, Helvetica, sans-serif; font-size:16px; font-weight:bold; color:#15151a; text-decoration:none; mso-line-height-rule:exactly; line-height:20px;">Confirm email</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Expiry strip -->
+          <tr>
+            <td style="padding:28px 48px 0 48px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%; background-color:#212128; border:1px solid #2e2e37; border-radius:12px;">
+                <tr>
+                  <td width="4" style="width:4px; background-color:#5cc79f; border-radius:12px 0 0 12px; font-size:0; line-height:0;">&nbsp;</td>
+                  <td style="padding:14px 18px; font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#c2c0ce; mso-line-height-rule:exactly; line-height:22px;">This link is valid for one hour and can be used only once.</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Fallback link -->
+          <tr>
+            <td style="padding:28px 48px 0 48px;" align="left">
+              <div style="font-family:'Courier New', Courier, monospace; font-size:11px; letter-spacing:2px; color:#9d9baa; text-transform:uppercase; mso-line-height-rule:exactly; line-height:14px;">BUTTON NOT WORKING?</div>
+              <div style="height:10px; line-height:10px; font-size:0;">&nbsp;</div>
+              <div class="edge-fallback" style="font-family:'Courier New', Courier, monospace; font-size:12px; color:#b6a9f5; mso-line-height-rule:exactly; line-height:20px; word-break:break-all;"><a href="{{ .SiteURL }}/api/verify-email?token_hash={{ .TokenHash }}&amp;type=magiclink" style="color:#b6a9f5; text-decoration:none; word-break:break-all;">{{ .SiteURL }}/api/verify-email?token_hash={{ .TokenHash }}&amp;type=magiclink</a></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:32px 48px 0 48px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;">
+                <tr><td height="1" style="height:1px; line-height:1px; font-size:0; background-color:#2a2a33;">&nbsp;</td></tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 48px 40px 48px;" align="left">
+              <p style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:14px; color:#aeacba; mso-line-height-rule:exactly; line-height:22px;">Didn't sign up for The Edge? Just ignore this email — nothing will happen.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td align="center" style="padding:24px 24px 0 24px;">
+        <div style="font-family:'Courier New', Courier, monospace; font-size:11px; letter-spacing:2px; color:#8f8d9c; mso-line-height-rule:exactly; line-height:18px;">THE EDGE · TRADING JOURNAL · V0.6 BETA</div>
+        <div style="height:8px; line-height:8px; font-size:0;">&nbsp;</div>
+        <div style="font-family:Arial, Helvetica, sans-serif; font-size:12px; color:#8a8895; mso-line-height-rule:exactly; line-height:18px;">This message was sent automatically after a sign-up request.</div>
+      </td>
+    </tr>
+
+  </table>
+
+</td>
+</tr>
+</table>
+</body>
+</html>

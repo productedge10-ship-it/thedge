@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
 /* ==================================================================
@@ -22,13 +22,19 @@ function apiRoutes() {
   return {
     name: 'edge-api-dev',
     configureServer(server) {
-      server.middlewares.use('/api/news', async (req, res) => {
-        try {
-          /* ssrLoadModule, а не import: так правки в api/news.js
-             підхоплюються без перезапуску сервера. */
-          const mod = await server.ssrLoadModule('/api/news.js')
+      /* Один middleware на всю теку api/, а не окремий роут на файл:
+         /api/news → api/news.js, /api/verify-email → api/verify-email.js.
+         Connect зрізає префікс '/api', тож у req.url лишається '/news?…'. */
+      server.middlewares.use('/api', async (req, res, next) => {
+        const url = new URL(req.url || '/', 'http://localhost')
+        const name = url.pathname.replace(/^\/+/, '').split('/')[0]
+        if (!name) return next()
 
-          const url = new URL(req.url || '/', 'http://localhost')
+        try {
+          /* ssrLoadModule, а не import: так правки в обробниках
+             підхоплюються без перезапуску сервера. */
+          const mod = await server.ssrLoadModule(`/api/${name}.js`)
+
           req.query = Object.fromEntries(url.searchParams)
 
           res.status = (code) => { res.statusCode = code; return res }
@@ -38,9 +44,22 @@ function apiRoutes() {
             return res
           }
           res.send = (body) => { res.end(body); return res }
+          /* Потрібен для підтвердження пошти: юзер клікає лінк у листі,
+             обробник перевіряє токен і відправляє його назад у застосунок. */
+          res.redirect = (code, to) => {
+            const [status, target] = typeof code === 'number' ? [code, to] : [302, code]
+            res.statusCode = status
+            res.setHeader('Location', target)
+            res.end()
+            return res
+          }
 
           await mod.default(req, res)
         } catch (e) {
+          /* Такого файлу немає — це не збій API, а звичайний 404:
+             віддаємо запит далі, хай ним займається Vite. */
+          if (/Failed to load url|Cannot find module/i.test(String(e?.message))) return next()
+
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ error: String(e?.message || e) }))
@@ -50,6 +69,18 @@ function apiRoutes() {
   }
 }
 
-export default defineConfig({
-  plugins: [react(), apiRoutes()],
+export default defineConfig(({ mode }) => {
+  /* Vite сам кладе у код лише змінні з префіксом VITE_, і то в
+     import.meta.env — а обробники в api/ читають process.env, бо на
+     хостингу живуть саме там. Локально через це всі ключі виявлялись
+     undefined, і функція мовчки падала.
+
+     Третій аргумент '' — порожній префікс: беремо всі змінні, а не
+     тільки VITE_. Вони потрібні серверній частині, у браузер не
+     потрапляють. */
+  Object.assign(process.env, loadEnv(mode, process.cwd(), ''))
+
+  return {
+    plugins: [react(), apiRoutes()],
+  }
 })
