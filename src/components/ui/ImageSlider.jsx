@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Maximize2, X, ImageOff, ZoomIn, Search } from 'lucide-react';
 import { T, EASE, SPRING } from '../../lib/theme';
+import { tvImage } from '../../lib/imageStore';
 
 /* ==================================================================
    ImageSlider з лупою.
@@ -102,7 +103,9 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
   const lastPosRef = useRef(null);
   const fullRef = useRef(null);
 
-  const list = Array.isArray(images) ? images.filter(Boolean) : [];
+  /* Адреси з TradingView ведуть на HTML-сторінку, а не на файл —
+     переписуємо тут, щоб кожен виклик слайдера не робив цього сам. */
+  const list = (Array.isArray(images) ? images.filter(Boolean) : []).map(tvImage);
   const count = list.length;
 
   const go = useCallback(

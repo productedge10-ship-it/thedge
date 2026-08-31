@@ -135,7 +135,7 @@ function Shots({ images }) {
         {images.length === 1 ? 'Скрін' : `Скріни · ${images.length}`}
       </div>
       <div style={{ marginTop: 10 }}>
-        <ImageSlider images={images} containerClassName="h-[380px] w-full" />
+        <ImageSlider images={images} containerClassName="h-[520px] w-full" />
       </div>
     </div>
   );
@@ -155,7 +155,7 @@ function Blocks({ label, rows }) {
             key={b.id ?? i}
             className="flex"
             style={{
-              gap: 14, padding: '14px 16px', borderRadius: 12,
+              gap: 14, padding: '16px 18px', borderRadius: 13,
               background: T.sunken, border: `1px solid ${T.line}`,
             }}
           >
@@ -171,12 +171,30 @@ function Blocks({ label, rows }) {
                 {b.tf}
               </span>
             )}
-            <p
-              className="min-w-0 whitespace-pre-wrap"
-              style={{ fontFamily: T.sans, fontSize: 15, lineHeight: '25px', color: T.text }}
-            >
-              {b.text}
-            </p>
+
+            <div className="min-w-0 flex-1">
+              {b.text && (
+                <p
+                  className="whitespace-pre-wrap"
+                  style={{ fontFamily: T.sans, fontSize: 15, lineHeight: '25px', color: T.text }}
+                >
+                  {b.text}
+                </p>
+              )}
+
+              {/* Графік із TradingView. Той самий переглядач, що всюди:
+                  стрілки, лупа й фулскрін без виходу зі сторінки. */}
+              {b.image && (
+                <div
+                  style={{
+                    marginTop: b.text ? 12 : 0,
+                    filter: b.dimmed ? 'brightness(0.84) contrast(1.05)' : 'none',
+                  }}
+                >
+                  <ImageSlider images={[b.image]} containerClassName="h-[440px] w-full" />
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -262,12 +280,14 @@ function MistakeBlock({ type, text, images }) {
     <div
       style={{
         marginTop: 20, padding: '16px 18px', borderRadius: 14,
-        background: `rgba(${T.warnRgb},0.05)`, border: `1px solid rgba(${T.warnRgb},0.22)`,
+        /* Червоний, а не жовтий: жовтим у нас позначено «увага, глянь»,
+           а помилка в угоді — це вже наслідок, який коштував грошей. */
+        background: `rgba(${T.badRgb},0.05)`, border: `1px solid rgba(${T.badRgb},0.20)`,
       }}
     >
       <div className="flex items-center" style={{ gap: 10 }}>
-        <AlertTriangle size={15} strokeWidth={2} style={{ color: T.warn, flex: 'none' }} />
-        <span style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.warn }}>
+        <AlertTriangle size={15} strokeWidth={2} style={{ color: T.bad, flex: 'none' }} />
+        <span style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.bad }}>
           {meta ? meta.label : 'Помилка в угоді'}
         </span>
       </div>
@@ -281,7 +301,7 @@ function MistakeBlock({ type, text, images }) {
       )}
       {images?.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <ImageSlider images={images} containerClassName="h-[300px] w-full" />
+          <ImageSlider images={images} containerClassName="h-[420px] w-full" />
         </div>
       )}
     </div>
@@ -338,10 +358,12 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
       { label: 'Вхід', value: hhmm(item.entryTime) },
       { label: 'У позиції', value: held },
       { label: 'За планом', value: <YesNo yes={item.followedPlan} /> },
-      /* Тут галочка була б двозначною: хрестик усюди читається як
-         «ні», а поспіх у нас навпаки — «так, був». Лишаємо словом. */
-      item.rushed ? { label: 'Поспіх', value: 'був', tone: T.warn } : null,
-    ].filter(Boolean);
+      /* Питаємо навпаки — «без поспіху?» — щоб значок читався так
+         само, як усюди: галочка добре, хрестик погано. З підписом
+         «Поспіх» хрестик означав би «поспіху не було», хоч насправді
+         він саме був. */
+      { label: 'Без поспіху', value: <YesNo yes={!item.rushed} /> },
+    ];
 
     texts = [
       { label: 'Нотатка', value: item.note },
@@ -411,7 +433,7 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
         transition={{ duration: 0.26, ease: EASE }}
         className="flex max-h-full w-full flex-col overflow-hidden"
         style={{
-          maxWidth: 760,
+          maxWidth: 1040,
           borderRadius: 20,
           background: T.surface,
           border: `1px solid ${T.line}`,
@@ -454,7 +476,7 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
         </div>
 
         <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto" style={{ padding: '8px 26px 24px' }}>
-          <div className="grid grid-cols-2 sm:grid-cols-3" style={{ columnGap: 28 }}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" style={{ columnGap: 28 }}>
             {facts.map((f) => <Fact key={f.label} {...f} />)}
           </div>
 

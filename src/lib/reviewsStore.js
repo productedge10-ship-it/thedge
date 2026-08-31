@@ -29,6 +29,20 @@ const numOrNull = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
+/* Блоки плану: лишаємо ті, де є хоч щось — текст або графік. */
+const blocksOf = (arr) => (Array.isArray(arr) ? arr : [])
+  .filter((b) => b && (b.text || b.image))
+  .map((b) => ({
+    id: b.id,
+    tf: b.tf || '',
+    text: b.text || '',
+    image: b.image || '',
+    /* Vision Guard: світлий графік приглушується, щоб не бив по очах
+       на темному тлі. Прапорець ставили при збереженні плану — тут
+       лише поважаємо його. */
+    dimmed: !!b.isDimmed,
+  }));
+
 const imagesOf = (arr, single) => {
   const list = Array.isArray(arr) ? arr.filter(Boolean) : [];
   if (list.length) return list;
@@ -134,9 +148,13 @@ const toPlan = (row) => {
     analysisMistake: d.analysisMistake ? (d.analysisMistakeText || 'Помилка в аналізі позначена, без опису.') : '',
 
     /* Розбір по таймфреймах — головний зміст плану. Це те, заради чого
-       план узагалі відкривають повторно. */
-    tda: Array.isArray(d.tdaBlocks) ? d.tdaBlocks.filter((b) => b?.text) : [],
-    review: Array.isArray(d.reviewBlocks) ? d.reviewBlocks.filter((b) => b?.text) : [],
+       план узагалі відкривають повторно.
+
+       Беремо блок і тоді, коли в ньому лише графік без підпису: у
+       плані це звична ситуація — картинка з TradingView сама по собі
+       і є думкою. Фільтр по самому тексту такі блоки мовчки викидав. */
+    tda: blocksOf(d.tdaBlocks),
+    review: blocksOf(d.reviewBlocks),
     updates: Array.isArray(d.updates) ? d.updates : [],
     quiz: d.quiz && typeof d.quiz === 'object' ? d.quiz : null,
     psy: {

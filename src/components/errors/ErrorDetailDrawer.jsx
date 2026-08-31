@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCat, hexA, reasonLabel, MAIN_REASONS } from './utils';
+import { tvImage } from '../../lib/imageStore';
 
 /* ==================================================================
    Перегляд помилки.
@@ -243,7 +244,7 @@ export default function ErrorDetailDrawer({ selected, numMap, onClose, onDelete,
                 {/^https?:\/\//i.test(selected.tvLink) ? (
                   <a href={selected.tvLink} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
                     <img
-                      src={selected.tvLink}
+                      src={tvImage(selected.tvLink)}
                       alt="Графік помилки"
                       style={{ width: '100%', borderRadius: 12, border: `1px solid ${C.line}`, display: 'block' }}
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}

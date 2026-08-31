@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
+import { tvImage } from '../lib/imageStore';
 import { useAuth } from '../context/AuthContext';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import PlanBackdrop from '../components/trading/PlanBackdrop';
@@ -98,7 +99,7 @@ function ChartBlock({ block, onZoom, eyebrow }) {
           className="mt-3 block w-full cursor-zoom-in transition-opacity duration-200 hover:opacity-92"
           style={{ background: T.sunken }}
         >
-          <img src={block.image} alt="" className="block h-auto w-full" />
+          <img src={tvImage(block.image)} alt="" className="block h-auto w-full" />
         </button>
       )}
 
@@ -422,7 +423,7 @@ export default function SharedPlan() {
             style={{ background: 'rgba(6,6,8,0.93)', backdropFilter: 'blur(10px)' }}
           >
             <motion.img
-              src={zoom}
+              src={tvImage(zoom)}
               alt=""
               initial={{ scale: 0.97, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

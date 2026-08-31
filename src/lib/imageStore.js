@@ -33,6 +33,31 @@ const QUALITY = 0.92;
 export const isHttpUrl = (s) => /^https?:\/\//i.test(String(s || '').trim());
 export const isDataUrl = (s) => /^data:image\//i.test(String(s || ''));
 
+/* ------------------------------------------------------------------
+   Посилання з TradingView → сам файл графіка.
+
+   Кнопка «Copy link to the chart image» дає адресу вигляду
+   https://www.tradingview.com/x/2gbm6jyC/ — і це НЕ картинка, а
+   HTML-сторінка з нею всередині. Колись TradingView віддавав по цій
+   адресі і те, і те залежно від запиту, тому <img src> працював.
+   Тепер приходить сторінка, і будь-який <img> із таким посиланням
+   лишається порожньою рамкою — саме тому графіки зникли одночасно й
+   у планах, і в аналізах, хоч у базі все на місці.
+
+   Сам файл лежить у снапшотах, а тека — перша літера коду в нижньому
+   регістрі. Переписуємо адресу на льоту, при показі: у базі лишається
+   те, що людина скопіювала, і старі записи чинити не треба.
+------------------------------------------------------------------ */
+const TV_SNAPSHOT = /^https?:\/\/(?:www\.)?tradingview\.com\/x\/([A-Za-z0-9]+)\/?/i;
+
+export const tvImage = (url) => {
+  const raw = String(url || '');
+  const m = raw.match(TV_SNAPSHOT);
+  if (!m) return raw;
+  const code = m[1];
+  return `https://s3.tradingview.com/snapshots/${code[0].toLowerCase()}/${code}.png`;
+};
+
 /* Картинка, що лежить у нашому Storage: її можна прибрати разом із
    нотаткою, на відміну від чужого посилання. */
 export const isStored = (s) => typeof s === 'string' && s.includes(`/${BUCKET}/`);
