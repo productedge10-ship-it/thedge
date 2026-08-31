@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { X, Check, Plus } from 'lucide-react';
+import { X, Check, Plus, AlertTriangle } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
 import ImageSlider from '../ui/ImageSlider';
@@ -77,15 +77,27 @@ function Fact({ label, value, tone }) {
     <div style={{ padding: '13px 0', borderTop: `1px solid ${T.line}` }}>
       <div
         className="uppercase"
-        style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: '1.6px', color: T.text3 }}
+        style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, letterSpacing: '1.3px', color: T.text3 }}
       >
         {label}
       </div>
       <div
-        style={{ fontFamily: T.sans, marginTop: 6, fontSize: 14.5, fontWeight: 500, color: tone || T.text }}
+        style={{ fontFamily: T.sans, marginTop: 7, fontSize: 16, fontWeight: 500, color: tone || T.text }}
       >
         {value}
       </div>
+    </div>
+  );
+}
+
+/* Підпис над блоком. Один на всі секції вікна. */
+function Cap({ children }) {
+  return (
+    <div
+      className="uppercase"
+      style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, letterSpacing: '1.3px', color: T.text3 }}
+    >
+      {children}
     </div>
   );
 }
@@ -95,15 +107,10 @@ function Text({ label, value }) {
   if (!value) return null;
   return (
     <div style={{ marginTop: 20 }}>
-      <div
-        className="uppercase"
-        style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: '1.6px', color: T.text3 }}
-      >
-        {label}
-      </div>
+      <Cap>{label}</Cap>
       <p
         className="whitespace-pre-wrap"
-        style={{ fontFamily: T.sans, marginTop: 10, fontSize: 14.5, lineHeight: '25px', color: T.text2 }}
+        style={{ fontFamily: T.sans, marginTop: 11, fontSize: 16, lineHeight: '28px', color: T.text }}
       >
         {value}
       </p>
@@ -123,13 +130,160 @@ function Shots({ images }) {
     <div style={{ marginTop: 20 }}>
       <div
         className="uppercase"
-        style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: '1.6px', color: T.text3 }}
+        style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, letterSpacing: '1.3px', color: T.text3 }}
       >
         {images.length === 1 ? 'Скрін' : `Скріни · ${images.length}`}
       </div>
       <div style={{ marginTop: 10 }}>
-        <ImageSlider images={images} containerClassName="h-[240px] w-full" />
+        <ImageSlider images={images} containerClassName="h-[380px] w-full" />
       </div>
+    </div>
+  );
+}
+
+/* Розбір по таймфреймах і післясесійні нотатки — списки {tf, text}.
+   Таймфрейм окремою міткою: у плані на пʼять блоків саме він відрізняє
+   один запис від іншого. */
+function Blocks({ label, rows }) {
+  if (!rows?.length) return null;
+  return (
+    <div style={{ marginTop: 20 }}>
+      <Cap>{label}</Cap>
+      <div className="flex flex-col" style={{ marginTop: 10, gap: 10 }}>
+        {rows.map((b, i) => (
+          <div
+            key={b.id ?? i}
+            className="flex"
+            style={{
+              gap: 14, padding: '14px 16px', borderRadius: 12,
+              background: T.sunken, border: `1px solid ${T.line}`,
+            }}
+          >
+            {b.tf && (
+              <span
+                className="shrink-0 uppercase"
+                style={{
+                  fontFamily: T.mono, fontSize: 11, fontWeight: 600, letterSpacing: '1px',
+                  padding: '3px 9px', borderRadius: 7, height: 'fit-content',
+                  background: `rgba(${T.accRgb},0.12)`, color: T.acc,
+                }}
+              >
+                {b.tf}
+              </span>
+            )}
+            <p
+              className="min-w-0 whitespace-pre-wrap"
+              style={{ fontFamily: T.sans, fontSize: 15, lineHeight: '25px', color: T.text }}
+            >
+              {b.text}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* Чек перед торгівлею: виспався, настрій, ризик, план. Значення
+   бувають null — питання просто не ставили, і показувати його як «ні»
+   було б наклепом. */
+const QUIZ = [
+  { key: 'sleep', label: 'Виспався' },
+  { key: 'mood', label: 'Настрій' },
+  { key: 'risk', label: 'Ризик за планом' },
+  { key: 'plan', label: 'План готовий' },
+];
+
+function Quiz({ quiz }) {
+  if (!quiz) return null;
+  const rows = QUIZ.filter((q) => quiz[q.key] != null);
+  if (!rows.length) return null;
+  return (
+    <div style={{ marginTop: 20 }}>
+      <Cap>Перед торгівлею</Cap>
+      <div className="flex flex-wrap" style={{ marginTop: 10, gap: 8 }}>
+        {rows.map((q) => {
+          const ok = !!quiz[q.key];
+          const c = ok ? T.ok : T.bad;
+          return (
+            <span
+              key={q.key}
+              className="flex items-center"
+              style={{
+                gap: 7, padding: '7px 13px', borderRadius: 10,
+                fontFamily: T.sans, fontSize: 14, fontWeight: 500,
+                background: `${c}1c`, border: `1px solid ${c}55`, color: c,
+              }}
+            >
+              {ok ? <Check size={13} strokeWidth={3} /> : <X size={13} strokeWidth={3} />}
+              {q.label}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* Чипи психології. Однакові для угоди, помилки й плану. */
+function Psy({ psy }) {
+  const flags = PSY.filter((f) => psy?.[f.key]);
+  if (!flags.length) return null;
+  return (
+    <div style={{ marginTop: 20 }}>
+      <Cap>Стан</Cap>
+      <div className="flex flex-wrap" style={{ marginTop: 10, gap: 8 }}>
+        {flags.map((f) => {
+          const c = f.good ? T.ok : T.warn;
+          return (
+            <span
+              key={f.key}
+              style={{
+                fontFamily: T.sans, padding: '7px 13px', borderRadius: 10,
+                fontSize: 14, fontWeight: 500,
+                background: `${c}1c`, border: `1px solid ${c}55`, color: c,
+              }}
+            >
+              {f.label}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* Помилка всередині угоди — окремою карткою з попереджувальним кантом,
+   щоб не загубилась між нотаткою і скрінами. */
+function MistakeBlock({ type, text, images }) {
+  if (!text && !type && !images?.length) return null;
+  const meta = MISTAKE_TYPES[type] || null;
+  return (
+    <div
+      style={{
+        marginTop: 20, padding: '16px 18px', borderRadius: 14,
+        background: `rgba(${T.warnRgb},0.05)`, border: `1px solid rgba(${T.warnRgb},0.22)`,
+      }}
+    >
+      <div className="flex items-center" style={{ gap: 10 }}>
+        <AlertTriangle size={15} strokeWidth={2} style={{ color: T.warn, flex: 'none' }} />
+        <span style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.warn }}>
+          {meta ? meta.label : 'Помилка в угоді'}
+        </span>
+      </div>
+      {text && (
+        <p
+          className="whitespace-pre-wrap"
+          style={{ fontFamily: T.sans, marginTop: 10, fontSize: 15, lineHeight: '25px', color: T.text2 }}
+        >
+          {text}
+        </p>
+      )}
+      {images?.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <ImageSlider images={images} containerClassName="h-[300px] w-full" />
+        </div>
+      )}
     </div>
   );
 }
@@ -149,7 +303,6 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
   let facts = [];
   let texts = [];
   let accent = T.acc;
-  let flags = [];
 
   if (kind === 'trades') {
     const r = rOf(item);
@@ -190,25 +343,31 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
       item.rushed ? { label: 'Поспіх', value: 'був', tone: T.warn } : null,
     ].filter(Boolean);
 
-    flags = PSY.filter((f) => item.psy?.[f.key]);
-    texts = [{ label: 'Нотатка', value: item.note }];
+    texts = [
+      { label: 'Нотатка', value: item.note },
+      { label: 'Нотатки про стан', value: item.psyNotes },
+    ];
   } else if (kind === 'plans') {
     const done = item.status === 'Розібрано' || item.status === 'Відпрацьовано';
     accent = done ? T.ok : T.warn;
     facts = [
       { label: 'Дата', value: fmtDate(item.date) },
+      { label: 'День', value: item.title },
       { label: 'Настрій', value: item.narrative },
       { label: 'Насправді', value: item.actualNarrative },
       { label: 'Категорія', value: item.category },
       { label: 'Стан', value: item.status, tone: accent },
-      { label: 'Оцінка', value: item.rating ? `${item.rating} / 5` : '' },
-    ];
+      { label: 'Оцінка сесії', value: item.rating ? `${item.rating} / 5` : '' },
+      item.updates?.length ? { label: 'Правок', value: String(item.updates.length) } : null,
+      item.isPublic ? { label: 'Доступ', value: 'за посиланням', tone: T.acc } : null,
+    ].filter(Boolean);
     texts = [
       { label: 'План', value: item.text },
       /* Висновки показуємо окремо й лише якщо це не той самий текст:
          у старих записах план і висновки писали в одне поле. */
       { label: 'Висновки', value: item.conclusions === item.text ? '' : item.conclusions },
       { label: 'Помилка аналізу', value: item.analysisMistake },
+      { label: 'Нотатки про стан', value: item.psyNotes },
     ];
   } else {
     const meta = MISTAKE_TYPES[item.type] || { label: item.type };
@@ -231,6 +390,7 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
          помилки часто лишають незаповненим. */
       { label: 'Що сталось', value: item.description || meta.hint || '' },
       { label: 'Нотатка до угоди', value: item.note },
+      { label: 'Нотатки про стан', value: item.psyNotes },
     ];
   }
 
@@ -251,8 +411,8 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
         transition={{ duration: 0.26, ease: EASE }}
         className="flex max-h-full w-full flex-col overflow-hidden"
         style={{
-          maxWidth: 480,
-          borderRadius: 18,
+          maxWidth: 760,
+          borderRadius: 20,
           background: T.surface,
           border: `1px solid ${T.line}`,
           boxShadow: '0 40px 100px -34px rgba(0,0,0,0.92)',
@@ -261,7 +421,7 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
         {/* шапка */}
         <div
           className="flex shrink-0 items-start justify-between"
-          style={{ gap: 16, padding: '20px 20px 18px', borderBottom: `1px solid ${T.line}`, background: T.surfaceHi }}
+          style={{ gap: 16, padding: '24px 26px 22px', borderBottom: `1px solid ${T.line}`, background: T.surfaceHi }}
         >
           <div className="min-w-0">
             <div
@@ -273,7 +433,7 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
             <div
               className="truncate"
               style={{
-                fontFamily: T.display, marginTop: 7, fontSize: 20,
+                fontFamily: T.display, marginTop: 8, fontSize: 23,
                 fontWeight: 600, letterSpacing: '-0.3px', color: T.text,
               }}
             >
@@ -293,51 +453,33 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
           </button>
         </div>
 
-        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto" style={{ padding: '6px 20px 20px' }}>
-          <div className="grid grid-cols-2" style={{ columnGap: 20 }}>
+        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto" style={{ padding: '8px 26px 24px' }}>
+          <div className="grid grid-cols-2 sm:grid-cols-3" style={{ columnGap: 28 }}>
             {facts.map((f) => <Fact key={f.label} {...f} />)}
           </div>
 
-          {flags.length > 0 && (
-            <div style={{ marginTop: 20 }}>
-              <div
-                className="uppercase"
-                style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: '1.6px', color: T.text3 }}
-              >
-                Стан
-              </div>
-              <div className="flex flex-wrap" style={{ marginTop: 10, gap: 8 }}>
-                {flags.map((f) => {
-                  const c = f.good ? T.ok : T.warn;
-                  return (
-                    <span
-                      key={f.key}
-                      style={{
-                        fontFamily: T.sans, padding: '6px 12px', borderRadius: 9,
-                        fontSize: 13, fontWeight: 500,
-                        background: `${c}1c`, border: `1px solid ${c}55`, color: c,
-                      }}
-                    >
-                      {f.label}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          <Quiz quiz={item.quiz} />
+          <Psy psy={item.psy} />
 
           {texts.map((t) => <Text key={t.label} {...t} />)}
+
+          <Blocks label="Розбір по таймфреймах" rows={item.tda} />
+          <Blocks label="Після сесії" rows={item.review} />
+
+          {kind === 'trades' && item.hasMistake && (
+            <MistakeBlock type={item.mistakeType} text={item.mistakeText} images={item.mistakeImages} />
+          )}
 
           <Shots images={item.images} />
         </div>
 
-        <div style={{ padding: '0 20px 20px' }}>
+        <div style={{ padding: '0 26px 24px' }}>
           <button
             onClick={() => { onToggle(); onClose(); }}
             className="flex w-full items-center justify-center"
             style={{
-              fontFamily: T.sans, gap: 8, height: 46, borderRadius: 13,
-              fontSize: 14, fontWeight: 600, transition: 'all .18s',
+              fontFamily: T.sans, gap: 8, height: 50, borderRadius: 13,
+              fontSize: 15, fontWeight: 600, transition: 'all .18s',
               background: selected ? 'transparent' : `rgba(${T.accRgb},0.14)`,
               border: `1px solid ${selected ? T.line : T.lineAcc}`,
               color: selected ? T.text3 : T.acc,

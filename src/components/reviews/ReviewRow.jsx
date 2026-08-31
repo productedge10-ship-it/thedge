@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { X, Share2, Globe } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
-import { EMOTIONS, fmtRange, fmtR, isoWeek } from '../../lib/reviewsData';
+import { EMOTIONS, fmtRange, fmtR } from '../../lib/reviewsData';
 
 /* ==================================================================
    Розбір у списку.
@@ -51,10 +51,6 @@ function Cell({ label, value, tone, last }) {
 export default function ReviewRow({ review, index, onOpen, onDelete, onShare }) {
   const s = review.stats || {};
   const c = scoreColor(review.score);
-  const week = isoWeek(review.from);
-  const kept = (review.promises || []).filter((p) => p.done).length;
-  const promises = (review.promises || []).length;
-  const allKept = promises > 0 && kept === promises;
 
   return (
     <motion.article
@@ -92,24 +88,7 @@ export default function ReviewRow({ review, index, onOpen, onDelete, onShare }) 
         }}
       >
         <div className="flex min-w-0 flex-wrap items-center" style={{ gap: 16 }}>
-          <span
-            style={{
-              padding: '6px 12px',
-              borderRadius: 9,
-              background: `rgba(${T.accRgb},0.13)`,
-              border: `1px solid rgba(${T.accRgb},0.28)`,
-              fontFamily: T.mono,
-              fontSize: 11,
-              letterSpacing: '1.4px',
-              color: T.acc,
-              textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Тиждень {week}
-          </span>
-
-          <span style={{ fontFamily: T.sans, fontSize: 14.5, color: T.text2, whiteSpace: 'nowrap' }}>
+          <span style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 500, color: T.text, whiteSpace: 'nowrap' }}>
             {fmtRange(review.from, review.to)}
           </span>
 
@@ -144,25 +123,6 @@ export default function ReviewRow({ review, index, onOpen, onDelete, onShare }) 
               );
             })}
           </div>
-
-          {promises > 0 && (
-            <span
-              title="Виконані домовленості з попереднього розбору"
-              style={{
-                fontFamily: T.mono,
-                fontSize: 12,
-                letterSpacing: '.6px',
-                color: allKept ? T.ok : T.text3,
-                /* Закреслення лишається тільки поки не всі виконані:
-                   домовленість, якої дотримались, закреслювати немає за що. */
-                textDecoration: allKept ? 'none' : 'line-through',
-                textDecorationColor: T.lineHi,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {kept} / {promises} обіцянок
-            </span>
-          )}
 
           {/* Дії. Місце під них зайняте завжди, видимість зʼявляється на
               наведенні — інакше смуга сіпалася б під курсором. */}

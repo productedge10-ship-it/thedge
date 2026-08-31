@@ -170,26 +170,3 @@ export function previousReview(reviews, from) {
 }
 
 export const SCORE_LABELS = ['', 'Провальний', 'Слабкий', 'Нормальний', 'Добрий', 'Еталонний'];
-
-/* Номер тижня за ISO-8601 — той самий, що показують календарі й
-   TradingView, тому «Тиждень 29» збігається з тим, як людина вже
-   звикла називати період.
-
-   Рахуємо через четвер: у ISO тиждень належить тому року, на який
-   випадає його четвер, і без цього кроку кінець грудня регулярно
-   давав би «тиждень 53» замість першого. */
-export const isoWeek = (iso) => {
-  if (!iso) return null;
-  const d = new Date(`${iso}T00:00:00Z`);
-  if (Number.isNaN(d.getTime())) return null;
-
-  const shift = (date) => {
-    const day = (date.getUTCDay() + 6) % 7;      // пн = 0
-    date.setUTCDate(date.getUTCDate() - day + 3); // четвер цього тижня
-    return date;
-  };
-
-  const thu = shift(d);
-  const firstThu = shift(new Date(Date.UTC(thu.getUTCFullYear(), 0, 4)));
-  return 1 + Math.round((thu - firstThu) / (7 * 24 * 3600 * 1000));
-};

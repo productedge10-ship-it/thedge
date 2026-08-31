@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import TextareaAutosize from 'react-textarea-autosize';
 import {
   ArrowLeft, CalendarDays, ChevronDown, Check, TrendingUp, Save,
-  Loader2, History, AlertTriangle, Eye,
+  Loader2, History, AlertTriangle, Plus, ChevronLeft, ChevronRight,
+  ImagePlus, X,
 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
 import DateField from '../ui/DateField';
 import MaterialPreview from './MaterialPreview';
+import ImageSlider from '../ui/ImageSlider';
+import { uploadImage, isHttpUrl } from '../../lib/imageStore';
+import { notify } from '../../utils/notify';
 import {
   PROMPTS, EMOTIONS, SCORE_LABELS, MISTAKE_TYPES,
   fmtDate, fmtR, fmtRange, rOf,
@@ -36,6 +40,10 @@ const PRESETS = [
 ];
 
 const mono = (size, extra = {}) => ({ fontFamily: T.mono, fontSize: size, ...extra });
+
+/* Підкладка обраного рядка. Через білі напівпрозорі шари, а не готовими
+   кольорами: так вона однаково лягає і на темну, і на світлу тему. */
+const SELECTED_BG = 'linear-gradient(90deg, rgba(255,255,255,0.055), rgba(255,255,255,0.03) 70%, rgba(255,255,255,0.016))';
 
 const cut = (s, n = 74) => (s.length > n ? `${s.slice(0, n).trim()}…` : s);
 
@@ -126,6 +134,7 @@ export default function ReviewBuilder({
   answers, onAnswer,
   lesson, onLesson,
   prevReview, keptPromises, onKeptPromise,
+  shots: initialShots, onShots, userId,
   saving, onSave,
 }) {
   const [statsOpen, setStatsOpen] = useState(false);
@@ -138,7 +147,12 @@ export default function ReviewBuilder({
   const [previewId, setPreviewId] = useState(null);
   /* Відкритий крок один: це анкета з шести питань, і всі розгорнуті
      разом знову перетворюють її на полотно полів. */
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
+  const [dir, setDir] = useState(1);
+  /* Скріни живуть тут, а не в answers: answers — це рівно ті три
+     питання, які летять у базу текстом, і домішувати до них масиви
+     картинок означало б ламати форму відповіді. */
+  const [shots, setShots] = useState(initialShots || {});
 
   const applyPreset = (days) => {
     const end = new Date();
@@ -180,7 +194,13 @@ export default function ReviewBuilder({
 
   /* Шість кроків висновку: оцінка, стан і чотири тексти. */
   const textSteps = [
-    ...PROMPTS.map((p) => ({ key: p.id, title: p.label, hint: p.question, placeholder: p.placeholder })),
+    /* Скріни просимо лише там, де вони справді щось доводять: «що
+       спрацювало» і «що зламалось». До закономірності й до зміни на
+       наступний період картинка нічого не додає. */
+    ...PROMPTS.map((p) => ({
+      key: p.id, title: p.label, hint: p.question, placeholder: p.placeholder,
+      attach: p.id === 'worked' || p.id === 'broke',
+    })),
     {
       key: 'lesson',
       title: 'Одна зміна на наступний період',
@@ -193,39 +213,114 @@ export default function ReviewBuilder({
   const valueOf = (key) => (key === 'lesson' ? lesson : answers[key] || '');
   const setValue = (key, v) => (key === 'lesson' ? onLesson(v) : onAnswer(key, v));
 
+  /* Оцінка дисципліни більше не крок висновку.
+
+     Вона не відповідь на питання, а факт про період — такий самий, як
+     кількість угод; писати висновок починають уже знаючи її. Тому вона
+     стоїть окремою панеллю над «Висновком», завжди розкрита, і в
+     лічильник кроків не входить. */
   const filled = [
-    score > 0,
     emotions.length > 0,
     ...textSteps.map((t) => !!valueOf(t.key).trim()),
   ];
   const filledCount = filled.filter(Boolean).length;
 
   const ready = score > 0 && lesson.trim();
+  const scoreTone = score >= 4 ? T.ok : score === 3 ? T.warn : T.bad;
 
   const steps = [
     {
-      title: 'Дисципліна періоду',
-      hint: 'Наскільки ти тримався плану весь період?',
-      preview: score ? `${score} / 5 · ${SCORE_LABELS[score]}` : 'не оцінено',
-      kind: 'rating',
-    },
-    {
+      kicker: 'Стан',
       title: 'Стан за період',
-      hint: 'Що переважало — обери все, що було.',
+      hint: 'Що переважало — обери все, що було. Це допоможе побачити, з якою головою ти торгував.',
       preview: emotions.length
         ? emotions.map((id) => EMOTIONS.find((e) => e.id === id)?.label).filter(Boolean).join(' · ')
-        : 'не обрано',
+        : '',
       kind: 'chips',
     },
     ...textSteps.map((t) => ({
       ...t,
+      kicker: t.accent ? 'Головне' : 'Розбір',
       kind: 'text',
-      preview: valueOf(t.key).trim() ? cut(valueOf(t.key).trim()) : 'не заповнено',
+      preview: valueOf(t.key).trim() ? cut(valueOf(t.key).trim()) : '',
     })),
   ];
 
+  const stepsTotal = steps.length;
+  const idx = Math.min(step, stepsTotal - 1);
+  const current = steps[idx];
+  const answered = steps
+    .map((st, i) => ({ ...st, i }))
+    .filter((st) => filled[st.i] && st.i !== idx);
+
+  const MAX_SHOTS = 5;
+
+  const putShots = (key, next) => {
+    const merged = { ...shots, [key]: next.slice(0, MAX_SHOTS) };
+    setShots(merged);
+    onShots?.(merged);
+  };
+
+  /* Два джерела картинок навмисно.
+
+     Посилання з TradingView — головний шлях: так само працює сторінка
+     планів, і людина вже звикла робити Alt+S і Ctrl+V. Файл лишаємо
+     як запасний варіант для скрінів не з графіка; він їде в сховище
+     стисненим, бо base64 у тілі розбору роздуває запис у рази. */
+  const addShotUrl = (key, url) => {
+    const cur = shots[key] || [];
+    if (cur.length >= MAX_SHOTS) { notify.error('Достатньо', `Більше ${MAX_SHOTS} скрінів на крок не тримаємо.`); return; }
+    if (cur.some((x) => x.src === url)) return;
+    putShots(key, [...cur, { src: url, name: 'TradingView' }]);
+  };
+
+  const addShotFiles = async (key, fileList) => {
+    const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'));
+    if (!files.length) return;
+    if (!userId) { notify.error('Не вийшло', 'Немає користувача для завантаження.'); return; }
+
+    const cur = shots[key] || [];
+    const room = MAX_SHOTS - cur.length;
+    if (room <= 0) { notify.error('Достатньо', `Більше ${MAX_SHOTS} скрінів на крок не тримаємо.`); return; }
+
+    try {
+      const uploaded = await Promise.all(
+        files.slice(0, room).map(async (f) => ({ src: await uploadImage(userId, 'reviews', f), name: f.name })),
+      );
+      putShots(key, [...cur, ...uploaded]);
+    } catch (e) {
+      /* «Bucket not found» сам по собі нічого не пояснює людині: це не
+         зламаний файл і не мережа, а невиконана міграція сховища
+         (src/db/2026-08-07_note_images_storage.sql). Посилання з
+         TradingView при цьому працюють — вони нікуди не вантажаться. */
+      const raw = String(e?.message || '');
+      if (/bucket not found/i.test(raw)) {
+        notify.error(
+          'Сховище не налаштоване',
+          'Виконай src/db/2026-08-07_note_images_storage.sql у Supabase. Поки що вставляй посилання з TradingView — воно працює без сховища.',
+        );
+      } else {
+        notify.error('Не вдалось завантажити', raw || 'Спробуй ще раз.');
+      }
+    }
+  };
+
+  const removeShot = (key, i) => {
+    const cur = [...(shots[key] || [])];
+    cur.splice(i, 1);
+    putShots(key, cur);
+  };
+
+  /* Напрямок руху памʼятаємо окремо: анімація має їхати туди, куди
+     людина натиснула, а з самого лише номера кроку цього не видно. */
+  const go = (n) => {
+    const next = Math.max(0, Math.min(stepsTotal - 1, n));
+    setDir(next >= idx ? 1 : -1);
+    setStep(next);
+  };
+
   return (
-    <div className="mx-auto w-full" style={{ maxWidth: 860 }}>
+    <div className="w-full">
 
       {/* ─────────── шапка ─────────── */}
       <div className="flex flex-wrap items-center" style={{ gap: 16, padding: '4px 0 22px' }}>
@@ -245,13 +340,13 @@ export default function ReviewBuilder({
         </button>
 
         <div className="min-w-0 flex-1" style={{ minWidth: 150 }}>
-          <div className="uppercase" style={mono(9.5, { letterSpacing: '2.4px', color: T.acc })}>
+          <div className="uppercase" style={mono(11, { letterSpacing: '2.2px', color: T.acc })}>
             Розбори
           </div>
           <div
             style={{
-              fontFamily: T.display, marginTop: 7, fontSize: 26,
-              fontWeight: 600, letterSpacing: '-0.6px', color: T.text,
+              fontFamily: T.display, marginTop: 7, fontSize: 30,
+              fontWeight: 600, letterSpacing: '-0.7px', color: T.text,
             }}
           >
             Новий розбір
@@ -270,8 +365,8 @@ export default function ReviewBuilder({
                 onClick={() => applyPreset(p.days)}
                 className="flex-1 sm:flex-none"
                 style={{
-                  fontFamily: T.sans, height: 32, padding: '0 14px', borderRadius: 9,
-                  fontSize: 13, transition: 'all .18s',
+                  fontFamily: T.sans, height: 38, padding: '0 18px', borderRadius: 10,
+                  fontSize: 14.5, transition: 'all .18s',
                   background: on ? T.line : 'transparent',
                   color: on ? T.text : T.text3,
                   fontWeight: on ? 500 : 400,
@@ -297,7 +392,7 @@ export default function ReviewBuilder({
         >
           <div className="flex min-w-0 items-center" style={{ gap: 14 }}>
             <CalendarDays size={16} strokeWidth={1.8} className="shrink-0" style={{ color: T.text2 }} />
-            <span className="truncate" style={mono(13.5, { color: T.text2 })}>
+            <span className="truncate" style={mono(15, { color: T.text })}>
               {fmtRange(range.from, range.to)}
             </span>
           </div>
@@ -323,7 +418,7 @@ export default function ReviewBuilder({
             className="flex flex-wrap items-center"
             style={{ gap: 10, padding: '14px 20px', borderBottom: `1px solid ${T.line}` }}
           >
-            <span className="shrink-0" style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text2 }}>
+            <span className="shrink-0" style={{ fontFamily: T.sans, fontSize: 14, color: T.text2 }}>
               Свій період
             </span>
             <div className="min-w-[150px] flex-1">
@@ -378,10 +473,10 @@ export default function ReviewBuilder({
               <TrendingUp size={16} strokeWidth={1.9} style={{ color: T.text2 }} />
             </span>
             <div className="min-w-0">
-              <div style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.text }}>
+              <div style={{ fontFamily: T.sans, fontSize: 17, fontWeight: 600, color: T.text }}>
                 Що розбираємо
               </div>
-              <div style={{ fontFamily: T.sans, marginTop: 3, fontSize: 12.5, color: T.text2 }}>
+              <div style={{ fontFamily: T.sans, marginTop: 4, fontSize: 14, color: T.text2 }}>
                 {loadingMaterial ? (
                   <span className="inline-flex items-center" style={{ gap: 6 }}>
                     <Loader2 size={12} className="animate-spin" style={{ color: T.acc }} />
@@ -414,8 +509,8 @@ export default function ReviewBuilder({
                     onClick={() => setTab(t.key)}
                     className="flex items-center"
                     style={{
-                      fontFamily: T.sans, gap: 8, height: 32, padding: '0 13px', borderRadius: 9,
-                      fontSize: 13, fontWeight: 500, transition: 'all .18s',
+                      fontFamily: T.sans, gap: 8, height: 38, padding: '0 16px', borderRadius: 10,
+                      fontSize: 14.5, fontWeight: 500, transition: 'all .18s',
                       background: on ? T.surfaceHi : 'transparent',
                       color: on ? T.text : T.text3,
                     }}
@@ -423,29 +518,35 @@ export default function ReviewBuilder({
                     onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
                   >
                     {t.label}
-                    <span style={mono(11, { color: on ? T.acc : T.text3 })}>{counts[t.key]}</span>
+                    <span style={mono(12.5, { fontWeight: 600, color: on ? T.acc : T.text3 })}>{counts[t.key]}</span>
                   </button>
                 );
               })}
             </div>
 
+            {/* Подвійний клік сам себе не показує — і без цього рядка
+                про нього просто ніхто б не дізнався. */}
+            <span className="ml-auto mr-4 hidden lg:block" style={{ fontFamily: T.sans, fontSize: 13, color: T.text3 }}>
+              Клік — переглянути, подвійний — взяти в розбір
+            </span>
+
             <button
               onClick={toggleAll}
               disabled={!list.length}
               style={{
-                fontFamily: T.sans, fontSize: 12.5, color: T.text2,
+                fontFamily: T.sans, fontSize: 14, color: T.text2,
                 opacity: list.length ? 1 : 0.4, transition: 'color .18s',
               }}
               onMouseEnter={(e) => { if (list.length) e.currentTarget.style.color = T.acc; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; }}
             >
-              {allPicked ? 'зняти все' : 'вибрати все'}
+              {allPicked ? 'Зняти все' : 'Вибрати все'}
             </button>
           </div>
 
-          <div className="custom-scrollbar" style={{ maxHeight: 330, overflowY: 'auto' }}>
+          <div className="custom-scrollbar" style={{ maxHeight: 460, overflowY: 'auto' }}>
             {list.length === 0 ? (
-              <p style={{ fontFamily: T.sans, padding: '40px 20px', textAlign: 'center', fontSize: 14, color: T.text3 }}>
+              <p style={{ fontFamily: T.sans, padding: '48px 20px', textAlign: 'center', fontSize: 15, color: T.text3 }}>
                 За цей період нічого немає.
               </p>
             ) : (
@@ -478,15 +579,15 @@ export default function ReviewBuilder({
               >
                 <AlertTriangle size={16} strokeWidth={1.7} className="shrink-0" style={{ color: T.warn }} />
                 <div className="min-w-0 flex-1">
-                  <div style={{ fontFamily: T.sans, fontSize: 13.5, fontWeight: 600, color: T.warn }}>
+                  <div style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.warn }}>
                     {meta.label} повторюється
                   </div>
-                  <div style={{ fontFamily: T.sans, marginTop: 3, fontSize: 12.5, color: T.text2 }}>
+                  <div style={{ fontFamily: T.sans, marginTop: 4, fontSize: 14, color: T.text2 }}>
                     {r.now} у цьому періоді · {r.before} раніше
                   </div>
                 </div>
                 {r.cost ? (
-                  <span className="shrink-0" style={mono(12.5, { color: T.warn })}>{fmtR(r.cost)}</span>
+                  <span className="shrink-0" style={mono(14, { color: T.warn })}>{fmtR(r.cost)}</span>
                 ) : null}
               </div>
             );
@@ -509,7 +610,7 @@ export default function ReviewBuilder({
                 <History size={16} strokeWidth={1.8} style={{ color: T.acc }} />
               </span>
               <div className="min-w-0">
-                <div style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.text }}>
+                <div style={{ fontFamily: T.sans, fontSize: 17, fontWeight: 600, color: T.text }}>
                   Минулого разу ти обіцяв
                 </div>
                 <div className="truncate" style={{ fontFamily: T.sans, marginTop: 3, fontSize: 12.5, color: T.text2 }}>
@@ -528,7 +629,7 @@ export default function ReviewBuilder({
                   background: `rgba(${T.accRgb},0.06)`, borderLeft: `2px solid ${T.acc}`,
                 }}
               >
-                <p style={{ fontFamily: T.sans, fontSize: 14.5, lineHeight: '25px', color: T.text2 }}>
+                <p style={{ fontFamily: T.sans, fontSize: 16, lineHeight: '27px', color: T.text }}>
                   {prevReview.lesson}
                 </p>
               </div>
@@ -552,13 +653,13 @@ export default function ReviewBuilder({
                       <Box on={on} tone={T.ok} />
                       <span
                         className="min-w-0 flex-1"
-                        style={{ fontFamily: T.sans, fontSize: 14, lineHeight: '21px', color: on ? T.text2 : T.text }}
+                        style={{ fontFamily: T.sans, fontSize: 15.5, lineHeight: '23px', color: on ? T.text2 : T.text }}
                       >
                         {p.text}
                       </span>
                       <span
                         className="shrink-0"
-                        style={mono(10.5, { letterSpacing: '.5px', color: on ? T.ok : T.text3 })}
+                        style={mono(12, { fontWeight: 600, letterSpacing: '.4px', color: on ? T.ok : T.text2 })}
                       >
                         {on ? 'виконано' : 'не виконано'}
                       </span>
@@ -571,178 +672,307 @@ export default function ReviewBuilder({
         </div>
       )}
 
-      {/* ─────────── висновок ─────────── */}
-      <div className="flex items-center justify-between" style={{ gap: 16, marginTop: 30 }}>
-        <div className="uppercase" style={mono(10, { letterSpacing: '2.4px', color: T.text2 })}>
-          Висновок
-        </div>
-        <div className="flex items-center" style={{ gap: 12 }}>
-          <div style={{ width: 110, height: 3, borderRadius: 99, background: T.line, overflow: 'hidden' }}>
-            <div
-              style={{
-                height: '100%', borderRadius: 99, background: T.acc,
-                width: `${Math.round((filledCount / 6) * 100)}%`, transition: 'width .25s',
-              }}
-            />
+      {/* ─────────── дисципліна періоду ─────────── */}
+      <div style={{ ...panel, marginTop: 12, padding: '20px 24px' }}>
+        <div className="flex flex-wrap items-center justify-between" style={{ gap: 20 }}>
+          <div className="min-w-0">
+            <div style={{ fontFamily: T.sans, fontSize: 16, fontWeight: 600, color: T.text }}>
+              Дисципліна періоду
+            </div>
+            <div style={{ fontFamily: T.sans, marginTop: 4, fontSize: 13.5, color: T.text2 }}>
+              Наскільки ти тримався плану весь період?
+            </div>
           </div>
-          <span style={mono(11, { color: T.text2 })}>{filledCount}/6</span>
-        </div>
-      </div>
 
-      <div className="flex flex-col" style={{ marginTop: 14, gap: 8 }}>
-        {steps.map((st, i) => {
-          const num = i + 1;
-          const open = step === num;
-          const isFilled = filled[i];
-          return (
-            <div
-              key={st.title}
+          <div className="flex items-center" style={{ gap: 14 }}>
+            <span
               style={{
-                borderRadius: 16, overflow: 'hidden', transition: 'all .2s',
-                background: open ? T.surfaceHi : T.surface,
-                border: `1px solid ${open ? T.lineHi : T.line}`,
+                fontFamily: T.sans, fontSize: 14, fontWeight: 600,
+                color: score ? scoreTone : T.text3, whiteSpace: 'nowrap',
               }}
             >
-              <div
-                onClick={() => setStep(open ? 0 : num)}
-                className="flex cursor-pointer items-center"
-                style={{ gap: 14, padding: '17px 20px', transition: 'background .18s' }}
-              >
-                <span
-                  className="grid shrink-0 place-items-center"
-                  style={{
-                    width: 24, height: 24, borderRadius: 8, transition: 'all .18s',
-                    ...mono(11),
-                    background: isFilled
-                      ? `rgba(${T.okRgb},0.13)`
-                      : st.accent ? `rgba(${T.accRgb},0.14)` : T.sunken,
-                    border: `1px solid ${isFilled
-                      ? `rgba(${T.okRgb},0.32)`
-                      : st.accent ? `rgba(${T.accRgb},0.34)` : T.line}`,
-                    color: isFilled ? T.ok : st.accent ? T.acc : T.text3,
-                  }}
-                >
-                  {num}
-                </span>
-
-                <div className="min-w-0 flex-1">
-                  <div
+              {score ? SCORE_LABELS[score] : 'не оцінено'}
+            </span>
+            <div className="flex" style={{ gap: 8 }}>
+              {[1, 2, 3, 4, 5].map((n) => {
+                const on = score === n;
+                /* Колір ставимо за самою оцінкою, а не акцентом вікна:
+                   двійка й пʼятірка — не те саме, і рівний фіолетовий на
+                   обох це ховав. */
+                const c = n >= 4 ? T.ok : n === 3 ? T.warn : T.bad;
+                return (
+                  <button
+                    key={n}
+                    onClick={() => onScore(on ? 0 : n)}
+                    title={SCORE_LABELS[n]}
                     style={{
-                      fontFamily: T.sans, fontSize: 14.5, fontWeight: 600,
-                      letterSpacing: '.1px', color: open ? T.text : T.text2,
+                      width: 52, height: 48, borderRadius: 12, transition: 'all .18s',
+                      ...mono(17, { fontWeight: 600 }),
+                      background: on ? `${c}22` : T.sunken,
+                      border: `1px solid ${on ? c : T.line}`,
+                      color: on ? c : T.text2,
                     }}
+                    onMouseEnter={(e) => { if (!on) { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; } }}
+                    onMouseLeave={(e) => { if (!on) { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; } }}
                   >
-                    {st.title}
-                  </div>
-                  <div
-                    className="truncate"
-                    style={{
-                      fontFamily: T.sans, marginTop: 4, fontSize: 12.5, lineHeight: '19px',
-                      color: isFilled ? T.text2 : T.text3,
-                    }}
-                  >
-                    {st.preview}
-                  </div>
-                </div>
-
-                <Chevron open={open} />
-              </div>
-
-              <Fold open={open}>
-                <div style={{ padding: '4px 20px 22px 54px' }}>
-                  <div style={{ fontFamily: T.sans, paddingTop: 16, fontSize: 13, color: T.text2 }}>
-                    {st.hint}
-                  </div>
-
-                  {st.kind === 'rating' && (
-                    <div className="grid grid-cols-5" style={{ marginTop: 14, gap: 8 }}>
-                      {[1, 2, 3, 4, 5].map((n) => {
-                        const on = score === n;
-                        return (
-                          <button
-                            key={n}
-                            onClick={() => onScore(on ? 0 : n)}
-                            title={SCORE_LABELS[n]}
-                            style={{
-                              height: 44, borderRadius: 12, transition: 'all .18s',
-                              ...mono(15, { fontWeight: 600 }),
-                              background: on ? `rgba(${T.accRgb},0.16)` : T.sunken,
-                              border: `1px solid ${on ? T.acc : T.line}`,
-                              color: on ? T.acc : T.text3,
-                            }}
-                            onMouseEnter={(e) => { if (!on) { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; } }}
-                            onMouseLeave={(e) => { if (!on) { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; } }}
-                          >
-                            {n}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {st.kind === 'chips' && (
-                    <div className="flex flex-wrap" style={{ marginTop: 14, gap: 8 }}>
-                      {EMOTIONS.map((e) => {
-                        const on = emotions.includes(e.id);
-                        const c = e.good ? T.ok : T.warn;
-                        return (
-                          <button
-                            key={e.id}
-                            onClick={() => onEmotion(e.id)}
-                            style={{
-                              fontFamily: T.sans, height: 34, padding: '0 15px', borderRadius: 10,
-                              fontSize: 13.5, fontWeight: 500, transition: 'all .18s',
-                              background: on ? `${c}1c` : T.sunken,
-                              border: `1px solid ${on ? `${c}55` : T.line}`,
-                              color: on ? c : T.text2,
-                            }}
-                            onMouseEnter={(ev) => { if (!on) { ev.currentTarget.style.borderColor = T.lineHi; ev.currentTarget.style.color = T.text; } }}
-                            onMouseLeave={(ev) => { if (!on) { ev.currentTarget.style.borderColor = T.line; ev.currentTarget.style.color = T.text2; } }}
-                          >
-                            {e.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {st.kind === 'text' && (
-                    <TextareaAutosize
-                      value={valueOf(st.key)}
-                      onChange={(e) => setValue(st.key, e.target.value)}
-                      placeholder={st.placeholder}
-                      minRows={3}
-                      className="w-full outline-none"
-                      style={{
-                        fontFamily: T.sans, marginTop: 14, padding: '15px 17px', borderRadius: 13,
-                        background: T.sunken,
-                        border: `1px solid ${st.accent ? `rgba(${T.accRgb},0.3)` : T.line}`,
-                        color: T.text, fontSize: 14.5, lineHeight: '24px',
-                        resize: 'vertical', transition: 'all .18s',
-                      }}
-                      onFocus={(e) => { e.currentTarget.style.borderColor = T.acc; }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = st.accent ? `rgba(${T.accRgb},0.3)` : T.line;
-                      }}
-                    />
-                  )}
-                </div>
-              </Fold>
+                    {n}
+                  </button>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        </div>
       </div>
 
+      {/* ─────────── висновок: кроки по одному ─────────── */}
+      <div className="flex flex-wrap items-center justify-between" style={{ gap: 20, marginTop: 32 }}>
+        <div className="flex items-baseline" style={{ gap: 14 }}>
+          <span className="uppercase" style={mono(12, { fontWeight: 600, letterSpacing: '2.2px', color: T.text2 })}>
+            Висновок
+          </span>
+          <span style={mono(12.5, { letterSpacing: '1.2px', color: T.text3 })}>
+            крок {idx + 1} з {stepsTotal}
+          </span>
+        </div>
+
+        <div className="flex items-center" style={{ gap: 6 }}>
+          {steps.map((st, i) => (
+            <button
+              key={st.title}
+              onClick={() => go(i)}
+              title={st.title}
+              style={{
+                height: 5, borderRadius: 99, transition: 'all .25s',
+                width: i === idx ? 34 : 16,
+                background: i === idx ? T.acc : filled[i] ? `rgba(${T.okRgb},0.55)` : T.lineHi,
+              }}
+            />
+          ))}
+          <span style={mono(12.5, { marginLeft: 8, fontWeight: 600, color: T.text2 })}>
+            {filledCount}/{stepsTotal}
+          </span>
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 14,
+          borderRadius: 20,
+          background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.surface})`,
+          border: `1px solid ${T.lineHi}`,
+          boxShadow: '0 30px 70px -40px rgba(0,0,0,0.9)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Картка їде вбік у той бік, куди рухаєшся. Без напрямку
+            «назад» відчувалося б так само, як «далі», і крок губився.
+
+            Свідомо без AnimatePresence з mode="wait": там нова картка
+            чекає, поки догра вихід старої, а вихід тримається на
+            requestAnimationFrame. Варто вкладці піти у фон посеред
+            переходу — кадри спиняються, і на екрані назавжди лишається
+            попередній крок при вже перемкнутому лічильнику. Тут ключ
+            просто перемонтовує вміст: анімація прикрашає перехід, але
+            нічого не блокує. */}
+          <motion.div
+            key={current.title}
+            initial={{ x: dir * 26, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.28, ease: EASE }}
+            style={{ minHeight: 250, padding: '30px 32px 26px' }}
+          >
+            <div className="flex items-center" style={{ gap: 13 }}>
+              <span
+                className="grid shrink-0 place-items-center"
+                style={{
+                  width: 28, height: 28, borderRadius: 9,
+                  ...mono(12.5, { fontWeight: 600 }),
+                  background: current.accent ? `rgba(${T.accRgb},0.15)` : T.sunken,
+                  border: `1px solid ${current.accent ? `rgba(${T.accRgb},0.36)` : T.line}`,
+                  color: current.accent ? T.acc : T.text2,
+                }}
+              >
+                {idx + 1}
+              </span>
+              <span className="uppercase" style={mono(11.5, { fontWeight: 600, letterSpacing: '2px', color: T.text2 })}>
+                {current.kicker}
+              </span>
+            </div>
+
+            <div
+              style={{
+                fontFamily: T.display, marginTop: 16, fontSize: 26,
+                fontWeight: 600, letterSpacing: '-0.5px', color: T.text,
+              }}
+            >
+              {current.title}
+            </div>
+            <div
+              style={{
+                fontFamily: T.sans, marginTop: 9, fontSize: 15.5,
+                lineHeight: '25px', color: T.text2, maxWidth: 700,
+              }}
+            >
+              {current.hint}
+            </div>
+
+            {current.kind === 'chips' && (
+              <div className="flex flex-wrap" style={{ marginTop: 24, gap: 9 }}>
+                {EMOTIONS.map((e) => {
+                  const on = emotions.includes(e.id);
+                  const c = e.good ? T.ok : T.warn;
+                  return (
+                    <button
+                      key={e.id}
+                      onClick={() => onEmotion(e.id)}
+                      style={{
+                        fontFamily: T.sans, height: 40, padding: '0 18px', borderRadius: 11,
+                        fontSize: 15, fontWeight: 500, transition: 'all .18s',
+                        background: on ? `${c}1c` : T.sunken,
+                        border: `1px solid ${on ? `${c}55` : T.line}`,
+                        color: on ? c : T.text2,
+                      }}
+                      onMouseEnter={(ev) => { if (!on) { ev.currentTarget.style.borderColor = T.lineHi; ev.currentTarget.style.color = T.text; } }}
+                      onMouseLeave={(ev) => { if (!on) { ev.currentTarget.style.borderColor = T.line; ev.currentTarget.style.color = T.text2; } }}
+                    >
+                      {e.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {current.kind === 'text' && (
+              <>
+                <TextareaAutosize
+                  value={valueOf(current.key)}
+                  onChange={(e) => setValue(current.key, e.target.value)}
+                  placeholder={current.placeholder}
+                  minRows={4}
+                  className="w-full outline-none"
+                  style={{
+                    fontFamily: T.sans, marginTop: 22, padding: '16px 18px', borderRadius: 14,
+                    background: T.sunken,
+                    border: `1px solid ${current.accent ? `rgba(${T.accRgb},0.3)` : T.line}`,
+                    color: T.text, fontSize: 16, lineHeight: '27px', maxWidth: 1100,
+                    resize: 'vertical', transition: 'all .18s',
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = T.acc; }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = current.accent ? `rgba(${T.accRgb},0.3)` : T.line;
+                  }}
+                />
+
+                {current.attach && (
+                  <Shots
+                    items={shots[current.key] || []}
+                    max={MAX_SHOTS}
+                    onFiles={(list) => addShotFiles(current.key, list)}
+                    onUrl={(url) => addShotUrl(current.key, url)}
+                    onRemove={(i) => removeShot(current.key, i)}
+                  />
+                )}
+              </>
+            )}
+          </motion.div>
+
+        <div
+          className="flex items-center justify-between"
+          style={{ gap: 12, padding: '16px 20px', background: T.sunken, borderTop: `1px solid ${T.line}` }}
+        >
+          <button
+            onClick={() => go(idx - 1)}
+            disabled={idx === 0}
+            className="flex items-center"
+            style={{
+              fontFamily: T.sans, gap: 8, height: 46, padding: '0 16px 0 13px', borderRadius: 12,
+              border: `1px solid ${T.line}`, fontSize: 14.5, transition: 'all .18s',
+              color: T.text2, opacity: idx === 0 ? 0.35 : 1,
+              cursor: idx === 0 ? 'default' : 'pointer',
+            }}
+            onMouseEnter={(e) => { if (idx) { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
+          >
+            <ChevronLeft size={16} strokeWidth={2} />
+            Назад
+          </button>
+
+          <div className="flex items-center" style={{ gap: 10 }}>
+            {idx < stepsTotal - 1 && !filled[idx] && (
+              <button
+                onClick={() => go(idx + 1)}
+                style={{ fontFamily: T.sans, height: 46, padding: '0 14px', borderRadius: 12, fontSize: 14.5, color: T.text3, transition: 'color .18s' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
+              >
+                Пропустити
+              </button>
+            )}
+
+            <button
+              onClick={() => go(idx + 1)}
+              disabled={idx === stepsTotal - 1}
+              className="flex items-center"
+              style={{
+                fontFamily: T.sans, gap: 9, height: 46, padding: '0 20px', borderRadius: 12,
+                background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)',
+                fontSize: 15, fontWeight: 600, transition: 'all .18s',
+                opacity: idx === stepsTotal - 1 ? 0.45 : 1,
+                cursor: idx === stepsTotal - 1 ? 'default' : 'pointer',
+                boxShadow: `0 14px 30px -18px rgba(${T.accRgb},0.9)`,
+              }}
+            >
+              {idx === stepsTotal - 1 ? 'Готово' : 'Далі'}
+              {idx < stepsTotal - 1 && <ChevronRight size={16} strokeWidth={2} />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Уже відповіджені кроки — щоб повернутись, не гортаючи слайдер */}
+      {answered.length > 0 && (
+        <div className="flex flex-col" style={{ marginTop: 12, gap: 7 }}>
+          {answered.map((a) => (
+            <button
+              key={a.title}
+              onClick={() => go(a.i)}
+              className="flex items-center text-left"
+              style={{
+                gap: 12, padding: '13px 18px', borderRadius: 13,
+                background: T.surface, border: `1px solid ${T.line}`, transition: 'all .18s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.background = T.surfaceHi; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.background = T.surface; }}
+            >
+              <Check size={15} strokeWidth={2.4} className="shrink-0" style={{ color: T.ok }} />
+              <span
+                className="shrink-0 truncate uppercase"
+                style={{ ...mono(11, { fontWeight: 600, letterSpacing: '1.4px', color: T.text3 }), width: 170 }}
+              >
+                {a.title}
+              </span>
+              <span className="min-w-0 flex-1 truncate" style={{ fontFamily: T.sans, fontSize: 14.5, color: T.text2 }}>
+                {a.preview}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ─────────── збереження ─────────── */}
-      <div className="flex items-center" style={{ marginTop: 24, gap: 12 }}>
+      {/* Показуємо на останньому кроці. Кнопка «Зберегти» поруч із
+          «Далі» весь час — це два заклики до дії водночас, і людина
+          тисне збереження, не дійшовши до головного питання. */}
+      {idx === stepsTotal - 1 && (
+      <div className="flex items-center" style={{ marginTop: 16, gap: 12 }}>
         <button
           onClick={onSave}
           disabled={!ready || saving}
           className="flex flex-1 items-center justify-center"
           style={{
-            fontFamily: T.sans, gap: 10, height: 52, borderRadius: 14,
+            fontFamily: T.sans, gap: 10, height: 56, borderRadius: 14,
             background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)',
-            fontSize: 15, fontWeight: 600, transition: 'all .18s',
+            fontSize: 16, fontWeight: 600, transition: 'all .18s',
             opacity: ready && !saving ? 1 : 0.4,
             cursor: ready && !saving ? 'pointer' : 'not-allowed',
             boxShadow: ready ? `0 16px 34px -18px rgba(${T.accRgb},0.9)` : 'none',
@@ -755,8 +985,8 @@ export default function ReviewBuilder({
         <button
           onClick={onBack}
           style={{
-            fontFamily: T.sans, height: 52, padding: '0 22px', borderRadius: 14,
-            border: `1px solid ${T.line}`, color: T.text2, fontSize: 14, transition: 'all .18s',
+            fontFamily: T.sans, height: 56, padding: '0 26px', borderRadius: 14,
+            border: `1px solid ${T.line}`, color: T.text2, fontSize: 15, transition: 'all .18s',
           }}
           onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text2; }}
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
@@ -764,9 +994,10 @@ export default function ReviewBuilder({
           Скасувати
         </button>
       </div>
+      )}
 
-      <p style={{ fontFamily: T.sans, marginTop: 12, textAlign: 'center', fontSize: 12.5, color: T.text3 }}>
-        Постав оцінку дисципліни й напиши одну зміну — решта не обовʼязкова
+      <p style={{ fontFamily: T.sans, marginTop: 14, textAlign: 'center', fontSize: 14, color: T.text3 }}>
+        Обовʼязкові тільки оцінка дисципліни й одна зміна на наступний період — решту можна пропустити
       </p>
 
       <AnimatePresence>
@@ -790,10 +1021,10 @@ export default function ReviewBuilder({
 function Pair({ value, unit, tone }) {
   return (
     <span className="flex items-baseline" style={{ gap: 7 }}>
-      <span className="tabular-nums" style={mono(16, { fontWeight: 600, color: tone || T.text })}>
+      <span className="tabular-nums" style={mono(18, { fontWeight: 600, color: tone || T.text })}>
         {value}
       </span>
-      <span style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text2 }}>{unit}</span>
+      <span style={{ fontFamily: T.sans, fontSize: 14, color: T.text2 }}>{unit}</span>
     </span>
   );
 }
@@ -801,28 +1032,51 @@ function Pair({ value, unit, tone }) {
 function Metric({ label, value, tone, last }) {
   return (
     <div style={{ padding: '16px 20px', borderRight: last ? 'none' : `1px solid ${T.line}` }}>
-      <div className="uppercase" style={mono(9.5, { letterSpacing: '1.6px', color: T.text3 })}>
+      <div className="uppercase" style={mono(11, { letterSpacing: '1.4px', fontWeight: 600, color: T.text2 })}>
         {label}
       </div>
-      <div className="tabular-nums" style={mono(19, { marginTop: 7, fontWeight: 600, color: tone || T.text })}>
+      <div className="tabular-nums" style={mono(22, { marginTop: 8, fontWeight: 600, color: tone || T.text })}>
         {value}
       </div>
     </div>
   );
 }
 
+/* Позначка вибору.
+
+   Була голим квадратиком 18px із тонким кантом — на світлому рядку її
+   було ледве видно, а натиснути точно виходило не завжди. Тепер:
+   помітніша підкладка в незібраному стані, помітно товща галочка й
+   мʼяке сяйво по колу, коли вибрано. Розмір 22px — саме та межа, за
+   якою чекбокс перестає бути «дрібницею на краю рядка».
+
+   Галочка проявляється масштабом, а не появою: миттєвий стрибок на
+   такому дрібному елементі читається як блимання. */
 function Box({ on, tone }) {
   const c = tone || T.acc;
   return (
     <span
       className="grid shrink-0 place-items-center"
       style={{
-        width: 18, height: 18, borderRadius: 6, transition: 'all .18s',
-        background: on ? c : 'transparent',
-        border: `1.6px solid ${on ? c : T.lineHi}`,
+        width: 22,
+        height: 22,
+        borderRadius: 7,
+        transition: 'background .18s ease, border-color .18s ease, box-shadow .18s ease',
+        background: on ? c : 'rgba(255,255,255,0.035)',
+        border: `1.5px solid ${on ? c : T.lineHi}`,
+        boxShadow: on ? `0 0 0 3px ${c}22` : 'none',
       }}
     >
-      {on && <Check size={11} strokeWidth={3.2} style={{ color: 'var(--edge-bg, #0A0A0C)' }} />}
+      <Check
+        size={13}
+        strokeWidth={3.4}
+        style={{
+          color: 'var(--edge-bg, #0A0A0C)',
+          opacity: on ? 1 : 0,
+          transform: on ? 'scale(1)' : 'scale(0.6)',
+          transition: 'opacity .15s ease, transform .18s cubic-bezier(.22,1,.36,1)',
+        }}
+      />
     </span>
   );
 }
@@ -839,7 +1093,13 @@ function MaterialRow({ kind, item, on, onToggle, onPreview }) {
     const long = item.type === 'LONG';
     const r = rOf(item);
     head.push(
-      <span key="pair" style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 600, letterSpacing: '.2px', color: T.text }}>
+      <span
+        key="pair"
+        style={{
+          fontFamily: T.sans, fontSize: 15.5, fontWeight: 600, letterSpacing: '.2px',
+          color: on ? T.text : T.text2, transition: 'color .18s',
+        }}
+      >
         {item.pair}
       </span>,
       <span
@@ -847,15 +1107,16 @@ function MaterialRow({ kind, item, on, onToggle, onPreview }) {
         className="inline-flex items-center uppercase"
         style={{
           height: 20, padding: '0 8px', borderRadius: 6,
-          ...mono(9.5, { letterSpacing: '1.1px' }),
+          ...mono(11, { fontWeight: 600, letterSpacing: '1px' }),
           background: long ? `rgba(${T.okRgb},0.10)` : `rgba(${T.badRgb},0.10)`,
-          border: `1px solid ${long ? `rgba(${T.okRgb},0.22)` : `rgba(${T.badRgb},0.22)`}`,
+          border: `1px solid ${long ? `rgba(${T.okRgb},${on ? 0.38 : 0.22})` : `rgba(${T.badRgb},${on ? 0.38 : 0.22})`}`,
+          transition: 'all .18s',
           color: long ? T.ok : T.bad,
         }}
       >
         {item.type}
       </span>,
-      <span key="r" className="tabular-nums" style={mono(12.5, { fontWeight: 600, color: r > 0 ? T.ok : r < 0 ? T.bad : T.text3 })}>
+      <span key="r" className="tabular-nums" style={mono(14, { fontWeight: 600, color: r > 0 ? T.ok : r < 0 ? T.bad : T.text3 })}>
         {fmtR(r)}
       </span>,
     );
@@ -866,11 +1127,11 @@ function MaterialRow({ kind, item, on, onToggle, onPreview }) {
   } else if (kind === 'plans') {
     const done = item.status === 'Відпрацьовано';
     head.push(
-      <span key="pair" style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 600, color: T.text }}>{item.pair}</span>,
+      <span key="pair" style={{ fontFamily: T.sans, fontSize: 15.5, fontWeight: 600, color: T.text }}>{item.pair}</span>,
       <span
         key="st"
         style={{
-          fontFamily: T.sans, padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 500,
+          fontFamily: T.sans, padding: '3px 10px', borderRadius: 7, fontSize: 13, fontWeight: 500,
           background: done ? `rgba(${T.okRgb},0.10)` : `rgba(${T.warnRgb},0.10)`,
           color: done ? T.ok : T.warn,
         }}
@@ -883,8 +1144,8 @@ function MaterialRow({ kind, item, on, onToggle, onPreview }) {
   } else {
     const m = MISTAKE_TYPES[item.type] || { label: item.type };
     head.push(
-      <span key="t" style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 600, color: T.text }}>{m.label}</span>,
-      <span key="p" style={{ fontFamily: T.sans, fontSize: 13, color: T.text2 }}>{item.pair}</span>,
+      <span key="t" style={{ fontFamily: T.sans, fontSize: 15.5, fontWeight: 600, color: T.text }}>{m.label}</span>,
+      <span key="p" style={{ fontFamily: T.sans, fontSize: 14, color: T.text2 }}>{item.pair}</span>,
     );
     if (item.cost != null) {
       head.push(
@@ -897,61 +1158,268 @@ function MaterialRow({ kind, item, on, onToggle, onPreview }) {
     meta = fmtDate(item.date);
   }
 
+  /* Один клік дивиться, подвійний бере в розбір.
+
+     Браузер шле click і на першому кліку подвійного теж, тому просту
+     дію доводиться відкладати: якщо протягом 220 мс прилетів dblclick,
+     скасовуємо відкриття вікна й перемикаємо вибір. Без цієї паузи
+     подвійний клік спершу відкривав би вікно перегляду, а вибір
+     відбувався б уже за ним. */
+  const clickTimer = useRef(null);
+
+  useEffect(() => () => clearTimeout(clickTimer.current), []);
+
+  const onSingle = () => {
+    clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(onPreview, 220);
+  };
+  const onDouble = () => {
+    clearTimeout(clickTimer.current);
+    onToggle();
+  };
+
   return (
     <div
-      onClick={onToggle}
-      className="group relative flex cursor-pointer items-center"
+      onClick={onSingle}
+      onDoubleClick={onDouble}
+      className="group relative flex cursor-pointer select-none items-center"
       style={{
-        gap: 13, padding: '14px 20px',
+        gap: 16, padding: '15px 20px 15px 22px',
         borderBottom: `1px solid ${T.line}`,
-        background: on ? T.surfaceHi : 'transparent',
-        transition: 'background .16s',
+        /* Обране — світліша підкладка з градієнтом, що згасає вправо, і
+           тонкий відблиск згори. Нейтральна, без акценту: акцент у
+           списку на сорок рядків робить із нього фіолетову ковдру. */
+        background: on ? SELECTED_BG : 'transparent',
+        boxShadow: on ? 'inset 0 1px 0 rgba(255,255,255,0.045)' : 'none',
+        transition: 'all .2s',
       }}
       onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.surfaceHi; }}
       onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
     >
+      {/* Світла риска зліва. Росте від центра, а не зʼявляється цілком —
+          саме рух робить вибір помітним краєм ока. */}
       <span
         className="absolute"
         style={{
-          left: 0, top: 9, bottom: 9, width: 2, borderRadius: 99,
-          background: on ? T.acc : 'transparent', transition: 'all .18s',
+          left: 0, top: '50%', width: 2, borderRadius: 99,
+          transform: 'translateY(-50%)',
+          height: on ? '62%' : 0,
+          opacity: on ? 1 : 0,
+          background: 'linear-gradient(180deg, rgba(236,234,243,0.85), rgba(236,234,243,0.25))',
+          transition: 'all .24s cubic-bezier(.2,.8,.2,1)',
         }}
       />
-      <Box on={on} />
-
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center" style={{ gap: 10 }}>
           {head}
           {/* На вузькому екрані окрема колонка справа лишає тексту
               смужку в кілька слів, тому дата йде в той самий рядок. */}
-          <span className="tabular-nums sm:hidden" style={{ fontFamily: T.sans, fontSize: 12, color: T.text3 }}>
+          <span className="tabular-nums sm:hidden" style={{ fontFamily: T.sans, fontSize: 13, color: T.text3 }}>
             {meta}
           </span>
         </div>
         {note && (
-          <div style={{ fontFamily: T.sans, marginTop: 5, fontSize: 12.5, lineHeight: '19px', color: flagged ? T.warn : T.text3 }}>
+          <div style={{ fontFamily: T.sans, marginTop: 6, fontSize: 14, lineHeight: '21px', color: flagged ? T.warn : T.text2 }}>
             {note}
           </div>
         )}
       </div>
 
-      <span className="hidden shrink-0 tabular-nums sm:block" style={{ fontFamily: T.sans, fontSize: 12, color: T.text3 }}>
+      <span className="hidden shrink-0 tabular-nums sm:block" style={{ fontFamily: T.sans, fontSize: 13, color: T.text3 }}>
         {meta}
       </span>
 
-      {/* Перегляд окремою кнопкою, а не кліком по рядку: рядок уже
-          зайнятий вибором, і одна дія не має ховати другу. Місце під
-          неї зайняте завжди, тому список не сіпається під курсором. */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onPreview(); }}
-        title="Подивитись детальніше"
-        className="grid shrink-0 place-items-center opacity-0 transition-all duration-200 group-hover:opacity-100 focus:opacity-100"
-        style={{ width: 28, height: 28, borderRadius: 9, color: T.text3 }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.background = `rgba(${T.accRgb},0.10)`; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.background = 'transparent'; }}
-      >
-        <Eye size={14} strokeWidth={2.2} />
-      </button>
+      {/* Кнопка вибору. Подвійний клік по рядку робить те саме, але
+          сам себе він не показує — а ця кнопка і є підказкою, що
+          матеріал можна взяти в розбір. */}
+      <Pick on={on} onClick={(e) => { e.stopPropagation(); onToggle(); }} />
     </div>
+  );
+}
+
+/* Скріншоти кроку.
+
+   Дві речі, яких не було в макеті, але без яких блок неповний:
+
+   • вставка посилання з TradingView (Ctrl+V або перетягнути) — рівно
+     як на сторінці планів, бо саме звідти беруть графіки;
+   • перегляд: клік по мініатюрі відкриває галерею зі стрілками й
+     лупою, а не окрему вкладку з голою картинкою.
+
+   Зона більша за макетну (168×108 проти 126×80): у неї кладуть
+   графіки, а на мініатюрі 126px від графіка лишається пляма.
+*/
+function Shots({ items, max, onFiles, onUrl, onRemove }) {
+  const [hot, setHot] = useState(false);
+  const [view, setView] = useState(-1);
+
+  const takeUrl = (raw) => {
+    const url = String(raw || '').trim();
+    if (!isHttpUrl(url)) return false;
+    onUrl(url);
+    return true;
+  };
+
+  const onPaste = (e) => {
+    if (takeUrl(e.clipboardData.getData('text'))) { e.preventDefault(); return; }
+    const files = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'));
+    if (files.length) { e.preventDefault(); onFiles(files); }
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setHot(false);
+    if (e.dataTransfer.files?.length) { onFiles(e.dataTransfer.files); return; }
+    takeUrl(e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text'));
+  };
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div className="flex items-center justify-between" style={{ gap: 16 }}>
+        <span className="uppercase" style={mono(11, { fontWeight: 600, letterSpacing: '1.6px', color: T.text3 })}>
+          Скріншоти
+        </span>
+        <span style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text3 }}>
+          {items.length ? `${items.length} з ${max}` : 'немає'}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap" style={{ marginTop: 12, gap: 10 }}>
+        {items.map((sh, i) => (
+          <div
+            key={sh.src}
+            className="group/shot relative overflow-hidden"
+            style={{
+              width: 168, height: 108, borderRadius: 12,
+              border: `1px solid ${T.line}`, background: T.sunken,
+              cursor: 'zoom-in', transition: 'border-color .2s',
+            }}
+            onClick={() => setView(i)}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; }}
+          >
+            <img src={sh.src} alt="" loading="lazy" className="h-full w-full object-cover" />
+
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemove(i); }}
+              title="Прибрати"
+              className="absolute grid place-items-center opacity-0 transition-all duration-200 group-hover/shot:opacity-100"
+              style={{
+                top: 6, right: 6, width: 24, height: 24, borderRadius: 8,
+                background: 'rgba(12,12,16,0.72)', backdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255,255,255,0.09)', color: '#cfcddb',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.9)`; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(12,12,16,0.72)'; e.currentTarget.style.color = '#cfcddb'; }}
+            >
+              <X size={12} strokeWidth={2.6} />
+            </button>
+
+            <span
+              className="absolute inset-x-0 bottom-0 truncate"
+              style={{
+                padding: '6px 9px',
+                background: 'linear-gradient(180deg, transparent, rgba(10,10,13,0.85))',
+                ...mono(10.5, { letterSpacing: '.5px' }),
+                color: '#b9b7c4',
+              }}
+            >
+              {sh.name}
+            </span>
+          </div>
+        ))}
+
+        {items.length < max && (
+          <label
+            tabIndex={0}
+            onPaste={onPaste}
+            onDragOver={(e) => { e.preventDefault(); setHot(true); }}
+            onDragLeave={() => setHot(false)}
+            onDrop={onDrop}
+            className="flex cursor-pointer flex-col items-center justify-center outline-none"
+            style={{
+              width: 168, height: 108, gap: 7, borderRadius: 12,
+              border: `1px dashed ${hot ? T.acc : T.lineHi}`,
+              background: hot ? `rgba(${T.accRgb},0.09)` : `rgba(${T.accRgb},0.03)`,
+              color: hot ? T.acc : T.text3,
+              transition: 'all .2s',
+            }}
+          >
+            <ImagePlus size={19} strokeWidth={1.7} />
+            <span style={{ fontFamily: T.sans, fontSize: 13 }}>
+              {hot ? 'Відпусти' : 'Додати'}
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => { onFiles(e.target.files); e.target.value = ''; }}
+              className="hidden"
+            />
+          </label>
+        )}
+      </div>
+
+      <div style={{ fontFamily: T.sans, marginTop: 10, fontSize: 13, color: T.text3 }}>
+        Ctrl+V посилання з TradingView, перетягни файл або вибери — до {max} на крок
+      </div>
+
+      {view >= 0 && (
+        <div
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setView(-1); }}
+          className="fixed inset-0 z-[300] flex items-center justify-center p-6"
+          style={{ background: 'rgba(8,8,11,0.86)', backdropFilter: 'blur(8px)' }}
+        >
+          <div className="w-full" style={{ maxWidth: 1100 }} onClick={(e) => e.stopPropagation()}>
+            <ImageSlider images={items.map((x) => x.src)} containerClassName="h-[70vh] w-full" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Перемикач «беру в розбір».
+
+   З макета: у спокої — порожнє коло з плюсом, при виборі кнопка
+   розтягується в пігулку з галочкою й підписом. Колір нейтральний,
+   світло-прозорий, а не акцентний: фіолетова заливка на кожному
+   другому рядку перетворювала список на строкату мозаїку. */
+function Pick({ on, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      title={on ? 'Прибрати з розбору' : 'Додати в розбір'}
+      className="flex shrink-0 items-center justify-center"
+      style={{
+        gap: 7,
+        height: 30,
+        width: on ? 'auto' : 30,
+        padding: on ? '0 13px 0 11px' : 0,
+        borderRadius: 99,
+        background: on ? 'rgba(255,255,255,0.055)' : 'transparent',
+        border: `1px solid ${on ? 'rgba(255,255,255,0.15)' : T.lineHi}`,
+        boxShadow: on ? 'inset 0 1px 0 rgba(255,255,255,0.06)' : 'none',
+        color: on ? T.text : T.text3,
+        transition: 'all .22s cubic-bezier(.2,.8,.2,1)',
+      }}
+      onMouseEnter={(e) => {
+        if (on) return;
+        e.currentTarget.style.borderColor = T.text3;
+        e.currentTarget.style.color = T.text;
+      }}
+      onMouseLeave={(e) => {
+        if (on) return;
+        e.currentTarget.style.borderColor = T.lineHi;
+        e.currentTarget.style.color = T.text3;
+      }}
+    >
+      {on ? <Check size={13} strokeWidth={2.4} /> : <Plus size={13} strokeWidth={2.2} />}
+      {on && (
+        <span className="uppercase" style={mono(10, { letterSpacing: '1.3px', whiteSpace: 'nowrap' })}>
+          у розборі
+        </span>
+      )}
+    </button>
   );
 }

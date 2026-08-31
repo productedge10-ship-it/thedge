@@ -67,6 +67,16 @@ const toTrade = (row) => ({
     revenge: !!row.psy_revenge,
   },
   images: imagesOf(row.trade_images, row.trade_image),
+  psyNotes: row.psy_notes || '',
+  createdAt: row.created_at || '',
+
+  /* Помилка живе в тій самій угоді. У вкладці «Помилки» вона окремим
+     рядком, але у вікні самої угоди ховати її безглуздо: людина
+     дивиться на угоду саме тому, що з нею щось пішло не так. */
+  hasMistake: !!row.has_mistake,
+  mistakeType: row.mistake_category || '',
+  mistakeText: row.mistake_description || '',
+  mistakeImages: imagesOf(row.mistake_images, row.mistake_image),
 });
 
 /* Помилка = угода, у якій трейдер сам це визнав. Ціна помилки —
@@ -87,7 +97,14 @@ const toMistake = (row) => {
     rushed: !!row.rushed,
     followedPlan: row.followed_plan !== false,
     note: row.trade_description || '',
-    images: imagesOf(row.mistake_images, null),
+    images: imagesOf(row.mistake_images, row.mistake_image),
+    psyNotes: row.psy_notes || '',
+    psy: {
+      confident: !!row.psy_confident,
+      fear: !!row.psy_fear,
+      repeat: !!row.psy_repeat,
+      revenge: !!row.psy_revenge,
+    },
   };
 };
 
@@ -107,7 +124,28 @@ const toPlan = (row) => {
     category: d.category || '',
     rating: Number(d.sessionRating) || 0,
     conclusions: d.conclusionsText || '',
-    analysisMistake: d.analysisMistake || '',
+    title: d.title || '',
+    isPublic: !!row.is_public,
+    createdAt: row.created_at || '',
+
+    /* analysisMistake — прапорець «в аналізі була помилка», а текст
+       лежить окремо в analysisMistakeText. Раніше я брав сам прапорець
+       як текст, і блок мовчки не малювався: React не виводить boolean. */
+    analysisMistake: d.analysisMistake ? (d.analysisMistakeText || 'Помилка в аналізі позначена, без опису.') : '',
+
+    /* Розбір по таймфреймах — головний зміст плану. Це те, заради чого
+       план узагалі відкривають повторно. */
+    tda: Array.isArray(d.tdaBlocks) ? d.tdaBlocks.filter((b) => b?.text) : [],
+    review: Array.isArray(d.reviewBlocks) ? d.reviewBlocks.filter((b) => b?.text) : [],
+    updates: Array.isArray(d.updates) ? d.updates : [],
+    quiz: d.quiz && typeof d.quiz === 'object' ? d.quiz : null,
+    psy: {
+      confident: !!d.psyConfident,
+      fear: !!d.psyFear,
+      repeat: !!d.psyRepeatTrade,
+      revenge: !!d.psyRevenge,
+    },
+    psyNotes: d.psyNotes || '',
   };
 };
 
@@ -124,8 +162,9 @@ export async function loadMaterial(userId, from, to) {
         entry_time, exit_time, account_name,
         followed_plan, rushed, trade_description,
         psy_confident, psy_fear, psy_repeat, psy_revenge,
-        has_mistake, mistake_description, mistake_category, mistake_images,
-        trade_image, trade_images
+        has_mistake, mistake_description, mistake_category,
+        mistake_image, mistake_images,
+        trade_image, trade_images, psy_notes, created_at
       `)
       .eq('user_id', userId)
       .gte('plan_date', from)
@@ -134,7 +173,7 @@ export async function loadMaterial(userId, from, to) {
 
     supabase
       .from('trading_plans')
-      .select('id, date, pair, narrative, plan_data')
+      .select('id, date, pair, narrative, plan_data, is_public, created_at')
       .eq('user_id', userId)
       .gte('date', from)
       .lte('date', to)
@@ -166,7 +205,7 @@ export async function loadAllMistakes(userId, limit = 500) {
   if (!userId) return [];
   const { data } = await supabase
     .from('trades')
-    .select('id, plan_date, plan_pair, result, rr, rushed, session, followed_plan, trade_description, mistake_description, mistake_category, mistake_images')
+    .select('id, plan_date, plan_pair, result, rr, rushed, session, followed_plan, trade_description, mistake_description, mistake_category, mistake_image, mistake_images, psy_notes, psy_confident, psy_fear, psy_repeat, psy_revenge')
     .eq('user_id', userId)
     .eq('has_mistake', true)
     .order('plan_date', { ascending: false })
@@ -198,6 +237,8 @@ const fromRow = (row) => ({
   emotions: row.data?.emotions || [],
   answers: row.data?.answers || {},
   promises: (row.data?.promises || []).map(toPromise),
+  /* Скріни до відповідей: { worked: [{src,name}], broke: [...] } */
+  shots: row.data?.shots || {},
   stats: row.data?.stats || {},
   evidence: row.data?.evidence || { trades: [], plans: [], mistakes: [] },
 });
@@ -212,6 +253,7 @@ const toRow = (review, userId) => ({
     emotions: review.emotions || [],
     answers: review.answers || {},
     promises: review.promises || [],
+    shots: review.shots || {},
     stats: review.stats || {},
     evidence: review.evidence || { trades: [], plans: [], mistakes: [] },
   },

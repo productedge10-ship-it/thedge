@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { X, Trash2, Check, Share2, Globe, Link2Off } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
-import { PROMPTS, EMOTIONS, SCORE_LABELS, fmtRange, fmtR, isoWeek } from '../../lib/reviewsData';
+import ImageSlider from '../ui/ImageSlider';
+import { PROMPTS, EMOTIONS, SCORE_LABELS, fmtRange, fmtR } from '../../lib/reviewsData';
 
 /* ==================================================================
    Читалка розбору.
@@ -32,14 +33,21 @@ import { PROMPTS, EMOTIONS, SCORE_LABELS, fmtRange, fmtR, isoWeek } from '../../
    раніше, ніж людина дочитає підпис. */
 const PROMPT_TONE = { worked: T.ok, broke: T.bad, pattern: T.acc };
 
-function Eyebrow({ children, color, size = 9.5, tracking = 1.8 }) {
+/* Підпис-надзаголовок.
+
+   Був 9.5px моноширинним із розрядкою 1.8 — на Full HD такий рядок
+   читається як орнамент, а не як текст. Побільшав кегль, додав ваги й
+   зменшив розрядку: саме вона на дрібному розмірі розсипає слово на
+   окремі літери. */
+function Eyebrow({ children, color, size = 11.5, tracking = 1.4 }) {
   return (
     <div
       style={{
         fontFamily: T.mono,
         fontSize: size,
+        fontWeight: 600,
         letterSpacing: `${tracking}px`,
-        color: color || T.text4,
+        color: color || T.text2,
         textTransform: 'uppercase',
       }}
     >
@@ -60,7 +68,7 @@ function Row({ label, value, tone, last }) {
         borderBottom: last ? `1px solid ${T.line}` : 'none',
       }}
     >
-      <span style={{ fontFamily: T.sans, fontSize: 13, color: T.text3 }}>{label}</span>
+      <span style={{ fontFamily: T.sans, fontSize: 14, color: T.text2 }}>{label}</span>
       <span
         className="tabular-nums"
         style={{ fontFamily: T.mono, fontSize: 17, fontWeight: 600, color: tone || T.text }}
@@ -113,7 +121,6 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
 
   const s = review.stats || {};
   const c = review.score >= 4 ? T.ok : review.score === 3 ? T.warn : T.bad;
-  const week = isoWeek(review.from);
   const promises = review.promises || [];
   const kept = promises.filter((p) => p.done).length;
 
@@ -150,8 +157,8 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
           }}
         >
           <div className="min-w-0 sm:pl-3">
-            <Eyebrow color={T.acc} size={10} tracking={2.2}>
-              Тиждень {week} · Розбір
+            <Eyebrow color={T.acc} size={11} tracking={2.2}>
+              Розбір
             </Eyebrow>
             {/* Без обрізання: на телефоні кнопки зʼїдають половину рядка,
                 і «13 лип. — 1…» не каже нічого. Хай переноситься. */}
@@ -298,17 +305,29 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
                     <div key={p.id} className="flex flex-col" style={{ gap: 30 }}>
                       {i > 0 && <div style={{ height: 1, background: T.line }} />}
                       <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: 18 }}>
-                        <div style={{ fontFamily: T.mono, fontSize: 15, color: T.text4, paddingTop: 3 }}>
+                        <div style={{ fontFamily: T.mono, fontSize: 16, fontWeight: 600, color: T.text3, paddingTop: 3 }}>
                           {String(i + 1).padStart(2, '0')}
                         </div>
                         <div className="min-w-0">
                           <Eyebrow color={PROMPT_TONE[p.id]} tracking={2}>{p.label}</Eyebrow>
                           <p
                             className="whitespace-pre-wrap"
-                            style={{ fontFamily: T.sans, marginTop: 11, fontSize: 16, lineHeight: '28px', color: T.text2 }}
+                            style={{ fontFamily: T.sans, marginTop: 12, fontSize: 16.5, lineHeight: '29px', color: T.text }}
                           >
                             {text}
                           </p>
+
+                          {/* Скріни, прикріплені до цієї відповіді. Саме тут,
+                              а не спільною купою внизу: інакше не видно, до
+                              чого який графік. */}
+                          {(review.shots?.[p.id] || []).length > 0 && (
+                            <div style={{ marginTop: 14 }}>
+                              <ImageSlider
+                                images={review.shots[p.id].map((x) => x.src)}
+                                containerClassName="h-[320px] w-full"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -327,10 +346,15 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
                   }}
                 >
                   <div className="flex items-center justify-between" style={{ gap: 16 }}>
-                    <Eyebrow color={T.text3} size={10} tracking={2}>Домовленості з собою</Eyebrow>
+                    {/* Звичайним шрифтом, а не моноширинним у розрядку:
+                        це заголовок блоку, який читають, а не мітка
+                        колонки з цифрами. */}
+                    <span style={{ fontFamily: T.sans, fontSize: 16, fontWeight: 600, color: T.text }}>
+                      Домовленості з собою
+                    </span>
                     <span
                       className="shrink-0 tabular-nums"
-                      style={{ fontFamily: T.mono, fontSize: 12, color: T.text3 }}
+                      style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 600, color: kept === promises.length ? T.ok : T.text2 }}
                     >
                       {kept}/{promises.length} виконано
                     </span>
@@ -364,14 +388,14 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
 
                         <span
                           className="min-w-0 flex-1"
-                          style={{ fontFamily: T.sans, fontSize: 14.5, lineHeight: '22px', color: p.done ? T.text2 : T.text }}
+                          style={{ fontFamily: T.sans, fontSize: 15.5, lineHeight: '24px', color: p.done ? T.text2 : T.text }}
                         >
                           {p.text}
                         </span>
 
                         <span
                           className="shrink-0"
-                          style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: '.6px', color: p.done ? T.ok : T.text4 }}
+                          style={{ fontFamily: T.mono, fontSize: 12.5, fontWeight: 600, letterSpacing: '.4px', color: p.done ? T.ok : T.text2 }}
                         >
                           {p.done ? 'виконано' : 'не виконано'}
                         </span>

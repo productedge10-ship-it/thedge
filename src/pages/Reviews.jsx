@@ -5,12 +5,14 @@ import { Plus, Search, X, ArrowLeft, BookOpenCheck, Loader2 } from 'lucide-react
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import { notify } from '../utils/notify';
 import { useAuth } from '../context/AuthContext';
-import { periodStats, repeatedMistakes, previousReview } from '../lib/reviewsData';
+import { periodStats, repeatedMistakes, previousReview, fmtRange } from '../lib/reviewsData';
 import {
   loadReviews, createReview, deleteReview, setReviewPublic,
   loadMaterial, loadAllMistakes,
 } from '../lib/reviewsStore';
 import ReviewBuilder from '../components/reviews/ReviewBuilder';
+import { DateRangeField } from '../components/ui/DateField';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import ReviewReader from '../components/reviews/ReviewReader';
 import ReviewRow from '../components/reviews/ReviewRow';
 
@@ -44,7 +46,19 @@ export default function Reviews() {
   const [allMistakes, setAllMistakes] = useState([]);
   const [loadingMaterial, setLoadingMaterial] = useState(false);
 
-  const [search, setSearch] = useState('');
+  /* Фільтр живе у двох станах: що людина набирає й що вже застосовано.
+
+     Живий пошук по тексту сам по собі непоганий, але дата так не
+     працює: після першого кліку по календарю період неповний, і
+     список на мить схлопувався б у порожнечу. Тому обидва поля — це
+     чернетка, а список змінює одна кнопка. */
+  const EMPTY = { q: '', from: '', to: '' };
+  const [draft, setDraft] = useState(EMPTY);
+  const [query, setQuery] = useState(EMPTY);
+
+  const dirty = draft.q !== query.q || draft.from !== query.from || draft.to !== query.to;
+  const applyFilters = () => setQuery(draft);
+  const resetFilters = () => { setDraft(EMPTY); setQuery(EMPTY); };
   const [reading, setReading] = useState(null);
 
   /* стан нового розбору */
@@ -55,6 +69,12 @@ export default function Reviews() {
   const [answers, setAnswers] = useState({});
   const [lesson, setLesson] = useState('');
   const [keptPromises, setKeptPromises] = useState({});
+  const [shots, setShots] = useState({});
+  /* Розбір, який просять видалити. Тримаємо весь обʼєкт, а не id:
+     у вікні підтвердження показуємо його висновок, щоб було видно,
+     що саме зникне. */
+  const [toDelete, setToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -124,7 +144,7 @@ export default function Reviews() {
   const startCreate = () => {
     setRange({ from: daysAgo(6), to: today() });
     setSelected({ trades: [], plans: [], mistakes: [] });
-    setScore(0); setEmotions([]); setAnswers({}); setLesson(''); setKeptPromises({});
+    setScore(0); setEmotions([]); setAnswers({}); setLesson(''); setKeptPromises({}); setShots({});
     setMode('create');
   };
 
@@ -141,6 +161,7 @@ export default function Reviews() {
         emotions,
         answers,
         lesson: lesson.trim(),
+        shots,
         promises: lesson.trim() ? [{ text: lesson.trim(), done: false }] : [],
         stats: {
           trades: stats.total,
@@ -163,14 +184,25 @@ export default function Reviews() {
   };
 
   /* ---------- видалення ---------- */
-  const removeReview = async (id) => {
+  const removeReview = async () => {
+    const id = toDelete?.id;
+    if (!id) return;
+
     const before = reviews;
+    setDeleting(true);
+    /* Прибираємо зі списку одразу, а вікно закриваємо після відповіді
+       бази: інакше на помилці розбір повертався б у список уже після
+       того, як людина відвела погляд. */
     setReviews((list) => list.filter((x) => x.id !== id));
     try {
       await deleteReview(user.id, id);
+      setToDelete(null);
+      if (reading?.id === id) setReading(null);
     } catch (err) {
       setReviews(before);
       notify.error('Не вдалось видалити', err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -203,12 +235,25 @@ export default function Reviews() {
   };
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return reviews;
-    return reviews.filter((r) =>
-      (r.lesson || '').toLowerCase().includes(q)
-      || Object.values(r.answers || {}).some((v) => String(v).toLowerCase().includes(q)));
-  }, [reviews, search]);
+    const q = query.q.trim().toLowerCase();
+
+    /* Умови складаються: слово І період. Задав обидва — лишаються
+       розбори, що підходять під те й те. */
+    return reviews.filter((r) => {
+      /* Розбір має вміститись у вибраний проміжок цілком.
+
+         Спершу тут був перетин — «хоч одним днем зачепився». На ділі
+         це збивало з пантелику: обираєш 25–31 серпня й отримуєш ще й
+         розбір за 23–29, бо в них спільні шість днів. «Цілком
+         усередині» — єдине правило, яке легко передбачити наперед. */
+      if (query.from && (r.from || r.to) < query.from) return false;
+      if (query.to && (r.to || r.from) > query.to) return false;
+
+      if (!q) return true;
+      return (r.lesson || '').toLowerCase().includes(q)
+        || Object.values(r.answers || {}).some((v) => String(v).toLowerCase().includes(q));
+    });
+  }, [reviews, query]);
 
   /* ================================================================ */
 
@@ -262,18 +307,64 @@ export default function Reviews() {
                 >
                   <Search size={15} strokeWidth={2.2} style={{ color: T.text4 }} />
                   <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    value={draft.q}
+                    onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }}
                     placeholder="Пошук по висновках…"
                     className="w-full bg-transparent text-[14px] outline-none"
                     style={{ fontFamily: T.sans, color: T.text }}
                   />
-                  {search && (
-                    <button onClick={() => setSearch('')} style={{ color: T.text4 }}>
+                  {draft.q && (
+                    <button
+                      onClick={() => { setDraft((d) => ({ ...d, q: '' })); setQuery((v) => ({ ...v, q: '' })); }}
+                      style={{ color: T.text4 }}
+                    >
                       <X size={14} strokeWidth={2.5} />
                     </button>
                   )}
                 </div>
+
+                {/* Період одним полем: готові проміжки зліва, календар
+                    справа. Той самий react-day-picker у тих самих
+                    кольорах, що й у новому розборі. */}
+                <div className="w-[220px]">
+                  <DateRangeField
+                    value={{ from: draft.from, to: draft.to }}
+                    onChange={(r) => setDraft((d) => ({ ...d, ...r }))}
+                  />
+                </div>
+
+                {/* Одна кнопка на обидва поля. Поки чернетка збігається
+                    з тим, що вже показано, вона гасне — інакше людина
+                    тисне її й не розуміє, чому нічого не змінилось. */}
+                <button
+                  onClick={applyFilters}
+                  disabled={!dirty}
+                  className="inline-flex h-[42px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14px] font-bold transition-all duration-200"
+                  style={{
+                    fontFamily: T.sans,
+                    background: dirty ? `rgba(${T.accRgb},0.14)` : 'transparent',
+                    border: `1px solid ${dirty ? T.lineAcc : T.line}`,
+                    color: dirty ? T.acc : T.text4,
+                    cursor: dirty ? 'pointer' : 'default',
+                  }}
+                >
+                  <Search size={15} strokeWidth={2.6} />
+                  Пошук
+                </button>
+
+                {(query.q || query.from || query.to) && (
+                  <button
+                    onClick={resetFilters}
+                    title="Скинути фільтри"
+                    className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl transition-colors duration-200"
+                    style={{ border: `1px solid ${T.line}`, color: T.text3 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
+                  >
+                    <X size={15} strokeWidth={2.4} />
+                  </button>
+                )}
 
                 {/* Та сама кнопка, що «Add Account» на рахунках: висота
                     під сусіднє поле пошуку, решта — спільний клас. */}
@@ -320,14 +411,14 @@ export default function Reviews() {
                   <p className="mb-7 max-w-[440px] text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.7 }}>
                     {reviews.length === 0
                       ? 'Розбір — це коли ти дивишся на свої угоди, плани й помилки разом і вирішуєш, що змінити. Достатньо раз на тиждень.'
-                      : 'Спробуй інші слова в пошуку.'}
+                      : 'Спробуй інші слова або ширший період.'}
                   </p>
                   <button
-                    onClick={() => (reviews.length === 0 ? startCreate() : setSearch(''))}
+                    onClick={() => (reviews.length === 0 ? startCreate() : resetFilters())}
                     className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-bold transition-transform duration-200 active:scale-[0.98]"
                     style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
                   >
-                    {reviews.length === 0 ? <><Plus size={15} strokeWidth={3} /> Зробити перший</> : 'Скинути пошук'}
+                    {reviews.length === 0 ? <><Plus size={15} strokeWidth={3} /> Зробити перший</> : 'Скинути фільтри'}
                   </button>
                 </div>
               ) : (
@@ -339,7 +430,7 @@ export default function Reviews() {
                         review={r}
                         index={i}
                         onOpen={setReading}
-                        onDelete={removeReview}
+                        onDelete={(id) => setToDelete(reviews.find((x) => x.id === id))}
                         onShare={shareReview}
                       />
                     ))}
@@ -376,6 +467,9 @@ export default function Reviews() {
                 prevReview={prev}
                 keptPromises={keptPromises}
                 onKeptPromise={(i, v) => setKeptPromises((s) => ({ ...s, [i]: v }))}
+                shots={shots}
+                onShots={setShots}
+                userId={user?.id}
                 saving={saving}
                 onSave={saveReview}
               />
@@ -390,9 +484,24 @@ export default function Reviews() {
             key="reader"
             review={reading}
             onClose={() => setReading(null)}
-            onDelete={(id) => { removeReview(id); setReading(null); }}
+            onDelete={(id) => setToDelete(reviews.find((x) => x.id === id))}
             onShare={() => shareReview(reading)}
             onUnshare={() => unshareReview(reading)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {toDelete && (
+          <ConfirmModal
+            open
+            title="Видалити розбір?"
+            text={`За ${fmtRange(toDelete.from, toDelete.to)}. Разом із ним зникнуть відповіді, обрані угоди й скріншоти. Скасувати це не вийде.`}
+            detail={toDelete.lesson}
+            confirmLabel="Видалити розбір"
+            busy={deleting}
+            onConfirm={removeReview}
+            onCancel={() => setToDelete(null)}
           />
         )}
       </AnimatePresence>
