@@ -70,6 +70,10 @@ export default function Reviews() {
   const [lesson, setLesson] = useState('');
   const [keptPromises, setKeptPromises] = useState({});
   const [shots, setShots] = useState({});
+  /* Домовленості на наступний період. Раніше виводились із тексту
+     «одна зміна» — увесь абзац ставав єдиним пунктом. Тепер це
+     справжній список, який наступний розбір покаже для позначок. */
+  const [promises, setPromises] = useState([]);
   /* Розбір, який просять видалити. Тримаємо весь обʼєкт, а не id:
      у вікні підтвердження показуємо його висновок, щоб було видно,
      що саме зникне. */
@@ -144,7 +148,7 @@ export default function Reviews() {
   const startCreate = () => {
     setRange({ from: daysAgo(6), to: today() });
     setSelected({ trades: [], plans: [], mistakes: [] });
-    setScore(0); setEmotions([]); setAnswers({}); setLesson(''); setKeptPromises({}); setShots({});
+    setScore(0); setEmotions([]); setAnswers({}); setLesson(''); setKeptPromises({}); setShots({}); setPromises([]);
     setMode('create');
   };
 
@@ -162,7 +166,11 @@ export default function Reviews() {
         answers,
         lesson: lesson.trim(),
         shots,
-        promises: lesson.trim() ? [{ text: lesson.trim(), done: false }] : [],
+        /* Якщо чекліст порожній, а зміна написана — беремо її як
+           єдину домовленість: краще одна, ніж жодної. */
+        promises: promises.length
+          ? promises.map((text) => ({ text, done: false }))
+          : lesson.trim() ? [{ text: lesson.trim(), done: false }] : [],
         stats: {
           trades: stats.total,
           netR: stats.netR,
@@ -470,6 +478,8 @@ export default function Reviews() {
                 shots={shots}
                 onShots={setShots}
                 userId={user?.id}
+                promises={promises}
+                onPromises={setPromises}
                 saving={saving}
                 onSave={saveReview}
               />

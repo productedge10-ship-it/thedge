@@ -47,6 +47,19 @@ const SELECTED_BG = 'linear-gradient(90deg, rgba(255,255,255,0.055), rgba(255,25
 
 const cut = (s, n = 74) => (s.length > n ? `${s.slice(0, n).trim()}…` : s);
 
+/* «1 правило», «3 правила», «5 правил». Без цього виходило «3 правил»,
+   що виглядає як недописаний рядок, а не як число. Окремий випадок для
+   11–14: там завжди форма множини, попри останню цифру. */
+const plural = (n, one, few, many) => {
+  const t = n % 100;
+  if (t >= 11 && t <= 14) return many;
+  const d = n % 10;
+  if (d === 1) return one;
+  if (d >= 2 && d <= 4) return few;
+  return many;
+};
+
+
 function Chevron({ open, size = 17 }) {
   return (
     <span
@@ -135,6 +148,7 @@ export default function ReviewBuilder({
   lesson, onLesson,
   prevReview, keptPromises, onKeptPromise,
   shots: initialShots, onShots, userId,
+  promises, onPromises,
   saving, onSave,
 }) {
   const [statsOpen, setStatsOpen] = useState(false);
@@ -222,6 +236,7 @@ export default function ReviewBuilder({
   const filled = [
     emotions.length > 0,
     ...textSteps.map((t) => !!valueOf(t.key).trim()),
+    promises.length > 0,
   ];
   const filledCount = filled.filter(Boolean).length;
 
@@ -244,6 +259,19 @@ export default function ReviewBuilder({
       kind: 'text',
       preview: valueOf(t.key).trim() ? cut(valueOf(t.key).trim()) : '',
     })),
+    {
+      kicker: 'Обіцянка',
+      title: 'Чого дотримуватись',
+      hint: 'Конкретні правила на наступний період. Наступного разу цей список зустріне тебе згори — і ти позначиш, що виконав.',
+      kind: 'list',
+      accent: true,
+      /* Тільки кількість. Показувати перше правило поруч було зайвим:
+         у списку відповідей це рядок про стан справ, а не місце, де
+         їх перечитують. */
+      preview: promises.length
+        ? `${promises.length} ${plural(promises.length, 'правило', 'правила', 'правил')}`
+        : '',
+    },
   ];
 
   const stepsTotal = steps.length;
@@ -822,7 +850,12 @@ export default function ReviewBuilder({
             </div>
 
             {current.kind === 'chips' && (
-              <div className="flex flex-wrap" style={{ marginTop: 24, gap: 9 }}>
+              /* Обране мало відрізнятись лише відтінком канта — на
+                 сімох чипах поспіль це не читається взагалі. Тепер у
+                 вибраного зʼявляється галочка, суцільний кант і
+                 підкладка кольору стану: різницю видно з першого
+                 погляду, не вчитуючись у кожен. */
+              <div className="flex flex-wrap" style={{ marginTop: 24, gap: 10 }}>
                 {EMOTIONS.map((e) => {
                   const on = emotions.includes(e.id);
                   const c = e.good ? T.ok : T.warn;
@@ -830,16 +863,50 @@ export default function ReviewBuilder({
                     <button
                       key={e.id}
                       onClick={() => onEmotion(e.id)}
+                      className="flex items-center"
                       style={{
-                        fontFamily: T.sans, height: 40, padding: '0 18px', borderRadius: 11,
-                        fontSize: 15, fontWeight: 500, transition: 'all .18s',
-                        background: on ? `${c}1c` : T.sunken,
-                        border: `1px solid ${on ? `${c}55` : T.line}`,
+                        /* Геометрія однакова в обох станах.
+
+                           Раніше галочка зʼявлялась і зникала разом із
+                           місцем під неї, а відступ зліва мінявся з 18
+                           на 14 — чип змінював ширину, ряд перепаковувався,
+                           і сусіди стрибали вбік. Тепер значок є завжди,
+                           просто невидимий: рухаються тільки кольори й
+                           прозорість, а їх браузер анімує без перерахунку
+                           розкладки. */
+                        fontFamily: T.sans, gap: 9, height: 44,
+                        padding: '0 18px 0 14px',
+                        borderRadius: 12,
+                        fontSize: 15, fontWeight: 500,
+                        transition: 'background-color .22s ease, border-color .22s ease, color .22s ease, box-shadow .22s ease',
+                        background: on ? `${c}22` : T.sunken,
+                        border: `1px solid ${on ? c : T.line}`,
                         color: on ? c : T.text2,
+                        boxShadow: on ? `0 0 0 3px ${c}1a` : 'none',
                       }}
-                      onMouseEnter={(ev) => { if (!on) { ev.currentTarget.style.borderColor = T.lineHi; ev.currentTarget.style.color = T.text; } }}
-                      onMouseLeave={(ev) => { if (!on) { ev.currentTarget.style.borderColor = T.line; ev.currentTarget.style.color = T.text2; } }}
+                      onMouseEnter={(ev) => { if (!on) { ev.currentTarget.style.borderColor = T.lineHi; ev.currentTarget.style.color = T.text; ev.currentTarget.style.background = T.surfaceHi; } }}
+                      onMouseLeave={(ev) => { if (!on) { ev.currentTarget.style.borderColor = T.line; ev.currentTarget.style.color = T.text2; ev.currentTarget.style.background = T.sunken; } }}
                     >
+                      <span
+                        className="grid shrink-0 place-items-center"
+                        style={{
+                          width: 18, height: 18, borderRadius: 6,
+                          background: on ? c : 'transparent',
+                          border: `1.5px solid ${on ? c : T.lineHi}`,
+                          transition: 'background-color .22s ease, border-color .22s ease',
+                        }}
+                      >
+                        <Check
+                          size={12}
+                          strokeWidth={3.4}
+                          style={{
+                            color: 'var(--edge-bg, #0A0A0C)',
+                            opacity: on ? 1 : 0,
+                            transform: on ? 'scale(1)' : 'scale(0.5)',
+                            transition: 'opacity .16s ease, transform .22s cubic-bezier(.22,1,.36,1)',
+                          }}
+                        />
+                      </span>
                       {e.label}
                     </button>
                   );
@@ -847,25 +914,17 @@ export default function ReviewBuilder({
               </div>
             )}
 
+            {current.kind === 'list' && (
+              <Checklist items={promises} onChange={onPromises} />
+            )}
+
             {current.kind === 'text' && (
               <>
-                <TextareaAutosize
+                <Field
                   value={valueOf(current.key)}
-                  onChange={(e) => setValue(current.key, e.target.value)}
+                  onChange={(v) => setValue(current.key, v)}
                   placeholder={current.placeholder}
-                  minRows={4}
-                  className="w-full outline-none"
-                  style={{
-                    fontFamily: T.sans, marginTop: 22, padding: '16px 18px', borderRadius: 14,
-                    background: T.sunken,
-                    border: `1px solid ${current.accent ? `rgba(${T.accRgb},0.3)` : T.line}`,
-                    color: T.text, fontSize: 16, lineHeight: '27px', maxWidth: 1100,
-                    resize: 'vertical', transition: 'all .18s',
-                  }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = T.acc; }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = current.accent ? `rgba(${T.accRgb},0.3)` : T.line;
-                  }}
+                  accent={current.accent}
                 />
 
                 {current.attach && (
@@ -1238,6 +1297,175 @@ function MaterialRow({ kind, item, on, onToggle, onPreview }) {
           сам себе він не показує — а ця кнопка і є підказкою, що
           матеріал можна взяти в розбір. */}
       <Pick on={on} onClick={(e) => { e.stopPropagation(); onToggle(); }} />
+    </div>
+  );
+}
+
+/* Поле відповіді.
+
+   Шапки з підписом і лічильником слів тут більше немає: вона займала
+   рядок, відбирала контраст у самого поля й нічого не вирішувала —
+   що це поле для тексту, видно й так.
+
+   Уся рамка живе в CSS-класі, а не в інлайнових стилях. Це не смак:
+   інлайновий style перебиває будь-яке правило з таблиці, тому
+   :focus-within просто не мав шансу — кант і кільце на фокусі не
+   зʼявлялись зовсім.
+*/
+function Field({ value, onChange, placeholder, accent }) {
+  return (
+    <div
+      className={`edge-field${accent ? ' edge-field--accent' : ''}`}
+      style={{ marginTop: 22, maxWidth: 1100 }}
+    >
+      {/* Плашка згори. Лічильника слів у ній навмисно немає — він
+          рахував те, чого ніхто не міряє, і забирав праву половину
+          рядка. Лишився самий підпис, який на фокусі світлішає до
+          акценту: видно, в якому саме полі курсор. */}
+      <div
+        className="edge-field-cap uppercase"
+        style={{
+          fontFamily: T.mono, padding: '10px 18px 9px',
+          fontSize: 10.5, fontWeight: 600, letterSpacing: '1.6px',
+          color: T.text3,
+          background: 'rgba(255,255,255,0.03)',
+          borderBottom: `1px solid ${T.line}`,
+          transition: 'color .18s ease',
+        }}
+      >
+        {accent ? 'Зміна' : 'Відповідь'}
+      </div>
+
+      {/* Росте до шести рядків, далі прокрутка. Ручка розтягування
+          прибрана: нею користувались, щоб побачити довгий текст, а
+          тепер поле само дає стільки місця, скільки має сенс, і не
+          роздуває картку на пів екрана. */}
+      <TextareaAutosize
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        minRows={3}
+        maxRows={6}
+        className="edge-scroll w-full bg-transparent outline-none"
+        style={{
+          fontFamily: T.sans, padding: '15px 18px 16px',
+          color: T.text, fontSize: 16, lineHeight: '27px',
+          resize: 'none',
+        }}
+      />
+    </div>
+  );
+}
+
+/* Чекліст домовленостей на наступний період.
+
+   Раніше обіцянка виводилась із тексту «одна зміна»: що написав — те
+   й ставало єдиним пунктом. Але «жодної угоди поза London» і
+   «стоп на день після двох стопів» — це два різні правила, і
+   позначати їх виконаними теж треба окремо.
+
+   Enter додає й лишає курсор у полі: правила пишуть чергою, і тягтись
+   до кнопки після кожного — зайвий рух.
+*/
+function Checklist({ items, onChange }) {
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef(null);
+
+  const add = () => {
+    const v = draft.trim();
+    if (!v) return;
+    /* Дублікат мовчки не додаємо: два однакові рядки в списку
+       домовленостей — це не два правила, а помилка набору. */
+    if (items.some((x) => x.toLowerCase() === v.toLowerCase())) { setDraft(''); return; }
+    onChange([...items, v]);
+    setDraft('');
+    inputRef.current?.focus();
+  };
+
+  const remove = (i) => onChange(items.filter((_, k) => k !== i));
+
+  return (
+    <div style={{ marginTop: 22, maxWidth: 900 }}>
+      {items.length > 0 && (
+        <div className="flex flex-col" style={{ marginBottom: 12, gap: 8 }}>
+          {items.map((text, i) => (
+            <div
+              key={text}
+              className="group/row flex items-center"
+              style={{
+                gap: 14, padding: '14px 16px', borderRadius: 13,
+                background: T.sunken, border: `1px solid ${T.line}`,
+                transition: 'border-color .18s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; }}
+            >
+              {/* Порожня рамка, а не галочка: тут правило лише
+                  записують. Ставити позначку буде наступний розбір. */}
+              <span
+                className="shrink-0"
+                style={{
+                  width: 20, height: 20, borderRadius: 6,
+                  border: `1.6px solid ${T.lineHi}`,
+                }}
+              />
+              <span
+                className="min-w-0 flex-1"
+                style={{ fontFamily: T.sans, fontSize: 16, lineHeight: '24px', color: T.text }}
+              >
+                {text}
+              </span>
+              <button
+                onClick={() => remove(i)}
+                title="Прибрати"
+                className="grid shrink-0 place-items-center opacity-0 transition-all duration-200 group-hover/row:opacity-100"
+                style={{ width: 28, height: 28, borderRadius: 9, color: T.text3 }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.background = 'transparent'; }}
+              >
+                <X size={14} strokeWidth={2.6} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div
+        /* Той самий клас, що й у полях відповідей: інлайнові фон і кант
+           перебивали б :focus-within і фокус знову б не малювався. */
+        className="edge-field edge-field--accent flex items-center"
+        style={{ gap: 12, padding: '0 8px 0 16px' }}
+      >
+        <Plus size={17} strokeWidth={2.4} className="shrink-0" style={{ color: T.acc }} />
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+          placeholder="Наприклад: після двох стопів — стоп на день"
+          className="min-w-0 flex-1 bg-transparent outline-none"
+          style={{ fontFamily: T.sans, height: 56, fontSize: 16, color: T.text }}
+        />
+        <button
+          onClick={add}
+          disabled={!draft.trim()}
+          className="shrink-0"
+          style={{
+            fontFamily: T.sans, height: 40, padding: '0 18px', borderRadius: 11,
+            fontSize: 14.5, fontWeight: 600,
+            background: draft.trim() ? T.acc : 'transparent',
+            color: draft.trim() ? 'var(--edge-on-acc, #0A0A0C)' : T.text4,
+            cursor: draft.trim() ? 'pointer' : 'default',
+            transition: 'all .18s',
+          }}
+        >
+          Додати
+        </button>
+      </div>
+
+      <p style={{ fontFamily: T.sans, marginTop: 10, fontSize: 13.5, color: T.text3 }}>
+        Enter додає правило. Тримай список коротким — три пункти виконуються, десять ні.
+      </p>
     </div>
   );
 }
