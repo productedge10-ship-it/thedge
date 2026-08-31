@@ -1367,13 +1367,21 @@ function Field({ value, onChange, placeholder, accent }) {
    Enter додає й лишає курсор у полі: правила пишуть чергою, і тягтись
    до кнопки після кожного — зайвий рух.
 */
+/* Три — не кругле число заради краси. Стільки правил людина реально
+   тримає в голові під час сесії; із десятьма список перетворюється на
+   декларацію, яку ніхто не перечитує. Обмеження жорстке, бо м'яка
+   порада «тримай список коротким» не працює. */
+const MAX_RULES = 3;
+
 function Checklist({ items, onChange }) {
   const [draft, setDraft] = useState('');
   const inputRef = useRef(null);
 
+  const full = items.length >= MAX_RULES;
+
   const add = () => {
     const v = draft.trim();
-    if (!v) return;
+    if (!v || full) return;
     /* Дублікат мовчки не додаємо: два однакові рядки в списку
        домовленостей — це не два правила, а помилка набору. */
     if (items.some((x) => x.toLowerCase() === v.toLowerCase())) { setDraft(''); return; }
@@ -1430,6 +1438,10 @@ function Checklist({ items, onChange }) {
         </div>
       )}
 
+      {/* На трьох правилах поле просто зникає. Ні лічильника, ні
+          пояснення: три рядки на екрані самі показують, що список
+          повний, а хрестик поруч — як його звільнити. */}
+      {!full && (
       <div
         /* Той самий клас, що й у полях відповідей: інлайнові фон і кант
            перебивали б :focus-within і фокус знову б не малювався. */
@@ -1462,10 +1474,13 @@ function Checklist({ items, onChange }) {
           Додати
         </button>
       </div>
+      )}
 
-      <p style={{ fontFamily: T.sans, marginTop: 10, fontSize: 13.5, color: T.text3 }}>
-        Enter додає правило. Тримай список коротким — три пункти виконуються, десять ні.
-      </p>
+      {!full && (
+        <p style={{ fontFamily: T.sans, marginTop: 10, fontSize: 13.5, color: T.text3 }}>
+          Enter додає правило. Максимум {MAX_RULES} — стільки реально тримаєш у голові під час сесії.
+        </p>
+      )}
     </div>
   );
 }
