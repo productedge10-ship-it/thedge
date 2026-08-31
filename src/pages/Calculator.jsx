@@ -1,130 +1,147 @@
 import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { supabase } from '../lib/supabase';
-import { motion, AnimatePresence, useMotionValue, useMotionTemplate, useSpring } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useMotionTemplate } from 'framer-motion';
 import Fuse from 'fuse.js';
-import { 
-  Calculator as CalcIcon, Wallet, ChevronDown, 
-  DollarSign, Crosshair, Search as SearchIcon, Loader2, Edit3 
+import {
+  Calculator as CalcIcon, ChevronDown, Search as SearchIcon, Loader2, Settings2,
 } from 'lucide-react';
 
-// Імпорт сповіщень
-import { notify } from '../utils/notify';
 import { T } from '../lib/theme';
-
-// Імпорти суб-компонентів
 import AssetIcon, { CURRENCY_TO_FLAG } from '../components/ui/AssetIcon';
-import { InputWithCopy } from '../components/ui/CopyElements';
 import ResultsBoard from '../components/calculator/ResultsBoard';
 import AssetSearchModal from '../components/modals/AssetSearchModal';
+import Popover from '../components/ui/Popover';
+
+/* ==================================================================
+   Калькулятор позиції.
+
+   Перероблено з двох колонок в одну, і це головне.
+
+   Калькулятор — лінійна задача: пʼять полів дають одне число. Дві
+   колонки розносили ввід і результат на шістсот пікселів, і око
+   мандрувало через екран після кожного символу. Тепер результат —
+   липка смуга над полями, все в межах одного погляду.
+
+   Порядок полів тепер збігається з порядком мислення трейдера:
+   актив → вхід → стоп (ці двоє задають ризик і мусять бути поруч)
+   → відсоток → тейк, який насправді необовʼязковий і думається
+   останнім. Раніше тейк стояв між входом і стопом, розриваючи
+   єдину думку.
+
+   Підписи винесені над поля. Плейсхолдер зникає, щойно почав
+   друкувати, і три однакові порожні прямокутники з дрібними
+   кольоровими крапками ставали нерозрізненними.
+================================================================== */
 
 const QUICK_SELECT_SYMBOLS = ['BTC/USD', 'EUR/USD', 'GER40', 'ETH/USD', 'GBP/USD', 'XAU/USD'];
 
-// --- АНІМАЦІЙНІ ВАРІАНТИ ---
-const containerVariants = {
+const container = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05, delayChildren: 0.05 }
-  }
+  show: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.04 } },
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 15, filter: "blur(4px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { type: 'spring', stiffness: 350, damping: 26 } }
+const item = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 350, damping: 26 } },
 };
 
-// --- НАДІЙНА ВЕРСІЯ КАРТКИ ЗІ СВІТЛОМ (З ACCOUNTS) ---
-function SpotlightCard({ children, className, glowColor = "rgba(255,255,255,0.05)", onClick, layout, initial, animate, exit }) {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
+const NO_SPIN = '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]';
 
-  const rotateX = useSpring(0, { stiffness: 200, damping: 25, mass: 0.5 });
-  const rotateY = useSpring(0, { stiffness: 200, damping: 25, mass: 0.5 });
+/* ---------- картка без руху ----------
+   Тільки світло за курсором. Нахил і підстрибування змушують око
+   щоразу заново ловити вміст, а тут його читають. */
+function Card({ children, className = '' }) {
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
 
-  function handleMouseMove({ currentTarget, clientX, clientY }) {
-    const { left, top, width, height } = currentTarget.getBoundingClientRect();
-    const localX = clientX - left;
-    const localY = clientY - top;
-    mouseX.set(localX);
-    mouseY.set(localY);
-
-    const maxRotate = 3; // Легкий 3D ефект нахилу
-    const px = Math.max(-1, Math.min(1, (localX / width) * 2 - 1));
-    const py = Math.max(-1, Math.min(1, (localY / height) * 2 - 1));
-
-    rotateX.set(-py * maxRotate);
-    rotateY.set(px * maxRotate);
-  }
-
-  function handleMouseLeave() {
-    rotateX.set(0);
-    rotateY.set(0);
-  }
+  const move = ({ currentTarget, clientX, clientY }) => {
+    const { left, top } = currentTarget.getBoundingClientRect();
+    mx.set(clientX - left);
+    my.set(clientY - top);
+  };
 
   return (
-    <motion.div
-      layout={layout}
-      initial={initial}
-      animate={animate}
-      exit={exit}
-      onClick={onClick}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ perspective: 1200 }}
-      className="relative group w-full h-full"
+    <div
+      onMouseMove={move}
+      className={`group relative overflow-hidden rounded-2xl p-5 ${className}`}
+      style={{ background: T.surface, border: `1px solid ${T.line}` }}
     >
       <motion.div
-        style={{ rotateX, rotateY, transformPerspective: 1200 }}
-        className={`relative w-full h-full ${className}`}
+        className="pointer-events-none absolute -inset-px z-0 rounded-[inherit] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: useMotionTemplate`radial-gradient(400px circle at ${mx}px ${my}px, rgba(${T.accRgb},0.09), transparent 80%)` }}
+      />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
+/* ---------- поле з підписом над ним ----------
+
+   Порожнє обовʼязкове поле підсвічує власний підпис акцентом. Так
+   зникла потреба в окремій плашці «заповни: актив, вхід, стоп» —
+   вона показувала те саме, але окремою порожньою коробкою вгорі,
+   далеко від полів, до яких стосувалась. */
+function Field({ id, label, hint, value, onChange, placeholder, tone, inputRef, required }) {
+  const wanted = required && !Number(value);
+
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className="mb-2 flex items-baseline justify-between text-[13px] font-semibold"
+        style={{ fontFamily: T.sans, color: wanted ? T.acc : T.text2 }}
       >
-        <motion.div
-          className="pointer-events-none absolute -inset-px z-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 rounded-[inherit]"
-          style={{
-            background: useMotionTemplate`radial-gradient(500px circle at ${mouseX}px ${mouseY}px, ${glowColor}, transparent 80%)`,
-          }}
-        />
-        <div className="relative z-10 h-full w-full">{children}</div>
-      </motion.div>
-    </motion.div>
+        <span className="flex items-center gap-2">
+          {tone && <span className="h-2 w-2 rounded-full" style={{ background: tone }} />}
+          {label}
+        </span>
+        {hint && <span className="text-[12px]" style={{ color: T.text3 }}>{hint}</span>}
+      </label>
+      <input
+        id={id}
+        ref={inputRef}
+        type="text"
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))}
+        placeholder={placeholder}
+        className={`h-14 w-full rounded-xl px-4 text-[18px] outline-none transition-colors ${NO_SPIN}`}
+        style={{
+          fontFamily: T.mono,
+          background: T.sunken,
+          border: `1px solid ${wanted ? `rgba(${T.accRgb},0.28)` : T.line}`,
+          color: T.text,
+        }}
+        onFocus={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
+        onBlur={(e) => (e.currentTarget.style.borderColor = wanted ? `rgba(${T.accRgb},0.28)` : T.line)}
+      />
+    </div>
   );
 }
 
 export default function Calculator() {
-  // --- СТАН ---
   const [accounts, setAccounts] = useState([]);
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
-  
   const [flatAssets, setFlatAssets] = useState([]);
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
-  
   const [favorites, setFavorites] = useState([]);
-  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
-  
-  const accountRef = useRef(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const searchInputRef = useRef(null);
+  const balanceRef = useRef(null);
+  const entryRef = useRef(null);
+  const stopRef = useRef(null);
+  const riskRef = useRef(null);
 
-  // Стейт для глобального відстеження світла за мишкою
-  const globalMouseX = useMotionValue(0);
-  const globalMouseY = useMotionValue(0);
-
-  function handleGlobalMouseMove({ clientX, clientY }) {
-    globalMouseX.set(clientX);
-    globalMouseY.set(clientY);
-  }
-
-  // Відновлення налаштувань з localStorage
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [balance, setBalance] = useState('');
-  const [riskPercent, setRiskPercent] = useState(() => localStorage.getItem('calc_risk_percent') || '1.0');
-  
-  const [assetPair, setAssetPair] = useState(() => localStorage.getItem('calc_selected_asset') || ''); 
+  const [riskPercent, setRiskPercent] = useState(() => localStorage.getItem('calc_risk_percent') || '1');
+  const [assetPair, setAssetPair] = useState(() => localStorage.getItem('calc_selected_asset') || '');
   const [contractSize, setContractSize] = useState(() => localStorage.getItem('calc_contract_size') || '');
-
-  // Стан для перемикання між ціною та піпсами
   const [isPipsMode, setIsPipsMode] = useState(() => localStorage.getItem('calc_pips_mode') === 'true');
 
-  const [assetSearch, setAssetSearch] = useState(''); 
+  const [assetSearch, setAssetSearch] = useState('');
   const deferredSearch = useDeferredValue(assetSearch);
 
   const [entryPrice, setEntryPrice] = useState('');
@@ -133,17 +150,16 @@ export default function Calculator() {
 
   const [expandedCategories, setExpandedCategories] = useState({
     'Forex Majors': true,
-    'Cryptocurrencies': true,
+    Cryptocurrencies: true,
   });
 
-  const toggleCategory = (cat) => setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
+  const toggleCategory = (cat) => setExpandedCategories((p) => ({ ...p, [cat]: !p[cat] }));
 
-  // Scroll Lock для модалки
   useEffect(() => {
     if (isAssetModalOpen) {
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      const w = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
+      document.body.style.paddingRight = `${w}px`;
     } else {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
@@ -154,25 +170,21 @@ export default function Calculator() {
     };
   }, [isAssetModalOpen]);
 
-  // Завантаження акаунтів
   useEffect(() => {
     async function fetchAccounts() {
       try {
         const { data: accData } = await supabase.from('prop_accounts').select('*').order('created_at', { ascending: false });
-        
         const savedAcc = localStorage.getItem('calc_selected_account');
         const savedBal = localStorage.getItem('calc_custom_balance');
 
         if (accData && accData.length > 0) {
           setAccounts(accData);
-          
           if (savedAcc === 'custom') {
             setSelectedAccount('custom');
             setBalance(savedBal || '');
-          } else if (savedAcc && accData.some(a => a.id === savedAcc)) {
+          } else if (savedAcc && accData.some((a) => a.id === savedAcc)) {
             setSelectedAccount(savedAcc);
-            const activeAcc = accData.find(a => a.id === savedAcc);
-            setBalance(activeAcc.balance.toString());
+            setBalance(accData.find((a) => a.id === savedAcc).balance.toString());
           } else {
             setSelectedAccount(accData[0].id);
             setBalance(accData[0].balance.toString());
@@ -182,7 +194,7 @@ export default function Calculator() {
           setBalance(savedBal || '');
         }
       } catch (error) {
-        console.error("Помилка акаунтів:", error);
+        console.error('Помилка акаунтів:', error);
         setSelectedAccount('custom');
         setBalance(localStorage.getItem('calc_custom_balance') || '');
       } finally {
@@ -192,84 +204,76 @@ export default function Calculator() {
     fetchAccounts();
   }, []);
 
-  // Синхронізація Favorites
   useEffect(() => {
     async function fetchFavorites() {
       const CACHE_KEY = 'calculator_favorites_v1';
       const cachedFavs = localStorage.getItem(CACHE_KEY);
       if (cachedFavs) setFavorites(JSON.parse(cachedFavs));
-
       try {
         const { data: session } = await supabase.auth.getSession();
-        if (!session?.session?.user) return; 
-
+        if (!session?.session?.user) return;
         const { data, error } = await supabase.from('user_assets').select('name');
         if (error) throw error;
-        
         if (data) {
-          const dbFavs = data.map(item => item.name);
+          const dbFavs = data.map((i) => i.name);
           if (JSON.stringify(dbFavs) !== cachedFavs) {
             setFavorites(dbFavs);
             localStorage.setItem(CACHE_KEY, JSON.stringify(dbFavs));
           }
         }
       } catch (err) {
-        console.error("Помилка інструментів:", err);
+        console.error('Помилка інструментів:', err);
       }
     }
     fetchFavorites();
   }, []);
 
-  // Завантаження інструментів ринку
   useEffect(() => {
     async function fetchMarketData() {
       setIsLoadingAssets(true);
       const CACHE_KEY = 'calculator_market_assets_v3';
       const CACHE_TIME_KEY = 'calculator_market_assets_time_v3';
-      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+      const ONE_DAY = 24 * 60 * 60 * 1000;
 
       const cachedData = localStorage.getItem(CACHE_KEY);
       const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
       const now = Date.now();
 
-      if (cachedData && cachedTime && (now - Number(cachedTime) < ONE_DAY_MS)) {
+      if (cachedData && cachedTime && now - Number(cachedTime) < ONE_DAY) {
         try {
-          const parsedCache = JSON.parse(cachedData);
-          setFlatAssets(parsedCache.flat);
+          const parsed = JSON.parse(cachedData);
+          setFlatAssets(parsed.flat);
           setIsLoadingAssets(false);
-          preloadQuickSelectImages(parsedCache.flat); 
-          return; 
-        } catch (e) {
-          console.warn("Помилка парсингу кешу.");
+          preload(parsed.flat);
+          return;
+        } catch {
+          console.warn('Помилка парсингу кешу.');
         }
       }
 
-      const combinedAssets = [];
+      const combined = [];
       try {
         const { data: dbAssets, error } = await supabase.from('instruments').select('symbol, category, contract_size');
         if (dbAssets && !error) {
-          combinedAssets.push(...dbAssets.map(item => ({
-            symbol: item.symbol, category: item.category, contractSize: Number(item.contract_size)
+          combined.push(...dbAssets.map((i) => ({
+            symbol: i.symbol, category: i.category, contractSize: Number(i.contract_size),
           })));
         }
-
         try {
-          const binanceRes = await fetch('https://api.binance.com/api/v3/exchangeInfo');
-          const binanceData = await binanceRes.json();
-          const cryptoPairs = binanceData.symbols
-            .filter(s => s.quoteAsset === 'USDT' && s.status === 'TRADING')
+          const res = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+          const j = await res.json();
+          combined.push(...j.symbols
+            .filter((s) => s.quoteAsset === 'USDT' && s.status === 'TRADING')
             .slice(0, 40)
-            .map(s => ({ symbol: s.symbol.replace('USDT', '/USD'), category: 'Cryptocurrencies', contractSize: 1 }));
-          combinedAssets.push(...cryptoPairs);
-        } catch (binanceErr) {}
+            .map((s) => ({ symbol: s.symbol.replace('USDT', '/USD'), category: 'Cryptocurrencies', contractSize: 1 })));
+        } catch { /* біржа недоступна — лишаємось на своїй базі */ }
 
-        setFlatAssets(combinedAssets);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ flat: combinedAssets }));
+        setFlatAssets(combined);
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ flat: combined }));
         localStorage.setItem(CACHE_TIME_KEY, now.toString());
-        preloadQuickSelectImages(combinedAssets);
-
+        preload(combined);
       } catch (error) {
-        console.error("Помилка маркет-дати:", error);
+        console.error('Помилка маркет-дати:', error);
       } finally {
         setIsLoadingAssets(false);
       }
@@ -277,76 +281,48 @@ export default function Calculator() {
     fetchMarketData();
   }, []);
 
-  const preloadQuickSelectImages = (assets) => {
-    QUICK_SELECT_SYMBOLS.forEach(sym => {
-      const asset = assets.find(a => a.symbol === sym);
-      if (!asset) return;
-      const clean = asset.symbol.replace('/', '');
-      if (asset.category === 'Cryptocurrencies' && asset.symbol.includes('/')) {
-        const coin = asset.symbol.split('/')[0].toLowerCase();
-        new Image().src = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${coin}.svg`;
+  const preload = (assets) => {
+    QUICK_SELECT_SYMBOLS.forEach((sym) => {
+      const a = assets.find((x) => x.symbol === sym);
+      if (!a) return;
+      const clean = a.symbol.replace('/', '');
+      if (a.category === 'Cryptocurrencies' && a.symbol.includes('/')) {
+        new Image().src = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${a.symbol.split('/')[0].toLowerCase()}.svg`;
       } else if (clean.length === 6) {
-        const b = clean.substring(0,3).toLowerCase();
-        const q = clean.substring(3,6).toLowerCase();
-        if (CURRENCY_TO_FLAG[b.toUpperCase()]) new Image().src = `https://flagcdn.com/${CURRENCY_TO_FLAG[b.toUpperCase()]}.svg`;
-        if (CURRENCY_TO_FLAG[q.toUpperCase()]) new Image().src = `https://flagcdn.com/${CURRENCY_TO_FLAG[q.toUpperCase()]}.svg`;
+        const b = CURRENCY_TO_FLAG[clean.substring(0, 3)];
+        const q = CURRENCY_TO_FLAG[clean.substring(3, 6)];
+        if (b) new Image().src = `https://flagcdn.com/${b}.svg`;
+        if (q) new Image().src = `https://flagcdn.com/${q}.svg`;
       }
     });
   };
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (accountRef.current && !accountRef.current.contains(event.target)) setIsAccountDropdownOpen(false);
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const handleToggleFavorite = async (e, symbol) => {
-    e.stopPropagation(); 
-    const isFavorite = favorites.includes(symbol);
-    let newFavorites;
-
-    if (isFavorite) {
-      newFavorites = favorites.filter(f => f !== symbol);
-      setFavorites(newFavorites);
-      supabase.from('user_assets').delete().match({ name: symbol }).then();
-    } else {
-      newFavorites = [...favorites, symbol];
-      setFavorites(newFavorites);
-      supabase.from('user_assets').insert([{ name: symbol }]).then();
-    }
-    localStorage.setItem('calculator_favorites_v1', JSON.stringify(newFavorites));
+    e.stopPropagation();
+    const isFav = favorites.includes(symbol);
+    const next = isFav ? favorites.filter((f) => f !== symbol) : [...favorites, symbol];
+    setFavorites(next);
+    if (isFav) supabase.from('user_assets').delete().match({ name: symbol }).then();
+    else supabase.from('user_assets').insert([{ name: symbol }]).then();
+    localStorage.setItem('calculator_favorites_v1', JSON.stringify(next));
   };
 
   const handleAccountSelect = (acc) => {
     const type = acc === 'custom' ? 'custom' : acc.id;
     setSelectedAccount(type);
     localStorage.setItem('calc_selected_account', type);
-
-    if (acc === 'custom') {
-      const savedBal = localStorage.getItem('calc_custom_balance') || '';
-      setBalance(savedBal);
-    } else {
-      setBalance(acc.balance.toString());
-    }
-    setIsAccountDropdownOpen(false);
+    setBalance(acc === 'custom' ? (localStorage.getItem('calc_custom_balance') || '') : acc.balance.toString());
   };
 
   const handleAssetSelect = (asset) => {
-    setIsAssetModalOpen(false); 
-    
+    setIsAssetModalOpen(false);
     requestAnimationFrame(() => {
       setAssetPair(asset.symbol);
       setContractSize(asset.contractSize.toString());
-      
       localStorage.setItem('calc_selected_asset', asset.symbol);
       localStorage.setItem('calc_contract_size', asset.contractSize.toString());
     });
-    
-    setTimeout(() => {
-      setAssetSearch('');
-    }, 300);
+    setTimeout(() => setAssetSearch(''), 300);
   };
 
   const handleModalClose = () => {
@@ -358,157 +334,124 @@ export default function Calculator() {
 
   const displayCategories = useMemo(() => {
     let results = flatAssets;
-    if (deferredSearch.trim() !== '') {
-      results = fuse.search(deferredSearch).map(r => r.item);
-    }
+    if (deferredSearch.trim() !== '') results = fuse.search(deferredSearch).map((r) => r.item);
     const grouped = {};
-    results.forEach(asset => {
-      if (!grouped[asset.category]) grouped[asset.category] = [];
-      grouped[asset.category].push(asset);
+    results.forEach((a) => {
+      if (!grouped[a.category]) grouped[a.category] = [];
+      grouped[a.category].push(a);
     });
     return grouped;
   }, [flatAssets, deferredSearch, fuse]);
 
-  const quickSelectAssets = useMemo(() => QUICK_SELECT_SYMBOLS.map(sym => flatAssets.find(a => a.symbol === sym)).filter(Boolean), [flatAssets]);
-  const favoriteAssetsList = useMemo(() => favorites.map(sym => flatAssets.find(a => a.symbol === sym)).filter(Boolean), [favorites, flatAssets]);
+  const quickSelectAssets = useMemo(
+    () => QUICK_SELECT_SYMBOLS.map((s) => flatAssets.find((a) => a.symbol === s)).filter(Boolean),
+    [flatAssets],
+  );
+  const favoriteAssetsList = useMemo(
+    () => favorites.map((s) => flatAssets.find((a) => a.symbol === s)).filter(Boolean),
+    [favorites, flatAssets],
+  );
 
-  // РОЗРАХУНОК: Врахування Тіків (Points) замість класичних Піпсів (Pips)
+  /* Улюблені попереду, типові добираються слідом. Шість штук —
+     стільки влазить у два рядки й охоплюється поглядом. */
+  const quickRow = useMemo(() => {
+    const seen = new Set();
+    return [...favoriteAssetsList, ...quickSelectAssets]
+      .filter((a) => a && !seen.has(a.symbol) && seen.add(a.symbol))
+      .slice(0, 6);
+  }, [favoriteAssetsList, quickSelectAssets]);
+
+  /* ---------- розрахунок ---------- */
   const calculatePosition = () => {
     const bal = Number(balance) || 0;
     const riskPct = Number(riskPercent) || 0;
     const entry = Number(entryPrice);
     const slInput = Number(stopLoss);
     const tpInput = Number(takeProfit);
-    const activeContractSize = Number(contractSize) || 100000;
+    const size = Number(contractSize) || 100000;
     const riskAmt = bal * (riskPct / 100);
 
-    // Базові перевірки
-    if (!slInput || riskAmt === 0 || !assetPair) {
-      return { lotSize: '0.00', riskAmount: '0.00', rr: '0.00', profit: '0.00' };
-    }
-    
-    // В Price Mode ми зобов'язані мати Entry, щоб порахувати дистанцію
-    if (!isPipsMode && !entry) {
-      return { lotSize: '0.00', riskAmount: '0.00', rr: '0.00', profit: '0.00' };
-    }
+    const empty = { lotSize: '0.00', riskAmount: '0.00', rr: '0.00', profit: '0.00' };
+    if (!slInput || riskAmt === 0 || !assetPair) return empty;
+    if (!isPipsMode && !entry) return empty;
 
-    const assetSpec = flatAssets.find(a => a.symbol === assetPair) || { category: 'Forex' };
-    const safeCategory = assetSpec.category?.toLowerCase() || '';
-    const cleanSymbol = assetPair.replace('/', '').toUpperCase();
-    
+    const spec = flatAssets.find((a) => a.symbol === assetPair) || { category: 'Forex' };
+    const cat = spec.category?.toLowerCase() || '';
+    const clean = assetPair.replace('/', '').toUpperCase();
+
     let distance = 0;
-
     if (isPipsMode) {
-      // Розмір 1 тіка (Point) для різних інструментів
-      let tickSize = 0.00001; 
-      if (safeCategory.includes('crypto')) {
-        tickSize = 0.01; 
-      } else if (cleanSymbol.includes('XAU') || cleanSymbol.includes('GOLD')) {
-        tickSize = 0.01;
-      } else if (cleanSymbol.includes('JPY')) {
-        tickSize = 0.001;
-      } else if (safeCategory.includes('forex') || cleanSymbol.length === 6) {
-        tickSize = 0.00001;
-      } else {
-        tickSize = 0.01; 
-      }
-      
-      // Дистанція розраховується чисто з введених тіків
-      distance = slInput * tickSize;
+      let tick = 0.00001;
+      if (cat.includes('crypto')) tick = 0.01;
+      else if (clean.includes('XAU') || clean.includes('GOLD')) tick = 0.01;
+      else if (clean.includes('JPY')) tick = 0.001;
+      else if (cat.includes('forex') || clean.length === 6) tick = 0.00001;
+      else tick = 0.01;
+      distance = slInput * tick;
     } else {
-      // Дистанція розраховується як різниця цін
       distance = Math.abs(entry - slInput);
     }
 
-    if (distance === 0) {
-      return { lotSize: '0.00', riskAmount: '0.00', rr: '0.00', profit: '0.00' };
+    if (distance === 0) return empty;
+
+    let lot = riskAmt / (distance * size);
+    if (assetPair.includes('JPY') && !cat.includes('crypto')) {
+      lot = (riskAmt * (entry || 150)) / (distance * size);
     }
 
-    // Базовий розрахунок лота
-    let calculatedLot = riskAmt / (distance * activeContractSize);
-    
-    // Коригування для JPY пар
-    if (assetPair.includes('JPY') && !safeCategory.includes('crypto')) {
-      const jpyRate = entry || 150; 
-      calculatedLot = (riskAmt * jpyRate) / (distance * activeContractSize); 
-    }
-
-    // Розрахунок RR та Profit
-    let rr = 0; let profit = 0;
+    let rr = 0;
+    let profit = 0;
     if (tpInput) {
-      if (isPipsMode) {
-        rr = tpInput / slInput;
-      } else {
-        if (!entry) return { lotSize: calculatedLot.toFixed(2), riskAmount: riskAmt.toFixed(2), rr: '0.00', profit: '0.00' };
-        const tpDistance = Math.abs(tpInput - entry);
-        rr = tpDistance / distance;
-      }
+      if (isPipsMode) rr = tpInput / slInput;
+      else if (entry) rr = Math.abs(tpInput - entry) / distance;
       profit = riskAmt * rr;
     }
-    
+
     return {
-      lotSize: calculatedLot.toFixed(2),
+      lotSize: lot.toFixed(2),
       riskAmount: riskAmt.toFixed(2),
       rr: rr > 0 ? rr.toFixed(2) : '0.00',
-      profit: profit.toFixed(2)
+      profit: profit.toFixed(2),
     };
   };
 
   const { lotSize, riskAmount, rr, profit } = calculatePosition();
 
-  /* Чого саме бракує для розрахунку — щоб табло не мовчало нулями */
-  const missingFields = useMemo(() => {
-    const m = [];
-    if (!Number(balance)) m.push('депозит');
-    if (!Number(riskPercent)) m.push('ризик %');
-    if (!assetPair) m.push('актив');
-    if (!isPipsMode && !Number(entryPrice)) m.push('вхід');
-    if (!Number(stopLoss)) m.push(isPipsMode ? 'стоп у пунктах' : 'стоп');
-    return m;
-  }, [balance, riskPercent, assetPair, entryPrice, stopLoss, isPipsMode]);
+  const ready = lotSize !== '0.00';
 
-  /* Дистанція стопу для підпису під табло */
   const stopDistance = useMemo(() => {
     if (!Number(stopLoss)) return 0;
     if (isPipsMode) return Number(stopLoss);
     if (!Number(entryPrice)) return 0;
     return Number(Math.abs(Number(entryPrice) - Number(stopLoss)).toFixed(5));
   }, [stopLoss, entryPrice, isPipsMode]);
-  const noSpinnerClass = "[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]";
+
+  const riskMoney = Number(balance) && Number(riskPercent)
+    ? `$${(Number(balance) * Number(riskPercent) / 100).toLocaleString('uk-UA', { maximumFractionDigits: 2 })}`
+    : null;
 
   return (
-    <div 
-      className="min-h-screen w-full relative overflow-hidden"
-      onMouseMove={handleGlobalMouseMove}
-    >
-      {/* ФОН — той самий, що на решті сайту, плюс промінь за курсором */}
-      <div className="fixed inset-0 z-[0] pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[150px]" style={{ background: `rgba(${T.accRgb},0.10)` }}></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[150px]" style={{ background: `rgba(${T.accRgb},0.06)` }}></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_20%,transparent_100%)]"></div>
-        <motion.div
-          className="absolute inset-0 z-10"
-          style={{ background: useMotionTemplate`radial-gradient(800px circle at ${globalMouseX}px ${globalMouseY}px, rgba(${T.accRgb}, 0.05), transparent 80%)` }}
-        />
-      </div>
-
-      {/* ГОЛОВНИЙ КОНТЕЙНЕР */}
-      <motion.div variants={containerVariants} initial="hidden" animate="show" className="max-w-[1400px] mx-auto p-4 sm:p-6 md:p-10 font-sans text-zinc-200 relative z-[10]">
-        
-        {/* Шапка — в одному стилі з рештою сторінок */}
-        <motion.div variants={itemVariants} className="mb-9 flex items-center gap-4 pb-6" style={{ borderBottom: `1px solid ${T.line}` }}>
+    <div className="relative min-h-full">
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="relative z-10 mx-auto w-full max-w-[720px] px-4 pb-24 pt-5 sm:px-6 lg:pt-7"
+      >
+        {/* ─────────── Шапка ─────────── */}
+        <motion.div variants={item} className="mb-5 flex items-center gap-3.5">
           <div
-            className="flex h-14 w-14 items-center justify-center rounded-2xl backdrop-blur-md"
-            style={{ background: `rgba(${T.accRgb},0.10)`, border: `1px solid ${T.accLine}`, boxShadow: `0 0 30px rgba(${T.accRgb},0.14)` }}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: `rgba(${T.accRgb},0.10)`, border: `1px solid ${T.lineAcc}` }}
           >
-            <CalcIcon size={26} style={{ color: T.acc }} />
+            <CalcIcon size={20} style={{ color: T.acc }} />
           </div>
           <div className="min-w-0">
-            <div className="mb-1.5 text-[12px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
+            <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
               Ризик-менеджмент
             </div>
             <h1
-              className="text-[32px] font-bold leading-none sm:text-[38px]"
+              className="text-[26px] font-bold leading-none sm:text-[30px]"
               style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
             >
               Калькулятор позиції
@@ -516,256 +459,385 @@ export default function Calculator() {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            
-            {/* Панель балансу */}
-            <motion.div variants={itemVariants} className="relative z-20">
-              <SpotlightCard glowColor="rgba(139,123,255,0.15)" className="bg-black/40 backdrop-blur-xl border border-[var(--edge-hair-strong)] rounded-[2rem] p-8 shadow-2xl transition-all duration-300">
-                <h2 className="text-[10px] font-black text-[#8b7bff] uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Wallet size={14} /> Capital Source
-                </h2>
-                <div className="relative mb-6" ref={accountRef}>
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Select Account</label>
-                  <div 
-                    onClick={() => !isLoadingAccounts && setIsAccountDropdownOpen(!isAccountDropdownOpen)}
-                    className={`w-full bg-[#111218]/80 backdrop-blur border border-[var(--edge-hair)] hover:border-[#8b7bff]/50 p-4 rounded-xl flex items-center justify-between transition-all ${isLoadingAccounts ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}
+        {/* ─────────── Результат ─────────── */}
+        <ResultsBoard
+          lotSize={lotSize}
+          riskAmount={riskAmount}
+          profit={profit}
+          rr={rr}
+          ready={ready}
+          balance={balance}
+          riskPercent={riskPercent}
+          stopDistance={stopDistance}
+          isPipsMode={isPipsMode}
+        />
+
+        <div className="flex flex-col gap-3">
+
+          {/* ─────────── Рахунок ─────────── */}
+          <motion.div variants={item} className="relative z-20">
+            <Card>
+              <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                Рахунок
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                {/* Портальний Popover, а не абсолютний блок усередині
+                    картки: у Card стоїть overflow-hidden заради
+                    заокруглення й світла за курсором, і він обрізав
+                    випадайку по нижньому краю картки. */}
+                <div className="min-w-0 flex-1">
+                  <label className="mb-2 block text-[13px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
+                    Звідки капітал
+                  </label>
+                  <Popover
+                    triggerClass="block w-full"
+                    renderTrigger={({ open, toggle }) => (
+                      <button
+                        type="button"
+                        onClick={() => !isLoadingAccounts && toggle()}
+                        className="flex h-14 w-full items-center justify-between rounded-xl px-4 text-left transition-colors"
+                        style={{
+                          background: T.sunken,
+                          border: `1px solid ${open ? T.lineAcc : T.line}`,
+                          cursor: isLoadingAccounts ? 'wait' : 'pointer',
+                        }}
+                      >
+                        <span className="truncate text-[15px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
+                          {isLoadingAccounts ? (
+                            <span className="flex items-center gap-2" style={{ color: T.text3 }}>
+                              <Loader2 size={15} className="animate-spin" /> завантажую…
+                            </span>
+                          ) : selectedAccount === 'custom'
+                            ? 'Вручну'
+                            : accounts.find((a) => a.id === selectedAccount)?.firm_name || 'Обрати'}
+                        </span>
+                        <ChevronDown
+                          size={16}
+                          style={{ color: T.text3, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
+                        />
+                      </button>
+                    )}
                   >
-                    <span className="font-bold text-sm">
-                      {isLoadingAccounts ? (
-                        <span className="flex items-center gap-2 text-zinc-500"><Loader2 size={14} className="animate-spin" /> Перевірка кешу...</span>
-                      ) : selectedAccount === 'custom' ? (
-                        'Custom Balance'
-                      ) : (
-                        accounts.find(a => a.id === selectedAccount)?.firm_name || 'Select Account...'
-                      )}
-                    </span>
-                    <ChevronDown size={16} className={`text-zinc-500 transition-transform ${isAccountDropdownOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                  <AnimatePresence>
-                    {isAccountDropdownOpen && !isLoadingAccounts && (
-                      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.15 }} className="absolute top-full left-0 w-full mt-2 bg-[#1A1A1A] border border-[#333] rounded-xl overflow-hidden shadow-2xl z-50">
-                        <div className="p-2 flex flex-col gap-1 max-h-[240px] overflow-y-auto custom-scrollbar">
-                          {accounts.map(acc => (
-                            <button key={acc.id} onClick={() => handleAccountSelect(acc)} className={`flex justify-between items-center px-4 py-3 rounded-lg text-sm font-bold transition-all ${selectedAccount === acc.id ? 'bg-[#8b7bff]/10 text-[#a99bff]' : 'text-zinc-400 hover:bg-[#222] hover:text-[var(--edge-text)]'}`}>
-                              <span>{acc.firm_name}</span>
-                              <span className="text-xs opacity-60">${acc.balance.toLocaleString()}</span>
-                            </button>
-                          ))}
-                          <button onClick={() => handleAccountSelect('custom')} className={`text-left px-4 py-3 rounded-lg text-sm font-bold transition-all border-t border-[#333] mt-1 ${selectedAccount === 'custom' ? 'bg-[#8b7bff]/10 text-[#a99bff]' : 'text-zinc-400 hover:bg-[#222] hover:text-[var(--edge-text)]'}`}>
-                            Manual / Custom Balance
+                    {({ close }) => (
+                      <div
+                        className="w-[280px] overflow-hidden rounded-xl"
+                        style={{ background: T.surfaceHi, border: `1px solid ${T.lineHi}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}
+                      >
+                        <div className="flex max-h-[280px] flex-col gap-1 overflow-y-auto p-1.5">
+                          {accounts.map((acc) => {
+                            const on = selectedAccount === acc.id;
+                            return (
+                              <button
+                                key={acc.id}
+                                onClick={() => { handleAccountSelect(acc); close(); }}
+                                className="flex items-center justify-between rounded-lg px-3 py-3 text-[14px] font-semibold transition-colors"
+                                style={{
+                                  fontFamily: T.sans,
+                                  color: on ? T.acc : T.text2,
+                                  background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
+                                }}
+                              >
+                                <span className="truncate">{acc.firm_name}</span>
+                                <span className="ml-2 shrink-0 tabular-nums" style={{ fontFamily: T.mono, color: T.text3 }}>
+                                  ${acc.balance.toLocaleString('uk-UA')}
+                                </span>
+                              </button>
+                            );
+                          })}
+                          <button
+                            onClick={() => { handleAccountSelect('custom'); close(); }}
+                            className="rounded-lg px-3 py-3 text-left text-[14px] font-semibold transition-colors"
+                            style={{
+                              fontFamily: T.sans,
+                              color: selectedAccount === 'custom' ? T.acc : T.text2,
+                              background: selectedAccount === 'custom' ? `rgba(${T.accRgb},0.12)` : 'transparent',
+                              borderTop: accounts.length ? `1px solid ${T.line}` : 'none',
+                            }}
+                          >
+                            Ввести вручну
                           </button>
+                        </div>
+                      </div>
+                    )}
+                  </Popover>
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <Field
+                    id="calc-balance"
+                    inputRef={balanceRef}
+                    required
+                    label="Депозит, $"
+                    value={balance}
+                    onChange={(v) => {
+                      setBalance(v);
+                      setSelectedAccount('custom');
+                      localStorage.setItem('calc_selected_account', 'custom');
+                      localStorage.setItem('calc_custom_balance', v);
+                    }}
+                    placeholder="10000"
+                  />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* ─────────── Угода ─────────── */}
+          <motion.div variants={item}>
+            <Card>
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                  Угода
+                </div>
+                {/* Режим — тихий перемикач, а не два великі прямокутники:
+                    його чіпають раз на місяць. */}
+                <div className="flex gap-1 rounded-lg p-1" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                  {[
+                    { id: false, label: 'за ціною' },
+                    { id: true, label: 'у пунктах' },
+                  ].map((m) => {
+                    const on = isPipsMode === m.id;
+                    return (
+                      <button
+                        key={String(m.id)}
+                        type="button"
+                        onClick={() => { setIsPipsMode(m.id); localStorage.setItem('calc_pips_mode', String(m.id)); }}
+                        className="rounded-md px-2.5 py-1 text-[12px] font-semibold transition-colors"
+                        style={{
+                          fontFamily: T.sans,
+                          color: on ? T.text : T.text3,
+                          background: on ? 'rgba(255,255,255,0.09)' : 'transparent',
+                        }}
+                      >
+                        {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3.5">
+
+                {/* актив */}
+                <div>
+                  <label
+                    className="mb-2 flex items-center justify-between text-[13px] font-semibold"
+                    style={{ fontFamily: T.sans, color: assetPair ? T.text2 : T.acc }}
+                  >
+                    Актив
+                    {isLoadingAssets && <Loader2 size={13} className="animate-spin" style={{ color: T.acc }} />}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => !isLoadingAssets && setIsAssetModalOpen(true)}
+                    className="flex h-14 w-full items-center justify-between rounded-xl px-4 transition-colors"
+                    style={{ background: T.sunken, border: `1px solid ${assetPair ? T.line : `rgba(${T.accRgb},0.28)`}` }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = assetPair ? T.line : `rgba(${T.accRgb},0.28)`)}
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      {assetPair && (
+                        <AssetIcon symbol={assetPair} category={flatAssets.find((a) => a.symbol === assetPair)?.category} />
+                      )}
+                      <span
+                        className="truncate text-[17px] font-bold"
+                        style={{ fontFamily: assetPair ? T.mono : T.sans, color: assetPair ? T.text : T.text3 }}
+                      >
+                        {assetPair || 'обрати інструмент'}
+                      </span>
+                    </span>
+                    <SearchIcon size={17} style={{ color: T.text3 }} />
+                  </button>
+
+                  {/* Швидкі активи прямо тут: улюблені плюс типові.
+                      Раніше вони жили тільки всередині модалки, і щоб
+                      узяти EUR/USD, треба було її відкрити, знайти,
+                      клікнути. Тепер один дотик. */}
+                  {quickRow.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      {quickRow.map((a) => {
+                        const on = assetPair === a.symbol;
+                        return (
+                          <button
+                            key={a.symbol}
+                            type="button"
+                            onClick={() => handleAssetSelect(a)}
+                            className="flex h-9 items-center gap-2 rounded-lg px-2.5 text-[13px] font-bold transition-colors"
+                            style={{
+                              fontFamily: T.mono,
+                              color: on ? T.acc : T.text2,
+                              background: on ? `rgba(${T.accRgb},0.12)` : 'rgba(255,255,255,0.04)',
+                            }}
+                            onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; }}
+                            onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                          >
+                            <AssetIcon symbol={a.symbol} category={a.category} />
+                            {a.symbol}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Вхід і стоп поруч: разом вони задають ризик, це одна
+                    думка. Раніше між ними стояв тейк і розривав її. */}
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                  {!isPipsMode && (
+                    <Field
+                      id="calc-entry"
+                      inputRef={entryRef}
+                      required
+                      label="Вхід"
+                      value={entryPrice}
+                      onChange={setEntryPrice}
+                      placeholder="1.08500"
+                      tone={T.acc}
+                    />
+                  )}
+                  <Field
+                    id="calc-stop"
+                    inputRef={stopRef}
+                    required
+                    label={isPipsMode ? 'Стоп, пунктів' : 'Стоп'}
+                    hint={!isPipsMode && stopDistance ? `${stopDistance}` : null}
+                    value={stopLoss}
+                    onChange={setStopLoss}
+                    placeholder={isPipsMode ? '250' : '1.08300'}
+                    tone={T.bad}
+                  />
+                </div>
+
+                {/* ризик */}
+                <div>
+                  <label htmlFor="calc-risk" className="mb-2 flex items-baseline justify-between text-[13px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
+                    <span className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full" style={{ background: T.bad }} />
+                      Ризик на угоду
+                    </span>
+                    {riskMoney && <span className="tabular-nums" style={{ fontFamily: T.mono, color: T.bad }}>{riskMoney}</span>}
+                  </label>
+
+                  <div className="flex gap-2">
+                    {/* Порівняння числове, не рядкове. Раніше тут було
+                        String(riskPercent) === v, і при значенні '1.0'
+                        чип '1' ніколи не підсвічувався — вибране
+                        значення виглядало як невибране. */}
+                    <div className="flex flex-1 gap-1.5">
+                      {['0.25', '0.5', '1', '2'].map((v) => {
+                        const on = Number(riskPercent) === Number(v);
+                        return (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => { setRiskPercent(v); localStorage.setItem('calc_risk_percent', v); }}
+                            className="h-14 flex-1 rounded-xl text-[15px] font-bold tabular-nums transition-colors"
+                            style={{
+                              fontFamily: T.mono,
+                              color: on ? T.bad : T.text3,
+                              background: on ? `rgba(${T.badRgb},0.12)` : T.sunken,
+                              border: `1px solid ${on ? `rgba(${T.badRgb},0.32)` : T.line}`,
+                            }}
+                          >
+                            {v}%
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <input
+                      id="calc-risk"
+                      ref={riskRef}
+                      type="text"
+                      inputMode="decimal"
+                      value={riskPercent}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(',', '.').replace(/[^\d.]/g, '');
+                        setRiskPercent(val);
+                        localStorage.setItem('calc_risk_percent', val);
+                      }}
+                      className={`h-14 w-[84px] shrink-0 rounded-xl px-2 text-center text-[17px] outline-none transition-colors ${NO_SPIN}`}
+                      style={{ fontFamily: T.mono, background: T.sunken, border: `1px solid ${T.line}`, color: T.bad }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.45)`)}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = T.line)}
+                    />
+                  </div>
+                </div>
+
+                {/* Тейк останній і підписаний як необовʼязковий — він і
+                    справді думається після того, як ризик уже заданий. */}
+                <Field
+                  id="calc-tp"
+                  label={isPipsMode ? 'Тейк, пунктів' : 'Тейк'}
+                  hint="не обовʼязково"
+                  value={takeProfit}
+                  onChange={setTakeProfit}
+                  placeholder={isPipsMode ? '500' : '1.08900'}
+                  tone={T.ok}
+                />
+
+                {/* Розмір контракту підставляється з активу сам, тому
+                    ховається. Раніше він стояв поруч із ризиком і мав
+                    три різні підписи на одне поле. */}
+                <div style={{ borderTop: `1px solid ${T.line}`, paddingTop: 12 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced((v) => !v)}
+                    className="flex items-center gap-1.5 text-[12.5px] font-semibold transition-colors"
+                    style={{ fontFamily: T.sans, color: showAdvanced ? T.acc : T.text3 }}
+                  >
+                    <Settings2 size={13} strokeWidth={2.2} />
+                    Розмір контракту
+                    <span className="tabular-nums" style={{ fontFamily: T.mono, color: T.text3 }}>
+                      {contractSize || '—'}
+                    </span>
+                    <ChevronDown
+                      size={13}
+                      strokeWidth={2.6}
+                      style={{ transform: showAdvanced ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
+                    />
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {showAdvanced && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div className="pt-3">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={contractSize}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/[^\d.]/g, '');
+                              setContractSize(v);
+                              localStorage.setItem('calc_contract_size', v);
+                            }}
+                            placeholder="100000"
+                            className={`h-11 w-full rounded-xl px-3.5 text-[15px] outline-none ${NO_SPIN}`}
+                            style={{ fontFamily: T.mono, background: T.sunken, border: `1px solid ${T.line}`, color: T.text2 }}
+                          />
+                          <p className="mt-2 text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                            Підставляється з активу автоматично. Міняй, лише якщо у твого брокера інший.
+                          </p>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Account Balance ($)</label>
-                  <div className="relative group">
-                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-[#8b7bff] transition-colors" size={18} />
-                    <input 
-                      type="number" 
-                      value={balance} 
-                      onChange={(e) => { 
-                        const val = e.target.value;
-                        setBalance(val); 
-                        setSelectedAccount('custom'); 
-                        localStorage.setItem('calc_selected_account', 'custom');
-                        localStorage.setItem('calc_custom_balance', val);
-                      }} 
-                      className={`w-full bg-[#111218]/80 backdrop-blur border border-[var(--edge-hair)] pl-12 pr-4 py-4 rounded-xl text-[var(--edge-text)] font-mono text-lg outline-none focus:border-[#8b7bff]/50 transition-all ${noSpinnerClass}`} 
-                      placeholder="100000" 
-                    />
-                  </div>
-                </div>
-              </SpotlightCard>
-            </motion.div>
-
-            {/* Параметри Угоди */}
-            <motion.div variants={itemVariants} className="relative z-10">
-              <SpotlightCard glowColor="rgba(139,123,255,0.15)" className="bg-black/40 backdrop-blur-xl border border-[var(--edge-hair-strong)] rounded-[2rem] p-8 shadow-2xl transition-all duration-300">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-[10px] font-black text-[#8b7bff] uppercase tracking-widest flex items-center gap-2">
-                    <Crosshair size={14} /> Trade Parameters
-                  </h2>
-                </div>
-
-                {/* ПЕРЕМИКАЧ РЕЖИМІВ */}
-                <div className="flex p-1 bg-[#111218]/90 border border-[var(--edge-hair)] rounded-xl mb-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPipsMode(false);
-                      localStorage.setItem('calc_pips_mode', 'false');
-                      notify.success('Price Mode Активний', 'Розрахунок ведеться за цінами');
-                    }}
-                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${!isPipsMode ? 'bg-zinc-800 text-[var(--edge-text)] shadow-md' : 'text-zinc-500 hover:text-zinc-300'}`}
-                  >
-                    Price Mode
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPipsMode(true);
-                      localStorage.setItem('calc_pips_mode', 'true');
-                      notify.success('Ticks Mode Активний', 'Розрахунок ведеться в тіках (Points)');
-                    }}
-                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${isPipsMode ? 'bg-[#8b7bff] text-[var(--edge-text)] shadow-[0_0_15px_rgba(139,123,255,0.4)]' : 'text-zinc-500 hover:text-zinc-300'}`}
-                  >
-                    Ticks / Points Mode
-                  </button>
-                </div>
-
-                <div className="space-y-6">
-                  
-                  <div className="relative">
-                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex justify-between">
-                      <span>Asset</span>
-                      {isLoadingAssets && <Loader2 size={12} className="animate-spin text-[#8b7bff]" />}
-                    </label>
-                    <div 
-                      onClick={() => !isLoadingAssets && setIsAssetModalOpen(true)}
-                      className="w-full bg-[#111218]/80 backdrop-blur border border-[var(--edge-hair)] hover:border-[#8b7bff]/50 p-4 rounded-xl flex items-center justify-between cursor-pointer transition-all min-h-[58px]"
-                    >
-                      <div className="flex items-center gap-4">
-                        {assetPair && (
-                          <AssetIcon symbol={assetPair} category={flatAssets.find(a => a.symbol === assetPair)?.category} />
-                        )}
-                        <span className={`font-bold text-sm tracking-wider uppercase ${assetPair ? 'text-[var(--edge-text)]' : 'text-zinc-600'}`}>
-                          {assetPair || 'SELECT FINANCIAL ASSET...'}
-                        </span>
-                      </div>
-                      <SearchIcon size={16} className="text-zinc-500" />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <label className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-widest" style={{ color: T.text4 }}>
-                        <span>Ризик</span>
-                        <span style={{ color: T.bad }}>
-                          {Number(balance) && Number(riskPercent)
-                            ? `$${(Number(balance) * Number(riskPercent) / 100).toLocaleString('uk-UA', { maximumFractionDigits: 2 })}`
-                            : `${riskPercent || 0}%`}
-                        </span>
-                      </label>
-
-                      {/* типові значення — один клік замість набору */}
-                      <div className="mb-2 flex gap-1.5">
-                        {['0.25', '0.5', '1', '2'].map((v) => {
-                          const on = String(riskPercent) === v;
-                          return (
-                            <button
-                              key={v}
-                              type="button"
-                              onClick={() => { setRiskPercent(v); localStorage.setItem('calc_risk_percent', v); }}
-                              className="h-8 flex-1 rounded-lg text-[12.5px] font-bold tabular-nums transition-colors duration-200"
-                              style={{
-                                fontFamily: T.mono,
-                                color: on ? T.bad : T.text4,
-                                background: on ? `rgba(${T.badRgb},0.12)` : 'transparent',
-                                border: `1px solid ${on ? `rgba(${T.badRgb},0.30)` : T.line}`,
-                              }}
-                              onMouseEnter={(e) => { if (!on) { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.lineHi; } }}
-                              onMouseLeave={(e) => { if (!on) { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; } }}
-                            >
-                              {v}%
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={riskPercent}
-                        onChange={(e) => {
-                          /* кома з української розкладки ламала розрахунок */
-                          const val = e.target.value.replace(',', '.').replace(/[^\d.]/g, '');
-                          setRiskPercent(val);
-                          localStorage.setItem('calc_risk_percent', val);
-                        }}
-                        className={`w-full rounded-xl px-4 py-4 text-center font-mono outline-none transition-all ${noSpinnerClass}`}
-                        style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.bad }}
-                        onFocus={(e) => (e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.45)`)}
-                        onBlur={(e) => (e.currentTarget.style.borderColor = T.line)}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex justify-between items-center">
-                        <span>Contract Size</span>
-                        <Edit3 size={12} className="text-[#8b7bff]" />
-                      </label>
-                      <input 
-                        type="number" 
-                        value={contractSize} 
-                        onChange={(e) => {
-                          setContractSize(e.target.value);
-                          localStorage.setItem('calc_contract_size', e.target.value);
-                        }} 
-                        placeholder="Size" 
-                        className={`w-full bg-[#111218]/80 backdrop-blur border border-[var(--edge-hair)] px-4 py-4 rounded-xl text-[#a99bff] font-mono text-center outline-none focus:border-[#8b7bff]/50 transition-all ${noSpinnerClass}`} 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 pt-4 border-t border-[var(--edge-hair)]">
-                    <InputWithCopy 
-                      label="Entry Price" 
-                      value={entryPrice} 
-                      setValue={setEntryPrice} 
-                      dotColor="bg-[#8b7bff]" 
-                      textColor="text-[var(--edge-text)]" 
-                    />
-                    
-                    {/* Динамічні інпути зі зміною кольорів при Ticks Mode */}
-                    <div className={`transition-all rounded-xl ${isPipsMode ? 'ring-1 ring-emerald-500/30 bg-emerald-500/5' : ''}`}>
-                      <InputWithCopy 
-                        label={isPipsMode ? "Take Profit (Ticks / Points)" : "Take Profit (Price)"} 
-                        value={takeProfit} 
-                        setValue={setTakeProfit} 
-                        dotColor="bg-emerald-500" 
-                        textColor="text-emerald-100" 
-                      />
-                    </div>
-                    
-                    <div className={`transition-all rounded-xl ${isPipsMode ? 'ring-1 ring-red-500/30 bg-red-500/5' : ''}`}>
-                      <InputWithCopy 
-                        label={isPipsMode ? "Stop Loss (Ticks / Points)" : "Stop Loss (Price)"} 
-                        value={stopLoss} 
-                        setValue={setStopLoss} 
-                        dotColor="bg-red-500" 
-                        textColor="text-red-100" 
-                      />
-                    </div>
-                  </div>
-
-                </div>
-              </SpotlightCard>
-            </motion.div>
-          </div>
-
-          <ResultsBoard
-            lotSize={lotSize}
-            riskAmount={riskAmount}
-            profit={profit}
-            rr={rr}
-            missing={missingFields}
-            balance={balance}
-            riskPercent={riskPercent}
-            stopDistance={stopDistance}
-            isPipsMode={isPipsMode}
-            assetPair={assetPair}
-          />
-          
+              </div>
+            </Card>
+          </motion.div>
         </div>
       </motion.div>
 
       <AnimatePresence>
         {isAssetModalOpen && (
-          <AssetSearchModal 
+          <AssetSearchModal
             isOpen={isAssetModalOpen}
             onClose={handleModalClose}
             searchInputRef={searchInputRef}
