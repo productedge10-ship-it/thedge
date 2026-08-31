@@ -19,6 +19,7 @@ export const KINDS = {
   payout:  { label: 'Виплата',      sign: -1 },
   deposit: { label: 'Поповнення',   sign: +1 },
   adjust:  { label: 'Коригування',  sign: 0 },
+  trade:   { label: 'Угода',        sign: 0 },
 };
 
 /* Деталка акаунта англійською: цю картку показують іншим, і
@@ -28,7 +29,20 @@ export const KINDS_EN = {
   payout:  { label: 'Payout',     hint: 'balance goes down, stays in history' },
   deposit: { label: 'Deposit',    hint: 'top-up or account upgrade' },
   adjust:  { label: 'Adjustment', hint: 'set balance to an exact number' },
+  trade:   { label: 'Trade',      hint: 'automatic — profit or loss from a logged trade' },
 };
+
+/* Причини закриття акаунта — переважно проп-порушення. Вільний
+   текст теж можна дописати нотаткою поруч, тому список короткий. */
+export const CLOSE_REASONS = [
+  'Max daily loss breached',
+  'Max total loss breached',
+  'Traded during news',
+  'Inconsistent lot sizing',
+  'Held over the weekend',
+  'Account passed / paid out',
+  'Other',
+];
 
 export const todayLocal = () => {
   const d = new Date();
@@ -131,6 +145,61 @@ export async function addEvent(userId, account, { kind, amount, happened_at, not
   if (accError) throw accError;
 
   return { event: ev, account: acc };
+}
+
+/* ---------- авто-рух від угоди ----------
+   Тільки для нових угод (форма викликає це лише при insert, не при
+   редагуванні) — щоб не рахувати той самий трейд у баланс двічі й
+   не переписувати заднім числом угоди, залоговані до цієї фічі.
+   profit — вже підписане число ($ прибуток чи збиток), а не сума
+   по модулю: додатне збільшує баланс, відʼємне зменшує. */
+export async function logTradeMovement(userId, account, { profit, happened_at, note }) {
+  const nextBalance = Number(account.balance) + profit;
+
+  const { data: ev, error: evError } = await supabase
+    .from('account_events')
+    .insert({
+      user_id: userId,
+      account_id: account.id,
+      kind: 'trade',
+      amount: Math.abs(profit),
+      balance_after: nextBalance,
+      note: note || '',
+      happened_at: happened_at || todayLocal(),
+    })
+    .select()
+    .single();
+
+  if (evError) throw evError;
+
+  const { data: acc, error: accError } = await supabase
+    .from('prop_accounts')
+    .update({ balance: nextBalance })
+    .eq('id', account.id)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (accError) throw accError;
+
+  return { event: ev, account: acc };
+}
+
+/* ---------- закриття акаунта ----------
+   Акаунт не видаляється — лишається в списку зі статусом Closed і
+   причиною. Баланс і історія не чіпаються: людині може ще знадобитись
+   подивитись, як усе було до закриття. */
+export async function closeAccount(userId, accountId, reason) {
+  const { data, error } = await supabase
+    .from('prop_accounts')
+    .update({ status: 'Closed', closed_reason: reason || null, closed_at: new Date().toISOString() })
+    .eq('id', accountId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
 export async function setBalance(userId, accountId, value) {

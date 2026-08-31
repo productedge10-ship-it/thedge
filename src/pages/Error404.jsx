@@ -7,6 +7,7 @@ import {
 } from "framer-motion";
 import { ArrowLeft, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * 404 — інтерактивна сторінка "не знайдено".
@@ -28,7 +29,31 @@ import { useNavigate } from "react-router-dom";
  */
 export default function NotFound() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [reduced, setReduced] = useState(false);
+
+  /* Куди веде «на головну». Для залогіненого це застосунок, а не
+     лендінг: лендінг однаково перекине його далі, і людина побачить
+     зайвий проблиск чужої сторінки. */
+  const home = user ? "/app" : "/";
+
+  /* Чи є куди повертатись.
+
+     navigate(-1) сам по собі мовчазний: якщо на 404 потрапили одразу —
+     набрали адресу руками, прийшли зі старого посилання, оновили
+     сторінку — попереднього запису в історії застосунку немає, і
+     браузер іде на крок назад ще ДО нього. Зі свіжої вкладки це
+     викидає з застосунку на порожню сторінку, і збоку виглядає так,
+     ніби кнопка зламана.
+
+     React Router нумерує свої записи в history.state.idx. Нуль
+     означає «це перший екран» — тоді замість кроку назад ведемо
+     додому, бо назад тут просто нікуди. */
+  const goBack = () => {
+    const idx = window.history.state?.idx;
+    if (typeof idx === "number" && idx > 0) navigate(-1);
+    else navigate(home, { replace: true });
+  };
 
   useEffect(() => {
     const m = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -216,7 +241,7 @@ export default function NotFound() {
           >
             <Magnetic reduced={reduced}>
               <button
-                onClick={() => navigate("/")}
+                onClick={() => navigate(home)}
                 className="inline-flex items-center gap-2 rounded-2xl bg-[#00E0A4] px-6 py-3.5 text-[14.5px] font-semibold text-[#04241C] transition-colors hover:bg-[#22e9b4]"
               >
                 <Home size={18} strokeWidth={2.4} />
@@ -225,7 +250,7 @@ export default function NotFound() {
             </Magnetic>
             <Magnetic reduced={reduced}>
               <button
-                onClick={() => navigate(-1)}
+                onClick={goBack}
                 className="inline-flex items-center gap-2 rounded-2xl border border-[#C4B5FD]/30 bg-[#8B7BFF]/10 px-6 py-3.5 text-[14.5px] font-medium text-white/90 transition-colors hover:border-[#C4B5FD]/60 hover:bg-[#8B7BFF]/20"
               >
                 <ArrowLeft size={18} strokeWidth={2.4} />

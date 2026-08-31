@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Maximize2, X, ImageOff, ZoomIn, Search } from 'lucide-react';
 import { T, EASE, SPRING } from '../../lib/theme';
+import { tvImage } from '../../lib/imageStore';
 
 /* ==================================================================
    ImageSlider з лупою.
@@ -11,16 +12,30 @@ import { T, EASE, SPRING } from '../../lib/theme';
    скло — ділянка під курсором показується у 2.5× просто на місці.
 ================================================================== */
 
-const LENS = 190;   // діаметр лупи
-const ZOOM = 2.6;   // кратність
+const LENS = 128;   // діаметр лупи — менша, щоб не закривала пів графіка
+const ZOOM = 2.1;   // кратність
 
-function Lens({ src, containerRef, enabled }) {
+function Lens({ src, containerRef, enabled, seedRef }) {
   const [pos, setPos] = useState(null);
   const [box, setBox] = useState(null);
 
   useEffect(() => {
-    if (!enabled) setPos(null);
-  }, [enabled]);
+    if (!enabled) { setPos(null); return; }
+    /* Клік по кнопці лупи — це не mousemove: без «зерна» лупа
+       зʼявлялась тільки після того, як курсор ще раз ворухнеться.
+       Тому одразу підставляємо останню відому позицію миші. */
+    const el = containerRef.current;
+    const seed = seedRef?.current;
+    if (el && seed) {
+      const r = el.getBoundingClientRect();
+      const x = seed.x - r.left;
+      const y = seed.y - r.top;
+      if (x >= 0 && y >= 0 && x <= r.width && y <= r.height) {
+        setBox({ w: r.width, h: r.height });
+        setPos({ x, y });
+      }
+    }
+  }, [enabled, containerRef, seedRef]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -63,8 +78,8 @@ function Lens({ src, containerRef, enabled }) {
         height: LENS,
         left: left - half,
         top: top - half,
-        border: `2px solid rgba(${T.accRgb},0.55)`,
-        boxShadow: `0 0 0 1px rgba(0,0,0,0.6), 0 18px 40px rgba(0,0,0,0.7), inset 0 0 24px rgba(0,0,0,0.35)`,
+        border: `1.5px solid rgba(${T.accRgb},0.5)`,
+        boxShadow: `0 0 0 1px rgba(0,0,0,0.5), 0 10px 26px rgba(0,0,0,0.55), inset 0 0 16px rgba(0,0,0,0.3)`,
         backgroundColor: T.bg,
         backgroundImage: `url(${src})`,
         backgroundRepeat: 'no-repeat',
@@ -82,12 +97,15 @@ function Lens({ src, containerRef, enabled }) {
 export default function ImageSlider({ images = [], containerClassName = '' }) {
   const [index, setIndex] = useState(0);
   const [full, setFull] = useState(false);
-  const [lensOn, setLensOn] = useState(true);
+  const [lensOn, setLensOn] = useState(false);
   const [hovering, setHovering] = useState(false);
   const wrapRef = useRef(null);
+  const lastPosRef = useRef(null);
   const fullRef = useRef(null);
 
-  const list = Array.isArray(images) ? images.filter(Boolean) : [];
+  /* Адреси з TradingView ведуть на HTML-сторінку, а не на файл —
+     переписуємо тут, щоб кожен виклик слайдера не робив цього сам. */
+  const list = (Array.isArray(images) ? images.filter(Boolean) : []).map(tvImage);
   const count = list.length;
 
   const go = useCallback(
@@ -118,7 +136,7 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
     return (
       <div className={`flex items-center justify-center gap-2 ${containerClassName}`} style={{ color: T.text4 }}>
         <ImageOff size={20} strokeWidth={1.6} />
-        <span className="text-[14px] font-bold" style={{ fontFamily: T.sans }}>Немає зображень</span>
+        <span className="text-[14px] font-bold" style={{ fontFamily: T.sans }}>No images</span>
       </div>
     );
   }
@@ -168,6 +186,7 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
         ref={wrapRef}
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
+        onMouseMove={(e) => { lastPosRef.current = { x: e.clientX, y: e.clientY }; }}
         className={`group/slider relative overflow-hidden ${containerClassName}`}
         style={{ background: T.bg, cursor: lensOn ? 'crosshair' : 'zoom-in' }}
       >
@@ -175,7 +194,7 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
           <motion.img
             key={index}
             src={list[index]}
-            alt={`Зображення ${index + 1} з ${count}`}
+            alt={`Image ${index + 1} of ${count}`}
             initial={{ opacity: 0, scale: 1.01 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
@@ -189,7 +208,7 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
         {/* Лупа */}
         <AnimatePresence>
           {lensOn && hovering && (
-            <Lens src={list[index]} containerRef={wrapRef} enabled={lensOn && hovering} />
+            <Lens src={list[index]} containerRef={wrapRef} enabled={lensOn && hovering} seedRef={lastPosRef} />
           )}
         </AnimatePresence>
 
@@ -197,11 +216,11 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
         <div className="absolute right-3 top-3 z-40 flex gap-2 opacity-0 transition-opacity duration-200 group-hover/slider:opacity-100">
           <ToolBtn
             icon={lensOn ? Search : ZoomIn}
-            label={lensOn ? 'Вимкнути лупу (Z)' : 'Увімкнути лупу (Z)'}
+            label={lensOn ? 'Turn off magnifier (Z)' : 'Turn on magnifier (Z)'}
             active={lensOn}
             onClick={() => setLensOn((v) => !v)}
           />
-          <ToolBtn icon={Maximize2} label="На весь екран" onClick={() => setFull(true)} />
+          <ToolBtn icon={Maximize2} label="Fullscreen" onClick={() => setFull(true)} />
         </div>
 
         {count > 1 && (
@@ -222,7 +241,7 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
                     width: i === index ? 18 : 6,
                     background: i === index ? T.acc : 'rgba(255,255,255,0.25)',
                   }}
-                  aria-label={`Зображення ${i + 1}`}
+                  aria-label={`Image ${i + 1}`}
                 />
               ))}
             </div>
@@ -236,7 +255,7 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
             style={{ background: 'rgba(10,10,12,0.7)', border: `1px solid ${T.line}` }}
           >
             <span className="text-[12px] font-bold" style={{ fontFamily: T.sans, color: T.text3 }}>
-              Наведи — збільшить
+              Hover to zoom
             </span>
           </div>
         )}
@@ -275,7 +294,7 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
                 <motion.img
                   key={index}
                   src={list[index]}
-                  alt={`Зображення ${index + 1}`}
+                  alt={`Image ${index + 1}`}
                   initial={{ scale: 0.97, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.97, opacity: 0 }}

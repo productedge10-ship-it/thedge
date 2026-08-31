@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import {
+  supabase, isRecoveryFlow, onRecoveryFlow, endRecoveryFlow, hadAuthTokenInUrl,
+} from '../lib/supabase';
 import {
   motion, AnimatePresence, useMotionValue, useSpring, useTransform, useMotionTemplate,
 } from 'framer-motion';
@@ -838,10 +840,43 @@ export default function Auth() {
   const liveTicker = useLiveTicker();
   const clock = useUtcClock();
 
-  // 'login' | 'register' | 'reset' | 'verify'
-  const [mode, setMode] = useState('login');
+  /* Чи прийшли ми сюди за посиланням «відновити пароль».
+
+     Мітку ?recovery=1 ставимо самі в redirectTo. Вона потрібна тому,
+     що перехід із листа створює звичайну сесію: без неї сторінка не
+     відрізнить «людина прийшла міняти пароль» від «людина просто
+     зайшла» і миттєво відправить її в застосунок повз форму.
+
+     На подію PASSWORD_RECOVERY покладатись не можна: Supabase надсилає
+     її лише в implicit-потоці, а в PKCE (він тут і працює) приходить
+     звичайний SIGNED_IN. Тому подія лишається необовʼязковим бонусом,
+     а не умовою.
+
+     Самої мітки замало: її можна дописати руками, і форма відкрилась
+     би будь-кому залогіненому. Тому вимагаємо ще й токен, який ніс
+     лист (hadAuthTokenInUrl зчитує його до того, як Supabase вичистить
+     адресу). Набрана вручну адреса токена не має — і форми не буде.
+
+     Це все одно перевірка в браузері, тож остаточне слово не за нею.
+     Від зміни пароля з чужого незаблокованого компʼютера захищає
+     Supabase: «Secure password change» вимагає повторної автентифікації
+     поза сесією відновлення, і обійти це з фронтенду неможливо. */
+  const isRecoveryUrl = typeof window !== 'undefined'
+    && hadAuthTokenInUrl()
+    && (
+      new URLSearchParams(window.location.search).get('recovery') === '1'
+      || window.location.hash.includes('type=recovery')
+    );
+
+  // 'login' | 'register' | 'reset' | 'verify' | 'newpass'
+  const [mode, setMode] = useState(
+    isRecoveryUrl || isRecoveryFlow() ? 'newpass' : 'login',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  /* Другий пароль тільки для екрана 'newpass': поставити новий пароль
+     наосліп, без підтвердження, — найкоротший шлях замкнути себе зовні. */
+  const [password2, setPassword2] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState(null); // { type: 'error' | 'success', text }
@@ -853,6 +888,28 @@ export default function Auth() {
   const from = location.state?.from?.pathname || '/app';
   const canvasRef = useRef(null);
   useCandlestickChart(canvasRef);
+
+  /* ---- повернення з листа «відновлення пароля» ----
+
+     Свій токен ніде не перевіряємо й не зберігаємо: сесію видав
+     Supabase у відповідь на справжнє посилання, а updateUser нижче без
+     неї просто не спрацює. */
+  const [recovering, setRecovering] = useState(
+    () => isRecoveryUrl || isRecoveryFlow(),
+  );
+
+  /* Подія приходить не в кожному потоці, тож форму вона не вмикає —
+     лише підстраховує випадок, коли мітки в адресі чомусь не було. */
+  useEffect(() => {
+    const stop = onRecoveryFlow(() => {
+      setRecovering(true);
+      setMode('newpass');
+      setPassword('');
+      setPassword2('');
+      setMessage(null);
+    });
+    return stop;
+  }, []);
 
   /* ---- right panel: flow field + 3D card tilt ---- */
   const flowRef = useRef(null);
@@ -904,6 +961,7 @@ export default function Auth() {
     setMode(next);
     setMessage(null);
     setPassword('');
+    setPassword2('');
   }, []);
 
   const handleInputChange = (setter) => (e) => {
@@ -935,16 +993,67 @@ export default function Auth() {
           return;
         }
 
-        setMode('verify');
         setPassword('');
+
+        /* Підтвердження пошти вимкнене на боці Supabase, тому реєстрація
+           одразу віддає сесію — людину треба пускати в застосунок, а не
+           тримати на екрані «перевірте пошту», якого вона все одно не
+           побачить: редірект «залогінений → у застосунок» спрацював би
+           раніше. Нагадування підтвердити зустріне її всередині
+           (VerifyEmailModal).
+
+           Гілка else лишається на випадок, якщо «Confirm email» колись
+           увімкнуть назад: тоді сесії не буде, і старий екран знову
+           стане єдиним правильним. */
+        if (data?.session) {
+          armReveal();
+          navigate(from, { replace: true });
+        } else {
+          setMode('verify');
+        }
       } else if (mode === 'reset') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin + '/auth',
+          /* ?recovery=1 — мітка для самих себе. Повернення з листа
+             створює звичайну сесію, і без неї сторінка не відрізнить
+             «людина прийшла міняти пароль» від «людина просто зайшла»,
+             та миттєво відправить її в застосунок повз форму. */
+          redirectTo: window.location.origin + '/auth?recovery=1',
         });
         if (error) throw error;
-        setMessage({ type: 'success', text: 'Посилання для відновлення надіслано на пошту.' });
+        /* Про спам згадуємо одразу, а не після скарги «лист не прийшов»:
+           відправка з поштового сервісу майже завжди має шанс туди
+           потрапити, і людина має знати, де шукати. */
+        setMessage({
+          type: 'success',
+          text: 'Посилання надіслано. Якщо листа немає — перевірте теку «Спам».',
+        });
         setMode('login');
         setPassword('');
+      } else if (mode === 'newpass') {
+        /* Перевіряємо збіг тут, а не покладаємось на required у полях:
+           браузер стежить лише за тим, що вони не порожні. */
+        if (password !== password2) {
+          setMessage({ type: 'error', text: 'Паролі не збігаються.' });
+          setLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setMessage({ type: 'error', text: 'Пароль має бути щонайменше 6 символів.' });
+          setLoading(false);
+          return;
+        }
+
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+
+        /* Сесія відновлення вже є, тож людина фактично залогінена —
+           тримати її на екрані входу після зміни пароля безглуздо. */
+        endRecoveryFlow();
+        setRecovering(false);
+        setPassword('');
+        setPassword2('');
+        armReveal();
+        navigate('/app', { replace: true });
       }
     } catch (error) {
       setMessage({ type: 'error', text: getErrorMessage(error) });
@@ -968,8 +1077,14 @@ export default function Auth() {
 
   const gridMask = 'radial-gradient(120% 100% at 68% 42%, #000 28%, transparent 74%)';
 
-  /* Уже залогінений — нічого показувати, одразу в застосунок */
-  if (user) return <Navigate to={from === '/auth' ? '/' : from} replace />;
+  /* Уже залогінений — нічого показувати, одразу в застосунок.
+
+     Виняток — відновлення пароля: перехід за посиланням із листа теж
+     створює сесію, і без цієї перевірки людину викинуло б у застосунок
+     повз форму, заради якої вона й прийшла. */
+  if (user && !recovering) {
+    return <Navigate to={from === '/auth' ? '/' : from} replace />;
+  }
 
   return (
     <div
@@ -1327,6 +1442,34 @@ export default function Auth() {
                   </motion.div>
                 )}
 
+                {/* --------------------- NEW PASSWORD ------------------ */}
+                {mode === 'newpass' && (
+                  <motion.div key="newpass" {...screenMotion}>
+                    <div className="text-center mb-6">
+                      <div
+                        className="w-[52px] h-[52px] mx-auto mb-[18px] rounded-[15px] flex items-center justify-center"
+                        style={{ background: `rgba(${ACCENT},0.22)`, border: '1px solid rgba(255,255,255,0.1)' }}
+                      >
+                        <Lock size={22} color={ACCENT_HEX} strokeWidth={1.7} />
+                      </div>
+                      <div className="font-bold text-[25px] tracking-[0.5px] text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                        Новий пароль
+                      </div>
+                      <div className="text-[13px] leading-[1.5] text-[#e8eaed]/50 mt-[11px]">
+                        Придумайте новий пароль — і одразу зайдете з ним у застосунок.
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleAuth} className="flex flex-col gap-3.5">
+                      <FieldInput icon={Lock} type="password" placeholder="Новий пароль" required
+                        value={password} onChange={handleInputChange(setPassword)} autoComplete="new-password" />
+                      <FieldInput icon={Lock} type="password" placeholder="Повторіть пароль" required
+                        value={password2} onChange={handleInputChange(setPassword2)} autoComplete="new-password" />
+                      <PrimaryButton type="submit" loading={loading}>Зберегти пароль</PrimaryButton>
+                    </form>
+                  </motion.div>
+                )}
+
                 {/* ----------------------- VERIFY --------------------- */}
                 {mode === 'verify' && (
                   <motion.div key="verify" {...screenMotion} className="text-center">
@@ -1346,6 +1489,7 @@ export default function Auth() {
                       Ми надіслали лист із підтвердженням на адресу{' '}
                       <span className="text-[#e8eaed]/85 font-semibold break-all">{email || 'your@email.com'}</span>.
                       {' '}Перейдіть за посиланням, щоб активувати акаунт.
+                      {' '}Якщо листа немає — перевірте теку «Спам».
                     </div>
 
                     <PrimaryButton type="button" loading={resending} onClick={handleResend}>

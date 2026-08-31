@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Building2, Trophy, Loader2, Check, Plus, Trash2,
-  TrendingUp, TrendingDown, Activity, Target, ArrowDownToLine,
+  X, Building2, Loader2, Check, Trash2, Lock,
+  TrendingUp, TrendingDown,
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
@@ -11,7 +11,7 @@ import { notify } from '../../utils/notify';
 import { T, EASE, SPRING } from '../../lib/theme';
 import {
   fetchEvents, ensureStart, addEvent, removeEvent, setBalance, fetchAccountTrades,
-  tradeStats, money, money2, todayLocal, KINDS_EN,
+  tradeStats, money, money2, todayLocal, KINDS_EN, CLOSE_REASONS, closeAccount,
 } from '../../lib/accountsStore';
 import DateField from '../ui/DateField';
 import BalanceChart from './BalanceChart';
@@ -34,46 +34,11 @@ const fmtDay = (iso) => {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 };
 
-/* Пишемо координати курсора у вузол — цим живуть усі ховери нижче */
-function track(e) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  el.style.setProperty('--mx', `${e.clientX - r.left}px`);
-  el.style.setProperty('--my', `${e.clientY - r.top}px`);
-}
-
-function Stat({ label, value, hint, tone, hue, icon: Icon }) {
-  return (
-    <div
-      onPointerMove={track}
-      className="ad-tile relative min-w-0 overflow-hidden rounded-2xl px-4 py-3.5"
-      style={{ '--hue': hue || T.accRgb, background: T.surface, border: `1px solid ${T.line}` }}
-    >
-      <span aria-hidden className="ad-bloom" />
-      <span aria-hidden className="ad-edge" />
-      <div className="relative z-10 mb-1.5 flex items-center gap-2">
-        {Icon && <Icon size={12.5} strokeWidth={2.3} style={{ color: `rgb(${hue || T.accRgb})` }} />}
-        <span
-          className="truncate text-[11px] font-bold uppercase tracking-[0.13em]"
-          style={{ fontFamily: T.sans, color: T.text4 }}
-        >
-          {label}
-        </span>
-      </div>
-      <div
-        className="relative z-10 text-[22px] font-bold tabular-nums"
-        style={{ fontFamily: T.mono, color: tone || T.text, letterSpacing: '-0.02em' }}
-      >
-        {value}
-      </div>
-      {hint && (
-        <div className="relative z-10 mt-0.5 truncate text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          {hint}
-        </div>
-      )}
-    </div>
-  );
-}
+const fmtDayShort = (iso) => {
+  const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+};
 
 /* Кістяк на час завантаження. Займає рівно стільки ж місця, скільки
    готовий вміст, тому вікно не міняє висоту, коли дані прилітають. */
@@ -92,14 +57,19 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const [kind, setKind] = useState('payout');
   const [amount, setAmount] = useState('');
   const [when, setWhen] = useState(todayLocal());
-  const [note, setNote] = useState('');
+  const [histFilter, setHistFilter] = useState('all');
+  const [chartRange, setChartRange] = useState('all');
+  const [closePanel, setClosePanel] = useState(false);
+  const [closeReason, setCloseReason] = useState(CLOSE_REASONS[0]);
+  const [closeNote, setCloseNote] = useState('');
+  const [closing, setClosing] = useState(false);
 
   const acc = account;
   const initial = Number(acc.initial_balance ?? acc.balance) || 0;
   const balance = Number(acc.balance) || 0;
+  const isClosed = acc.status === 'Closed';
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -142,28 +112,104 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
   const openProfit = balance - initial;
   const earned = totalPaid + openProfit;
 
-  const history = useMemo(() => [...events].reverse(), [events]);
+  /* Похідні від поля суми — для quick-picks, смуги «частка від
+     доступного» і стану кнопки в панелі виплати. */
+  const rawAmount = parseFloat(String(amount).replace(',', '.'));
+  const hasAmount = !isNaN(rawAmount) && rawAmount > 0;
+  const overLimit = hasAmount && rawAmount > Math.max(openProfit, 0);
+
+  /* Дельта від попередньої точки по кожному запису — рахуємо тут раз,
+     а не гадаємо по kind: withdrawn завжди мінус, а прибуток/збиток
+     від угоди залежить від того, вгору чи вниз пішов баланс. */
+  const history = useMemo(() => {
+    const rev = [...events].reverse();
+    return rev.map((e, i) => {
+      const prev = rev[i + 1];
+      const delta = e.kind === 'start' ? null : e.balance_after - (prev ? Number(prev.balance_after) : initial);
+      return { ...e, delta };
+    });
+  }, [events, initial]);
   const lastId = events.length ? events[events.length - 1].id : null;
+  const filteredHistory = useMemo(
+    () => (histFilter === 'all' ? history : history.filter((e) => e.kind === histFilter)),
+    [history, histFilter],
+  );
+
+  /* Групи по місяцях — рядки під заголовком з назвою місяця. */
+  const historyGroups = useMemo(() => {
+    const out = [];
+    filteredHistory.forEach((e) => {
+      const d = new Date(`${String(e.happened_at).slice(0, 10)}T12:00:00`);
+      const key = isNaN(d) ? 'Unknown' : d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).toUpperCase();
+      let g = out[out.length - 1];
+      if (!g || g.key !== key) { g = { key, rows: [] }; out.push(g); }
+      g.rows.push(e);
+    });
+    return out;
+  }, [filteredHistory]);
+
+  /* Просадка від піку: найвищий баланс, який колись бачив акаунт,
+     проти поточного. Не «максимальний лосс за день» проп-фірми (ми
+     його не рахуємо тут), а тіньова відстань до найкращої точки. */
+  const drawdownPct = useMemo(() => {
+    if (!events.length) return 0;
+    const peak = Math.max(initial, ...events.map((e) => Number(e.balance_after) || 0));
+    if (peak <= 0) return 0;
+    return Math.max(0, ((peak - balance) / peak) * 100);
+  }, [events, initial, balance]);
+
+  /* «30д» показує лише свіжі точки, але завжди лишає одну точку
+     перед вирізаним вікном — інакше лінія починалась би нізвідки. */
+  const chartEvents = useMemo(() => {
+    if (chartRange === 'all' || events.length < 2) return events;
+    const cutoff = Date.now() - 30 * 86400000;
+    const inRange = events.filter((e) => new Date(`${e.happened_at}T00:00:00`).getTime() >= cutoff);
+    const firstInIdx = events.findIndex((e) => inRange.includes(e));
+    if (firstInIdx > 0) return events.slice(firstInIdx - 1);
+    return inRange.length ? inRange : events;
+  }, [events, chartRange]);
+
+  /* Тихий підпис під графіком: пік, дно і скільки днів у вибраному
+     вікні — щоб цифру не доводилось вичитувати з самої кривої. */
+  const chartSummary = useMemo(() => {
+    if (!chartEvents.length) return null;
+    const values = chartEvents.map((e) => Number(e.balance_after) || 0);
+    const peak = Math.max(initial, ...values);
+    const low = Math.min(initial, ...values);
+    const first = chartEvents[0]?.happened_at;
+    const last = chartEvents[chartEvents.length - 1]?.happened_at;
+    const days = first && last
+      ? Math.max(1, Math.round((new Date(`${last}T00:00:00`) - new Date(`${first}T00:00:00`)) / 86400000) + 1)
+      : 1;
+    return { peak, low, days, count: chartEvents.length, firstDate: first };
+  }, [chartEvents, initial]);
 
   const submit = async () => {
+    if (isClosed) return;
     const value = Math.abs(Number(String(amount).replace(',', '.')) || 0);
     if (!value) { notify.error('Enter an amount', 'Zero changes nothing.'); return; }
-    if (kind === 'payout' && value > balance) {
-      notify.error('Too much', 'Payout exceeds the current balance.');
+    /* Вивести можна лише те, що понад базовий розмір рахунку — після
+       виплати баланс ніколи не має впасти нижче initial_balance. */
+    if (value > openProfit) {
+      notify.error(
+        'Too much',
+        openProfit > 0
+          ? `You can only withdraw what's above the ${money(initial)} account size — up to ${money2(openProfit)} right now.`
+          : `Balance hasn't grown past the ${money(initial)} account size yet, so there's nothing to withdraw.`,
+      );
       return;
     }
 
     setBusy(true);
     try {
       const { event, account: next } = await addEvent(user.id, acc, {
-        kind, amount: value, happened_at: when, note,
+        kind: 'payout', amount: value, happened_at: when, note: '',
       });
       setEvents((list) => [...list, event]);
       onUpdate(next);
       setAmount('');
-      setNote('');
       notify.success(
-        kind === 'payout' ? 'Payout logged' : 'Logged',
+        'Payout logged',
         `Balance is now ${money(next.balance)}`,
       );
     } catch (err) {
@@ -192,6 +238,21 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
     }
   };
 
+  const confirmClose = async () => {
+    setClosing(true);
+    try {
+      const reason = closeNote.trim() ? `${closeReason} — ${closeNote.trim()}` : closeReason;
+      const next = await closeAccount(user.id, acc.id, reason);
+      onUpdate(next);
+      setClosePanel(false);
+      notify.success('Account closed', reason);
+    } catch (err) {
+      notify.error('Could not close', err.message);
+    } finally {
+      setClosing(false);
+    }
+  };
+
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -211,57 +272,71 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
            рухаються — рух завжди читається як затримка.
         ========================================================== */
         .ad-tile, .ad-row, .ad-seg {
-          --mx: 50%;
-          --my: 50%;
           --hue: ${T.accRgb};
-          isolation: isolate;
-          transition: background-color .35s ease, border-color .35s ease, box-shadow .4s ease;
-        }
-        .ad-tile:hover, .ad-row:hover {
-          border-color: rgba(var(--hue), 0.24) !important;
-          box-shadow: 0 18px 40px -30px rgba(var(--hue), 0.75);
         }
 
-        .ad-bloom, .ad-edge {
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          pointer-events: none;
+        /* Рядок історії — тільки рамка тепліє, без сяйва: тут довгий
+           список, і будь-який блиск на кожному наведенні втомлює. */
+        .ad-row {
+          transition: border-color .25s ease, background-color .25s ease;
         }
-        .ad-bloom {
-          background: radial-gradient(200px circle at var(--mx) var(--my),
-            rgba(var(--hue), .11), transparent 66%);
-          opacity: 0;
-          transition: opacity .32s ease;
+        .ad-row:hover {
+          border-color: rgba(var(--hue), 0.22) !important;
+          background-color: rgba(255,255,255,0.018);
         }
-        .ad-tile:hover .ad-bloom, .ad-row:hover .ad-bloom { opacity: calc(1 * var(--edge-fx, 1)); }
 
-        /* Кромка світиться рівно там, де курсор */
-        .ad-edge {
-          padding: 1px;
-          background: radial-gradient(180px circle at var(--mx) var(--my),
-            rgba(var(--hue), .9), rgba(var(--hue), .2) 38%, transparent 70%);
-          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-          -webkit-mask-composite: xor;
-          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-          mask-composite: exclude;
-          opacity: 0;
-          transition: opacity .3s ease;
-        }
-        .ad-tile:hover .ad-edge, .ad-row:hover .ad-edge { opacity: calc(1 * var(--edge-fx, 1)); }
+        /* Рядок у боковій панелі графіка (Peak/Win rate/Net R/
+           Drawdown) — тихо світлішає під курсором, як у макеті. */
+        .ad-tile-row { transition: background-color .2s ease; }
+        .ad-tile-row:hover { background-color: rgba(255,255,255,0.022); }
 
-        /* Кнопка з відблиском, що пробігає при наведенні */
-        .ad-cta { position: relative; overflow: hidden; }
-        .ad-cta::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.45) 50%, transparent 62%);
-          transform: translateX(-120%);
-          transition: transform .7s cubic-bezier(.22,1,.36,1);
+        /* Рядок історії — легкий фіолетовий градієнт, тонке кільце
+           всередині і зсув вправо на 3px, як у макеті. */
+        .ad-hist-row {
+          transition: background .22s ease, box-shadow .22s ease, transform .22s ease;
         }
-        .ad-cta:hover::after { transform: translateX(120%); }
-        .ad-cta:hover { box-shadow: 0 12px 34px -10px rgba(${T.accRgb}, 0.85) !important; }
+        .ad-hist-row:hover {
+          background: linear-gradient(90deg, rgba(${T.accRgb},0.07) 0%, rgba(255,255,255,0.02) 45%, rgba(255,255,255,0) 100%);
+          box-shadow: inset 0 0 0 1px ${T.lineHi};
+          transform: translateX(3px);
+        }
+
+        /* ─────────── Панель виплати: тонка градієнтна рамка навколо
+           темної картки й повільний відблиск, що пропливає по ній
+           раз на кілька секунд — «преміальна» картка ─────────── */
+        .ad-payout-frame {
+          background: linear-gradient(140deg,
+            rgba(${T.accRgb},0.6) 0%, rgba(${T.accRgb},0.1) 32%,
+            rgba(255,255,255,0.05) 60%, rgba(${T.accRgb},0.3) 100%);
+        }
+        /* Кнопка «Log payout» — скляна пігулка: ледь тонований
+           фіолетовий, тонка рамка, розмиття позаду. На ховері тло і
+           рамка яскравіють, зʼявляється сяйво й легкий підйом. */
+        .ad-payout-cta {
+          background: rgba(${T.accRgb},0.08);
+          color: #c4b5fd;
+          border: 1px solid rgba(${T.accRgb},0.4);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease;
+        }
+        .ad-payout-cta:hover:not(:disabled) {
+          background: rgba(${T.accRgb},0.18);
+          color: #fff;
+          border-color: rgba(${T.accRgb},0.8);
+          box-shadow: 0 0 20px rgba(${T.accRgb},0.3);
+          transform: translateY(-2px);
+        }
+        .ad-payout-cta:active:not(:disabled) { transform: translateY(0); }
+        .ad-payout-cta:disabled {
+          background: ${T.surfaceHi};
+          border-color: ${T.line};
+          color: ${T.text3};
+          box-shadow: none;
+          cursor: not-allowed;
+        }
+
+        .ad-quick-pick:hover:not(:disabled) { border-color: ${T.lineAcc} !important; color: ${T.acc} !important; }
 
         /* Поле, що підсвічує рамку під курсором */
         .ad-field {
@@ -294,7 +369,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
         @keyframes ad-shimmer { to { transform: translateX(100%); } }
 
         @media (prefers-reduced-motion: reduce) {
-          .ad-cta::after, .ad-skeleton::after { animation: none; transition: none; }
+          .ad-skeleton::after { animation: none; transition: none; }
         }
       `}</style>
 
@@ -303,9 +378,11 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 18, scale: 0.985 }}
         transition={SPRING}
-        /* Висота задана, а не виведена з вмісту: інакше вікно росло б
-           у момент, коли долітають дані, і стрибало під курсором */
-        className="flex h-[min(760px,94vh)] w-full max-w-[1120px] flex-col overflow-hidden rounded-3xl"
+        /* max-h, а не h: вікно росте під висоту вмісту (короткій
+           історії не лишає порожнечі знизу), і лише впирається у
+           стелю 94vh на великих екранах, де вмісту справді багато —
+           тоді вже вмикається внутрішня прокрутка тіла. */
+        className="flex max-h-[94vh] w-full max-w-[1120px] flex-col overflow-hidden rounded-3xl"
         style={{
           background: T.bg,
           border: `1px solid ${T.line}`,
@@ -326,337 +403,587 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
           >
             <Building2 size={19} strokeWidth={2} style={{ color: T.acc }} />
           </span>
-          <div className="min-w-0 flex-1 pr-10">
+          <div className="min-w-0 flex-1">
             <h2
               className="truncate text-[20px] font-bold sm:text-[23px]"
               style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.025em' }}
             >
               {acc.firm_name}
             </h2>
-            <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: T.ok }}>
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: T.ok, boxShadow: `0 0 8px ${T.ok}` }} />
-              {acc.status === 'Active' ? 'Active' : acc.status}
-              <span style={{ color: T.text4 }}>· {money(initial)} account</span>
+            <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: isClosed ? T.text3 : T.ok }}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: isClosed ? T.text3 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
+              {isClosed ? 'Closed' : 'Active'}
+              <span style={{ color: T.text3 }}>· {money(initial)} account</span>
+              {isClosed && acc.closed_reason && <span style={{ color: T.text3 }}>· {acc.closed_reason}</span>}
             </div>
           </div>
+
+          <div className="flex h-10 shrink-0 items-center gap-2">
+            {!isClosed && (
+              <button
+                onClick={() => setClosePanel((v) => !v)}
+                className="flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-[12.5px] font-bold transition-colors"
+                style={{
+                  background: `rgba(${T.badRgb},0.1)`,
+                  border: `1px solid rgba(${T.badRgb},0.4)`,
+                  color: T.bad,
+                  fontFamily: T.sans,
+                  boxShadow: closePanel ? `0 0 18px -6px rgba(${T.badRgb},0.6)` : 'none',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.16)`; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.1)`; }}
+              >
+                <Lock size={13} strokeWidth={2.3} /> Close account
+              </button>
+            )}
+          </div>
+
           <button
             onClick={onClose}
-            className="ad-close absolute right-5 top-4 grid h-10 w-10 place-items-center rounded-xl"
-            style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
+            className="ad-close grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+            style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2 }}
             onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = T.surface; e.currentTarget.style.color = T.text3; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = T.surface; e.currentTarget.style.color = T.text2; }}
           >
             <X size={17} strokeWidth={2.4} />
           </button>
         </div>
 
-        {/* ─────────── Body ─────────── */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_324px]">
-
-          {/* ══════ Left ══════ */}
-          <div className="custom-scrollbar min-h-0 overflow-y-auto px-4 py-5 sm:px-6">
-
-            <div className="mb-4">
-              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                Current balance
-              </p>
-              <div className="flex flex-wrap items-baseline gap-2.5">
-                <span
-                  className="text-[36px] font-bold tabular-nums leading-none sm:text-[44px]"
-                  style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.04em' }}
-                >
-                  {money2(balance)}
-                </span>
-                <span
-                  className="flex items-center gap-1 rounded-lg px-2 py-1 text-[12.5px] font-bold tabular-nums"
-                  style={{
-                    fontFamily: T.mono,
-                    background: openProfit >= 0 ? `rgba(${T.okRgb},0.10)` : `rgba(${T.badRgb},0.10)`,
-                    border: `1px solid ${openProfit >= 0 ? `rgba(${T.okRgb},0.24)` : `rgba(${T.badRgb},0.24)`}`,
-                    color: openProfit >= 0 ? T.ok : T.bad,
-                  }}
-                >
-                  {openProfit >= 0 ? <TrendingUp size={12} strokeWidth={2.6} /> : <TrendingDown size={12} strokeWidth={2.6} />}
-                  {openProfit >= 0 ? '+' : '−'}{money2(Math.abs(openProfit))}
-                </span>
-              </div>
-              <p className="mt-1.5 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                {openProfit > 0
-                  ? 'unrealised profit above account size'
-                  : openProfit < 0
-                    ? 'below the starting size'
-                    : 'exactly at account size'}
-              </p>
-            </div>
-
+        {/* ─────────── Close account panel ─────────── */}
+        {/*
+          grid-template-rows 0fr → 1fr замість framer height:'auto' —
+          той спосіб вимірював висоту вручну й одного разу обрізав
+          панель, коли зовнішнє вікно стало max-h. Цей трюк суто CSS:
+          браузер сам плавно інтерполює висоту без жодного виміру,
+          тому зламатись так само вже не може, і водночас це
+          виглядає як «висувається», а не просто проявляється. */}
+        <div
+          className="grid transition-[grid-template-rows] duration-300 ease-out"
+          style={{
+            gridTemplateRows: closePanel ? '1fr' : '0fr',
+            borderBottom: closePanel ? `1px solid ${T.line}` : 'none',
+            background: `rgba(${T.badRgb},0.04)`,
+          }}
+        >
+          <div className="min-h-0 overflow-hidden">
             <div
-              onPointerMove={track}
-              className="ad-tile relative mb-4 overflow-hidden rounded-2xl px-2 py-3"
-              style={{ '--hue': openProfit >= 0 ? T.okRgb : T.badRgb, background: T.surface, border: `1px solid ${T.line}` }}
+              className="flex flex-col gap-3 px-5 py-4 transition-opacity duration-200 sm:px-7"
+              style={{ opacity: closePanel ? 1 : 0, transitionDelay: closePanel ? '80ms' : '0ms' }}
             >
-              <span aria-hidden className="ad-bloom" />
-              <span aria-hidden className="ad-edge" />
-              <div className="relative z-10">
-                {loading ? <Skeleton h={206} className="border-0" /> : <BalanceChart events={events} initial={initial} />}
-              </div>
-            </div>
-
-            <div className="mb-5 grid grid-cols-2 gap-2.5 xl:grid-cols-4">
-              {loading ? (
-                [0, 1, 2, 3].map((i) => <Skeleton key={i} h={92} />)
-              ) : (
-                <>
-                  <Stat
-                    icon={Activity}
-                    hue="110,168,254"
-                    label="Trades"
-                    value={stats.total || '—'}
-                    hint={stats.total ? `${stats.wins}W · ${stats.losses}L` : 'none in journal yet'}
-                  />
-                  <Stat
-                    icon={Target}
-                    hue={T.okRgb}
-                    label="Win rate"
-                    value={stats.total ? `${stats.winrate}%` : '—'}
-                    hint={stats.total ? 'break-even excluded' : 'nothing to count'}
-                    tone={stats.total ? (stats.winrate >= 50 ? T.ok : T.text) : T.text4}
-                  />
-                  <Stat
-                    icon={TrendingUp}
-                    hue={stats.netR >= 0 ? T.okRgb : T.badRgb}
-                    label="Net R"
-                    value={stats.total ? `${stats.netR > 0 ? '+' : ''}${stats.netR}R` : '—'}
-                    hint={stats.total ? `avg ${stats.avgR > 0 ? '+' : ''}${stats.avgR}R` : '—'}
-                    tone={stats.total ? (stats.netR >= 0 ? T.ok : T.bad) : T.text4}
-                  />
-                  <Stat
-                    icon={Trophy}
-                    hue={T.accRgb}
-                    label="Earned"
-                    value={money(earned)}
-                    hint="payouts plus what's on the account"
-                    tone={earned >= 0 ? T.acc : T.bad}
-                  />
-                </>
-              )}
-            </div>
-
-            <h3
-              className="mb-3 flex items-center gap-2 pb-2.5 text-[11.5px] font-bold uppercase tracking-[0.16em]"
-              style={{ fontFamily: T.sans, color: T.text4, borderBottom: `1px solid ${T.line}` }}
-            >
-              <Trophy size={12.5} strokeWidth={2.3} style={{ color: T.warn }} /> Account history
-              {!loading && <span style={{ color: T.text4, opacity: 0.7 }}>· {events.length}</span>}
-            </h3>
-
-            <div className="flex flex-col gap-2 pb-2">
-              {loading ? (
-                [0, 1].map((i) => <Skeleton key={i} h={68} />)
-              ) : (
-                <AnimatePresence initial={false}>
-                  {history.map((e) => {
-                    const isPayout = e.kind === 'payout';
-                    const tone = isPayout ? T.warn : e.kind === 'deposit' ? T.info : T.text3;
-                    const hue = isPayout ? T.warnRgb : T.accRgb;
-
-                    return (
-                      <motion.div
-                        key={e.id}
-                        layout
-                        onPointerMove={track}
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                        transition={{ duration: 0.22, ease: EASE }}
-                        className="ad-row group relative flex items-center gap-3.5 overflow-hidden rounded-2xl px-4 py-3"
-                        style={{ '--hue': hue, background: T.surface, border: `1px solid ${T.line}` }}
-                      >
-                        <span aria-hidden className="ad-bloom" />
-                        <span aria-hidden className="ad-edge" />
-
-                        <span
-                          className="relative z-10 grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-transform duration-300 group-hover:scale-105"
-                          style={{ background: `rgba(${hue},0.09)`, border: `1px solid rgba(${hue},0.22)` }}
-                        >
-                          {isPayout
-                            ? <ArrowDownToLine size={15} strokeWidth={2.3} style={{ color: T.warn }} />
-                            : <Check size={15} strokeWidth={2.6} style={{ color: T.acc }} />}
-                        </span>
-
-                        <div className="relative z-10 min-w-0 flex-1">
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
-                              {KINDS_EN[e.kind]?.label || e.kind}
-                            </span>
-                            {e.kind !== 'start' && Number(e.amount) > 0 && (
-                              <span className="text-[13.5px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: tone }}>
-                                {isPayout ? '−' : '+'}{money2(e.amount)}
-                              </span>
-                            )}
-                          </div>
-                          <div className="truncate text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                            {fmtDay(e.happened_at)}
-                            {e.note ? ` · ${e.note}` : ''}
-                          </div>
-                        </div>
-
-                        <span className="relative z-10 shrink-0 text-right">
-                          <span className="block text-[13.5px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
-                            {money2(e.balance_after)}
-                          </span>
-                          <span className="text-[11px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                            balance
-                          </span>
-                        </span>
-
-                        {/* Undo лише для останньої події — інакше баланси
-                            всіх наступних стали б брехнею */}
-                        {e.id === lastId && e.kind !== 'start' && (
-                          <button
-                            onClick={() => undo(e)}
-                            disabled={busy}
-                            title="Undo last movement"
-                            className="relative z-10 grid h-8 w-8 shrink-0 place-items-center rounded-lg opacity-0 transition-all duration-200 group-hover:opacity-100"
-                            style={{ border: `1px solid ${T.line}`, color: T.text4 }}
-                            onMouseEnter={(ev) => { ev.currentTarget.style.color = T.bad; ev.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; ev.currentTarget.style.background = `rgba(${T.badRgb},0.08)`; }}
-                            onMouseLeave={(ev) => { ev.currentTarget.style.color = T.text4; ev.currentTarget.style.borderColor = T.line; ev.currentTarget.style.background = 'transparent'; }}
-                          >
-                            <Trash2 size={13} strokeWidth={2.2} />
-                          </button>
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              )}
-            </div>
-          </div>
-
-          {/* ══════ Right ══════ */}
-          <div
-            className="custom-scrollbar min-h-0 overflow-y-auto px-4 py-5 sm:px-5"
-            style={{ borderLeft: `1px solid ${T.line}`, background: `linear-gradient(180deg, ${T.surface}, ${T.bg} 240px)` }}
-          >
-            <div
-              onPointerMove={track}
-              className="ad-tile relative mb-4 overflow-hidden rounded-2xl px-4 py-3.5"
-              style={{ '--hue': T.warnRgb, background: `rgba(${T.warnRgb},0.05)`, border: `1px solid rgba(${T.warnRgb},0.16)` }}
-            >
-              <span aria-hidden className="ad-bloom" />
-              <span aria-hidden className="ad-edge" />
-              <p className="relative z-10 mb-1 text-[11px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                Withdrawn to date
+              <p className="text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.bad }}>
+                Why are you closing this account?
               </p>
-              <div className="relative z-10 text-[24px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: totalPaid ? T.warn : T.text4 }}>
-                {loading ? '—' : money2(totalPaid)}
-              </div>
-              <p className="relative z-10 mt-0.5 text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                {payouts.length ? `${payouts.length} payout${payouts.length === 1 ? '' : 's'}` : 'none yet'}
-              </p>
-            </div>
-
-            <h3
-              className="mb-3 flex items-center gap-2 pb-2.5 text-[11.5px] font-bold uppercase tracking-[0.16em]"
-              style={{ fontFamily: T.sans, color: T.text4, borderBottom: `1px solid ${T.line}` }}
-            >
-              <Plus size={12.5} strokeWidth={2.6} style={{ color: T.acc }} /> Log a movement
-            </h3>
-
-            <div className="flex flex-col gap-2.5">
-              <div className="grid grid-cols-3 gap-1.5">
-                {['payout', 'deposit', 'adjust'].map((k) => {
-                  const on = kind === k;
+              <div className="flex flex-wrap gap-1.5">
+                {CLOSE_REASONS.map((r) => {
+                  const on = closeReason === r;
                   return (
                     <button
-                      key={k}
-                      onClick={() => setKind(k)}
-                      className="ad-seg rounded-lg py-2 text-[12px] font-bold"
+                      key={r}
+                      onClick={() => setCloseReason(r)}
+                      className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors duration-150"
                       style={{
-                        background: on ? `rgba(${T.accRgb},0.13)` : T.sunken,
-                        border: `1px solid ${on ? T.lineAcc : T.line}`,
-                        color: on ? T.acc : T.text3,
                         fontFamily: T.sans,
-                        boxShadow: on ? `0 0 18px -6px rgba(${T.accRgb},0.55)` : 'none',
+                        background: on ? `rgba(${T.badRgb},0.14)` : T.surface,
+                        border: `1px solid ${on ? `rgba(${T.badRgb},0.4)` : T.line}`,
+                        color: on ? T.bad : T.text2,
                       }}
                     >
-                      {KINDS_EN[k].label}
+                      {r}
                     </button>
                   );
                 })}
               </div>
-
-              <div
-                className="ad-field relative rounded-xl"
-                style={{ background: T.sunken, border: `1px solid ${T.line}` }}
-              >
-                <span
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[17px] font-bold"
-                  style={{ fontFamily: T.mono, color: T.text4 }}
-                >
-                  $
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !busy && submit()}
-                  placeholder="0"
-                  className="h-[52px] w-full bg-transparent pl-8 pr-3.5 text-[20px] font-bold tabular-nums outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  style={{ color: T.text, fontFamily: T.mono }}
-                />
-              </div>
-
-              {/* найчастіший випадок — вивести весь прибуток */}
-              {kind === 'payout' && openProfit > 0 && (
+              <input
+                value={closeNote}
+                onChange={(e) => setCloseNote(e.target.value)}
+                placeholder="Details (optional)"
+                className="h-10 w-full rounded-xl px-3.5 text-[13.5px] outline-none"
+                style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text, fontFamily: T.sans }}
+              />
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setAmount(String(Math.round(openProfit * 100) / 100))}
-                  className="rounded-xl px-3 py-2 text-[12.5px] font-semibold transition-colors duration-200"
-                  style={{ background: T.sunken, border: `1px dashed ${T.lineHi}`, color: T.text3, fontFamily: T.sans }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = T.lineAcc; e.currentTarget.style.background = `rgba(${T.accRgb},0.07)`; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.background = T.sunken; }}
+                  onClick={confirmClose}
+                  disabled={closing}
+                  className="flex h-10 items-center gap-2 rounded-xl px-4 text-[13px] font-bold transition-colors"
+                  style={{ background: T.bad, color: '#fff', fontFamily: T.sans, opacity: closing ? 0.6 : 1 }}
                 >
-                  Full profit — {money2(openProfit)}
+                  {closing ? <Loader2 size={14} className="animate-spin" /> : <Lock size={13} strokeWidth={2.4} />}
+                  Confirm close
                 </button>
-              )}
-
-              <DateField value={when} onChange={setWhen} align="right" lang="en" />
-
-              <div className="ad-field rounded-xl" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
-                <input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Note (optional)"
-                  className="h-11 w-full bg-transparent px-3.5 text-[14px] outline-none"
-                  style={{ color: T.text, fontFamily: T.sans }}
-                />
+                <button
+                  onClick={() => setClosePanel(false)}
+                  className="text-[13px] font-semibold"
+                  style={{ fontFamily: T.sans, color: T.text3 }}
+                >
+                  Cancel
+                </button>
               </div>
-
-              <button
-                onClick={submit}
-                disabled={busy}
-                className="ad-cta mt-0.5 flex h-12 items-center justify-center gap-2 rounded-xl text-[14px] font-bold transition-transform duration-200 active:scale-[0.99]"
-                style={{
-                  background: T.acc,
-                  color: 'var(--edge-bg, #0A0A0C)',
-                  fontFamily: T.sans,
-                  opacity: busy ? 0.6 : 1,
-                  boxShadow: `0 8px 24px -10px rgba(${T.accRgb},0.7)`,
-                }}
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  {busy
-                    ? <Loader2 size={16} className="animate-spin" />
-                    : <><Check size={16} strokeWidth={3} /> Log it</>}
-                </span>
-              </button>
-
-              <p className="text-[12px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.55 }}>
-                {KINDS_EN[kind].hint}
-              </p>
             </div>
           </div>
+        </div>
+
+        {/* ─────────── Body ─────────── */}
+        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
+
+          {/* Balance / Withdrawn / Earned — three equal columns, the
+              headline numbers of the account in one glance. */}
+          <div className="grid grid-cols-1 sm:grid-cols-3" style={{ borderBottom: `1px solid ${T.line}`, background: T.surface }}>
+            <div className="flex flex-col gap-2 px-5 py-5 sm:px-7" style={{ borderRight: `1px solid ${T.line}` }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                Current balance
+              </p>
+              <span
+                className="text-[32px] font-semibold tabular-nums leading-none sm:text-[38px]"
+                style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
+              >
+                {money2(balance)}
+              </span>
+              <span
+                className="flex w-fit items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-bold tabular-nums"
+                style={{
+                  fontFamily: T.mono,
+                  background: openProfit >= 0 ? `rgba(${T.okRgb},0.10)` : `rgba(${T.badRgb},0.10)`,
+                  border: `1px solid ${openProfit >= 0 ? `rgba(${T.okRgb},0.24)` : `rgba(${T.badRgb},0.24)`}`,
+                  color: openProfit >= 0 ? T.ok : T.bad,
+                }}
+              >
+                {openProfit >= 0 ? <TrendingUp size={11} strokeWidth={2.6} /> : <TrendingDown size={11} strokeWidth={2.6} />}
+                {openProfit >= 0 ? '+' : '−'}{money2(Math.abs(openProfit))} from start
+              </span>
+            </div>
+            <div className="flex flex-col gap-2 px-5 py-5 sm:px-7" style={{ borderRight: `1px solid ${T.line}` }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                Withdrawn
+              </p>
+              <span
+                className="text-[32px] font-semibold tabular-nums leading-none sm:text-[38px]"
+                style={{ fontFamily: T.display, color: totalPaid ? T.warn : T.text, letterSpacing: '-0.03em' }}
+              >
+                {money2(totalPaid)}
+              </span>
+              <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                {payouts.length ? `${payouts.length} payout${payouts.length === 1 ? '' : 's'}` : 'none yet'}
+              </span>
+            </div>
+            <div className="flex flex-col gap-2 px-5 py-5 sm:px-7">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                Total earned
+              </p>
+              <span
+                className="text-[32px] font-semibold tabular-nums leading-none sm:text-[38px]"
+                style={{ fontFamily: T.display, color: earned >= 0 ? T.acc : T.bad, letterSpacing: '-0.03em' }}
+              >
+                {money(earned)}
+              </span>
+              <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                payouts + open profit
+              </span>
+            </div>
+          </div>
+
+          {/* ─────────── Log a payout — premium panel ─────────── */}
+          <div className="px-4 py-4 sm:px-6" style={{ borderBottom: `1px solid ${T.line}` }}>
+            <div
+              className="ad-payout-frame relative rounded-[20px] p-px"
+              style={{ boxShadow: '0 26px 60px -34px rgba(139,123,255,0.5)', opacity: isClosed ? 0.5 : 1, pointerEvents: isClosed ? 'none' : 'auto' }}
+            >
+              <div
+                className="ad-payout relative overflow-hidden rounded-[19px] p-5"
+                style={{ background: 'linear-gradient(180deg, #14141c 0%, #0d0d11 100%)' }}
+              >
+                <div className="relative z-10 flex flex-col gap-4">
+                  {isClosed ? (
+                    <div className="flex items-center gap-2 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>
+                      <Lock size={13} strokeWidth={2.3} /> Account is closed — nothing can be logged anymore
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: T.acc }} />
+                      <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.sans, color: T.acc, letterSpacing: '0.2em' }}>
+                        Payout
+                      </span>
+                      <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, rgba(${T.accRgb},0.3), transparent)` }} />
+                      <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text2 }}>
+                        available{' '}
+                        <b className="font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
+                          {money2(Math.max(openProfit, 0))}
+                        </b>
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-[minmax(240px,1.4fr)_auto_auto] sm:items-stretch">
+                    <div
+                      className="ad-field relative flex h-[48px] items-center gap-3 rounded-[15px] px-5"
+                      style={{ background: T.bg, border: `1px solid ${T.line}` }}
+                    >
+                      <span className="text-[18px] font-semibold" style={{ fontFamily: T.mono, color: T.text2 }}>
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && !busy && !isClosed && submit()}
+                        disabled={isClosed}
+                        placeholder="0.00"
+                        className="h-full w-full bg-transparent text-[20px] font-semibold tabular-nums outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        style={{ color: T.text, fontFamily: T.mono, letterSpacing: '-0.02em' }}
+                      />
+                      {amount && (
+                        <button
+                          type="button"
+                          onClick={() => setAmount('')}
+                          aria-label="Clear"
+                          className="shrink-0 rounded-lg p-1 transition-colors"
+                          style={{ color: T.text3 }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
+                        >
+                          <X size={14} strokeWidth={2.4} />
+                        </button>
+                      )}
+                    </div>
+
+                    <DateField
+                      value={when}
+                      onChange={setWhen}
+                      align="right"
+                      lang="en"
+                      height={48}
+                      monthStyle="short"
+                      quickPicks
+                      fontSize={14.5}
+                      fontWeight={600}
+                    />
+
+                    <button
+                      onClick={submit}
+                      disabled={busy || isClosed || !hasAmount || overLimit}
+                      className="ad-payout-cta relative flex h-[48px] min-w-[122px] items-center justify-center gap-1.5 self-center overflow-hidden rounded-xl px-4 text-[12.5px] font-semibold"
+                      style={{ fontFamily: T.sans, opacity: busy ? 0.7 : 1 }}
+                    >
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        {busy
+                          ? <Loader2 size={14} className="animate-spin" />
+                          : <><Check size={14} strokeWidth={2.8} /> Log payout</>}
+                      </span>
+                    </button>
+                  </div>
+
+                  {!isClosed && (
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {[25, 50, 100].map((pct) => {
+                        const amt = Math.round((Math.max(openProfit, 0) * pct) / 100 * 100) / 100;
+                        const active = hasAmount && Math.abs(rawAmount - amt) < 0.005;
+                        return (
+                          <button
+                            key={pct}
+                            onClick={() => setAmount(amt.toFixed(2))}
+                            disabled={amt <= 0}
+                            className="ad-quick-pick rounded-full px-3 py-1.5 text-[12px] font-semibold tabular-nums transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40"
+                            style={{
+                              fontFamily: T.mono,
+                              background: active ? `rgba(${T.accRgb},0.12)` : 'transparent',
+                              border: `1px solid ${active ? T.lineAcc : T.line}`,
+                              color: active ? T.acc : T.text2,
+                            }}
+                          >
+                            {pct === 100 ? 'Max' : `${pct}%`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {!isClosed && (
+                    <div className="flex flex-wrap items-start gap-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div className="flex min-w-[120px] flex-col gap-1">
+                        <span className="text-[10px] font-semibold uppercase" style={{ fontFamily: T.sans, color: T.text3, letterSpacing: '0.13em' }}>
+                          Balance after
+                        </span>
+                        <span className="text-[16px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text }}>
+                          {money2(hasAmount && !overLimit ? balance - rawAmount : balance)}
+                        </span>
+                      </div>
+                      <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+                        <span className="text-[10px] font-semibold uppercase" style={{ fontFamily: T.sans, color: T.text3, letterSpacing: '0.13em' }}>
+                          {hasAmount && !overLimit ? `Share of available · ${Math.round((rawAmount / (openProfit || 1)) * 100)}%` : 'Share of available'}
+                        </span>
+                        <span className="block h-1.5 overflow-hidden rounded-full" style={{ background: T.sunken }}>
+                          <motion.span
+                            className="block h-full rounded-full"
+                            style={{ background: 'linear-gradient(90deg, #5a4fd6 0%, #a99bff 100%)' }}
+                            initial={false}
+                            animate={{ width: `${hasAmount && !overLimit && openProfit > 0 ? Math.min(rawAmount / openProfit, 1) * 100 : 0}%` }}
+                            transition={{ duration: 0.25, ease: EASE }}
+                          />
+                        </span>
+                        {overLimit ? (
+                          <span className="flex items-center gap-2 text-[12.5px]" style={{ fontFamily: T.sans, color: T.bad }}>
+                            <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: T.bad }} />
+                            Over the balance — up to{' '}
+                            <b className="font-bold tabular-nums" style={{ fontFamily: T.mono }}>{money2(Math.max(openProfit, 0))}</b>{' '}
+                            can be paid out
+                          </span>
+                        ) : (
+                          <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                            {hasAmount
+                              ? 'Balance goes down, the payout stays in history'
+                              : <>Balance goes down, stays in history — up to <b className="font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>{money2(Math.max(openProfit, 0))}</b> available</>}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-4 py-5 sm:px-6">
+
+            {/* ─────────── Chart + side stats — 1:1 з макетом ─────────── */}
+            <div
+              className="relative -mx-4 mb-5 overflow-hidden sm:-mx-6"
+              style={{
+                background: `
+                  radial-gradient(70% 90% at 10% 0%, rgba(${T.accRgb},0.16) 0%, rgba(10,10,12,0) 60%),
+                  radial-gradient(55% 70% at 100% 100%, rgba(${T.okRgb},0.09) 0%, rgba(10,10,12,0) 58%),
+                  radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+                  linear-gradient(180deg, ${T.surfaceHi} 0%, ${T.bg} 100%)`,
+                backgroundSize: 'auto, auto, 22px 22px, auto',
+                borderTop: `1px solid ${T.line}`,
+                borderBottom: `1px solid ${T.line}`,
+              }}
+            >
+              <div className="flex flex-wrap items-end justify-between gap-6 px-4 pt-[26px] sm:px-6">
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-[22px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}>
+                    Balance curve
+                  </h3>
+                  <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                    {loading
+                      ? 'every point is a movement'
+                      : chartSummary
+                        ? `${chartSummary.count} movement${chartSummary.count === 1 ? '' : 's'} since ${fmtDayShort(chartSummary.firstDate)} · hover the line for details`
+                        : 'every point is a movement'}
+                  </span>
+                </div>
+                <div className="flex shrink-0 gap-[3px] rounded-[10px] p-[3px]" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
+                  {[['all', 'All'], ['30d', '30d']].map(([k, l]) => {
+                    const on = chartRange === k;
+                    return (
+                      <button
+                        key={k}
+                        onClick={() => setChartRange(k)}
+                        className="rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+                        style={{
+                          fontFamily: T.sans,
+                          background: on ? `rgba(${T.accRgb},0.16)` : 'transparent',
+                          color: on ? T.acc : T.text2,
+                        }}
+                      >
+                        {l}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 items-stretch gap-0 lg:grid-cols-[1fr_260px]" style={{ borderTop: `1px solid ${T.line}` }}>
+                <div className="flex flex-col justify-center px-4 pb-4 pt-[18px] sm:px-6 lg:border-r" style={{ borderColor: T.line }}>
+                  {loading ? <Skeleton h={264} className="border-0" /> : <BalanceChart events={chartEvents} initial={initial} />}
+                </div>
+
+                <div style={{ background: `linear-gradient(180deg, rgba(${T.accRgb},0.06) 0%, rgba(10,10,12,0) 55%)` }}>
+                  {loading ? (
+                    <div className="flex flex-col gap-2.5 p-4">
+                      {[0, 1, 2, 3].map((i) => <Skeleton key={i} h={58} />)}
+                    </div>
+                  ) : (
+                    [
+                      { label: 'Peak', value: money(chartSummary?.peak ?? initial), color: T.text, hint: 'highest balance' },
+                      {
+                        label: 'Win rate',
+                        value: stats.total ? `${stats.winrate}%` : '—',
+                        color: stats.total ? T.ok : T.text2,
+                        hint: stats.total ? `${stats.wins} of ${stats.total} closed green` : 'nothing in journal yet',
+                      },
+                      {
+                        label: 'Net R',
+                        value: stats.total ? `${stats.netR > 0 ? '+' : ''}${stats.netR}R` : '—',
+                        color: stats.total ? T.acc : T.text2,
+                        hint: 'risk-adjusted result',
+                      },
+                      {
+                        label: 'Drawdown',
+                        value: `${drawdownPct.toFixed(1)}%`,
+                        color: drawdownPct > 0 ? T.bad : T.text2,
+                        hint: 'from peak balance',
+                      },
+                    ].map((t) => (
+                      <div
+                        key={t.label}
+                        className="ad-tile-row flex flex-col justify-center gap-1.5 px-4 py-4 sm:px-6"
+                        style={{ borderBottom: `1px solid ${T.line}` }}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: t.color }} />
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.15em]" style={{ fontFamily: T.sans, color: T.text2 }}>
+                            {t.label}
+                          </span>
+                        </span>
+                        <span className="flex items-baseline justify-between gap-3">
+                          <span className="text-[22px] font-semibold leading-none tabular-nums" style={{ fontFamily: T.mono, color: t.color, letterSpacing: '-0.02em' }}>
+                            {t.value}
+                          </span>
+                          <span className="truncate text-right text-[11.5px]" style={{ fontFamily: T.sans, color: T.text2 }}>
+                            {t.hint}
+                          </span>
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ─────────── History — 1:1 з макетом ─────────── */}
+          <div
+            className="relative -mx-4 px-4 pb-7 pt-6 sm:-mx-6 sm:px-6"
+            style={{ background: `radial-gradient(80% 120% at 100% 0%, rgba(${T.accRgb},0.06) 0%, rgba(10,10,12,0) 60%)` }}
+          >
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-5">
+              <div className="flex flex-col gap-1.5">
+                <h3 className="text-[18px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.015em' }}>
+                  History
+                </h3>
+                <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                  {loading ? '' : `${filteredHistory.length} ${filteredHistory.length === 1 ? 'entry' : 'entries'} · newest first`}
+                </span>
+              </div>
+              <div className="flex shrink-0 gap-[3px] rounded-[10px] p-[3px]" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
+                {[['all', 'All'], ['payout', 'Payouts'], ['trade', 'Profit']].map(([k, l]) => {
+                  const on = histFilter === k;
+                  return (
+                    <button
+                      key={k}
+                      onClick={() => setHistFilter(k)}
+                      className="whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors duration-150"
+                      style={{ fontFamily: T.sans, background: on ? `rgba(${T.accRgb},0.16)` : 'transparent', color: on ? T.acc : T.text2 }}
+                    >
+                      {l}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex flex-col gap-2">
+                {[0, 1].map((i) => <Skeleton key={i} h={68} />)}
+              </div>
+            ) : filteredHistory.length === 0 ? (
+              <p className="py-6 text-center text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                Nothing here yet.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-[18px]">
+                {historyGroups.map((g) => (
+                  <div key={g.key} className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3 px-2.5 pb-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                        {g.key}
+                      </span>
+                      <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${T.line}, transparent)` }} />
+                    </div>
+
+                    <AnimatePresence initial={false}>
+                      {g.rows.map((e) => {
+                        const isStart = e.kind === 'start';
+                        const isPayout = e.kind === 'payout';
+                        const isLoss = !isStart && !isPayout && (e.delta || 0) < 0;
+
+                        let glyph = '•';
+                        let color = T.text3;
+                        let chipBg = 'rgba(255,255,255,0.07)';
+                        let tag = 'start';
+                        if (isPayout) { glyph = '↓'; color = T.acc; chipBg = `rgba(${T.accRgb},0.15)`; tag = 'payout'; }
+                        else if (e.kind === 'trade') {
+                          glyph = isLoss ? '↓' : '↑'; color = isLoss ? T.bad : T.ok;
+                          chipBg = isLoss ? `rgba(${T.badRgb},0.13)` : `rgba(${T.okRgb},0.13)`;
+                          tag = isLoss ? 'loss' : 'profit';
+                        } else if (e.kind === 'deposit') { glyph = '+'; color = T.info; chipBg = `rgba(${T.infoRgb},0.13)`; tag = 'deposit'; }
+                        else if (e.kind === 'adjust') { glyph = '='; color = T.text2; chipBg = T.surfaceHi; tag = 'adjust'; }
+
+                        return (
+                          <motion.div
+                            key={e.id}
+                            layout
+                            initial={{ opacity: 0, y: -6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                            transition={{ duration: 0.22, ease: EASE }}
+                            className="ad-hist-row group relative flex items-center justify-between gap-4 rounded-2xl py-3 pl-3 pr-11"
+                          >
+                            <span className="flex min-w-0 items-center gap-3.5">
+                              <span
+                                className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[11px] text-[15px] font-semibold"
+                                style={{ color, background: chipBg }}
+                              >
+                                {glyph}
+                              </span>
+                              <span className="flex min-w-0 flex-col gap-1">
+                                <span className="flex flex-wrap items-center gap-2">
+                                  <span className="text-[14.5px] font-medium" style={{ fontFamily: T.sans, color: T.text }}>
+                                    {KINDS_EN[e.kind]?.label || e.kind}
+                                  </span>
+                                  <span
+                                    className="rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em]"
+                                    style={{ color, background: chipBg }}
+                                  >
+                                    {tag}
+                                  </span>
+                                </span>
+                                <span className="truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                                  {fmtDay(e.happened_at)}{e.note ? ` · ${e.note}` : ''}
+                                </span>
+                              </span>
+                            </span>
+
+                            <span className="text-[14.5px] font-medium tabular-nums" style={{ fontFamily: T.mono, color, letterSpacing: '-0.02em' }}>
+                              {isStart ? money2(e.balance_after) : `${(e.delta || 0) >= 0 ? '+' : '−'}${money2(Math.abs(e.delta || 0))}`}
+                            </span>
+
+                            {/* Undo лише для останньої події — інакше
+                                баланси всіх наступних стали б брехнею.
+                                Абсолютно позиційована в кутку, а не в
+                                ряд із сумою — інакше сума їздила туди-
+                                сюди щоразу, як кнопка зʼявлялась. */}
+                            {!isClosed && e.id === lastId && !isStart && (
+                              <button
+                                onClick={() => undo(e)}
+                                disabled={busy}
+                                title="Undo last movement"
+                                className="absolute right-2 top-2 grid h-6 w-6 shrink-0 place-items-center rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                                style={{ color: T.bad, background: `rgba(${T.badRgb},0.12)` }}
+                              >
+                                <Trash2 size={12} strokeWidth={2.2} />
+                              </button>
+                            )}
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         </div>
       </motion.div>
     </motion.div>,

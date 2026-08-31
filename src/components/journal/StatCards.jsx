@@ -18,10 +18,10 @@ function SparkTip({ active, payload, primary }) {
   const d = payload[0].payload;
 
   const rows = [
-    { label: 'Угода',      value: `№${d.trades}` },
-    { label: 'Накопичено', value: `${d.cumulativeRR > 0 ? '+' : ''}${d.cumulativeRR}R`, color: d.cumulativeRR >= 0 ? T.ok : T.bad },
+    { label: 'Trade',      value: `#${d.trades}` },
+    { label: 'Accumulated', value: `${d.cumulativeRR > 0 ? '+' : ''}${d.cumulativeRR}R`, color: d.cumulativeRR >= 0 ? T.ok : T.bad },
     { label: 'Win rate',   value: `${d.winRate}%` },
-    { label: 'За планом',  value: `${d.planRate}%` },
+    { label: 'Plan rate',  value: `${d.planRate}%` },
   ];
 
   return (
@@ -180,10 +180,10 @@ export default function StatCards({ stats, chartData }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Card
-        label="Всього угод"
+        label="Total Trades"
         icon={Hash}
-        spark={<Spark data={chartData} dataKey="trades" color={T.text3} primary="Угода" />}
-        note={stats.total === 0 ? 'Ще немає записів' : null}
+        spark={<Spark data={chartData} dataKey="trades" color={T.text3} primary="Trade" />}
+        note={stats.total === 0 ? 'No records yet' : null}
       >
         <Num>{stats.total}</Num>
       </Card>
@@ -193,16 +193,16 @@ export default function StatCards({ stats, chartData }) {
         icon={Target}
         accent={wrLow ? T.warn : null}
         spark={<Spark data={chartData} dataKey="winRate" color={wrLow ? T.warn : T.text3} primary="Win rate" />}
-        note={stats.total > 0 ? `${Math.round((stats.winrate / 100) * stats.total)} з ${stats.total}` : null}
+        note={stats.total > 0 ? `${Math.round((stats.winrate / 100) * stats.total)} of ${stats.total}` : null}
       >
         <Num color={wrLow ? T.warn : T.text}>{stats.winrate}%</Num>
       </Card>
 
       <Card
-        label="Сумарний R / PnL"
+        label="Total R / PnL"
         icon={rrUp ? TrendingUp : TrendingDown}
         accent={stats.totalRR === 0 ? null : rrUp ? T.ok : T.bad}
-        spark={<Spark data={chartData} dataKey="cumulativeRR" color={rrUp ? T.ok : T.bad} primary="Накопичено" />}
+        spark={<Spark data={chartData} dataKey="cumulativeRR" color={rrUp ? T.ok : T.bad} primary="Accumulated" />}
       >
         <Num color={rrColor}>
           {stats.totalRR > 0 ? '+' : ''}{stats.totalRR}R
@@ -217,11 +217,11 @@ export default function StatCards({ stats, chartData }) {
       </Card>
 
       <Card
-        label="За планом"
+        label="Plan Adherence"
         icon={ShieldCheck}
         accent={planLow ? T.bad : null}
-        spark={<Spark data={chartData} dataKey="planRate" color={planLow ? T.bad : T.text3} primary="За планом" />}
-        note={stats.mistakeRate > 0 ? `помилки у ${stats.mistakeRate}% угод` : null}
+        spark={<Spark data={chartData} dataKey="planRate" color={planLow ? T.bad : T.text3} primary="Plan rate" />}
+        note={stats.mistakeRate > 0 ? `mistakes in ${stats.mistakeRate}% of trades` : null}
       >
         <Num color={planLow ? T.bad : T.text}>{stats.planRate}%</Num>
       </Card>
@@ -230,36 +230,71 @@ export default function StatCards({ stats, chartData }) {
 }
 
 /* ==================================================================
-   Серія — компактний рядок під картками. Показує, що відбувається
-   прямо зараз: скільки перемог/поразок поспіль.
+   Серія — хайповий банер, а не тихий рядок статистики. Стрік це
+   момент адреналіну (як у Duolingo чи кіл-стріку в шутері), тому
+   тут навмисно гучніше за решту сторінки: відблиск, що пробігає
+   поверхнею, пульсуюче світіння, іконка, що оживає.
 ================================================================== */
+
 export function StreakBar({ streak }) {
   if (!streak || streak.count < 2) return null;
   const win = streak.type === 'win';
   const c = win ? T.ok : T.bad;
   const rgb = win ? T.okRgb : T.badRgb;
+  const Icon = win ? Flame : Snowflake;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: EASE }}
-      className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5"
-      style={{ background: `rgba(${rgb},0.05)`, border: `1px solid rgba(${rgb},0.16)` }}
+      initial={{ opacity: 0, scale: 0.92, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ type: 'spring', duration: 0.5, bounce: 0.4 }}
+      className="relative flex items-center gap-3.5 overflow-hidden rounded-2xl px-5 py-4"
+      style={{
+        background: `linear-gradient(120deg, rgba(${rgb},0.24), rgba(${rgb},0.05) 70%)`,
+        border: `1.5px solid rgba(${rgb},0.5)`,
+      }}
     >
+      {/* Пульсуюче зовнішнє світіння */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-2xl"
+        animate={{ boxShadow: [`0 0 0px rgba(${rgb},0)`, `0 0 34px rgba(${rgb},0.55)`, `0 0 0px rgba(${rgb},0)`] }}
+        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+      />
+
+      {/* Відблиск, що періодично пробігає поверхнею */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-[20deg]"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent)' }}
+        animate={{ left: ['-45%', '140%'] }}
+        transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.6, ease: 'easeInOut' }}
+      />
+
       <motion.span
-        animate={win ? { scale: [1, 1.14, 1] } : { rotate: [0, -8, 8, 0] }}
-        transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 1.6, ease: 'easeInOut' }}
-        className="flex"
+        className="relative flex shrink-0"
+        animate={win ? { rotate: [0, -10, 10, -6, 0], scale: [1, 1.18, 1] } : { y: [0, -4, 0] }}
+        transition={{ duration: 1.7, repeat: Infinity, ease: 'easeInOut' }}
       >
-        {win ? <Flame size={16} strokeWidth={2.4} style={{ color: c }} />
-             : <Snowflake size={16} strokeWidth={2.4} style={{ color: c }} />}
+        <Icon size={30} strokeWidth={2} style={{ color: c, filter: `drop-shadow(0 0 10px rgba(${rgb},0.85))` }} />
       </motion.span>
-      <span className="text-[14px] font-bold" style={{ color: c, fontFamily: T.sans }}>
-        {streak.count} {win ? 'перемог' : 'поразок'} поспіль
-      </span>
-      <span className="ml-auto text-[13px]" style={{ color: T.text4, fontFamily: T.sans }}>
-        {win ? 'не розслабляйся з ризиком' : 'подумай про паузу'}
+
+      <div className="relative flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <motion.span
+          className="text-[32px] font-black italic leading-none tabular-nums"
+          style={{ fontFamily: T.display, color: c }}
+          animate={{ textShadow: [`0 0 0px rgba(${rgb},0)`, `0 0 18px rgba(${rgb},0.9)`, `0 0 0px rgba(${rgb},0)`] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          {streak.count}
+        </motion.span>
+        <span className="text-[16px] font-black uppercase tracking-wide" style={{ color: c, fontFamily: T.display }}>
+          {win ? 'Win Streak' : 'Losing Streak'}
+        </span>
+      </div>
+
+      <span className="relative ml-auto text-[13px]" style={{ color: T.text4, fontFamily: T.sans }}>
+        {win ? 'stay disciplined with risk' : 'consider taking a break'}
       </span>
     </motion.div>
   );

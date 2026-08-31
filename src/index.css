@@ -1,14 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=UnifrakturMaguntia&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=UnifrakturMaguntia&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
 body {
   background-color: #111111;
-  color: #EDEDED;
-  font-family: 'Roboto', sans-serif;
+  color: #ededed;
+  font-family: "Roboto", sans-serif;
   margin: 0;
+}
+.recharts-wrapper,
+.recharts-wrapper *,
+.recharts-surface {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible,
+.recharts-wrapper svg:focus,
+.recharts-wrapper svg:focus-visible {
+  outline: none !important;
 }
 
 /* Кастомний скроллбар для краси */
@@ -20,11 +31,52 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2D2D2D;
+  background: #2d2d2d;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3D3D3D;
+  background: #3d3d3d;
+}
+
+/* Тонший скролбар для компактних випадашок (напр. фільтр активів) —
+   у колір поверхні модалки, а не сірий системний */
+.asset-dropdown-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.asset-dropdown-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.asset-dropdown-scroll::-webkit-scrollbar-thumb {
+  background: var(--edge-line-hi);
+  border-radius: 3px;
+}
+.asset-dropdown-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--edge-hair-strong);
+}
+.asset-dropdown-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge-line-hi) transparent;
+}
+
+/* Тонкий скролбар для текстових полів редагування (напр. нотатки
+   про стан у картці угоди) — щоб довгий текст гортався всередині
+   свого блоку, а не розтягував усю модалку. */
+.notes-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.notes-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.notes-scroll::-webkit-scrollbar-thumb {
+  background: var(--edge-line-hi);
+  border-radius: 4px;
+}
+.notes-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--edge-acc, #8b7bff);
+}
+.notes-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge-line-hi) transparent;
 }
 /* Стилі для Tiptap Editor */
 /* Стилі для Tiptap Editor */
@@ -42,7 +94,8 @@ body {
 .tiptap p {
   margin-bottom: 0.5rem;
 }
-.tiptap strong, .tiptap b {
+.tiptap strong,
+.tiptap b {
   font-weight: 800 !important;
   color: inherit; /* Щоб колір тексту застосовувався і до жирного */
 }
@@ -58,7 +111,7 @@ body {
   font-weight: bold;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
-  color: #EDEDED;
+  color: #ededed;
 }
 .tiptap ul {
   list-style-type: disc;
@@ -71,11 +124,11 @@ body {
   margin-bottom: 0.5rem;
 }
 .tiptap blockquote {
-  border-left: 3px solid #3B82F6;
+  border-left: 3px solid #3b82f6;
   padding-left: 1rem;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
-  color: #A1A1AA;
+  color: #a1a1aa;
   font-style: italic;
 }
 /* index.css / App.css */
@@ -136,7 +189,6 @@ body {
   background: rgba(0, 0, 0, 0.28);
 }
 
-
 /* ==================================================================
    Значення за замовчуванням для токенів теми.
 
@@ -152,42 +204,204 @@ body {
      спалахнути на повну й потім пригаснути. */
   --edge-fx: 0.6;
 
-  --edge-bg: #0A0A0C;
+  --edge-bg: #0a0a0c;
   --edge-surface: #131316;
-  --edge-surface-hi: #18181C;
-  --edge-sunken: #0D0D10;
+  --edge-surface-hi: #18181c;
+  --edge-sunken: #0d0d10;
   --edge-line: #232328;
-  --edge-line-hi: #33333A;
-  --edge-line-acc: rgba(139,123,255,0.35);
-  --edge-text: #FAFAFA;
-  --edge-text2: #B4B4BD;
-  --edge-text3: #7A7A85;
-  --edge-text4: #4A4A52;
+  --edge-line-hi: #33333a;
+  --edge-line-acc: rgba(139, 123, 255, 0.35);
+  --edge-text: #fafafa;
+  --edge-text2: #b4b4bd;
+  --edge-text3: #7a7a85;
+  --edge-text4: #4a4a52;
   --edge-acc: #8b7bff;
-  --edge-acc-rgb: 139,123,255;
-  --edge-acc-soft: rgba(139,123,255,0.10);
-  --edge-acc-line: rgba(139,123,255,0.25);
+  --edge-acc-rgb: 139, 123, 255;
+  --edge-acc-soft: rgba(139, 123, 255, 0.1);
+  --edge-acc-line: rgba(139, 123, 255, 0.25);
   --edge-ok: #34d399;
-  --edge-ok-rgb: 52,211,153;
+  --edge-ok-rgb: 52, 211, 153;
   --edge-warn: #fbbf24;
-  --edge-warn-rgb: 251,191,36;
+  --edge-warn-rgb: 251, 191, 36;
   --edge-bad: #f87171;
-  --edge-bad-rgb: 248,113,113;
+  --edge-bad-rgb: 248, 113, 113;
   --edge-info: #60a5fa;
-  --edge-info-rgb: 96,165,250;
+  --edge-info-rgb: 96, 165, 250;
   --edge-shell: #07080b;
-  --edge-hair: rgba(255,255,255,0.07);
-  --edge-hair-strong: rgba(255,255,255,0.14);
+  --edge-hair: rgba(255, 255, 255, 0.07);
+  --edge-hair-strong: rgba(255, 255, 255, 0.14);
   --edge-nav: #8b95a7;
   --edge-nav-active: #f4f6fa;
-  --edge-nav-dim: rgba(150,160,179,0.5);
-  --edge-nav-hover: rgba(255,255,255,0.035);
-  --edge-panel: rgba(12,13,18,0.95);
-  --edge-panel-shadow: 0 40px 100px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.08);
-  --edge-card-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 24px 48px -32px rgba(0,0,0,0.9);
-  --edge-dot: rgba(255,255,255,0.9);
+  --edge-nav-dim: rgba(150, 160, 179, 0.5);
+  --edge-nav-hover: rgba(255, 255, 255, 0.035);
+  --edge-panel: rgba(12, 13, 18, 0.95);
+  --edge-panel-shadow: 0 40px 100px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --edge-card-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 24px 48px -32px rgba(0, 0, 0, 0.9);
+  --edge-dot: rgba(255, 255, 255, 0.9);
   --edge-wordmark: #f2f4f8;
-  --edge-on-acc: #0A0A0C;
-  --edge-mono-bg: rgba(10,11,15,0.95);
-  --edge-mono-shadow: 0 8px 20px -6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2);
+  --edge-on-acc: #0a0a0c;
+  --edge-mono-bg: rgba(10, 11, 15, 0.95);
+  --edge-mono-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* ------------------------------------------------------------------
+   Повзунок у налаштуваннях.
+
+   Рідний accent-color фарбує лише заповнену частину й лишає доріжку
+   системною — на темному фоні вона майже не видно. Тут доріжка й
+   бігунок малюються самі, тому вигляд однаковий у всіх браузерах.
+   Заповнення йде через --p: єдине число, яке задає компонент.
+------------------------------------------------------------------ */
+.edge-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 4px;
+}
+.edge-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 99px;
+  background: linear-gradient(
+    90deg,
+    var(--edge-acc, #8b7bff) 0%,
+    var(--edge-acc, #8b7bff) var(--p, 40%),
+    var(--edge-line-hi, #33333a) var(--p, 40%),
+    var(--edge-line-hi, #33333a) 100%
+  );
+}
+.edge-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 99px;
+  background: var(--edge-text, #fafafa);
+  border: 3px solid var(--edge-acc, #8b7bff);
+  cursor: pointer;
+}
+.edge-range::-moz-range-track {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--edge-line-hi, #33333a);
+}
+.edge-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--edge-acc, #8b7bff);
+}
+.edge-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  background: var(--edge-text, #fafafa);
+  border: 3px solid var(--edge-acc, #8b7bff);
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------
+   Головна кнопка дії — «Add Account», «Новий розбір».
+
+   Без анімації: статична рамка акцентного фіолетового й мінімальний
+   ховер, коли рамка й тло ледь світлішають. Раніше правило лежало
+   всередині сторінки рахунків, але той блок стилів існує тільки поки
+   вона змонтована, — а вигляд потрібен однаковий на всіх сторінках.
+------------------------------------------------------------------ */
+.edge-add-btn {
+  background: #17151f;
+  border: 1px solid rgba(139, 123, 255, 0.5);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.edge-add-btn:hover {
+  background: #1c1a26;
+  border-color: rgba(139, 123, 255, 0.85);
+}
+
+/* ------------------------------------------------------------------
+   Поява картки кроку в розборі.
+
+   Раніше це робив framer через initial={{ x: 26 }} → animate={{ x: 0 }}.
+   Проблема не в самому русі, а в тому, що початковий зсув лишається
+   інлайновим стилем, доки анімація не догра. Варто кадрам спинитись
+   (вкладка у фоні, важкий рендер) — і картка просто стоїть зсунутою,
+   а при наступному перемальовуванні різко «вистрілює» на місце.
+
+   CSS-анімація не має цієї вади: базовий стан елемента — вже кінцевий,
+   а кадри лише прикрашають появу. Не встигли відмалюватись — картка
+   просто виникне без руху, і це найгірше, що може статись.
+------------------------------------------------------------------ */
+@keyframes edge-step-in-right {
+  from {
+    transform: translateX(26px);
+    opacity: 0;
+  }
+}
+@keyframes edge-step-in-left {
+  from {
+    transform: translateX(-26px);
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Поле вводу в розборі.
+
+   Уся рамка тут, а не в інлайнових стилях компонента. Інакше
+   :focus-within не працює взагалі: інлайновий style сильніший за
+   будь-яке правило з таблиці, і кант на фокусі просто не з'являвся.
+
+   Контраст навмисно вищий за картку, на якій поле лежить: картка
+   світла (surface-hi), поле — заглиблення (bg) з видимим кантом.
+   Раніше і те, і те було майже одного тону, і поле читалось як
+   порожня пляма, а не як місце, куди пишуть.
+------------------------------------------------------------------ */
+.edge-field {
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--edge-bg, #0a0a0c);
+  border: 1px solid var(--edge-line-hi, #33333a);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.edge-field--accent {
+  border-color: rgba(var(--edge-acc-rgb, 139, 123, 255), 0.45);
+}
+.edge-field:hover {
+  border-color: var(--edge-text4, #4a4a52);
+}
+.edge-field:focus-within {
+  border-color: var(--edge-acc, #8b7bff);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35),
+    0 0 0 3px rgba(var(--edge-acc-rgb, 139, 123, 255), 0.16);
+}
+.edge-field textarea::placeholder,
+.edge-field input::placeholder {
+  color: var(--edge-text3, #7a7a85);
+}
+/* Підпис у плашці світлішає разом із кантом: так видно, що курсор
+   саме в цьому полі, навіть коли текст ще порожній. */
+.edge-field:focus-within .edge-field-cap {
+  color: var(--edge-acc, #8b7bff);
+}
+
+/* Тонка прокрутка в полях розбору. Системна смуга на темному тлі
+   виглядає як чужа деталь і з'їдає 15px ширини тексту. */
+.edge-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge-line-hi, #33333a) transparent;
+}
+.edge-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.edge-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.edge-scroll::-webkit-scrollbar-thumb {
+  background: var(--edge-line-hi, #33333a);
+  border-radius: 99px;
+}
+.edge-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--edge-text4, #4a4a52);
 }

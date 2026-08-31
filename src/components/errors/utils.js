@@ -1,12 +1,12 @@
 export const CATS = [
   { id: 'fomo',    label: 'FOMO Entry',        color: '#ff7a6b' },
-  { id: 'haste',   label: 'Поспіх',            color: '#f0b13c' },
-  { id: 'fear',    label: 'Страх',             color: '#9d8cff' },
-  { id: 'early',   label: 'Ранній вихід',      color: '#4da3ff' },
+  { id: 'haste',   label: 'Rushed',            color: '#f0b13c' },
+  { id: 'fear',    label: 'Fear',              color: '#9d8cff' },
+  { id: 'early',   label: 'Early Exit',        color: '#4da3ff' },
   { id: 'revenge', label: 'Revenge Trading',   color: '#ff4d6d' },
-  { id: 'tilt',    label: 'Тильт',             color: '#ff9f43' },
-  { id: 'risk',    label: 'Порушення ризику',  color: '#ff3b4f' },
-  { id: 'over',    label: 'Переторгівля',      color: '#3ddc97' }
+  { id: 'tilt',    label: 'Tilt',              color: '#ff9f43' },
+  { id: 'risk',    label: 'Risk Violation',    color: '#ff3b4f' },
+  { id: 'over',    label: 'Overtrading',       color: '#3ddc97' }
 ];
 
 /* ==================================================================
@@ -40,66 +40,66 @@ export const CATS = [
    колонки, бо по них рахується статистика, а не тільки читається
    текст. */
 export const MAIN_REASONS = [
-  { id: 'q-plan',   label: 'Угода була не по плану', flag: 'followed_plan', value: false },
-  { id: 'q-fomo',   label: 'Заходив на FOMO',        flag: 'rushed',        value: true  },
-  { id: 'q-system', label: 'Вхід не по своїй ТС',    flag: 'by_system',     value: false },
-  { id: 'q-risk',   label: 'Ризик більший за звичайний', flag: 'risk_ok',   value: false },
+  { id: 'q-plan',   label: 'Trade was off plan', flag: 'followed_plan', value: false },
+  { id: 'q-fomo',   label: 'Entered on FOMO',        flag: 'rushed',        value: true  },
+  { id: 'q-system', label: 'Entry not per my system',    flag: 'by_system',     value: false },
+  { id: 'q-risk',   label: 'Risk larger than usual', flag: 'risk_ok',   value: false },
 ];
 
 export const REASON_GROUPS = [
-  { group: 'Головне', main: true, items: MAIN_REASONS },
+  { group: 'Main', main: true, items: MAIN_REASONS },
   {
-    group: 'Вхід',
+    group: 'Entry',
     items: [
-      { id: 'no-confirm',   label: 'Не дочекався підтвердження' },
-      { id: 'chased',       label: 'Наздоганяв рух, що вже пішов' },
-      { id: 'wrong-level',  label: 'Зайшов не від свого рівня' },
-      { id: 'no-setup',     label: 'Сетапу не було взагалі' },
-      { id: 'counter-htf',  label: 'Проти старшого таймфрейму' },
-      { id: 'early-entry',  label: 'Зайшов зарано, до формування' },
+      { id: 'no-confirm',   label: 'Did not wait for confirmation' },
+      { id: 'chased',       label: 'Chased a move already underway' },
+      { id: 'wrong-level',  label: 'Entered from the wrong level' },
+      { id: 'no-setup',     label: 'There was no setup at all' },
+      { id: 'counter-htf',  label: 'Against the higher timeframe' },
+      { id: 'early-entry',  label: 'Entered too early, before it formed' },
     ],
   },
   {
-    group: 'Ведення і вихід',
+    group: 'Management and exit',
     items: [
-      { id: 'early-exit',   label: 'Вийшов зарано, не дав дійти' },
-      { id: 'held-too-long',label: 'Пересидів розворот' },
-      { id: 'moved-stop',   label: 'Пересунув стоп проти себе' },
-      { id: 'no-partial',   label: 'Не зафіксував частину' },
-      { id: 'no-be',        label: 'Не перевів у беззбиток' },
-      { id: 'manual-close', label: 'Закрив руками без причини' },
+      { id: 'early-exit',   label: 'Exited too early, did not let it run' },
+      { id: 'held-too-long',label: 'Held through the reversal' },
+      { id: 'moved-stop',   label: 'Moved the stop against myself' },
+      { id: 'no-partial',   label: 'Did not take partial profit' },
+      { id: 'no-be',        label: 'Did not move to breakeven' },
+      { id: 'manual-close', label: 'Closed manually for no reason' },
     ],
   },
   {
-    group: 'Ризик',
+    group: 'Risk',
     items: [
-      { id: 'oversized',    label: 'Завеликий обсяг' },
-      { id: 'added-losing', label: 'Доливав до збиткової' },
-      { id: 'no-stop',      label: 'Увійшов без стопа' },
-      { id: 'correlated',   label: 'Кілька корельованих позицій' },
-      { id: 'daily-limit',  label: 'Продовжив після денного ліміту' },
+      { id: 'oversized',    label: 'Position size too large' },
+      { id: 'added-losing', label: 'Added to a losing position' },
+      { id: 'no-stop',      label: 'Entered without a stop' },
+      { id: 'correlated',   label: 'Multiple correlated positions' },
+      { id: 'daily-limit',  label: 'Kept trading past the daily limit' },
     ],
   },
   {
-    group: 'Голова',
+    group: 'Mindset',
     items: [
-      { id: 'fear-miss',    label: 'Боявся пропустити рух' },
-      { id: 'revenge',      label: 'Відігравав попередній мінус' },
-      { id: 'overconfident',label: 'Розслабився після серії плюсів' },
-      { id: 'bored',        label: 'Нудьга — торгував, бо нічого не робив' },
-      { id: 'proving',      label: 'Доводив щось собі або ринку' },
-      { id: 'impatient',    label: 'Не вистачило терпіння чекати' },
+      { id: 'fear-miss',    label: 'Afraid of missing the move' },
+      { id: 'revenge',      label: 'Trying to win back a loss' },
+      { id: 'overconfident',label: 'Got overconfident after a winning streak' },
+      { id: 'bored',        label: 'Boredom — traded because there was nothing else to do' },
+      { id: 'proving',      label: 'Trying to prove something to myself or the market' },
+      { id: 'impatient',    label: 'Ran out of patience to wait' },
     ],
   },
   {
-    group: 'Підготовка',
+    group: 'Preparation',
     items: [
-      { id: 'no-plan',      label: 'Не було плану на день' },
-      { id: 'ignored-plan', label: 'План був, але я його не відкрив' },
-      { id: 'no-rule',      label: 'Немає правила для цього сценарію' },
-      { id: 'news',         label: 'Не подивився календар новин' },
-      { id: 'tired',        label: 'Втома, недосип, поганий стан' },
-      { id: 'distracted',   label: 'Відволікся, торгував між справами' },
+      { id: 'no-plan',      label: 'No plan for the day' },
+      { id: 'ignored-plan', label: 'Had a plan but did not open it' },
+      { id: 'no-rule',      label: 'No rule for this scenario' },
+      { id: 'news',         label: 'Did not check the news calendar' },
+      { id: 'tired',        label: 'Fatigue, lack of sleep, poor condition' },
+      { id: 'distracted',   label: 'Distracted, traded between other things' },
     ],
   },
 ];
@@ -177,19 +177,19 @@ export function catsFromReasons(list) {
 }
 
 export const SAMPLES = [
-  { id: 12, pair: 'EURUSD', date: '2026-07-09', cats: ['fomo','haste'], followedPlan: false, rushed: true, desc: 'Побачив імпульс на Лондоні та зайшов без підтвердження свіпу. Ціна повернулась у діапазон і зняла стоп за 20 хвилин. Класичний вхід на страху впустити рух.' },
-  { id: 11, pair: 'GER40', date: '2026-07-07', cats: ['early'], followedPlan: true, rushed: false, desc: 'Закрив позицію на +1.2R при цілі 3R. Після двох червоних днів рука сама тягнеться фіксувати. План був правильний — виконання ні.' },
-  { id: 10, pair: 'XAUUSD', date: '2026-07-02', cats: ['risk','tilt'], followedPlan: false, rushed: true, desc: 'Після стопу подвоїв ризик до 2%, щоб «відбити». Другий стоп за день. Нове правило: два стопи поспіль — термінал закривається до завтра.' },
-  { id: 9, pair: 'EURUSD', date: '2026-06-24', cats: ['fomo'], followedPlan: false, rushed: true, tvLink: 'https://www.tradingview.com/x/9oCwRebL/', desc: 'Потрібно було очікувати інвалідації 1фта та ресвіпа. Це не завжди працює — але саме тому чекати обовʼязково, а не заходити на першому русі.' },
-  { id: 8, pair: 'GER40', date: '2026-06-20', cats: ['revenge'], followedPlan: false, rushed: true, desc: 'Стоп на відкритті Франкфурта — і одразу переворот проти позиції без сетапу. Ринок нічого мені не винен. Реванш — це не стратегія.' },
-  { id: 7, pair: 'BTCUSD', date: '2026-06-12', cats: ['over'], followedPlan: false, rushed: false, desc: 'Шість входів за сесію при ліміті три. Кожен наступний — гірший за попередній. Ліміт входів існує не просто так.' },
-  { id: 6, pair: 'EURUSD', date: '2026-06-08', cats: ['fear'], followedPlan: false, rushed: false, desc: 'Пропустив валідний сетап за планом — злякався після вчорашнього стопу. Невзята угода за планом — теж помилка, і вона теж коштує грошей.' },
-  { id: 5, pair: 'GER40', date: '2026-05-28', cats: ['haste','risk'], followedPlan: false, rushed: true, desc: 'Позиція на 1.5% замість 0.5% — поспішав до новин і не перерахував лот. Чек-лист розміру позиції перед входом тепер обовʼязковий.' },
-  { id: 4, pair: 'XAUUSD', date: '2026-05-19', cats: ['early'], followedPlan: true, rushed: false, tvLink: 'https://www.tradingview.com/x/9oCwRebL/', desc: 'Вийшов на першому тесті цілі — ціна дійшла до фінальної через годину. Довіряй рівням, які сам намалював на пре-сесії.' },
-  { id: 3, pair: 'EURUSD', date: '2026-05-14', cats: ['tilt'], followedPlan: false, rushed: false, desc: 'Торгував у день без плану, бо «відчував ринок». Відчуття коштувало 0.8R. Немає плану — немає торгівлі.' }
+  { id: 12, pair: 'EURUSD', date: '2026-07-09', cats: ['fomo','haste'], followedPlan: false, rushed: true, desc: 'Saw a London impulse and entered without confirmation of the sweep. Price returned into the range and hit the stop in 20 minutes. Classic entry driven by fear of missing the move.' },
+  { id: 11, pair: 'GER40', date: '2026-07-07', cats: ['early'], followedPlan: true, rushed: false, desc: 'Closed the position at +1.2R with a 3R target. After two red days the hand reaches to lock in profit on its own. The plan was right — the execution was not.' },
+  { id: 10, pair: 'XAUUSD', date: '2026-07-02', cats: ['risk','tilt'], followedPlan: false, rushed: true, desc: 'Doubled risk to 2% after a stop to "win it back." Second stop of the day. New rule: two stops in a row — the terminal closes until tomorrow.' },
+  { id: 9, pair: 'EURUSD', date: '2026-06-24', cats: ['fomo'], followedPlan: false, rushed: true, tvLink: 'https://www.tradingview.com/x/9oCwRebL/', desc: 'Should have waited for the 1H invalidation and resweep. It does not always work — but that is exactly why waiting is mandatory, rather than entering on the first move.' },
+  { id: 8, pair: 'GER40', date: '2026-06-20', cats: ['revenge'], followedPlan: false, rushed: true, desc: 'Stopped out at the Frankfurt open — and immediately flipped against the position with no setup. The market owes me nothing. Revenge is not a strategy.' },
+  { id: 7, pair: 'BTCUSD', date: '2026-06-12', cats: ['over'], followedPlan: false, rushed: false, desc: 'Six entries in a session with a limit of three. Each one worse than the last. The entry limit exists for a reason.' },
+  { id: 6, pair: 'EURUSD', date: '2026-06-08', cats: ['fear'], followedPlan: false, rushed: false, desc: 'Skipped a valid setup that matched the plan — got scared after yesterday\'s stop. A trade not taken according to plan is still a mistake, and it still costs money.' },
+  { id: 5, pair: 'GER40', date: '2026-05-28', cats: ['haste','risk'], followedPlan: false, rushed: true, desc: 'Position at 1.5% instead of 0.5% — rushed ahead of news and did not recalculate the lot size. A position-size checklist before entry is now mandatory.' },
+  { id: 4, pair: 'XAUUSD', date: '2026-05-19', cats: ['early'], followedPlan: true, rushed: false, tvLink: 'https://www.tradingview.com/x/9oCwRebL/', desc: 'Exited on the first test of the target — price reached the final target an hour later. Trust the levels you drew yourself in the pre-session.' },
+  { id: 3, pair: 'EURUSD', date: '2026-05-14', cats: ['tilt'], followedPlan: false, rushed: false, desc: 'Traded on a day with no plan because "felt the market." That feeling cost 0.8R. No plan — no trading.' }
 ];
 
-export const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+export const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 export function hexA(hex, a) {
   const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);

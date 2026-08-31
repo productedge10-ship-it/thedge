@@ -169,7 +169,7 @@ function ReasonPicker({ value = [], onChange, invalid }) {
       >
         {value.length === 0 && (
           <span style={{ fontFamily: SANS, fontSize: 15, color: invalid ? C.bad : C.text4, flex: 1 }}>
-            Причину не вказано
+            No reason selected
           </span>
         )}
 
@@ -209,7 +209,7 @@ function ReasonPicker({ value = [], onChange, invalid }) {
             display: 'flex', alignItems: 'center', gap: 7, transition: 'all .18s',
           }}
         >
-          {value.length ? 'Ще' : 'Обрати'}
+          {value.length ? 'More' : 'Choose'}
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>
             <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -262,7 +262,7 @@ function ReasonPicker({ value = [], onChange, invalid }) {
                   if (first) toggle(first.id);
                   else if (q.trim()) toggle(q.trim());
                 }}
-                placeholder="Шукати або написати свою причину…"
+                placeholder="Search or write your own reason…"
                 style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontFamily: SANS, fontSize: 14.5, color: C.text }}
               />
             </div>
@@ -471,10 +471,10 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: SANS, fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, lineHeight: 1.15 }}>
-                    Розбір помилки
+                    Mistake Review
                   </div>
                   <div style={{ fontFamily: SANS, fontSize: 13.5, color: C.text3, marginTop: 4 }}>
-                    Що сталось, чому і що з цього робити далі
+                    What happened, why, and what to do about it
                   </div>
                 </div>
                 <button
@@ -487,7 +487,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
               </div>
 
               {/* ---------- актив ---------- */}
-              <Cap hint="не обовʼязково">Торгова пара</Cap>
+              <Cap hint="optional">Trading pair</Cap>
               <div
                 className="error-input"
                 onClick={() => setAssetPickerOpen(true)}
@@ -500,7 +500,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}
               >
-                <span>{form.pair || 'Обрати актив'}</span>
+                <span>{form.pair || 'Choose asset'}</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </div>
 
@@ -526,15 +526,15 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
                   статистика працюють як раніше, без зайвого поля. */}
 
               {/* ---------- опис ---------- */}
-              <Cap hint={bad(missDesc) ? '⚠ без опису запис не піддається розбору' : undefined}>
-                Що сталось і який висновок
+              <Cap hint={bad(missDesc) ? '⚠ no description means this entry can\'t be reviewed' : undefined}>
+                What happened and what did you learn
               </Cap>
               <textarea
                 className="error-input"
                 value={form.desc}
                 onChange={(e) => setForm({ ...form, desc: e.target.value })}
                 rows="4"
-                placeholder="Опиши своїми словами: що зробив, що пішло не так, що зробиш інакше наступного разу."
+                placeholder="Describe in your own words: what you did, what went wrong, what you'll do differently next time."
                 style={{
                   width: '100%', padding: '14px 16px', borderRadius: 12, background: C.sunken,
                   border: `1px solid ${bad(missDesc) ? C.bad : C.line}`, color: C.text, fontFamily: SANS,
@@ -550,12 +550,12 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
               />
 
               {/* ---------- скрін ---------- */}
-              <Cap hint="не обовʼязково">Скріншот графіка</Cap>
+              <Cap hint="optional">Chart screenshot</Cap>
               <input
                 className="error-input-dashed"
                 value={form.tvLink}
                 onChange={(e) => setForm({ ...form, tvLink: e.target.value })}
-                placeholder="Лінк на графік — Ctrl+V"
+                placeholder="Chart link — Ctrl+V"
                 style={{
                   width: '100%', padding: '15px 16px', borderRadius: 12, background: 'transparent',
                   border: `1px dashed ${C.lineHi}`, color: C.acc, fontFamily: SANS,
@@ -576,8 +576,8 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
                   навіть коли помилка була в одному. У списку людина
                   позначає те, що справді сталось, і мовчання про
                   решту лишається мовчанням. */}
-              <Cap hint={bad(missReason) ? '⚠ оберіть хоча б одну' : 'можна декілька · з цього виводиться правило'}>
-                Причина
+              <Cap hint={bad(missReason) ? '⚠ pick at least one' : 'multiple allowed · this drives the rule'}>
+                Reason
               </Cap>
               <div style={{ marginBottom: 28 }}>
                 <ReasonPicker
@@ -598,8 +598,8 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
                       style={{ marginRight: 'auto', fontFamily: SANS, fontSize: 13.5, fontWeight: 600, color: C.bad }}
                     >
                       {missReason && missDesc
-                        ? 'Заповни причину і опис'
-                        : missReason ? 'Обери причину' : 'Опиши, що сталось'}
+                        ? 'Fill in the reason and description'
+                        : missReason ? 'Pick a reason' : 'Describe what happened'}
                     </motion.span>
                   )}
                 </AnimatePresence>
@@ -608,7 +608,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
                   onClick={onClose}
                   style={{ padding: '13px 20px', borderRadius: 10, background: 'transparent', border: `1px solid ${C.line}`, color: C.text2, fontFamily: SANS, fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: 'all .2s' }}
                 >
-                  Скасувати
+                  Cancel
                 </button>
                 <button
                   className="error-btn-save"
@@ -624,7 +624,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
                     boxShadow: '0 6px 24px rgba(217,44,63,.22)',
                   }}
                 >
-                  Зберегти
+                  Save
                 </button>
               </div>
             </motion.div>

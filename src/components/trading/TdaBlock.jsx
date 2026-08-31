@@ -7,6 +7,7 @@ import { notify } from '../../utils/notify';
 import TfSelect from '../ui/TfSelect';
 import useDeferredField from '../../hooks/useDeferredField';
 import { T, EASE, SPRING } from './planTheme';
+import { tvImage } from '../../lib/imageStore';
 
 /* Визначає, чи світлий графік — щоб автоматично приглушити його */
 function detectLightBackground(src) {
@@ -217,7 +218,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
               className="group/img relative flex w-full cursor-zoom-in items-center justify-center"
             >
               <motion.img
-                src={image}
+                src={tvImage(image)}
                 alt="Графік"
                 onClick={() => setFull(true)}
                 draggable={false}
@@ -318,7 +319,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.96, opacity: 0, y: 12 }}
                 transition={SPRING}
-                src={image}
+                src={tvImage(image)}
                 alt="Графік на весь екран"
                 className="max-h-full max-w-full rounded-xl object-contain"
                 style={{

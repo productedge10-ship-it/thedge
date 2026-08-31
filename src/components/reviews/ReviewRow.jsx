@@ -1,38 +1,48 @@
 import { motion } from 'framer-motion';
-import { ArrowUpRight, Quote, Check, X, Share2, Globe } from 'lucide-react';
+import { X, Share2, Globe } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
-import { EMOTIONS, SCORE_LABELS, fmtRange, fmtR } from '../../lib/reviewsData';
+import { EMOTIONS, fmtRange, fmtR } from '../../lib/reviewsData';
 
 /* ==================================================================
    Розбір у списку.
-   Не картка-плитка, а розворот: зліва оцінка великою цифрою, по
-   центру — сама зміна, заради якої розбір і робиться, справа —
-   цифри періоду вузькою колонкою. Читається як запис у книзі, а не
-   як плитка в каталозі.
+
+   Три поверхи: смуга з ідентифікацією тижня, сама зміна великим
+   текстом, і цифри стрічкою внизу. Головне — середній поверх: розбір
+   роблять заради висновку, а не заради статистики, тому вона під ним
+   і дрібнішим кеглем.
+
+   Геометрія з макета редизайну, кольори — проєктні токени.
 ================================================================== */
 
 const scoreColor = (n) => (n >= 4 ? T.ok : n === 3 ? T.warn : T.bad);
 
-function Metric({ label, value, tone, fill }) {
+/* Клітинка нижньої стрічки. */
+function Cell({ label, value, tone, last }) {
   return (
-    <div className="min-w-0">
-      <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="truncate text-[11.5px] font-semibold uppercase tracking-[0.08em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          {label}
-        </span>
-        <span className="shrink-0 text-[13.5px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: tone || T.text2 }}>
-          {value}
-        </span>
+    <div style={{ padding: '20px 26px', borderRight: last ? 'none' : `1px solid ${T.line}` }}>
+      <div
+        style={{
+          fontFamily: T.mono,
+          fontSize: 9.5,
+          letterSpacing: '1.6px',
+          color: T.text4,
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
       </div>
-      <div className="h-[3px] overflow-hidden rounded-full" style={{ background: T.sunken }}>
-        <motion.div
-          className="h-full rounded-full"
-          initial={{ width: 0 }}
-          whileInView={{ width: `${Math.min(1, Math.max(0, fill)) * 100}%` }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, ease: EASE }}
-          style={{ background: tone || T.lineHi }}
-        />
+      <div
+        className="tabular-nums"
+        style={{
+          fontFamily: T.mono,
+          marginTop: 9,
+          fontSize: 22,
+          fontWeight: 600,
+          letterSpacing: '-0.6px',
+          color: tone || T.text,
+        }}
+      >
+        {value}
       </div>
     </div>
   );
@@ -41,9 +51,6 @@ function Metric({ label, value, tone, fill }) {
 export default function ReviewRow({ review, index, onOpen, onDelete, onShare }) {
   const s = review.stats || {};
   const c = scoreColor(review.score);
-  const netUp = (s.netR ?? 0) >= 0;
-  const kept = (review.promises || []).filter((p) => p.done).length;
-  const promises = (review.promises || []).length;
 
   return (
     <motion.article
@@ -53,179 +60,163 @@ export default function ReviewRow({ review, index, onOpen, onDelete, onShare }) 
       transition={{ duration: 0.32, delay: Math.min(index, 6) * 0.04, ease: EASE }}
       whileHover={{ y: -2 }}
       onClick={() => onOpen(review)}
-      className="group relative grid cursor-pointer grid-cols-1 overflow-hidden rounded-2xl lg:grid-cols-[132px_1fr_240px]"
+      className="group cursor-pointer overflow-hidden"
       style={{
-        background: T.surface,
+        borderRadius: 22,
         border: `1px solid ${T.line}`,
-        transition: 'border-color 240ms ease, box-shadow 240ms ease',
+        background: T.surface,
+        boxShadow: '0 26px 64px -34px rgba(0,0,0,0.9)',
+        transition: 'border-color .2s, box-shadow .2s',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = `${c}44`;
-        e.currentTarget.style.boxShadow = '0 22px 48px -30px rgba(0,0,0,0.95)';
+        e.currentTarget.style.borderColor = T.lineHi;
+        e.currentTarget.style.boxShadow = '0 36px 84px -34px rgba(0,0,0,0.95)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = T.line;
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.boxShadow = '0 26px 64px -34px rgba(0,0,0,0.9)';
       }}
     >
-      {/* ─── оцінка ─── */}
+      {/* ─────────── смуга ідентифікації ─────────── */}
       <div
-        className="relative flex items-center gap-4 px-5 py-5 lg:flex-col lg:items-start lg:justify-center lg:gap-1"
-        style={{ background: `linear-gradient(160deg, ${c}0f, transparent 70%)` }}
+        className="flex flex-wrap items-center justify-between"
+        style={{
+          gap: 20,
+          padding: '18px 26px',
+          background: T.surfaceHi,
+          borderBottom: `1px solid ${T.line}`,
+        }}
       >
-        <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: c, opacity: 0.6 }} />
-
-        <span
-          className="text-[38px] font-black leading-none tabular-nums transition-transform duration-300 group-hover:-translate-y-0.5 sm:text-[46px]"
-          style={{ fontFamily: T.display, color: c, letterSpacing: '-0.04em' }}
-        >
-          {review.score}
-        </span>
-        <span className="flex flex-col">
-          <span className="text-[13px] font-bold" style={{ fontFamily: T.sans, color: c }}>
-            {SCORE_LABELS[review.score]}
-          </span>
-          <span className="text-[12px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
+        <div className="flex min-w-0 flex-wrap items-center" style={{ gap: 16 }}>
+          <span style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 500, color: T.text, whiteSpace: 'nowrap' }}>
             {fmtRange(review.from, review.to)}
           </span>
-        </span>
+
+          <span style={{ width: 1, height: 16, background: T.lineHi }} />
+
+          <span className="flex items-baseline" style={{ gap: 6 }}>
+            <span
+              className="tabular-nums"
+              style={{ fontFamily: T.mono, fontSize: 16, fontWeight: 600, color: T.text }}
+            >
+              {s.trades ?? 0}
+            </span>
+            <span style={{ fontFamily: T.sans, fontSize: 13, color: T.text3 }}>угод</span>
+          </span>
+        </div>
+
+        <div className="flex items-center" style={{ gap: 18 }}>
+          <div className="flex flex-wrap items-center" style={{ gap: 14 }}>
+            {(review.emotions || []).map((id) => {
+              const e = EMOTIONS.find((x) => x.id === id);
+              if (!e) return null;
+              const ec = e.good ? T.ok : T.warn;
+              return (
+                <span
+                  key={id}
+                  className="flex items-center"
+                  style={{ gap: 8, fontFamily: T.sans, fontSize: 13.5, color: ec }}
+                >
+                  <span style={{ width: 5, height: 5, borderRadius: 99, background: ec }} />
+                  {e.label}
+                </span>
+              );
+            })}
+          </div>
+
+          {/* Дії. Місце під них зайняте завжди, видимість зʼявляється на
+              наведенні — інакше смуга сіпалася б під курсором. */}
+          <span className="flex shrink-0 items-center" style={{ gap: 6 }}>
+            {review.isPublic && (
+              <span
+                title="Відкритий за посиланням"
+                className="grid place-items-center"
+                style={{
+                  width: 26, height: 26, borderRadius: 8,
+                  color: T.acc, background: `rgba(${T.accRgb},0.10)`,
+                }}
+              >
+                <Globe size={12} strokeWidth={2.4} />
+              </span>
+            )}
+
+            {onShare && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onShare(review); }}
+                title={review.isPublic ? 'Скопіювати посилання' : 'Поділитись розбором'}
+                className="grid place-items-center opacity-0 transition-all duration-200 group-hover:opacity-100"
+                style={{ width: 26, height: 26, borderRadius: 8, color: T.text4 }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.background = `rgba(${T.accRgb},0.10)`; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
+              >
+                <Share2 size={12.5} strokeWidth={2.4} />
+              </button>
+            )}
+
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(review.id); }}
+              title="Видалити розбір"
+              className="grid place-items-center opacity-0 transition-all duration-200 group-hover:opacity-100"
+              style={{ width: 26, height: 26, borderRadius: 8, color: T.text4 }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <X size={13} strokeWidth={2.6} />
+            </button>
+          </span>
+        </div>
       </div>
 
-      {/* ─── головна зміна ─── */}
-      <div className="flex min-w-0 flex-col justify-center gap-3 px-5 py-5" style={{ borderLeft: `1px solid ${T.line}` }}>
-        <div className="flex items-start gap-3">
-          <Quote size={16} strokeWidth={2.4} className="mt-1 shrink-0 rotate-180" style={{ color: `${c}88` }} />
+      {/* ─────────── сама зміна ─────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '3px 1fr' }}>
+        {/* Смужка бере колір оцінки, а не постійний акцент: у макеті це
+            декор, а тут ще й єдине місце, де оцінка видно на картці. */}
+        <div style={{ background: `linear-gradient(180deg, ${c}, ${c}1f)` }} />
+
+        <div className="px-6 py-7 sm:px-10 sm:pb-8 sm:pt-[34px]">
           <p
-            className="text-[17px] font-bold leading-snug"
             style={{
-              fontFamily: T.display, color: T.text, letterSpacing: '-0.015em',
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              fontFamily: T.display,
+              fontSize: 22,
+              lineHeight: '36px',
+              fontWeight: 600,
+              letterSpacing: '-0.4px',
+              color: T.text,
+              maxWidth: 880,
             }}
           >
             {review.lesson}
           </p>
-        </div>
 
-        {review.answers?.pattern && (
-          <p
-            className="pl-7 text-[13.5px]"
-            style={{
-              fontFamily: T.sans, color: T.text3, lineHeight: 1.6,
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-            }}
-          >
-            {review.answers.pattern}
-          </p>
-        )}
-
-        <div className="flex flex-wrap items-center gap-1.5 pl-7">
-          {(review.emotions || []).map((id) => {
-            const e = EMOTIONS.find((x) => x.id === id);
-            if (!e) return null;
-            const ec = e.good ? T.ok : T.warn;
-            return (
-              <span
-                key={id}
-                className="rounded-md px-2 py-0.5 text-[12px] font-semibold"
-                style={{ fontFamily: T.sans, color: ec, background: `${ec}14` }}
-              >
-                {e.label}
-              </span>
-            );
-          })}
-
-          {promises > 0 && (
-            <span
-              className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[12px] font-semibold"
-              style={{
-                fontFamily: T.sans,
-                color: kept === promises ? T.ok : T.text3,
-                background: kept === promises ? `rgba(${T.okRgb},0.10)` : T.sunken,
-              }}
-              title="Виконані домовленості з попереднього розбору"
-            >
-              {kept === promises ? <Check size={11} strokeWidth={3.4} /> : <X size={11} strokeWidth={3.4} />}
-              {kept}/{promises} обіцянок
-            </span>
+          {review.answers?.pattern && (
+            <div className="flex" style={{ marginTop: 16, gap: 12, maxWidth: 820 }}>
+              <span style={{ width: 2, flex: 'none', borderRadius: 99, background: T.lineHi }} />
+              <p style={{ fontFamily: T.sans, fontSize: 15, lineHeight: '25px', color: T.text3 }}>
+                {review.answers.pattern}
+              </p>
+            </div>
           )}
         </div>
       </div>
 
-      {/* ─── цифри періоду ─── */}
+      {/* ─────────── цифри ─────────── */}
       <div
-        className="flex flex-col justify-center gap-2.5 px-5 py-5"
-        style={{ borderLeft: `1px solid ${T.line}`, background: T.sunken }}
+        className="grid grid-cols-2 sm:grid-cols-4"
+        style={{ borderTop: `1px solid ${T.line}`, background: T.sunken }}
       >
-        <Metric
+        <Cell
           label="Net R"
           value={fmtR(s.netR ?? 0)}
-          tone={netUp ? T.ok : T.bad}
-          fill={Math.min(1, Math.abs(s.netR ?? 0) / 10)}
+          tone={(s.netR ?? 0) >= 0 ? T.ok : T.bad}
         />
-        <Metric
-          label="Win rate"
-          value={`${Math.round(s.winrate ?? 0)}%`}
-          tone={(s.winrate ?? 0) >= 50 ? T.ok : T.text2}
-          fill={(s.winrate ?? 0) / 100}
-        />
-        <Metric
+        <Cell label="Win rate" value={`${Math.round(s.winrate ?? 0)}%`} />
+        <Cell
           label="За планом"
           value={`${Math.round(s.planRate ?? 0)}%`}
           tone={(s.planRate ?? 0) >= 70 ? T.ok : T.warn}
-          fill={(s.planRate ?? 0) / 100}
         />
-        <Metric
-          label="Помилок"
-          value={s.mistakes ?? 0}
-          tone={(s.mistakes ?? 0) > 0 ? T.warn : T.ok}
-          fill={Math.min(1, (s.mistakes ?? 0) / 5)}
-        />
+        <Cell label="Помилок" value={s.mistakes ?? 0} last />
       </div>
-
-      {/* дії */}
-      <span className="absolute right-3 top-3 flex items-center gap-1.5">
-        {/* Відкритий розбір позначаємо завжди — щоб не забути, що він
-            лежить у публічному доступі */}
-        {review.isPublic && (
-          <span
-            title="Відкритий за посиланням"
-            className="grid h-7 w-7 place-items-center rounded-lg"
-            style={{ color: T.acc, background: `rgba(${T.accRgb},0.10)` }}
-          >
-            <Globe size={12} strokeWidth={2.4} />
-          </span>
-        )}
-
-        {onShare && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onShare(review); }}
-            title={review.isPublic ? 'Скопіювати посилання' : 'Поділитись розбором'}
-            className="grid h-7 w-7 place-items-center rounded-lg opacity-0 transition-all duration-200 group-hover:opacity-100"
-            style={{ color: T.text4 }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.background = `rgba(${T.accRgb},0.10)`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
-          >
-            <Share2 size={12.5} strokeWidth={2.4} />
-          </button>
-        )}
-
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(review.id); }}
-          title="Видалити розбір"
-          className="grid h-7 w-7 place-items-center rounded-lg opacity-0 transition-all duration-200 group-hover:opacity-100"
-          style={{ color: T.text4 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
-        >
-          <X size={13} strokeWidth={2.6} />
-        </button>
-        <ArrowUpRight
-          size={16}
-          strokeWidth={2.4}
-          className="shrink-0 opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100"
-          style={{ color: c }}
-        />
-      </span>
     </motion.article>
   );
 }

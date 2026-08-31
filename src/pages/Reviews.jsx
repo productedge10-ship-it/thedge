@@ -5,14 +5,14 @@ import { Plus, Search, X, ArrowLeft, BookOpenCheck, Loader2 } from 'lucide-react
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import { notify } from '../utils/notify';
 import { useAuth } from '../context/AuthContext';
-import { periodStats, repeatedMistakes, previousReview } from '../lib/reviewsData';
+import { periodStats, repeatedMistakes, previousReview, fmtRange } from '../lib/reviewsData';
 import {
   loadReviews, createReview, deleteReview, setReviewPublic,
   loadMaterial, loadAllMistakes,
 } from '../lib/reviewsStore';
-import { PeriodPicker, PeriodStats, RepeatedMistakes } from '../components/reviews/PeriodBar';
-import EvidencePicker from '../components/reviews/EvidencePicker';
-import ReviewComposer from '../components/reviews/ReviewComposer';
+import ReviewBuilder from '../components/reviews/ReviewBuilder';
+import { DateRangeField } from '../components/ui/DateField';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import ReviewReader from '../components/reviews/ReviewReader';
 import ReviewRow from '../components/reviews/ReviewRow';
 
@@ -46,7 +46,19 @@ export default function Reviews() {
   const [allMistakes, setAllMistakes] = useState([]);
   const [loadingMaterial, setLoadingMaterial] = useState(false);
 
-  const [search, setSearch] = useState('');
+  /* Фільтр живе у двох станах: що людина набирає й що вже застосовано.
+
+     Живий пошук по тексту сам по собі непоганий, але дата так не
+     працює: після першого кліку по календарю період неповний, і
+     список на мить схлопувався б у порожнечу. Тому обидва поля — це
+     чернетка, а список змінює одна кнопка. */
+  const EMPTY = { q: '', from: '', to: '' };
+  const [draft, setDraft] = useState(EMPTY);
+  const [query, setQuery] = useState(EMPTY);
+
+  const dirty = draft.q !== query.q || draft.from !== query.from || draft.to !== query.to;
+  const applyFilters = () => setQuery(draft);
+  const resetFilters = () => { setDraft(EMPTY); setQuery(EMPTY); };
   const [reading, setReading] = useState(null);
 
   /* стан нового розбору */
@@ -57,6 +69,16 @@ export default function Reviews() {
   const [answers, setAnswers] = useState({});
   const [lesson, setLesson] = useState('');
   const [keptPromises, setKeptPromises] = useState({});
+  const [shots, setShots] = useState({});
+  /* Домовленості на наступний період. Раніше виводились із тексту
+     «одна зміна» — увесь абзац ставав єдиним пунктом. Тепер це
+     справжній список, який наступний розбір покаже для позначок. */
+  const [promises, setPromises] = useState([]);
+  /* Розбір, який просять видалити. Тримаємо весь обʼєкт, а не id:
+     у вікні підтвердження показуємо його висновок, щоб було видно,
+     що саме зникне. */
+  const [toDelete, setToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -123,12 +145,10 @@ export default function Reviews() {
       [kind]: s[kind].includes(id) ? s[kind].filter((x) => x !== id) : [...s[kind], id],
     }));
 
-  const pickedCount = selected.trades.length + selected.plans.length + selected.mistakes.length;
-
   const startCreate = () => {
     setRange({ from: daysAgo(6), to: today() });
     setSelected({ trades: [], plans: [], mistakes: [] });
-    setScore(0); setEmotions([]); setAnswers({}); setLesson(''); setKeptPromises({});
+    setScore(0); setEmotions([]); setAnswers({}); setLesson(''); setKeptPromises({}); setShots({}); setPromises([]);
     setMode('create');
   };
 
@@ -145,7 +165,12 @@ export default function Reviews() {
         emotions,
         answers,
         lesson: lesson.trim(),
-        promises: lesson.trim() ? [{ text: lesson.trim(), done: false }] : [],
+        shots,
+        /* Якщо чекліст порожній, а зміна написана — беремо її як
+           єдину домовленість: краще одна, ніж жодної. */
+        promises: promises.length
+          ? promises.map((text) => ({ text, done: false }))
+          : lesson.trim() ? [{ text: lesson.trim(), done: false }] : [],
         stats: {
           trades: stats.total,
           netR: stats.netR,
@@ -167,14 +192,25 @@ export default function Reviews() {
   };
 
   /* ---------- видалення ---------- */
-  const removeReview = async (id) => {
+  const removeReview = async () => {
+    const id = toDelete?.id;
+    if (!id) return;
+
     const before = reviews;
+    setDeleting(true);
+    /* Прибираємо зі списку одразу, а вікно закриваємо після відповіді
+       бази: інакше на помилці розбір повертався б у список уже після
+       того, як людина відвела погляд. */
     setReviews((list) => list.filter((x) => x.id !== id));
     try {
       await deleteReview(user.id, id);
+      setToDelete(null);
+      if (reading?.id === id) setReading(null);
     } catch (err) {
       setReviews(before);
       notify.error('Не вдалось видалити', err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -207,12 +243,25 @@ export default function Reviews() {
   };
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return reviews;
-    return reviews.filter((r) =>
-      (r.lesson || '').toLowerCase().includes(q)
-      || Object.values(r.answers || {}).some((v) => String(v).toLowerCase().includes(q)));
-  }, [reviews, search]);
+    const q = query.q.trim().toLowerCase();
+
+    /* Умови складаються: слово І період. Задав обидва — лишаються
+       розбори, що підходять під те й те. */
+    return reviews.filter((r) => {
+      /* Розбір має вміститись у вибраний проміжок цілком.
+
+         Спершу тут був перетин — «хоч одним днем зачепився». На ділі
+         це збивало з пантелику: обираєш 25–31 серпня й отримуєш ще й
+         розбір за 23–29, бо в них спільні шість днів. «Цілком
+         усередині» — єдине правило, яке легко передбачити наперед. */
+      if (query.from && (r.from || r.to) < query.from) return false;
+      if (query.to && (r.to || r.from) > query.to) return false;
+
+      if (!q) return true;
+      return (r.lesson || '').toLowerCase().includes(q)
+        || Object.values(r.answers || {}).some((v) => String(v).toLowerCase().includes(q));
+    });
+  }, [reviews, query]);
 
   /* ================================================================ */
 
@@ -222,6 +271,9 @@ export default function Reviews() {
       <div className="relative z-10 mx-auto w-full max-w-[1800px] px-4 pb-24 pt-5 sm:px-6 lg:w-[92%] lg:px-0 lg:pb-32 lg:pt-7">
 
         {/* ─────────── Хедер ─────────── */}
+        {/* Лише для списку: у нового розбору шапка своя, з поверненням
+            назад і перемикачем періоду. */}
+        {mode === 'list' && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -229,40 +281,32 @@ export default function Reviews() {
           className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between"
         >
           <div className="flex min-w-0 items-start gap-4">
-            {mode === 'create' && (
-              <button
-                onClick={() => setMode('list')}
-                title="До списку розборів"
-                className="group mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-xl transition-all duration-200 active:scale-95"
-                style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = T.surface; e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
-              >
-                <ArrowLeft size={18} strokeWidth={2.2} className="transition-transform duration-200 group-hover:-translate-x-0.5" />
-              </button>
-            )}
 
             <div className="min-w-0">
-              <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
+              <div
+                className="uppercase"
+                style={{ fontFamily: T.mono, fontSize: 10.5, letterSpacing: '2.6px', color: T.acc }}
+              >
                 Розбори
               </div>
               <h1
-                className="text-[28px] font-bold leading-none sm:text-[38px] lg:text-[46px]"
-                style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
+                className="text-[28px] leading-none sm:text-[38px]"
+                style={{ fontFamily: T.display, marginTop: 13, fontWeight: 600, color: T.text, letterSpacing: '-1px' }}
               >
-                {mode === 'list' ? 'Висновки' : 'Новий розбір'}
+                Висновки
               </h1>
-              <p className="mt-3 text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                {mode === 'list'
-                  ? `${reviews.length} ${reviews.length === 1 ? 'розбір' : 'розборів'}`
-                  : 'Обери період, познач що розбираєш — і напиши, що з цим робити далі'}
+              {/* Лічильник моноширинним і в верхньому регістрі — він
+                  службовий, і так не змагається із заголовком за увагу. */}
+              <p
+                className="uppercase"
+                style={{ fontFamily: T.mono, marginTop: 13, fontSize: 11, letterSpacing: '1.8px', color: T.text3 }}
+              >
+                {`${reviews.length} ${reviews.length === 1 ? 'розбір' : 'розборів'}`}
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {mode === 'list' ? (
-              <>
                 <div
                   className="flex h-[42px] w-full items-center gap-2.5 rounded-xl px-3.5 transition-colors duration-200 sm:w-[260px]"
                   style={{ background: T.surface, border: `1px solid ${T.line}` }}
@@ -271,38 +315,78 @@ export default function Reviews() {
                 >
                   <Search size={15} strokeWidth={2.2} style={{ color: T.text4 }} />
                   <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    value={draft.q}
+                    onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }}
                     placeholder="Пошук по висновках…"
                     className="w-full bg-transparent text-[14px] outline-none"
                     style={{ fontFamily: T.sans, color: T.text }}
                   />
-                  {search && (
-                    <button onClick={() => setSearch('')} style={{ color: T.text4 }}>
+                  {draft.q && (
+                    <button
+                      onClick={() => { setDraft((d) => ({ ...d, q: '' })); setQuery((v) => ({ ...v, q: '' })); }}
+                      style={{ color: T.text4 }}
+                    >
                       <X size={14} strokeWidth={2.5} />
                     </button>
                   )}
                 </div>
 
+                {/* Період одним полем: готові проміжки зліва, календар
+                    справа. Той самий react-day-picker у тих самих
+                    кольорах, що й у новому розборі. */}
+                <div className="w-[220px]">
+                  <DateRangeField
+                    value={{ from: draft.from, to: draft.to }}
+                    onChange={(r) => setDraft((d) => ({ ...d, ...r }))}
+                  />
+                </div>
+
+                {/* Одна кнопка на обидва поля. Поки чернетка збігається
+                    з тим, що вже показано, вона гасне — інакше людина
+                    тисне її й не розуміє, чому нічого не змінилось. */}
+                <button
+                  onClick={applyFilters}
+                  disabled={!dirty}
+                  className="inline-flex h-[42px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14px] font-bold transition-all duration-200"
+                  style={{
+                    fontFamily: T.sans,
+                    background: dirty ? `rgba(${T.accRgb},0.14)` : 'transparent',
+                    border: `1px solid ${dirty ? T.lineAcc : T.line}`,
+                    color: dirty ? T.acc : T.text4,
+                    cursor: dirty ? 'pointer' : 'default',
+                  }}
+                >
+                  <Search size={15} strokeWidth={2.6} />
+                  Пошук
+                </button>
+
+                {(query.q || query.from || query.to) && (
+                  <button
+                    onClick={resetFilters}
+                    title="Скинути фільтри"
+                    className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl transition-colors duration-200"
+                    style={{ border: `1px solid ${T.line}`, color: T.text3 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
+                  >
+                    <X size={15} strokeWidth={2.4} />
+                  </button>
+                )}
+
+                {/* Та сама кнопка, що «Add Account» на рахунках: висота
+                    під сусіднє поле пошуку, решта — спільний клас. */}
                 <button
                   onClick={startCreate}
-                  className="group inline-flex h-[42px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-                  style={{
-                    background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans,
-                    boxShadow: `0 6px 18px -8px rgba(${T.accRgb},0.6)`,
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.boxShadow = `0 10px 26px -8px rgba(${T.accRgb},0.75)`)}
-                  onMouseLeave={(e) => (e.currentTarget.style.boxShadow = `0 6px 18px -8px rgba(${T.accRgb},0.6)`)}
+                  className="edge-add-btn inline-flex h-[42px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold"
+                  style={{ color: '#fff', fontFamily: T.sans }}
                 >
-                  <Plus size={16} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+                  <Plus size={15} strokeWidth={3} className="shrink-0" style={{ color: T.acc }} />
                   Новий розбір
                 </button>
-              </>
-            ) : (
-              <PeriodPicker from={range.from} to={range.to} onChange={setRange} />
-            )}
           </div>
         </motion.div>
+        )}
 
         {/* ─────────── Контент ─────────── */}
         <AnimatePresence mode="wait">
@@ -335,18 +419,18 @@ export default function Reviews() {
                   <p className="mb-7 max-w-[440px] text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.7 }}>
                     {reviews.length === 0
                       ? 'Розбір — це коли ти дивишся на свої угоди, плани й помилки разом і вирішуєш, що змінити. Достатньо раз на тиждень.'
-                      : 'Спробуй інші слова в пошуку.'}
+                      : 'Спробуй інші слова або ширший період.'}
                   </p>
                   <button
-                    onClick={() => (reviews.length === 0 ? startCreate() : setSearch(''))}
+                    onClick={() => (reviews.length === 0 ? startCreate() : resetFilters())}
                     className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-bold transition-transform duration-200 active:scale-[0.98]"
                     style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
                   >
-                    {reviews.length === 0 ? <><Plus size={15} strokeWidth={3} /> Зробити перший</> : 'Скинути пошук'}
+                    {reviews.length === 0 ? <><Plus size={15} strokeWidth={3} /> Зробити перший</> : 'Скинути фільтри'}
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                   <AnimatePresence initial={false}>
                     {filtered.map((r, i) => (
                       <ReviewRow
@@ -354,7 +438,7 @@ export default function Reviews() {
                         review={r}
                         index={i}
                         onOpen={setReading}
-                        onDelete={removeReview}
+                        onDelete={(id) => setToDelete(reviews.find((x) => x.id === id))}
                         onShare={shareReview}
                       />
                     ))}
@@ -369,57 +453,36 @@ export default function Reviews() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25, ease: EASE }}
-              className="flex flex-col gap-4"
             >
-              <PeriodStats stats={stats} />
-
-              <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-                {/* матеріал */}
-                <div className="flex flex-col gap-4">
-                  {loadingMaterial && (
-                    <div
-                      className="flex items-center gap-2.5 rounded-2xl px-4 py-3"
-                      style={{ background: T.surface, border: `1px solid ${T.line}` }}
-                    >
-                      <Loader2 size={14} className="animate-spin" style={{ color: T.acc }} />
-                      <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                        збираю угоди, плани й помилки за період…
-                      </span>
-                    </div>
-                  )}
-
-                  <EvidencePicker
-                    trades={inPeriod.trades}
-                    plans={inPeriod.plans}
-                    mistakes={inPeriod.mistakes}
-                    selected={selected}
-                    onToggle={toggle}
-                  />
-                  <RepeatedMistakes rows={repeats} />
-                </div>
-
-                {/* висновок */}
-                <div className="xl:sticky xl:top-4 xl:self-start">
-                  <ReviewComposer
-                    from={range.from}
-                    to={range.to}
-                    score={score}
-                    onScore={setScore}
-                    emotions={emotions}
-                    onEmotion={(id) => setEmotions((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
-                    answers={answers}
-                    onAnswer={(id, v) => setAnswers((s) => ({ ...s, [id]: v }))}
-                    lesson={lesson}
-                    onLesson={setLesson}
-                    prevReview={prev}
-                    keptPromises={keptPromises}
-                    onKeptPromise={(i, v) => setKeptPromises((s) => ({ ...s, [i]: v }))}
-                    picked={pickedCount}
-                    saving={saving}
-                    onSave={saveReview}
-                  />
-                </div>
-              </div>
+              <ReviewBuilder
+                onBack={() => setMode('list')}
+                range={range}
+                onRange={setRange}
+                stats={stats}
+                material={inPeriod}
+                loadingMaterial={loadingMaterial}
+                selected={selected}
+                onToggle={toggle}
+                repeats={repeats}
+                score={score}
+                onScore={setScore}
+                emotions={emotions}
+                onEmotion={(id) => setEmotions((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
+                answers={answers}
+                onAnswer={(id, v) => setAnswers((s) => ({ ...s, [id]: v }))}
+                lesson={lesson}
+                onLesson={setLesson}
+                prevReview={prev}
+                keptPromises={keptPromises}
+                onKeptPromise={(i, v) => setKeptPromises((s) => ({ ...s, [i]: v }))}
+                shots={shots}
+                onShots={setShots}
+                userId={user?.id}
+                promises={promises}
+                onPromises={setPromises}
+                saving={saving}
+                onSave={saveReview}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -431,9 +494,24 @@ export default function Reviews() {
             key="reader"
             review={reading}
             onClose={() => setReading(null)}
-            onDelete={(id) => { removeReview(id); setReading(null); }}
+            onDelete={(id) => setToDelete(reviews.find((x) => x.id === id))}
             onShare={() => shareReview(reading)}
             onUnshare={() => unshareReview(reading)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {toDelete && (
+          <ConfirmModal
+            open
+            title="Видалити розбір?"
+            text={`За ${fmtRange(toDelete.from, toDelete.to)}. Разом із ним зникнуть відповіді, обрані угоди й скріншоти. Скасувати це не вийде.`}
+            detail={toDelete.lesson}
+            confirmLabel="Видалити розбір"
+            busy={deleting}
+            onConfirm={removeReview}
+            onCancel={() => setToDelete(null)}
           />
         )}
       </AnimatePresence>

@@ -259,10 +259,12 @@ export default function SharedReview() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: EASE, delay: 0.1 }}
-              className="relative mb-9 overflow-hidden rounded-3xl p-6 sm:p-8"
-              style={{ background: T.surface, border: `1px solid ${T.lineAcc}` }}
+              /* Кант як у решти блоків сторінки. Був акцентний, і разом
+                 із фіолетовою смужкою зліва це давало подвійну рамку —
+                 блок кричав удвічі там, де досить одного акценту. */
+              className="mb-9 overflow-hidden rounded-2xl p-6 sm:p-8"
+              style={{ background: T.surface, border: `1px solid ${T.line}` }}
             >
-              <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: T.acc }} />
               <Quote size={20} strokeWidth={2} style={{ color: T.acc, opacity: 0.5 }} className="mb-3" />
               <p
                 className="text-[19px] font-semibold sm:text-[22px]"

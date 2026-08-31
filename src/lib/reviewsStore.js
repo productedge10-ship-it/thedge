@@ -16,6 +16,39 @@ const RESULT_MAP = {
   WIN: 'WIN', LOSS: 'LOSS',
 };
 
+/* Скріни лежать двома полями: старим одиничним і новим масивом.
+   Беремо масив, а одиничне — як запасний варіант для давніх записів. */
+const numOrNull = (v) => {
+  if (v == null || v === '') return null;
+  /* Порожній рядок після чистки — це «цифр не було взагалі». Без цієї
+     перевірки Number('') повертає 0, і «абв» перетворювалось на ризик
+     у нуль відсотків. */
+  const cleaned = String(v).replace(',', '.').replace(/[^\d.-]/g, '');
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+};
+
+/* Блоки плану: лишаємо ті, де є хоч щось — текст або графік. */
+const blocksOf = (arr) => (Array.isArray(arr) ? arr : [])
+  .filter((b) => b && (b.text || b.image))
+  .map((b) => ({
+    id: b.id,
+    tf: b.tf || '',
+    text: b.text || '',
+    image: b.image || '',
+    /* Vision Guard: світлий графік приглушується, щоб не бив по очах
+       на темному тлі. Прапорець ставили при збереженні плану — тут
+       лише поважаємо його. */
+    dimmed: !!b.isDimmed,
+  }));
+
+const imagesOf = (arr, single) => {
+  const list = Array.isArray(arr) ? arr.filter(Boolean) : [];
+  if (list.length) return list;
+  return single ? [single] : [];
+};
+
 const toTrade = (row) => ({
   id: row.id,
   date: row.plan_date,
@@ -26,6 +59,38 @@ const toTrade = (row) => ({
   session: row.session || '',
   followedPlan: row.followed_plan !== false,
   note: row.trade_description || '',
+
+  /* Далі — те, що потрібне лише у вікні перегляду. У списку воно не
+     показується, але тягнеться тим самим запитом: окремий похід у
+     базу на кожен відкритий рядок дав би затримку там, де її можна
+     не мати. */
+  account: row.account_name || '',
+  /* Ризик у базі буває і числом, і рядком на кшталт «1,5» чи «1%» —
+     поле заповнювали руками. Number() на такому дає NaN, і у вікні
+     чесно зʼявлялось «NaN%». Витягуємо число, а якщо його там немає,
+     лишаємо null: краще не показати поле, ніж показати сміття. */
+  risk: numOrNull(row.risk),
+  setup: row.setup || '',
+  entryTime: row.entry_time || '',
+  exitTime: row.exit_time || '',
+  rushed: !!row.rushed,
+  psy: {
+    confident: !!row.psy_confident,
+    fear: !!row.psy_fear,
+    repeat: !!row.psy_repeat,
+    revenge: !!row.psy_revenge,
+  },
+  images: imagesOf(row.trade_images, row.trade_image),
+  psyNotes: row.psy_notes || '',
+  createdAt: row.created_at || '',
+
+  /* Помилка живе в тій самій угоді. У вкладці «Помилки» вона окремим
+     рядком, але у вікні самої угоди ховати її безглуздо: людина
+     дивиться на угоду саме тому, що з нею щось пішло не так. */
+  hasMistake: !!row.has_mistake,
+  mistakeType: row.mistake_category || '',
+  mistakeText: row.mistake_description || '',
+  mistakeImages: imagesOf(row.mistake_images, row.mistake_image),
 });
 
 /* Помилка = угода, у якій трейдер сам це визнав. Ціна помилки —
@@ -39,19 +104,68 @@ const toMistake = (row) => {
     pair: row.plan_pair,
     type: row.mistake_category || 'no_plan',
     severity: row.rushed ? 'high' : 'mid',
-    description: row.mistake_description || 'Помилка без опису.',
+    description: row.mistake_description || '',
     cost: Number(lost.toFixed(2)),
+
+    session: row.session || '',
+    rushed: !!row.rushed,
+    followedPlan: row.followed_plan !== false,
+    note: row.trade_description || '',
+    images: imagesOf(row.mistake_images, row.mistake_image),
+    psyNotes: row.psy_notes || '',
+    psy: {
+      confident: !!row.psy_confident,
+      fear: !!row.psy_fear,
+      repeat: !!row.psy_repeat,
+      revenge: !!row.psy_revenge,
+    },
   };
 };
 
-const toPlan = (row) => ({
-  id: row.id,
-  date: row.date,
-  pair: row.pair,
-  narrative: row.narrative || '',
-  status: row.plan_data?.sessionRating > 0 ? 'Розібрано' : 'Без розбору',
-  text: row.plan_data?.planText || row.plan_data?.conclusionsText || '',
-});
+const toPlan = (row) => {
+  const d = row.plan_data || {};
+  return {
+    id: row.id,
+    date: row.date,
+    pair: row.pair,
+    narrative: row.narrative || '',
+    status: d.sessionRating > 0 ? 'Розібрано' : 'Без розбору',
+    text: d.planText || d.conclusionsText || '',
+
+    /* Для вікна перегляду. actualNarrative — те, що ринок зробив
+       насправді: різниця з narrative і є найцікавішим у плані. */
+    actualNarrative: d.actualNarrative || '',
+    category: d.category || '',
+    rating: Number(d.sessionRating) || 0,
+    conclusions: d.conclusionsText || '',
+    title: d.title || '',
+    isPublic: !!row.is_public,
+    createdAt: row.created_at || '',
+
+    /* analysisMistake — прапорець «в аналізі була помилка», а текст
+       лежить окремо в analysisMistakeText. Раніше я брав сам прапорець
+       як текст, і блок мовчки не малювався: React не виводить boolean. */
+    analysisMistake: d.analysisMistake ? (d.analysisMistakeText || 'Помилка в аналізі позначена, без опису.') : '',
+
+    /* Розбір по таймфреймах — головний зміст плану. Це те, заради чого
+       план узагалі відкривають повторно.
+
+       Беремо блок і тоді, коли в ньому лише графік без підпису: у
+       плані це звична ситуація — картинка з TradingView сама по собі
+       і є думкою. Фільтр по самому тексту такі блоки мовчки викидав. */
+    tda: blocksOf(d.tdaBlocks),
+    review: blocksOf(d.reviewBlocks),
+    updates: Array.isArray(d.updates) ? d.updates : [],
+    quiz: d.quiz && typeof d.quiz === 'object' ? d.quiz : null,
+    psy: {
+      confident: !!d.psyConfident,
+      fear: !!d.psyFear,
+      repeat: !!d.psyRepeatTrade,
+      revenge: !!d.psyRevenge,
+    },
+    psyNotes: d.psyNotes || '',
+  };
+};
 
 /* ---------- матеріал за період ---------- */
 
@@ -61,7 +175,15 @@ export async function loadMaterial(userId, from, to) {
   const [tradesRes, plansRes] = await Promise.all([
     supabase
       .from('trades')
-      .select('id, plan_date, plan_pair, type, result, rr, session, followed_plan, rushed, trade_description, has_mistake, mistake_description, mistake_category')
+      .select(`
+        id, plan_date, plan_pair, type, result, rr, risk, session, setup,
+        entry_time, exit_time, account_name,
+        followed_plan, rushed, trade_description,
+        psy_confident, psy_fear, psy_repeat, psy_revenge,
+        has_mistake, mistake_description, mistake_category,
+        mistake_image, mistake_images,
+        trade_image, trade_images, psy_notes, created_at
+      `)
       .eq('user_id', userId)
       .gte('plan_date', from)
       .lte('plan_date', to)
@@ -69,12 +191,22 @@ export async function loadMaterial(userId, from, to) {
 
     supabase
       .from('trading_plans')
-      .select('id, date, pair, narrative, plan_data')
+      .select('id, date, pair, narrative, plan_data, is_public, created_at')
       .eq('user_id', userId)
       .gte('date', from)
       .lte('date', to)
       .order('date', { ascending: true }),
   ]);
+
+  /* Помилку запиту не ковтаємо.
+
+     Раніше тут стояло `data || []`, і будь-який збій — від політики
+     доступу до друкарської помилки в назві колонки — виглядав однаково:
+     «за цей період нічого немає». Сторінка вже вміє показати тост про
+     невдале завантаження, їй просто ніхто не давав шансу: без throw
+     обіцянка завжди виконувалась успішно з порожнім результатом. */
+  const failed = tradesRes.error || plansRes.error;
+  if (failed) throw new Error(failed.message || 'не вдалось прочитати матеріал');
 
   const tradeRows = tradesRes.data || [];
 
@@ -91,7 +223,7 @@ export async function loadAllMistakes(userId, limit = 500) {
   if (!userId) return [];
   const { data } = await supabase
     .from('trades')
-    .select('id, plan_date, plan_pair, result, rr, rushed, mistake_description, mistake_category')
+    .select('id, plan_date, plan_pair, result, rr, rushed, session, followed_plan, trade_description, mistake_description, mistake_category, mistake_image, mistake_images, psy_notes, psy_confident, psy_fear, psy_repeat, psy_revenge')
     .eq('user_id', userId)
     .eq('has_mistake', true)
     .order('plan_date', { ascending: false })
@@ -101,6 +233,16 @@ export async function loadAllMistakes(userId, limit = 500) {
 }
 
 /* ---------- самі розбори ---------- */
+
+/* Домовленості приводимо до одного вигляду.
+
+   Застосунок пише їх обʼєктами {text, done}, а демо-наповнення (і
+   старі записи) — просто рядками. Читалка чекала обʼєкт, тому на
+   таких розборах показувала три порожні рядки з галочками: текст
+   лежав там, де його ніхто не шукав. Нормалізуємо на вході, щоб далі
+   форму даних розбирати не доводилось. */
+const toPromise = (p) =>
+  (typeof p === 'string' ? { text: p, done: false } : { text: p?.text || '', done: !!p?.done });
 
 const fromRow = (row) => ({
   id: row.id,
@@ -112,7 +254,9 @@ const fromRow = (row) => ({
   createdAt: row.created_at,
   emotions: row.data?.emotions || [],
   answers: row.data?.answers || {},
-  promises: row.data?.promises || [],
+  promises: (row.data?.promises || []).map(toPromise),
+  /* Скріни до відповідей: { worked: [{src,name}], broke: [...] } */
+  shots: row.data?.shots || {},
   stats: row.data?.stats || {},
   evidence: row.data?.evidence || { trades: [], plans: [], mistakes: [] },
 });
@@ -127,6 +271,7 @@ const toRow = (review, userId) => ({
     emotions: review.emotions || [],
     answers: review.answers || {},
     promises: review.promises || [],
+    shots: review.shots || {},
     stats: review.stats || {},
     evidence: review.evidence || { trades: [], plans: [], mistakes: [] },
   },
