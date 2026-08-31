@@ -307,18 +307,9 @@ return (
         stroke-dasharray: 100 0;
       }
 
-      /* Кнопка «Add Account» — без анімації: статична рамка того ж
-         фіолетового, що раніше було обертовим акцентом, і мінімальний
-         ховер (рамка й тло ледь світлішають). */
-      .acc-add-btn {
-        background: #17151f;
-        border: 1px solid rgba(139,123,255,0.5);
-        transition: background-color .2s ease, border-color .2s ease;
-      }
-      .acc-add-btn:hover {
-        background: #1c1a26;
-        border-color: rgba(139,123,255,0.85);
-      }
+      /* Кнопка «Add Account» живе в index.css під іменем
+         .edge-add-btn: той самий вигляд потрібен і на розборах, а цей
+         блок стилів існує лише поки змонтована сторінка рахунків. */
 
       /* Кнопка «Archive» — та сама скляна панель, що інші преміальні
          блоки: градієнтне тло, іконка в колі, м'який ховер. */
@@ -430,7 +421,7 @@ return (
 
           <button
             onClick={guard(openAddModal)}
-            className="acc-add-btn ml-1 inline-flex h-[54px] shrink-0 items-center justify-center gap-2 rounded-2xl px-6 text-[14.5px] font-bold"
+            className="edge-add-btn ml-1 inline-flex h-[54px] shrink-0 items-center justify-center gap-2 rounded-2xl px-6 text-[14.5px] font-bold"
             style={{ color: '#fff', fontFamily: T.sans }}
           >
             <Plus size={16} strokeWidth={3} className="shrink-0" style={{ color: '#8b7bff' }} />

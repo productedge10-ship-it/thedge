@@ -871,7 +871,7 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
           {/* Анкета живе тут, поруч із довідкою: її шукають саме там,
               де «налаштування про мене», а не серед розділів журналу */}
           <NavItem collapsed={collapsed} onClick={openOnboarding} icon={Sparkles} label="Про тебе" tour="about" />
-          <NavItem collapsed={collapsed} onClick={openSettings} icon={Settings} label="Налаштування" tour="settings" />
+          <NavItem collapsed={collapsed} onClick={openSettings} icon={Settings} label="Settings" tour="settings" />
           <NavItem collapsed={collapsed} to="/faq" icon={HelpCircle} label="FAQ / Help" />
           <NavItem collapsed={collapsed} onClick={signOut} icon={LogOut} label="Sign out" isDanger />
         </div>

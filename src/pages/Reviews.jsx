@@ -10,9 +10,7 @@ import {
   loadReviews, createReview, deleteReview, setReviewPublic,
   loadMaterial, loadAllMistakes,
 } from '../lib/reviewsStore';
-import { PeriodPicker, PeriodStats, RepeatedMistakes } from '../components/reviews/PeriodBar';
-import EvidencePicker from '../components/reviews/EvidencePicker';
-import ReviewComposer from '../components/reviews/ReviewComposer';
+import ReviewBuilder from '../components/reviews/ReviewBuilder';
 import ReviewReader from '../components/reviews/ReviewReader';
 import ReviewRow from '../components/reviews/ReviewRow';
 
@@ -123,8 +121,6 @@ export default function Reviews() {
       [kind]: s[kind].includes(id) ? s[kind].filter((x) => x !== id) : [...s[kind], id],
     }));
 
-  const pickedCount = selected.trades.length + selected.plans.length + selected.mistakes.length;
-
   const startCreate = () => {
     setRange({ from: daysAgo(6), to: today() });
     setSelected({ trades: [], plans: [], mistakes: [] });
@@ -222,6 +218,9 @@ export default function Reviews() {
       <div className="relative z-10 mx-auto w-full max-w-[1800px] px-4 pb-24 pt-5 sm:px-6 lg:w-[92%] lg:px-0 lg:pb-32 lg:pt-7">
 
         {/* ─────────── Хедер ─────────── */}
+        {/* Лише для списку: у нового розбору шапка своя, з поверненням
+            назад і перемикачем періоду. */}
+        {mode === 'list' && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -229,40 +228,32 @@ export default function Reviews() {
           className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between"
         >
           <div className="flex min-w-0 items-start gap-4">
-            {mode === 'create' && (
-              <button
-                onClick={() => setMode('list')}
-                title="До списку розборів"
-                className="group mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-xl transition-all duration-200 active:scale-95"
-                style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = T.surface; e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
-              >
-                <ArrowLeft size={18} strokeWidth={2.2} className="transition-transform duration-200 group-hover:-translate-x-0.5" />
-              </button>
-            )}
 
             <div className="min-w-0">
-              <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
+              <div
+                className="uppercase"
+                style={{ fontFamily: T.mono, fontSize: 10.5, letterSpacing: '2.6px', color: T.acc }}
+              >
                 Розбори
               </div>
               <h1
-                className="text-[28px] font-bold leading-none sm:text-[38px] lg:text-[46px]"
-                style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
+                className="text-[28px] leading-none sm:text-[38px]"
+                style={{ fontFamily: T.display, marginTop: 13, fontWeight: 600, color: T.text, letterSpacing: '-1px' }}
               >
-                {mode === 'list' ? 'Висновки' : 'Новий розбір'}
+                Висновки
               </h1>
-              <p className="mt-3 text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                {mode === 'list'
-                  ? `${reviews.length} ${reviews.length === 1 ? 'розбір' : 'розборів'}`
-                  : 'Обери період, познач що розбираєш — і напиши, що з цим робити далі'}
+              {/* Лічильник моноширинним і в верхньому регістрі — він
+                  службовий, і так не змагається із заголовком за увагу. */}
+              <p
+                className="uppercase"
+                style={{ fontFamily: T.mono, marginTop: 13, fontSize: 11, letterSpacing: '1.8px', color: T.text3 }}
+              >
+                {`${reviews.length} ${reviews.length === 1 ? 'розбір' : 'розборів'}`}
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {mode === 'list' ? (
-              <>
                 <div
                   className="flex h-[42px] w-full items-center gap-2.5 rounded-xl px-3.5 transition-colors duration-200 sm:w-[260px]"
                   style={{ background: T.surface, border: `1px solid ${T.line}` }}
@@ -284,25 +275,19 @@ export default function Reviews() {
                   )}
                 </div>
 
+                {/* Та сама кнопка, що «Add Account» на рахунках: висота
+                    під сусіднє поле пошуку, решта — спільний клас. */}
                 <button
                   onClick={startCreate}
-                  className="group inline-flex h-[42px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-                  style={{
-                    background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans,
-                    boxShadow: `0 6px 18px -8px rgba(${T.accRgb},0.6)`,
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.boxShadow = `0 10px 26px -8px rgba(${T.accRgb},0.75)`)}
-                  onMouseLeave={(e) => (e.currentTarget.style.boxShadow = `0 6px 18px -8px rgba(${T.accRgb},0.6)`)}
+                  className="edge-add-btn inline-flex h-[42px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold"
+                  style={{ color: '#fff', fontFamily: T.sans }}
                 >
-                  <Plus size={16} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+                  <Plus size={15} strokeWidth={3} className="shrink-0" style={{ color: T.acc }} />
                   Новий розбір
                 </button>
-              </>
-            ) : (
-              <PeriodPicker from={range.from} to={range.to} onChange={setRange} />
-            )}
           </div>
         </motion.div>
+        )}
 
         {/* ─────────── Контент ─────────── */}
         <AnimatePresence mode="wait">
@@ -346,7 +331,7 @@ export default function Reviews() {
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                   <AnimatePresence initial={false}>
                     {filtered.map((r, i) => (
                       <ReviewRow
@@ -369,57 +354,31 @@ export default function Reviews() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25, ease: EASE }}
-              className="flex flex-col gap-4"
             >
-              <PeriodStats stats={stats} />
-
-              <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-                {/* матеріал */}
-                <div className="flex flex-col gap-4">
-                  {loadingMaterial && (
-                    <div
-                      className="flex items-center gap-2.5 rounded-2xl px-4 py-3"
-                      style={{ background: T.surface, border: `1px solid ${T.line}` }}
-                    >
-                      <Loader2 size={14} className="animate-spin" style={{ color: T.acc }} />
-                      <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                        збираю угоди, плани й помилки за період…
-                      </span>
-                    </div>
-                  )}
-
-                  <EvidencePicker
-                    trades={inPeriod.trades}
-                    plans={inPeriod.plans}
-                    mistakes={inPeriod.mistakes}
-                    selected={selected}
-                    onToggle={toggle}
-                  />
-                  <RepeatedMistakes rows={repeats} />
-                </div>
-
-                {/* висновок */}
-                <div className="xl:sticky xl:top-4 xl:self-start">
-                  <ReviewComposer
-                    from={range.from}
-                    to={range.to}
-                    score={score}
-                    onScore={setScore}
-                    emotions={emotions}
-                    onEmotion={(id) => setEmotions((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
-                    answers={answers}
-                    onAnswer={(id, v) => setAnswers((s) => ({ ...s, [id]: v }))}
-                    lesson={lesson}
-                    onLesson={setLesson}
-                    prevReview={prev}
-                    keptPromises={keptPromises}
-                    onKeptPromise={(i, v) => setKeptPromises((s) => ({ ...s, [i]: v }))}
-                    picked={pickedCount}
-                    saving={saving}
-                    onSave={saveReview}
-                  />
-                </div>
-              </div>
+              <ReviewBuilder
+                onBack={() => setMode('list')}
+                range={range}
+                onRange={setRange}
+                stats={stats}
+                material={inPeriod}
+                loadingMaterial={loadingMaterial}
+                selected={selected}
+                onToggle={toggle}
+                repeats={repeats}
+                score={score}
+                onScore={setScore}
+                emotions={emotions}
+                onEmotion={(id) => setEmotions((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
+                answers={answers}
+                onAnswer={(id, v) => setAnswers((s) => ({ ...s, [id]: v }))}
+                lesson={lesson}
+                onLesson={setLesson}
+                prevReview={prev}
+                keptPromises={keptPromises}
+                onKeptPromise={(i, v) => setKeptPromises((s) => ({ ...s, [i]: v }))}
+                saving={saving}
+                onSave={saveReview}
+              />
             </motion.div>
           )}
         </AnimatePresence>

@@ -35,13 +35,57 @@ import { THEMES } from '../../lib/themes';
 /* Надпис над заголовком. Він групує розділи за змістом: видно, що
    «Тема» і «Рух» — про одне й те саме, хоч і лежать окремо. */
 const TABS = [
-  { id: 'profile', label: 'Профіль', icon: User, eyebrow: 'ОСОБИСТЕ', hint: 'Як до тебе звертатись' },
-  { id: 'goal', label: 'Ціль тижня', icon: Target, eyebrow: 'РИТМ', hint: 'Те, що показує плашка «Тиждень» у Лаунчпаді' },
-  { id: 'journal', label: 'Журнал', icon: BookOpen, eyebrow: 'ПРАКТИКА', hint: 'Скільки питань ставити після кожної угоди' },
-  { id: 'look', label: 'Тема', icon: Palette, eyebrow: 'ВИГЛЯД', hint: 'Світла чи темна — з переходом по діагоналі' },
-  { id: 'motion', label: 'Рух і світло', icon: Sparkles, eyebrow: 'ВИГЛЯД', hint: 'Скільки руху ти готовий терпіти за шість годин перед екраном' },
-  { id: 'menu', label: 'Розділи', icon: LayoutGrid, eyebrow: 'НАВІГАЦІЯ', hint: 'Прибери те, чим не користуєшся — дані лишаться' },
+  { id: 'profile', label: 'Profile', icon: User, eyebrow: 'PERSONAL', hint: 'What we should call you' },
+  { id: 'goal', label: 'Weekly goal', icon: Target, eyebrow: 'RHYTHM', hint: 'What the “Week” tile on the Launchpad shows' },
+  { id: 'journal', label: 'Journal', icon: BookOpen, eyebrow: 'PRACTICE', hint: 'How many questions to ask after every trade' },
+  { id: 'look', label: 'Theme', icon: Palette, eyebrow: 'APPEARANCE', hint: 'Light or dark — with a diagonal sweep' },
+  { id: 'motion', label: 'Motion & glow', icon: Sparkles, eyebrow: 'APPEARANCE', hint: 'How much movement you can stand over six hours at a screen' },
+  { id: 'menu', label: 'Sections', icon: LayoutGrid, eyebrow: 'NAVIGATION', hint: 'Hide what you don’t use — the data stays' },
 ];
+
+/* ------------------------------------------------------------------
+   Англійські підписи варіантів.
+
+   Самі списки (MOTION, FX, PSY, GOALS, THEMES) лишаються українськими:
+   їхні поля читає ще й Лаунчпад, і переклад у спільному місці зробив
+   би там мішанину на кшталт «3 з 7 days». Тому переклад живе тут — у
+   єдиному вікні, яке його показує, а зіставлення йде за id.
+
+   Якщо в списку зʼявиться новий варіант і його забудуть додати сюди,
+   впаде назад рідний підпис, а не порожнє місце.
+------------------------------------------------------------------ */
+const EN = {
+  motion: {
+    full: ['Full', 'everything moves the way it was designed'],
+    calm: ['Calm', 'no background, no entrance effects'],
+    off: ['Off', 'nothing moves at all'],
+  },
+  fx: {
+    off: ['No glow', 'no halo under the cursor at all'],
+    soft: ['Barely there', 'a hint you only notice if you look for it'],
+    medium: ['Moderate', 'visible, but it doesn’t pull your eye'],
+    full: ['Bright', 'the way it was meant to look'],
+  },
+  psy: {
+    short: ['Short', 'the three questions the stats are built from'],
+    full: ['Full', 'all seven — more material to work with'],
+  },
+  goal: {
+    clean: ['Clean days', 'days when every trade followed the plan, with no mistakes'],
+    trades: ['Trade count', 'plain volume of work for the week'],
+    r: ['Result in R', 'handle with care: a profit goal nudges you into extra trades'],
+    none: ['No goal', 'the tile just sums up the week'],
+  },
+  theme: {
+    dark: ['Dark', 'the native one, for long sessions'],
+    light: ['Light', 'for working in daylight'],
+  },
+  unit: { clean: 'days', trades: 'trades', r: 'R', none: '' },
+};
+
+/* Підпис варіанта: англійський, якщо є; інакше той, що в списку. */
+const label = (group, item) => EN[group]?.[item.id]?.[0] ?? item.label;
+const hintOf = (group, item) => EN[group]?.[item.id]?.[1] ?? item.hint;
 
 /* Картка-варіант. Один опис на всі списки вибору, щоб «Ціль», «Журнал»,
    «Рух» і «Світло» не розʼїжджались на піксель. */
@@ -191,7 +235,7 @@ export default function SettingsModal() {
                     color: T.text,
                   }}
                 >
-                  Налаштування
+                  Settings
                 </div>
                 <div
                   style={{
@@ -202,7 +246,7 @@ export default function SettingsModal() {
                     color: T.text3,
                   }}
                 >
-                  Зміни діють одразу й переїжджають між пристроями
+                  Changes apply at once and follow you across devices
                 </div>
               </div>
 
@@ -297,7 +341,7 @@ export default function SettingsModal() {
                 }}
               >
                 <RotateCcw size={15} strokeWidth={2.2} style={{ opacity: 0.85 }} />
-                Повернути все як було
+                Reset everything
               </button>
             </div>
 
@@ -342,7 +386,7 @@ export default function SettingsModal() {
 
                 <button
                   onClick={() => setOpen(false)}
-                  aria-label="Закрити"
+                  aria-label="Close"
                   className="grid shrink-0 place-items-center"
                   style={{
                     width: 38,
@@ -400,7 +444,7 @@ export default function SettingsModal() {
                 {tab === 'profile' && (
                   <div className="flex flex-col" style={{ gap: 30, maxWidth: 760 }}>
                     <div>
-                      <Label>Як до тебе звертатись</Label>
+                      <Label>What we should call you</Label>
                       <input
                         value={nick}
                         onChange={(e) => setNick(e.target.value)}
@@ -410,7 +454,7 @@ export default function SettingsModal() {
                         }}
                         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                         maxLength={32}
-                        placeholder="Нікнейм — інакше візьмемо початок пошти"
+                        placeholder="A nickname — otherwise we’ll use the start of your email"
                         className="w-full outline-none"
                         style={{
                           fontFamily: T.sans,
@@ -433,7 +477,7 @@ export default function SettingsModal() {
                         способом підтвердитись лишалось би натиснути
                         заблоковану кнопку — незрозуміло й нелогічно. */}
                     <div>
-                      <Label>Пошта</Label>
+                      <Label>Email</Label>
                       <div
                         className="flex items-center"
                         style={{
@@ -479,7 +523,7 @@ export default function SettingsModal() {
                               color: emailVerified === false ? T.warn : T.ok,
                             }}
                           >
-                            {emailVerified === false ? 'Не підтверджено' : 'Підтверджено'}
+                            {emailVerified === false ? 'Not verified' : 'Verified'}
                           </div>
                         </div>
 
@@ -501,13 +545,13 @@ export default function SettingsModal() {
                             onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.22)`; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.14)`; }}
                           >
-                            Підтвердити
+                            Verify
                           </button>
                         )}
                       </div>
 
                       {emailVerified === false && (
-                        <Note>Поки пошта не підтверджена, не вийде створювати акаунти й записувати угоди.</Note>
+                        <Note>Until your email is verified you can’t create accounts or log trades.</Note>
                       )}
                     </div>
 
@@ -519,8 +563,8 @@ export default function SettingsModal() {
                 {tab === 'goal' && (
                   <div style={{ maxWidth: 900 }}>
                     <Head
-                      title="Ціль на тиждень"
-                      hint="Те, що показує плашка «Тиждень» у Лаунчпаді"
+                      title="Goal for the week"
+                      hint="What the “Week” tile on the Launchpad shows"
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2" style={{ marginTop: 20, gap: 12 }}>
                       {GOALS.map((g) => {
@@ -533,8 +577,8 @@ export default function SettingsModal() {
                             style={cardStyle(on)}
                             {...hoverLine(on)}
                           >
-                            <div style={cardTitle(on)}>{g.label}</div>
-                            <div style={cardHint}>{g.hint}</div>
+                            <div style={cardTitle(on)}>{label('goal', g)}</div>
+                            <div style={cardHint}>{hintOf('goal', g)}</div>
                           </button>
                         );
                       })}
@@ -559,7 +603,7 @@ export default function SettingsModal() {
                           className="shrink-0"
                           style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 500, color: T.text2 }}
                         >
-                          Скільки
+                          How many
                         </span>
                         <input
                           type="range"
@@ -581,7 +625,7 @@ export default function SettingsModal() {
                             color: T.acc,
                           }}
                         >
-                          {goalValue} {goalById(goalType).unit}
+                          {goalValue} {EN.unit[goalType] ?? goalById(goalType).unit}
                         </span>
                       </div>
                     )}
@@ -592,8 +636,8 @@ export default function SettingsModal() {
                 {tab === 'journal' && (
                   <div style={{ maxWidth: 900 }}>
                     <Head
-                      title="Розбір угоди"
-                      hint="Скільки питань про себе ставити після кожної угоди"
+                      title="Trade review"
+                      hint="How many questions to ask yourself after every trade"
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2" style={{ marginTop: 20, gap: 12 }}>
                       {PSY.map((p) => {
@@ -606,8 +650,8 @@ export default function SettingsModal() {
                             style={cardStyle(on)}
                             {...hoverLine(on)}
                           >
-                            <div style={cardTitle(on)}>{p.label}</div>
-                            <div style={cardHint}>{p.hint}</div>
+                            <div style={cardTitle(on)}>{label('psy', p)}</div>
+                            <div style={cardHint}>{hintOf('psy', p)}</div>
                           </button>
                         );
                       })}
@@ -623,7 +667,7 @@ export default function SettingsModal() {
                         color: T.text3,
                       }}
                     >
-                      У короткому режимі решта питань лишається в угоді під розкриттям — просто перестає бути обовʼязковою.
+                      In short mode the rest of the questions stay in the trade behind a toggle — they simply stop being required.
                     </div>
                   </div>
                 )}
@@ -632,8 +676,8 @@ export default function SettingsModal() {
                 {tab === 'look' && (
                   <div style={{ maxWidth: 900 }}>
                     <Head
-                      title="Тема"
-                      hint="Перемикається з переходом по діагоналі — щоб не било по очах"
+                      title="Theme"
+                      hint="Switches with a diagonal sweep — so it doesn’t hit your eyes"
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2" style={{ marginTop: 20, gap: 12 }}>
                       {THEMES.map((th) => {
@@ -660,12 +704,12 @@ export default function SettingsModal() {
                               <Ico size={17} strokeWidth={2.2} />
                             </span>
                             <span className="min-w-0">
-                              <span className="block" style={cardTitle(on)}>{th.label}</span>
+                              <span className="block" style={cardTitle(on)}>{label('theme', th)}</span>
                               <span
                                 className="block"
                                 style={{ fontFamily: T.sans, marginTop: 5, fontSize: 13, color: T.text3 }}
                               >
-                                {th.hint}
+                                {hintOf('theme', th)}
                               </span>
                             </span>
                           </button>
@@ -680,8 +724,8 @@ export default function SettingsModal() {
                   <div className="flex flex-col" style={{ maxWidth: 900, gap: 34 }}>
                     <div>
                       <Head
-                        title="Анімації"
-                        hint="Скільки руху ти готовий терпіти за шість годин перед екраном"
+                        title="Animation"
+                        hint="How much movement you can stand over six hours at a screen"
                       />
 
                       {/* Окремий рубильник понад трьома режимами: коли людина
@@ -713,7 +757,7 @@ export default function SettingsModal() {
                         }}
                       >
                         <ZapOff size={15} strokeWidth={2.2} style={{ opacity: 0.7 }} />
-                        Вимкнути всі анімації
+                        Turn off all animation
                       </button>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3" style={{ marginTop: 12, gap: 12 }}>
@@ -727,8 +771,8 @@ export default function SettingsModal() {
                               style={cardStyle(on)}
                               {...hoverLine(on)}
                             >
-                              <div style={cardTitle(on)}>{m.label}</div>
-                              <div style={cardHint}>{m.hint}</div>
+                              <div style={cardTitle(on)}>{label('motion', m)}</div>
+                              <div style={cardHint}>{hintOf('motion', m)}</div>
                             </button>
                           );
                         })}
@@ -738,10 +782,10 @@ export default function SettingsModal() {
                           «спокійних»: той режим сам по собі прибирає фон, і
                           активний тумблер поруч обіцяв би те, чого не буде. */}
                       <Toggle
-                        label="Живий фон"
+                        label="Live background"
                         hint={s.motion === 'calm'
-                          ? 'Спокійні анімації вже прибирають фон'
-                          : 'Крапки, що дрейфують і розходяться від курсора'}
+                          ? 'Calm animation already removes the background'
+                          : 'Drifting dots that scatter away from the cursor'}
                         on={s.liveBg && s.motion === 'full'}
                         disabled={s.motion !== 'full'}
                         onClick={() => s.set({ liveBg: !s.liveBg })}
@@ -750,8 +794,8 @@ export default function SettingsModal() {
 
                     <div>
                       <Head
-                        title="Світло за курсором"
-                        hint="Ореол, що йде за мишкою по картках. Окремо від анімацій — можна лишити рух і прибрати світло"
+                        title="Glow under the cursor"
+                        hint="A halo that follows the mouse across cards. Separate from animation — you can keep the motion and drop the glow"
                       />
                       <div className="grid grid-cols-1 sm:grid-cols-2" style={{ marginTop: 20, gap: 12 }}>
                         {FX.map((f) => {
@@ -786,16 +830,16 @@ export default function SettingsModal() {
                                     boxShadow: f.value >= 1 ? `0 0 10px rgba(${T.accRgb},0.7)` : 'none',
                                   }}
                                 />
-                                <div style={cardTitle(on)}>{f.label}</div>
+                                <div style={cardTitle(on)}>{label('fx', f)}</div>
                               </div>
-                              <div style={{ ...cardHint, paddingLeft: 22 }}>{f.hint}</div>
+                              <div style={{ ...cardHint, paddingLeft: 22 }}>{hintOf('fx', f)}</div>
                             </button>
                           );
                         })}
                       </div>
 
                       {s.motion === 'off' && (
-                        <Note>Анімації вимкнені — світло теж не вмикається. Поверни рух, щоб налаштувати яскравість.</Note>
+                        <Note>Animation is off, so the glow stays off too. Turn motion back on to set its brightness.</Note>
                       )}
                     </div>
                   </div>
@@ -805,10 +849,10 @@ export default function SettingsModal() {
                 {tab === 'menu' && (
                   <div style={{ maxWidth: 940 }}>
                     <Head
-                      title="Розділи в меню"
+                      title="Sections in the menu"
                       hint={hiddenCount
-                        ? `${hiddenCount} прибрано. Сховане не видаляється — дані лишаються, зникає тільки пункт.`
-                        : 'Прибери те, чим не користуєшся. Дані лишаться, зникне тільки пункт меню.'}
+                        ? `${hiddenCount} hidden. Hiding deletes nothing — the data stays, only the menu item goes.`
+                        : 'Hide what you don’t use. The data stays, only the menu item goes.'}
                     />
 
                     <div className="flex flex-col" style={{ marginTop: 28, gap: 26 }}>
@@ -927,7 +971,7 @@ function PasswordBlock({ armed, onDone }) {
       if (error) throw error;
       setSent(true);
       startCooldown();
-      notify.success('Лист надіслано', `Посилання на зміну пароля — на ${user?.email}.`);
+      notify.success('Email sent', `A password change link is on its way to ${user?.email}.`);
     } catch (e) {
       /* Найчастіша помилка тут — серверний ліміт Supabase на частоту
          листів. Сирий англійський текст лякає без потреби, тому
@@ -936,9 +980,9 @@ function PasswordBlock({ armed, onDone }) {
       const seconds = raw.match(/after (\d+) seconds?/i)?.[1];
       if (seconds) {
         startCooldown(Number(seconds));
-        notify.error('Зачекайте трохи', `Наступний лист можна надіслати через ${seconds} с.`);
+        notify.error('Hold on a moment', `The next email can be sent in ${seconds} s.`);
       } else {
-        notify.error('Не вдалось надіслати', raw || 'Спробуйте ще раз за хвилину.');
+        notify.error('Couldn’t send it', raw || 'Try again in a minute.');
       }
     } finally {
       setSending(false);
@@ -951,7 +995,7 @@ function PasswordBlock({ armed, onDone }) {
 
   return (
     <div>
-      <Label>Пароль</Label>
+      <Label>Password</Label>
       <div
         className="flex items-center"
         style={{
@@ -980,12 +1024,12 @@ function PasswordBlock({ armed, onDone }) {
 
         <div className="min-w-0 flex-1">
           <div style={{ fontFamily: T.sans, fontSize: 15.5, fontWeight: 600, color: T.text }}>
-            {sent ? 'Лист надіслано' : 'Змінити пароль'}
+            {sent ? 'Email sent' : 'Change password'}
           </div>
           <div style={{ fontFamily: T.sans, marginTop: 3, fontSize: 13, color: T.text3 }}>
             {sent
-              ? 'Відкрий посилання з листа — і задай новий пароль'
-              : 'Надішлемо посилання на пошту'}
+              ? 'Open the link from the email and set a new password'
+              : 'We’ll send a link to your email'}
           </div>
         </div>
 
@@ -1011,17 +1055,17 @@ function PasswordBlock({ armed, onDone }) {
         >
           {sending && <Loader2 size={13} className="animate-spin" />}
           {left > 0
-            ? `Ще раз — ${left} с`
+            ? `Again in ${left} s`
             : sending
-              ? 'Надсилаємо…'
-              : sent ? 'Надіслати ще раз' : 'Надіслати посилання'}
+              ? 'Sending…'
+              : sent ? 'Send again' : 'Send the link'}
         </button>
       </div>
 
       {sent && (
         <Note>
-          Якщо листа немає — зазирни у теку «Спам». Поточний пароль працює,
-          доки не заданий новий.
+          No email? Check the Spam folder. Your current password keeps working
+          until a new one is set.
         </Note>
       )}
     </div>
@@ -1054,15 +1098,15 @@ function NewPasswordForm({ onDone }) {
       const { error } = await supabase.auth.updateUser({ password: pass });
       if (error) throw error;
       endRecoveryFlow();
-      notify.success('Пароль змінено', 'Наступного разу заходь уже з новим.');
+      notify.success('Password changed', 'Use the new one next time you sign in.');
       onDone();
     } catch (e2) {
       const raw = String(e2?.message || '');
       /* Supabase відмовляє, якщо новий пароль дорівнює старому. Сирий
          англійський текст тут нічого не пояснює. */
       setErr(/should be different/i.test(raw)
-        ? 'Це той самий пароль, що й зараз. Придумай інший.'
-        : raw || 'Не вдалось зберегти. Спробуй ще раз.');
+        ? 'That’s the password you already have. Pick a different one.'
+        : raw || 'Couldn’t save it. Try again.');
     } finally {
       setSaving(false);
     }
@@ -1082,7 +1126,7 @@ function NewPasswordForm({ onDone }) {
 
   return (
     <form onSubmit={save}>
-      <Label>Новий пароль</Label>
+      <Label>New password</Label>
 
       <div
         style={{
@@ -1096,7 +1140,7 @@ function NewPasswordForm({ onDone }) {
         <div className="flex items-center" style={{ gap: 11 }}>
           <KeyRound size={15} strokeWidth={2.2} style={{ color: T.acc, flex: 'none' }} />
           <span style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text2, lineHeight: '20px' }}>
-            Посилання підтверджено — задай новий пароль
+            Link confirmed — set your new password
           </span>
         </div>
 
@@ -1107,7 +1151,7 @@ function NewPasswordForm({ onDone }) {
             autoFocus
             autoComplete="new-password"
             onChange={(e) => { setPass(e.target.value); setErr(''); }}
-            placeholder={`Новий пароль — від ${PASS_MIN} символів`}
+            placeholder={`New password — ${PASS_MIN} characters or more`}
             className="w-full outline-none"
             style={field(tooShort)}
             onFocus={(e) => { if (!tooShort) e.currentTarget.style.borderColor = T.acc; }}
@@ -1118,7 +1162,7 @@ function NewPasswordForm({ onDone }) {
           <button
             type="button"
             onClick={() => setShow((v) => !v)}
-            aria-label={show ? 'Сховати пароль' : 'Показати пароль'}
+            aria-label={show ? 'Hide password' : 'Show password'}
             className="absolute grid place-items-center"
             style={{
               right: 8, top: 8, width: 38, height: 38,
@@ -1136,7 +1180,7 @@ function NewPasswordForm({ onDone }) {
           value={pass2}
           autoComplete="new-password"
           onChange={(e) => { setPass2(e.target.value); setErr(''); }}
-          placeholder="Ще раз — для певності"
+          placeholder="Once more, to be sure"
           className="w-full outline-none"
           style={{ ...field(mismatch), marginTop: 10, paddingRight: 18 }}
           onFocus={(e) => { if (!mismatch) e.currentTarget.style.borderColor = T.acc; }}
@@ -1145,7 +1189,7 @@ function NewPasswordForm({ onDone }) {
 
         {(mismatch || tooShort || err) && (
           <div style={{ fontFamily: T.sans, marginTop: 10, fontSize: 13, color: T.bad, lineHeight: '19px' }}>
-            {err || (tooShort ? `Замало — потрібно щонайменше ${PASS_MIN} символів.` : 'Паролі не збігаються.')}
+            {err || (tooShort ? `Too short — ${PASS_MIN} characters minimum.` : 'The passwords don’t match.')}
           </div>
         )}
 
@@ -1169,7 +1213,7 @@ function NewPasswordForm({ onDone }) {
           }}
         >
           {saving && <Loader2 size={15} className="animate-spin" />}
-          {saving ? 'Зберігаємо…' : 'Зберегти пароль'}
+          {saving ? 'Saving…' : 'Save password'}
         </button>
       </div>
     </form>
