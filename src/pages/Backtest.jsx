@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Search, X, Loader2, FlaskConical, Trash2, ArrowDownUp, Layers,
+  Plus, Search, X, Loader2, FlaskConical, Trash2, Layers,
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
@@ -10,9 +10,21 @@ import { useAuth } from '../context/AuthContext';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import { computeStats, fmtR, fmtPF } from '../lib/backtestStats';
 import { DEMO_SESSIONS } from '../lib/backtestDemo';
-import { SoftCard } from '../components/ui/Hovers';
+import { ACT } from '../components/backtest/accent';
 import BacktestCard from '../components/backtest/BacktestCard';
 import NewBacktestModal from '../components/backtest/NewBacktestModal';
+
+/* «1 бектест», «3 бектести», «5 бектестів». Без цього виходило
+   «3 бектестів» — рядок, що виглядає як помилка набору. Окремий
+   випадок для 11–14: там завжди форма множини. */
+const plural = (n, one, few, many) => {
+  const t = n % 100;
+  if (t >= 11 && t <= 14) return many;
+  const d = n % 10;
+  if (d === 1) return one;
+  if (d >= 2 && d <= 4) return few;
+  return many;
+};
 
 /* ==================================================================
    Головна бектестів.
@@ -34,39 +46,83 @@ function Summary({ sessions }) {
     };
   }, [sessions]);
 
+  /* Кожна плитка має свій колір, а не спільний акцент. Пʼять
+     однакових фіолетових прямокутників читаються як орнамент; коли
+     кожна цифра має свій відтінок, погляд знаходить потрібну, не
+     перечитуючи підписи. */
   const items = [
-    { label: 'Бектестів', value: agg.count },
-    { label: 'Угод усього', value: agg.trades },
-    { label: 'Сумарний R', value: agg.trades ? fmtR(agg.netR) : '—', color: agg.netR > 0 ? T.ok : agg.netR < 0 ? T.bad : T.text },
-    { label: 'Win rate', value: agg.trades ? `${agg.winrate.toFixed(0)}%` : '—' },
-    { label: 'Profit factor', value: agg.trades ? fmtPF(agg.pf) : '—', color: agg.pf >= 1.5 ? T.ok : agg.pf < 1 && agg.trades ? T.bad : T.text },
+    { label: 'Бектестів', value: agg.count, hue: ACT.tint, rgb: ACT.rgb },
+    { label: 'Угод усього', value: agg.trades, hue: T.info, rgb: T.infoRgb },
+    {
+      label: 'Сумарний R',
+      value: agg.trades ? fmtR(agg.netR) : '—',
+      hue: agg.netR >= 0 ? T.ok : T.bad,
+      rgb: agg.netR >= 0 ? T.okRgb : T.badRgb,
+      big: true,
+    },
+    { label: 'Win rate', value: agg.trades ? `${agg.winrate.toFixed(0)}%` : '—', hue: T.warn, rgb: T.warnRgb },
+    {
+      label: 'Profit factor',
+      value: agg.trades ? fmtPF(agg.pf) : '—',
+      hue: agg.pf >= 1.5 ? T.ok : agg.pf < 1 && agg.trades ? T.bad : T.text2,
+      rgb: agg.pf >= 1.5 ? T.okRgb : agg.pf < 1 && agg.trades ? T.badRgb : ACT.rgb,
+    },
   ];
 
   return (
-    <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-3 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
       {items.map((it, i) => (
         <motion.div
           key={it.label}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, delay: i * 0.04, ease: EASE }}
+          className="group relative min-w-0 overflow-hidden"
+          style={{
+            padding: '16px 18px',
+            borderRadius: 16,
+            background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.surface})`,
+            border: `1px solid ${T.line}`,
+            transition: 'border-color .22s, box-shadow .22s, transform .22s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = `rgba(${it.rgb},0.45)`;
+            e.currentTarget.style.boxShadow = `0 18px 40px -26px rgba(${it.rgb},0.55)`;
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = T.line;
+            e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.transform = 'none';
+          }}
         >
-          <SoftCard className="min-w-0 px-4 py-3.5">
-            <div
-              className="truncate text-[12px] font-semibold uppercase tracking-[0.09em]"
-              style={{ fontFamily: T.sans, color: T.text4 }}
-              title={it.label}
-            >
-              {it.label}
-            </div>
-            <div
-              className="mt-1.5 truncate text-[22px] font-bold tabular-nums leading-none"
-              style={{ fontFamily: T.display, color: it.color || T.text }}
-              title={String(it.value)}
-            >
-              {it.value}
-            </div>
-          </SoftCard>
+          {/* Ореол проявляється на наведенні. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            style={{
+              inset: -40,
+              background: `radial-gradient(120px circle at 50% 0%, rgba(${it.rgb},0.16), transparent 70%)`,
+            }}
+          />
+
+          <div
+            className="relative truncate uppercase"
+            style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 600, letterSpacing: '1.6px', color: T.text3 }}
+            title={it.label}
+          >
+            {it.label}
+          </div>
+          <div
+            className="relative mt-2 truncate tabular-nums leading-none"
+            style={{
+              fontFamily: T.mono, fontSize: it.big ? 26 : 24,
+              fontWeight: 600, letterSpacing: '-0.8px', color: it.hue,
+            }}
+            title={String(it.value)}
+          >
+            {it.value}
+          </div>
         </motion.div>
       ))}
     </div>
@@ -175,10 +231,19 @@ export default function Backtest() {
     });
   }, [sessions, search, sort]);
 
+  /* Загальна кількість угод для підзаголовка: у макеті поруч із
+     кількістю бектестів. */
+  const totalTrades = useMemo(
+    () => sessions.reduce((n, x) => n + (x.trades?.length || 0), 0),
+    [sessions],
+  );
+
+  /* Суперлативи, а не назви ключів: «Highest R» одразу каже, що
+     згори найкращі, тоді як «За R» лишало здогадуватись про напрям. */
   const SORTS = [
-    { key: 'recent', label: 'нові' },
-    { key: 'netR', label: 'за R' },
-    { key: 'trades', label: 'за угодами' },
+    { key: 'recent', label: 'Newest' },
+    { key: 'netR', label: 'Highest R' },
+    { key: 'trades', label: 'Most trades' },
   ];
 
   return (
@@ -186,94 +251,147 @@ export default function Backtest() {
 
       <div className="relative z-10 mx-auto w-full max-w-[1800px] px-4 pb-24 pt-5 sm:px-6 lg:w-[92%] lg:px-0 lg:pb-32 lg:pt-7">
 
-        {/* ─────────── Хедер ─────────── */}
+        {/* ─────────── Шапка ─────────── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between"
+          className="flex flex-wrap items-end justify-between"
+          style={{ gap: 36, padding: '10px 0 30px' }}
         >
           <div className="min-w-0">
-            <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
-              Backtesting
+            <div className="flex items-center" style={{ gap: 9 }}>
+              {/* Крапка з ореолом. Дрібниця, але саме вона перетворює
+                  надпис на позначку розділу, а не на службовий рядок. */}
+              <span
+                style={{
+                  width: 6, height: 6, borderRadius: 99,
+                  background: ACT.tint, boxShadow: `0 0 12px ${ACT.tint}`,
+                }}
+              />
+              <span
+                className="uppercase"
+                style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 600, letterSpacing: '2.6px', color: ACT.tint }}
+              >
+                Backtesting
+              </span>
             </div>
+
             <h1
-              className="text-[28px] font-bold leading-none sm:text-[38px] lg:text-[46px]"
-              style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
+              className="text-[30px] sm:text-[40px]"
+              style={{
+                fontFamily: T.display, marginTop: 13, fontWeight: 600,
+                letterSpacing: '-1.3px', lineHeight: 1, color: T.text,
+              }}
             >
               Бектести
             </h1>
-            <p className="mt-3 text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+
+            <p style={{ fontFamily: T.sans, marginTop: 11, fontSize: 14, color: T.text2 }}>
               {usingDemo
                 ? 'Це демо-дані — створи свій бектест, і вони зникнуть.'
-                : `${sessions.length} ${sessions.length === 1 ? 'бектест' : 'бектестів'} · статистика рахується по всіх угодах`}
+                : `${sessions.length} ${plural(sessions.length, 'бектест', 'бектести', 'бектестів')} · ${totalTrades} ${plural(totalTrades, 'угода', 'угоди', 'угод')}`}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div
-              className="flex h-[42px] w-full items-center gap-2.5 rounded-xl px-3.5 sm:w-[240px]"
-              style={{ background: T.surface, border: `1px solid ${T.line}` }}
-            >
-              <Search size={15} strokeWidth={2.2} style={{ color: T.text4 }} />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Назва, актив, стратегія…"
-                className="w-full bg-transparent text-[14px] outline-none"
-                style={{ fontFamily: T.sans, color: T.text }}
-              />
-              {search && (
-                <button onClick={() => setSearch('')} style={{ color: T.text4 }}>
-                  <X size={14} strokeWidth={2.5} />
-                </button>
-              )}
-            </div>
-
-            <div className="flex h-[42px] items-center gap-1 rounded-xl p-1" style={{ background: T.surface, border: `1px solid ${T.line}` }}>
-              <ArrowDownUp size={14} strokeWidth={2.2} style={{ color: T.text4, marginLeft: 6, marginRight: 2 }} />
-              {SORTS.map((s) => {
-                const on = sort === s.key;
-                return (
-                  <button
-                    key={s.key}
-                    onClick={() => setSort(s.key)}
-                    className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors"
-                    style={{
-                      fontFamily: T.sans,
-                      color: on ? T.acc : T.text3,
-                      background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              onClick={() => setCreating(true)}
-              className="group inline-flex h-[42px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-              style={{
-                background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans,
-                boxShadow: `0 6px 18px -8px rgba(${T.accRgb},0.6)`,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.boxShadow = `0 10px 26px -8px rgba(${T.accRgb},0.75)`)}
-              onMouseLeave={(e) => (e.currentTarget.style.boxShadow = `0 6px 18px -8px rgba(${T.accRgb},0.6)`)}
-            >
-              <Plus size={16} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
-              Новий бектест
-            </button>
-          </div>
+          <button
+            onClick={() => setCreating(true)}
+            className="flex shrink-0 items-center"
+            style={{
+              fontFamily: T.sans, gap: 10, height: 46, padding: '0 22px', borderRadius: 13,
+              background: `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`,
+              color: '#fff', fontSize: 14.5, fontWeight: 600,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 30px -12px rgba(${ACT.rgb},0.9)`,
+              transition: 'all .18s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.background = `linear-gradient(180deg, ${ACT.hoverFrom}, ${ACT.hoverTo})`;
+              e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.27), 0 16px 36px -12px rgba(${ACT.rgb},0.95)`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.background = `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`;
+              e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 30px -12px rgba(${ACT.rgb},0.9)`;
+            }}
+          >
+            <Plus size={16} strokeWidth={2.6} />
+            Новий бектест
+          </button>
         </motion.div>
 
         {loading ? (
           <div className="grid place-items-center py-32">
-            <Loader2 size={30} className="animate-spin" style={{ color: T.acc }} />
+            <Loader2 size={30} className="animate-spin" style={{ color: ACT.tint }} />
           </div>
         ) : (
           <>
+            {/* Зведення над фільтрами, а не під ними: це підсумок усього
+                розділу, і читається він до того, як щось відбирати. */}
             {sessions.length > 0 && <Summary sessions={sessions} />}
+
+            {/* ─────────── Фільтри ─────────── */}
+            <div
+              className="flex flex-wrap items-center justify-between"
+              style={{
+                gap: 16, marginTop: 22, padding: '14px 6px 18px',
+                borderTop: `1px solid ${T.line}`,
+                borderBottom: `1px solid ${T.line}`,
+              }}
+            >
+              <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
+                {SORTS.map((x) => {
+                  const on = sort === x.key;
+                  return (
+                    <button
+                      key={x.key}
+                      onClick={() => setSort(x.key)}
+                      style={{
+                        fontFamily: T.sans, height: 36, padding: '0 16px', borderRadius: 10,
+                        fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap',
+                        transition: 'all .18s',
+                        color: on ? '#fff' : T.text2,
+                        background: on
+                          ? `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`
+                          : 'rgba(255,255,255,0.03)',
+                        boxShadow: on
+                          ? `inset 0 1px 0 rgba(255,255,255,0.2), 0 8px 20px -10px rgba(${ACT.rgb},0.9)`
+                          : `inset 0 0 0 1px ${T.line}`,
+                      }}
+                      onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text; }}
+                      onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
+                    >
+                      {x.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div
+                className="edge-search flex items-center"
+                style={{
+                  gap: 10, height: 40, padding: '0 15px', width: 250, borderRadius: 11,
+                  background: T.sunken, border: `1px solid ${T.line}`,
+                  transition: 'border-color .18s, box-shadow .18s',
+                }}
+              >
+                <Search size={15} strokeWidth={2} className="shrink-0" style={{ color: T.text3 }} />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Пошук"
+                  className="min-w-0 flex-1 bg-transparent outline-none"
+                  style={{ fontFamily: T.sans, fontSize: 14, color: T.text }}
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} className="shrink-0" style={{ color: T.text3 }}>
+                    <X size={14} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 22 }} />
 
             {visible.length === 0 ? (
               <div className="flex flex-col items-center px-5 py-24 text-center">
@@ -294,13 +412,22 @@ export default function Backtest() {
                 <button
                   onClick={() => (sessions.length === 0 ? setCreating(true) : setSearch(''))}
                   className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-bold"
-                  style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+                  style={{
+                    fontFamily: T.sans,
+                    background: `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`,
+                    color: '#fff',
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 30px -12px rgba(${ACT.rgb},0.9)`,
+                  }}
                 >
                   {sessions.length === 0 ? <><Plus size={15} strokeWidth={3} /> Створити перший</> : 'Скинути пошук'}
                 </button>
               </div>
             ) : (
-              <motion.div layout className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+              <motion.div
+                layout
+                className="grid gap-[18px]"
+                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))' }}
+              >
                 <AnimatePresence mode="popLayout" initial={false}>
                   {visible.map((s) => (
                     <BacktestCard

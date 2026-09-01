@@ -1,56 +1,100 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import TextareaAutosize from 'react-textarea-autosize';
-import { X, Check, Trash2, ImagePlus, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Check, Trash2, ImagePlus, Loader2, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
-import { SESSIONS, QUALITIES, metaOf, pairOf } from '../../lib/backtestStats';
+import { SESSIONS, QUALITIES, COMMON_PAIRS, metaOf, pairOf } from '../../lib/backtestStats';
+import { ACT, act, actGradient, actGradientHover } from './accent';
+import DateField from '../ui/DateField';
 
 /* ==================================================================
    Деталі угоди бектесту.
-   Тільки те, що реально потрібно, щоб потім розібрати угоду:
-   актив, напрям і результат, R, сесія, якість, сетап, скрін і запис.
-   Ніяких рівнів входу та анкет — у бектесті вони не окупаються.
+   Дві колонки: зліва все, що впливає на статистику, справа — те, що
+   пишеться довільно (скрін і запис). Так форма читається за один
+   погляд і не перетворюється на анкету з двадцяти полів.
 ================================================================== */
-
-const qualColor = (q) => ({ 'A+': T.ok, A: T.acc, B: T.warn, C: T.bad }[q] || T.text3);
-const resColor = (r) => ({ WIN: T.ok, LOSS: T.bad, BE: T.text3 }[r] || T.text3);
 
 const SETUP_TAGS = ['Silver Bullet', 'SFP', 'Manipulation', 'BOS', 'OB retest', 'FVG', 'Swing', 'FOMO', 'Impatience'];
 
-function Field({ label, children, hint }) {
+/* Тип активу — підказка в списку, щоб не вчитуватись у тікер */
+const KIND = {
+  NAS100: 'Індекси', US30: 'Індекси', GER40: 'Індекси',
+  XAUUSD: 'Метали',
+  BTCUSD: 'Крипто', ETHUSD: 'Крипто',
+  EURUSD: 'Forex', GBPUSD: 'Forex', USDJPY: 'Forex',
+};
+
+/* Заливка активного сегмента. Напрям і результат беруть семантичний
+   колір, сесії — свій власний (їх три, і кольором вони впізнаються
+   швидше за текст), решта — акцент розділу. */
+const fill = (rgb) => `linear-gradient(180deg, rgba(${rgb},1), rgba(${rgb},0.82))`;
+
+const SEG_TONE = {
+  LONG: T.okRgb, WIN: T.okRgb,
+  SHORT: T.badRgb, LOSS: T.badRgb,
+  Asia: T.badRgb, London: T.infoRgb, 'New York': T.okRgb,
+};
+
+const resTone = (r) => (r === 'WIN' ? T.okRgb : r === 'LOSS' ? T.badRgb : ACT.rgb);
+
+/* Пружина під пальці: плавний хід без пружинення в кінці. Та сама
+   в усіх перемикачах розділу, щоб вибір усюди відчувався однаково. */
+const SEG_SPRING = { type: 'spring', stiffness: 380, damping: 34, mass: 0.8 };
+
+function Label({ children, hint, right }) {
   return (
-    <div className="min-w-0">
-      <div className="mb-2 flex items-baseline gap-2">
-        <span className="text-[12.5px] font-bold uppercase tracking-[0.12em]" style={{ fontFamily: T.sans, color: T.text3 }}>{label}</span>
-        {hint && <span className="truncate text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>{hint}</span>}
+    <div className="flex items-baseline justify-between gap-2.5">
+      <div className="flex min-w-0 items-baseline gap-2">
+        <span
+          className="text-[9.5px] font-bold uppercase tracking-[0.19em]"
+          style={{ fontFamily: T.mono, color: T.text3 }}
+        >
+          {children}
+        </span>
+        {hint && <span className="truncate text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>{hint}</span>}
       </div>
-      {children}
+      {right}
     </div>
   );
 }
 
-/* Сегмент: активний — залитий кольором, неактивний просто світлішає.
-   Один стан, один перехід, нічого не стрибає. */
-function Seg({ options, value, onChange, colorOf, full }) {
+/* Заливка не перемальовується, а переїжджає: градієнт неможливо
+   анімувати через CSS, тому активний стан — окремий шар із layoutId,
+   який framer переносить пружиною з попередньої кнопки на нову. */
+function Seg({ id, options, value, onChange }) {
   return (
-    <div className={`flex items-center gap-1 rounded-xl p-1 ${full ? 'w-full' : 'w-fit'}`} style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
+    <div
+      className="mt-[9px] flex w-full items-center gap-[5px] rounded-xl p-[5px]"
+      style={{ background: T.sunken, border: `1px solid ${T.line}` }}
+    >
       {options.map((o) => {
         const on = value === o;
-        const c = colorOf ? colorOf(o) : T.acc;
+        const rgb = SEG_TONE[o] || ACT.rgb;
         return (
           <button
             key={o}
             onClick={() => onChange(o)}
-            className={`whitespace-nowrap rounded-lg px-3 py-2 text-[13.5px] font-bold transition-colors duration-200 ${full ? 'flex-1' : ''}`}
+            className="relative flex h-[34px] flex-1 items-center justify-center whitespace-nowrap rounded-[9px] px-2.5 text-[12px] font-bold tracking-[0.07em]"
             style={{
-              fontFamily: T.sans,
-              color: on ? c : T.text3,
-              background: on ? `${c}1f` : 'transparent',
-              border: `1px solid ${on ? `${c}3d` : 'transparent'}`,
+              fontFamily: T.mono,
+              color: on ? '#fff' : T.text3,
+              transition: 'color .25s ease',
+              zIndex: 1,
             }}
-            onMouseEnter={(e) => { if (!on) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = T.text; } }}
-            onMouseLeave={(e) => { if (!on) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+            onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
+            onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
           >
+            {on && (
+              <motion.span
+                layoutId={`seg-${id}`}
+                transition={SEG_SPRING}
+                className="absolute inset-0 rounded-[9px]"
+                style={{
+                  background: fill(rgb),
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
+                  zIndex: -1,
+                }}
+              />
+            )}
             {o}
           </button>
         );
@@ -59,25 +103,150 @@ function Seg({ options, value, onChange, colorOf, full }) {
   );
 }
 
-/* Поле: на ховері рамка світлішає, на фокусі стає акцентною */
-function Input({ value, onChange, placeholder, mono, className = '', ...rest }) {
+/* Рамка поля: спокійна в спокої, акцентна з ореолом у фокусі */
+const fieldStyle = (focused) => ({
+  background: T.sunken,
+  border: `1px solid ${focused ? ACT.to : T.line}`,
+  boxShadow: focused ? `0 0 0 3px ${act(0.13)}` : 'none',
+  transition: 'border-color .18s, box-shadow .18s',
+});
+
+function AssetPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+  const box = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    /* Escape має закривати спершу випадайку, а не всю модалку. Ловимо
+       на фазі перехоплення й глушимо подію — інакше вікно закриється
+       разом зі списком, і людина втратить незбережену угоду. */
+    const esc = (e) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc, true);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc, true);
+    };
+  }, [open]);
+
+  const pick = (p) => { onChange(p); setOpen(false); setDraft(''); };
+  const commit = () => { const v = draft.trim().toUpperCase(); if (v) pick(v); };
+  const options = [...new Set([value, ...COMMON_PAIRS].filter(Boolean))];
+
   return (
-    <input
-      value={value ?? ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className={`h-11 w-full rounded-xl px-3.5 text-[14px] outline-none transition-colors duration-200 ${className}`}
-      style={{
-        background: T.sunken, border: `1px solid ${T.line}`, color: T.text,
-        fontFamily: mono ? T.mono : T.sans,
-      }}
-      onMouseEnter={(e) => { if (document.activeElement !== e.currentTarget) e.currentTarget.style.borderColor = T.lineHi; }}
-      onMouseLeave={(e) => { if (document.activeElement !== e.currentTarget) e.currentTarget.style.borderColor = T.line; }}
-      onFocus={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
-      onBlur={(e) => (e.currentTarget.style.borderColor = T.line)}
-      {...rest}
-    />
+    <div ref={box} className="relative mt-[9px]">
+      <button
+        onClick={() => setOpen((s) => !s)}
+        className="flex h-[46px] w-full items-center justify-between gap-2.5 rounded-xl px-3.5"
+        style={fieldStyle(open)}
+        onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = T.lineHi; }}
+        onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = T.line; }}
+      >
+        <span
+          className="truncate text-[14.5px] font-bold tracking-[0.05em]"
+          style={{ fontFamily: T.mono, color: value ? T.text : T.text4 }}
+        >
+          {value || 'актив'}
+        </span>
+        <ChevronDown
+          size={15}
+          strokeWidth={2.2}
+          className="shrink-0"
+          style={{ color: ACT.tint, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.16, ease: EASE }}
+            className="absolute inset-x-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-[14px] p-1.5"
+            style={{
+              /* Суцільний фон, а не панельна змінна: --edge-panel
+                 напівпрозорий (він розрахований на розмиту бічну
+                 панель), і крізь випадайку просвічував вміст під нею. */
+              background: T.surfaceHi,
+              border: `1px solid ${T.lineHi}`,
+              boxShadow: 'var(--edge-panel-shadow, 0 24px 50px -18px rgba(0,0,0,0.9))',
+            }}
+          >
+            <div className="custom-scrollbar max-h-[230px] overflow-y-auto">
+              {options.map((p) => {
+                const on = p === value;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => pick(p)}
+                    className="flex w-full items-center justify-between gap-3.5 rounded-[10px] px-3 py-2.5 text-left transition-colors"
+                    style={{ background: on ? act(0.18) : 'transparent' }}
+                    onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.surfaceHi; }}
+                    onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <span className="text-[13px] font-bold tracking-[0.05em]" style={{ fontFamily: T.mono, color: T.text }}>{p}</span>
+                    <span className="text-[11.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>{KIND[p] || ''}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-1.5 pt-1.5" style={{ borderTop: `1px solid ${T.line}` }}>
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value.toUpperCase())}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
+                onBlur={commit}
+                placeholder="свій актив"
+                className="h-8 w-full rounded-lg bg-transparent px-3 text-[13px] font-bold outline-none"
+                style={{ fontFamily: T.mono, color: T.text }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
+}
+
+/* ==================================================================
+   Модалка центрується не по вікну, а по робочій області.
+
+   Сайдбар непрозорий і займає ліві ~300px. Вікно, відцентроване по
+   viewport, математично стоїть посередині, але виглядає зсунутим
+   уліво: половину його «половини» з'їдає меню. Томуміряємо <main>
+   і накриваємо саме його.
+
+   ResizeObserver, а не одноразовий вимір: сайдбар згортається, і
+   робоча область при цьому міняє ширину під уже відкритою модалкою.
+   Якщо <main> немає (публічна сторінка) — лишається весь екран.
+================================================================== */
+function useContentBox() {
+  const [box, setBox] = useState(null);
+
+  useEffect(() => {
+    const main = document.querySelector('main');
+    if (!main) return undefined;
+
+    const measure = () => {
+      const r = main.getBoundingClientRect();
+      setBox({ left: r.left, width: r.width });
+    };
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(main);
+    window.addEventListener('resize', measure);
+    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
+
+  return box;
 }
 
 function IconBtn({ icon: Icon, label, onClick, danger }) {
@@ -85,11 +254,11 @@ function IconBtn({ icon: Icon, label, onClick, danger }) {
     <button
       onClick={onClick}
       title={label}
-      className="grid h-9 w-9 place-items-center rounded-xl transition-all duration-200 active:scale-95"
+      className="grid h-[38px] w-[38px] place-items-center rounded-[11px] transition-all duration-200 active:scale-95"
       style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2 }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = danger ? `rgba(${T.badRgb},0.10)` : T.surfaceHi;
-        e.currentTarget.style.borderColor = danger ? `rgba(${T.badRgb},0.35)` : T.lineHi;
+        e.currentTarget.style.background = danger ? `rgba(${T.badRgb},0.12)` : T.surfaceHi;
+        e.currentTarget.style.borderColor = danger ? `rgba(${T.badRgb},0.4)` : T.lineHi;
         e.currentTarget.style.color = danger ? T.bad : T.text;
       }}
       onMouseLeave={(e) => {
@@ -98,7 +267,7 @@ function IconBtn({ icon: Icon, label, onClick, danger }) {
         e.currentTarget.style.color = T.text2;
       }}
     >
-      <Icon size={15} strokeWidth={2.2} />
+      <Icon size={16} strokeWidth={2.1} />
     </button>
   );
 }
@@ -118,6 +287,9 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
     notes: initial?.notes || '',
     screenshot_url: initial?.screenshot_url || null,
   });
+  const [focus, setFocus] = useState(null);
+  const [drop, setDrop] = useState(false);
+  const contentBox = useContentBox();
   const fileRef = useRef(null);
   const set = (p) => setF((s) => ({ ...s, ...p }));
 
@@ -154,14 +326,29 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
     });
   };
 
+  const short = f.type === 'SHORT';
+  const tone = resTone(f.result);
+  const dateLabel = (() => {
+    const d = String(f.date).split('-');
+    return d.length === 3 ? `${d[2]}.${d[1]}.${d[0]}` : f.date;
+  })();
+
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       onClick={onClose}
-      className="fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto p-3 sm:p-8"
-      style={{ background: 'rgba(6,6,8,0.86)', backdropFilter: 'blur(10px)' }}
+      className="fixed inset-y-0 z-[220] overflow-y-auto"
+      style={{
+        left: contentBox ? contentBox.left : 0,
+        width: contentBox ? contentBox.width : '100%',
+        background: 'rgba(6,6,8,0.86)',
+        backdropFilter: 'blur(10px)',
+      }}
     >
+      {/* Обгортка на всю висоту: тільки так вікно стоїть рівно по
+          центру екрана, але прокручується, коли не влазить */}
+      <div className="flex min-h-full items-center justify-center p-3 sm:p-8">
       <motion.div
         initial={{ opacity: 0, y: 16, scale: 0.99 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -169,201 +356,295 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
         transition={{ duration: 0.3, ease: EASE }}
         onClick={(e) => e.stopPropagation()}
         onPaste={onPaste}
-        className="my-auto w-full max-w-[760px] overflow-hidden rounded-3xl"
-        style={{ background: T.surface, border: `1px solid ${T.line}`, boxShadow: '0 40px 100px -30px rgba(0,0,0,0.95)' }}
+        className="relative w-full max-w-[940px] overflow-hidden rounded-[26px]"
+        style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 44px 100px -34px rgba(0,0,0,0.95)' }}
       >
-        {/* шапка */}
+        {/* Волосяна лінія згори — єдине, що видає колір розділу до того,
+            як людина щось натисне */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px"
+          style={{ background: `linear-gradient(90deg, transparent, ${act(0.8)}, transparent)` }}
+        />
+
+        {/* ─────────── Шапка ─────────── */}
         <div
-          className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3.5 sm:px-7"
-          style={{ borderBottom: `1px solid ${T.line}`, background: 'rgba(19,19,22,0.94)', backdropFilter: 'blur(14px)' }}
+          className="flex items-center justify-between gap-5 px-6 py-5"
+          style={{ borderBottom: `1px solid ${T.line}` }}
         >
-          <div
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors duration-200"
-            style={{
-              background: f.type === 'LONG' ? `rgba(${T.okRgb},0.10)` : `rgba(${T.infoRgb},0.10)`,
-              border: `1px solid ${f.type === 'LONG' ? `rgba(${T.okRgb},0.22)` : `rgba(${T.infoRgb},0.22)`}`,
-            }}
-          >
-            {f.type === 'LONG'
-              ? <TrendingUp size={15} strokeWidth={2.4} style={{ color: T.ok }} />
-              : <TrendingDown size={15} strokeWidth={2.4} style={{ color: T.info }} />}
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] transition-all duration-200"
+              style={{
+                background: fill(short ? T.badRgb : T.okRgb),
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 10px 22px -12px rgba(${short ? T.badRgb : T.okRgb},0.9)`,
+              }}
+            >
+              {short
+                ? <TrendingDown size={21} strokeWidth={2} style={{ color: '#fff' }} />
+                : <TrendingUp size={21} strokeWidth={2} style={{ color: '#fff' }} />}
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}>
+                  {f.id ? 'Угода' : 'Нова угода'}
+                </span>
+                <span
+                  className="rounded-[7px] px-2.5 py-1 text-[10.5px] font-bold tracking-[0.1em]"
+                  style={{
+                    fontFamily: T.mono,
+                    color: `rgb(${tone})`,
+                    background: `rgba(${tone},0.12)`,
+                    border: `1px solid rgba(${tone},0.3)`,
+                  }}
+                >
+                  {f.result}
+                </span>
+              </div>
+              <div className="mt-[5px] truncate text-[12.5px]" style={{ fontFamily: T.mono, color: T.text3 }}>
+                {f.pair || 'без активу'} · {f.session} · {dateLabel}
+              </div>
+            </div>
           </div>
 
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[15px] font-bold" style={{ fontFamily: T.display, color: T.text }}>
-              {f.id ? 'Угода' : 'Нова угода'}
-            </div>
-            <div className="truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              {f.pair || 'без активу'} · {f.session}
-            </div>
-          </div>
-
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {f.id && onDelete && <IconBtn icon={Trash2} label="Видалити" onClick={() => onDelete(f.id)} danger />}
             <IconBtn icon={X} label="Закрити (Esc)" onClick={onClose} />
           </div>
         </div>
 
-        <div className="flex flex-col gap-6 px-4 py-5 sm:px-7 sm:py-6">
-          {/* напрям і результат */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Напрям">
-              <Seg full options={['LONG', 'SHORT']} value={f.type} onChange={(v) => set({ type: v })} colorOf={(v) => (v === 'LONG' ? T.ok : T.info)} />
-            </Field>
-            <Field label="Результат">
-              <Seg full options={['WIN', 'LOSS', 'BE']} value={f.result} onChange={(v) => set({ result: v })} colorOf={resColor} />
-            </Field>
-          </div>
-
-          {/* актив · R · дата */}
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Актив">
-              <Input value={f.pair} onChange={(v) => set({ pair: v.toUpperCase() })} placeholder="EURUSD" mono />
-            </Field>
-            <Field label="R" hint={f.result !== 'WIN' ? 'авто' : null}>
-              <Input
-                mono
-                value={f.result === 'WIN' ? f.rr : f.result === 'LOSS' ? '−1' : '0'}
-                onChange={(v) => set({ rr: v.replace(',', '.') })}
-                disabled={f.result !== 'WIN'}
-                inputMode="decimal"
-              />
-            </Field>
-            <Field label="Дата">
-              <input
-                type="date"
-                value={f.date}
-                onChange={(e) => set({ date: e.target.value })}
-                className="h-11 w-full rounded-xl px-3.5 text-[14px] outline-none transition-colors duration-200"
-                style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans, colorScheme: 'dark' }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
-              />
-            </Field>
-          </div>
-
-          {/* сесія · якість */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Сесія">
-              <Seg full options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} />
-            </Field>
-            <Field label="Якість">
-              <Seg full options={QUALITIES} value={f.quality} onChange={(v) => set({ quality: v })} colorOf={qualColor} />
-            </Field>
-          </div>
-
-          {/* сетап */}
-          <Field label="Сетап" hint="можна кілька">
-            <div className="flex flex-wrap gap-2">
-              {SETUP_TAGS.map((tag) => {
-                const on = f.tags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors duration-200"
-                    style={{
-                      fontFamily: T.sans,
-                      color: on ? T.acc : T.text3,
-                      background: on ? `rgba(${T.accRgb},0.12)` : T.sunken,
-                      border: `1px solid ${on ? T.lineAcc : T.line}`,
-                    }}
-                    onMouseEnter={(e) => { if (!on) { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; } }}
-                    onMouseLeave={(e) => { if (!on) { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; } }}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-          </Field>
-
-          {/* графік */}
-          <Field label="Графік" hint="Ctrl+V, файл або посилання">
-            {f.screenshot_url ? (
-              <div
-                className="group relative overflow-hidden rounded-2xl transition-colors duration-200"
-                style={{ border: `1px solid ${T.line}` }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
-              >
-                <img src={f.screenshot_url} alt="" className="block max-h-[340px] w-full object-contain" style={{ background: T.sunken }} />
-                <button
-                  onClick={() => set({ screenshot_url: null })}
-                  title="Прибрати"
-                  className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-lg opacity-0 transition-all duration-200 group-hover:opacity-100"
-                  style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${T.line}`, color: T.text2, backdropFilter: 'blur(8px)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.4)`; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; }}
-                >
-                  <X size={14} strokeWidth={2.6} />
-                </button>
+        <div className="grid lg:grid-cols-[1fr_372px]">
+          {/* ─────────── Ліва колонка: цифри ─────────── */}
+          <div className="flex flex-col gap-[18px] px-6 pb-6 pt-[22px] lg:border-r" style={{ borderColor: T.line }}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Напрям</Label>
+                <Seg id="type" options={['LONG', 'SHORT']} value={f.type} onChange={(v) => set({ type: v })} />
               </div>
-            ) : (
-              <button
-                onClick={() => fileRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); readFile(e.dataTransfer.files?.[0]); }}
-                className="flex h-28 w-full flex-col items-center justify-center gap-2 rounded-2xl text-[13.5px] font-semibold transition-colors duration-200"
-                style={{ background: T.sunken, border: `1px dashed ${T.lineHi}`, color: T.text3, fontFamily: T.sans }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineAcc; e.currentTarget.style.color = T.acc; e.currentTarget.style.background = `rgba(${T.accRgb},0.04)`; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text3; e.currentTarget.style.background = T.sunken; }}
-              >
-                <ImagePlus size={20} strokeWidth={1.9} />
-                Встав скрін графіка
-              </button>
-            )}
-            <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => readFile(e.target.files?.[0])} />
-          </Field>
-
-          {/* запис */}
-          <Field label="Запис">
-            <div
-              className="rounded-2xl transition-colors duration-200"
-              style={{ background: T.sunken, border: `1px solid ${T.line}` }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
-            >
-              <TextareaAutosize
-                value={f.notes}
-                onChange={(e) => set({ notes: e.target.value })}
-                placeholder="Що бачив, чому зайшов, що зробив би інакше."
-                minRows={3}
-                className="w-full resize-none border-none bg-transparent px-4 py-3 outline-none"
-                style={{ fontFamily: T.sans, fontSize: 15, lineHeight: 1.7, color: T.text }}
-              />
+              <div>
+                <Label>Результат</Label>
+                <Seg id="result" options={['WIN', 'LOSS', 'BE']} value={f.result} onChange={(v) => set({ result: v })} />
+              </div>
             </div>
-          </Field>
+
+            <div className="grid gap-3 sm:grid-cols-[1.1fr_1fr_1.15fr]">
+              <div className="min-w-0">
+                <Label>Актив</Label>
+                <AssetPicker value={f.pair} onChange={(v) => set({ pair: v })} />
+              </div>
+
+              <div className="min-w-0">
+                <Label hint={f.result !== 'WIN' ? 'авто' : null}>R</Label>
+                <div
+                  className="mt-[9px] flex h-[46px] items-center overflow-hidden rounded-xl"
+                  style={{ ...fieldStyle(focus === 'r'), opacity: f.result === 'WIN' ? 1 : 0.55 }}
+                >
+                  <input
+                    value={f.result === 'WIN' ? f.rr : f.result === 'LOSS' ? '−1' : '0'}
+                    disabled={f.result !== 'WIN'}
+                    onChange={(e) => set({ rr: e.target.value.replace(',', '.') })}
+                    onFocus={() => setFocus('r')}
+                    onBlur={() => setFocus(null)}
+                    inputMode="decimal"
+                    className="h-full w-full border-none bg-transparent px-3.5 text-[15.5px] font-bold tabular-nums outline-none"
+                    style={{ fontFamily: T.mono, color: T.text }}
+                  />
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <Label>Дата</Label>
+                {/* Наш календар, а не системний: попап ОС світлий і
+                    малюється чужим шрифтом поверх темної модалки */}
+                <div className="mt-[9px]">
+                  <DateField
+                    value={f.date}
+                    onChange={(v) => set({ date: v })}
+                    height={46}
+                    fontSize={14}
+                    fontWeight={500}
+                    alwaysNumeric
+                    accent={ACT.tint}
+                    accentRgb={ACT.rgb}
+                    accentBorder={act(0.45)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="min-w-0">
+                <Label>Сесія</Label>
+                <Seg id="session" options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} />
+              </div>
+              <div className="min-w-0">
+                <Label>Якість</Label>
+                <Seg id="quality" options={QUALITIES} value={f.quality} onChange={(v) => set({ quality: v })} />
+              </div>
+            </div>
+
+            <div>
+              <Label
+                hint="можна кілька"
+                right={f.tags.length ? (
+                  <span className="shrink-0 text-[11px] font-bold" style={{ fontFamily: T.mono, color: ACT.tint }}>
+                    {f.tags.length} обрано
+                  </span>
+                ) : null}
+              >
+                Сетап
+              </Label>
+              <div className="mt-[11px] flex flex-wrap gap-[7px]">
+                {SETUP_TAGS.map((tag) => {
+                  const on = f.tags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className="flex h-[34px] items-center whitespace-nowrap rounded-[10px] px-3.5 text-[13px] font-semibold transition-all duration-200"
+                      style={{
+                        fontFamily: T.sans,
+                        color: on ? T.text : T.text2,
+                        background: on ? act(0.18) : T.surfaceHi,
+                        border: `1px solid ${on ? act(0.5) : T.line}`,
+                      }}
+                      onMouseEnter={(e) => { if (!on) { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; } }}
+                      onMouseLeave={(e) => { if (!on) { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; } }}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* ─────────── Права колонка: скрін і запис ─────────── */}
+          <div className="flex flex-col gap-[18px] px-6 pb-6 pt-[22px]" style={{ background: T.sunken }}>
+            <div>
+              <Label hint="Ctrl+V, файл або посилання">Графік</Label>
+
+              {f.screenshot_url ? (
+                <div
+                  className="group relative mt-[11px] overflow-hidden rounded-2xl"
+                  style={{ border: `1px solid ${T.line}` }}
+                >
+                  <img
+                    src={f.screenshot_url}
+                    alt=""
+                    className="block max-h-[186px] w-full object-contain"
+                    style={{ background: T.bg }}
+                  />
+                  <button
+                    onClick={() => set({ screenshot_url: null })}
+                    title="Прибрати"
+                    className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-lg opacity-0 transition-all duration-200 group-hover:opacity-100"
+                    style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${T.line}`, color: T.text2, backdropFilter: 'blur(8px)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.4)`; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; }}
+                  >
+                    <X size={14} strokeWidth={2.6} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDrop(true); }}
+                  onDragLeave={() => setDrop(false)}
+                  onDrop={(e) => { e.preventDefault(); setDrop(false); readFile(e.dataTransfer.files?.[0]); }}
+                  onMouseEnter={() => setDrop(true)}
+                  onMouseLeave={() => setDrop(false)}
+                  className="mt-[11px] flex h-[186px] w-full flex-col items-center justify-center rounded-2xl px-5 text-center transition-all duration-200"
+                  style={{
+                    background: drop ? act(0.08) : T.bg,
+                    border: `1.5px dashed ${drop ? act(0.66) : T.lineHi}`,
+                  }}
+                >
+                  <span
+                    className="grid h-[46px] w-[46px] place-items-center rounded-[14px]"
+                    style={{ background: act(0.14), border: `1px solid ${act(0.28)}` }}
+                  >
+                    <ImagePlus size={21} strokeWidth={1.7} style={{ color: ACT.tint }} />
+                  </span>
+                  <span className="mt-3 text-[14px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
+                    Встав скрін графіка
+                  </span>
+                  <span className="mt-1.5 text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                    PNG, JPG або посилання TradingView
+                  </span>
+                </button>
+              )}
+              <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => readFile(e.target.files?.[0])} />
+            </div>
+
+            <div className="flex flex-1 flex-col">
+              <Label
+                right={f.notes.length ? (
+                  <span className="shrink-0 text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
+                    {f.notes.length}
+                  </span>
+                ) : null}
+              >
+                Запис
+              </Label>
+              <div
+                className="mt-[11px] flex min-h-[132px] flex-1 overflow-hidden rounded-[14px]"
+                style={fieldStyle(focus === 'n')}
+              >
+                <textarea
+                  value={f.notes}
+                  onChange={(e) => set({ notes: e.target.value })}
+                  onFocus={() => setFocus('n')}
+                  onBlur={() => setFocus(null)}
+                  placeholder="Що бачив, чому зайшов, що зробив би інакше."
+                  className="h-full w-full resize-none border-none bg-transparent px-4 py-3.5 outline-none"
+                  style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.55, color: T.text }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* дії */}
-        <div className="flex items-center justify-end gap-2.5 px-4 py-4 sm:px-7" style={{ borderTop: `1px solid ${T.line}` }}>
-          <button
-            onClick={onClose}
-            className="h-11 whitespace-nowrap rounded-xl px-4 text-[14px] font-semibold transition-all duration-200 active:scale-[0.98]"
-            style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; }}
-          >
-            Скасувати
-          </button>
-          <button
-            onClick={submit}
-            disabled={saving}
-            className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-            style={{
-              background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans,
-              boxShadow: `0 6px 18px -8px rgba(${T.accRgb},0.6)`,
-              opacity: saving ? 0.6 : 1,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.boxShadow = `0 10px 26px -8px rgba(${T.accRgb},0.75)`)}
-            onMouseLeave={(e) => (e.currentTarget.style.boxShadow = `0 6px 18px -8px rgba(${T.accRgb},0.6)`)}
-          >
-            {saving ? <Loader2 size={15} strokeWidth={3} className="animate-spin" /> : <Check size={15} strokeWidth={3} className="shrink-0" />}
-            {f.id ? 'Зберегти' : 'Додати угоду'}
-          </button>
+        {/* ─────────── Дії ─────────── */}
+        <div
+          className="flex flex-wrap items-center justify-between gap-4 px-6 pb-[22px] pt-[18px]"
+          style={{ borderTop: `1px solid ${T.line}` }}
+        >
+          <span className="min-w-0 truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+            {f.tags.length ? f.tags.join(' · ') : 'Сетап не обрано'}
+          </span>
+
+          <div className="ml-auto flex items-center gap-2.5">
+            <button
+              onClick={onClose}
+              className="flex h-11 items-center rounded-xl px-[22px] text-[14.5px] font-semibold transition-all duration-200"
+              style={{ fontFamily: T.sans, color: T.text2, background: 'transparent' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
+            >
+              Скасувати
+            </button>
+            <button
+              onClick={submit}
+              disabled={saving}
+              className="flex h-11 items-center gap-2.5 whitespace-nowrap rounded-xl px-6 text-[14.5px] font-semibold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
+              style={{
+                fontFamily: T.sans, color: '#fff',
+                background: actGradient,
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 30px -12px ${act(0.9)}`,
+                opacity: saving ? 0.6 : 1,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = actGradientHover; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = actGradient; }}
+            >
+              {saving ? <Loader2 size={16} strokeWidth={3} className="animate-spin" /> : <Check size={16} strokeWidth={2.6} />}
+              {f.id ? 'Зберегти' : 'Додати угоду'}
+            </button>
+          </div>
         </div>
       </motion.div>
+      </div>
     </motion.div>
   );
 }

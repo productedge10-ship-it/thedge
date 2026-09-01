@@ -1,72 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowLeft, Loader2, Trash2, TrendingUp, Target, Percent,
-  Activity, Wallet, Gauge, Share2, Globe, Link2Off } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2, Share2, Globe, Link2Off } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
 import { notify } from '../utils/notify';
 import { useAuth } from '../context/AuthContext';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
-import { computeStats, fmtPF, fmtR, money, pairOf } from '../lib/backtestStats';
+import { computeStats, pairOf } from '../lib/backtestStats';
 import { isDemo, getDemoSession, addDemoTrade, updateDemoTrade, deleteDemoTrade } from '../lib/backtestDemo';
 import { setBacktestPublic } from '../lib/backtestShare';
-import { SoftCard } from '../components/ui/Hovers';
 import QuickTradeBar from '../components/backtest/QuickTradeBar';
 import BacktestTable from '../components/backtest/BacktestTable';
 import TradeSheet from '../components/backtest/TradeSheet';
-import { EquityPanel, SessionPanel, WeekdayPanel, StreakPanel } from '../components/backtest/BacktestCharts';
+import StatStrip from '../components/backtest/StatStrip';
+import EquityCurve from '../components/backtest/EquityCurve';
+import BreakdownPanels from '../components/backtest/BreakdownPanels';
+import { ACT, act } from '../components/backtest/accent';
 
 /* ==================================================================
    Сторінка одного бектесту.
-   Порядок екрана = порядок роботи: спершу цифри «як воно йде»,
-   потім швидкий запис угоди, потім таблиця, і вже внизу — розбір
-   по сесіях, днях і серіях, куди дивляться раз на 50 угод.
+   Порядок екрана = порядок читання: спершу підсумок прогону —
+   цифри, крива, розбивки; і тільки потім робоча зона, де угоди
+   записують і переглядають списком.
 ================================================================== */
-
-function Kpi({ icon: Icon, label, value, sub, color, delay = 0 }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay, ease: EASE }}
-      className="h-full"
-    >
-      <SoftCard className="flex h-full flex-col justify-between p-4 sm:p-5">
-        <div className="mb-3 flex items-start justify-between gap-2">
-          <span
-            className="min-w-0 truncate text-[12.5px] font-bold uppercase tracking-[0.09em]"
-            style={{ fontFamily: T.sans, color: T.text3 }}
-            title={label}
-          >
-            {label}
-          </span>
-          <Icon
-            size={16}
-            strokeWidth={2.2}
-            className="shrink-0 opacity-70 transition-opacity duration-300 group-hover:opacity-100"
-            style={{ color: color || T.text4 }}
-          />
-        </div>
-        <div className="min-w-0">
-          <div
-            className="truncate text-[28px] font-bold leading-none tabular-nums sm:text-[30px]"
-            style={{ fontFamily: T.display, color: color || T.text, letterSpacing: '-0.02em' }}
-            title={String(value)}
-          >
-            {value}
-          </div>
-          {sub && (
-            <div className="mt-2 truncate text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }} title={sub}>
-              {sub}
-            </div>
-          )}
-        </div>
-      </SoftCard>
-    </motion.div>
-  );
-}
 
 export default function BacktestSession() {
   useEdgeFonts();
@@ -173,7 +130,7 @@ export default function BacktestSession() {
   });
 
   const quickAdd = async (q) => {
-    const payload = toPayload({ ...q, tags: [], notes: '' });
+    const payload = toPayload({ ...q, tags: q.tags || [], notes: q.notes || '' });
     setSaving(true);
     try {
       if (demo) {
@@ -233,12 +190,10 @@ export default function BacktestSession() {
   if (loading) {
     return (
       <div className="grid min-h-full place-items-center">
-        <Loader2 size={32} className="animate-spin" style={{ color: T.acc }} />
+        <Loader2 size={32} className="animate-spin" style={{ color: ACT.tint }} />
       </div>
     );
   }
-
-  const up = stats.netR >= 0;
 
   return (
     <div className="relative min-h-full">
@@ -250,54 +205,67 @@ export default function BacktestSession() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between"
+          className="mb-7 flex flex-wrap items-start justify-between gap-8"
         >
-          <div className="flex min-w-0 items-start gap-4">
+          <div className="flex min-w-0 items-start gap-[18px]">
             <button
               onClick={() => navigate('/backtest')}
               title="До списку бектестів"
-              className="group mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-xl transition-all duration-200 active:scale-95"
+              className="group mt-4 grid h-11 w-11 shrink-0 place-items-center rounded-[13px] transition-all duration-200 active:scale-95"
               style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2 }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = act(0.15); e.currentTarget.style.borderColor = act(0.45); e.currentTarget.style.color = T.text; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = T.surface; e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
             >
-              <ArrowLeft size={18} strokeWidth={2.2} className="transition-transform duration-200 group-hover:-translate-x-0.5" />
+              <ArrowLeft size={17} strokeWidth={2.2} className="transition-transform duration-200 group-hover:-translate-x-0.5" />
             </button>
 
             <div className="min-w-0">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="text-[12px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.26em]" style={{ fontFamily: T.mono, color: ACT.tint }}>
                   Бектест
                 </span>
                 {demo && (
                   <span
-                    className="rounded-md px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.1em]"
-                    style={{ fontFamily: T.sans, color: T.warn, background: `rgba(${T.warnRgb},0.10)`, border: `1px solid rgba(${T.warnRgb},0.25)` }}
+                    className="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em]"
+                    style={{ fontFamily: T.mono, color: T.warn, background: `rgba(${T.warnRgb},0.10)`, border: `1px solid rgba(${T.warnRgb},0.25)` }}
                   >
                     демо
                   </span>
                 )}
               </div>
+
               <h1
-                className="text-[26px] font-bold leading-[1.1] sm:text-[32px] lg:text-[40px]"
+                className="mt-2.5 text-[28px] font-bold leading-none sm:text-[34px] lg:text-[38px]"
                 style={{
-                  fontFamily: T.display, color: T.text, letterSpacing: '-0.03em',
+                  fontFamily: T.display, color: T.text, letterSpacing: '-0.032em',
                   overflowWrap: 'anywhere',
                   display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                 }}
               >
                 {session.name}
               </h1>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {[session.pair, session.strategy_name, `Старт $${Number(session.initial_balance).toLocaleString('uk-UA')}`, 'Ризик 1%']
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {session.pair && (
+                  <span
+                    className="rounded-lg px-[11px] py-1.5 text-[11px] font-bold tracking-[0.1em]"
+                    style={{
+                      fontFamily: T.mono, color: ACT.tint,
+                      background: act(0.18), border: `1px solid ${act(0.45)}`,
+                    }}
+                  >
+                    {session.pair}
+                  </span>
+                )}
+                {[session.strategy_name, `Старт $${Number(session.initial_balance).toLocaleString('uk-UA')}`, 'Ризик 1%']
                   .filter(Boolean)
                   .map((chip) => (
                     <span
                       key={chip}
-                      className="cursor-default rounded-lg px-2.5 py-1 text-[13px] font-semibold transition-colors duration-200"
-                      style={{ fontFamily: T.sans, color: T.text2, background: T.surface, border: `1px solid ${T.line}` }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
+                      className="cursor-default rounded-lg px-[11px] py-1.5 text-[12.5px] font-medium transition-colors duration-200"
+                      style={{ fontFamily: T.sans, color: T.text3, background: T.surface, border: `1px solid ${T.line}` }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text2; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text3; }}
                     >
                       {chip}
                     </span>
@@ -308,23 +276,24 @@ export default function BacktestSession() {
 
           {/* Поділитись прогоном. Демо не ділиться — там нема чого показувати. */}
           {!demo && (
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="mt-[22px] flex shrink-0 items-center gap-2.5">
               <button
                 onClick={share}
-                className="flex h-[42px] items-center gap-2 rounded-xl px-4 text-[13.5px] font-semibold transition-all duration-200 active:scale-[0.98]"
+                className="flex h-11 items-center gap-2.5 rounded-xl px-5 text-[14px] font-semibold transition-all duration-200 active:scale-[0.98]"
                 style={{
-                  background: session.is_public ? `rgba(${T.accRgb},0.10)` : T.surface,
-                  border: `1px solid ${session.is_public ? T.lineAcc : T.line}`,
-                  color: session.is_public ? T.acc : T.text2,
                   fontFamily: T.sans,
+                  background: session.is_public ? act(0.15) : T.surface,
+                  border: `1px solid ${session.is_public ? act(0.45) : T.line}`,
+                  color: session.is_public ? ACT.tint : T.text2,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = T.lineAcc; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = act(0.15); e.currentTarget.style.borderColor = act(0.45); e.currentTarget.style.color = T.text; }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = session.is_public ? T.acc : T.text2;
-                  e.currentTarget.style.borderColor = session.is_public ? T.lineAcc : T.line;
+                  e.currentTarget.style.background = session.is_public ? act(0.15) : T.surface;
+                  e.currentTarget.style.borderColor = session.is_public ? act(0.45) : T.line;
+                  e.currentTarget.style.color = session.is_public ? ACT.tint : T.text2;
                 }}
               >
-                {session.is_public ? <Globe size={15} strokeWidth={2.3} /> : <Share2 size={15} strokeWidth={2.3} />}
+                {session.is_public ? <Globe size={16} strokeWidth={2.1} /> : <Share2 size={16} strokeWidth={2.1} />}
                 {session.is_public ? 'Скопіювати лінк' : 'Поділитись'}
               </button>
 
@@ -332,7 +301,7 @@ export default function BacktestSession() {
                 <button
                   onClick={unshare}
                   title="Закрити публічний доступ"
-                  className="grid h-[42px] w-[42px] place-items-center rounded-xl transition-all duration-200 active:scale-95"
+                  className="grid h-11 w-11 place-items-center rounded-xl transition-all duration-200 active:scale-95"
                   style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = T.warn; e.currentTarget.style.borderColor = `rgba(${T.warnRgb},0.35)`; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
@@ -344,46 +313,27 @@ export default function BacktestSession() {
           )}
         </motion.div>
 
-        {/* ─────────── KPI ─────────── */}
-        <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-6">
-          <Kpi
-            icon={Activity} label="Net R" delay={0}
-            value={fmtR(stats.netR)}
-            sub={`${stats.total} угод · ${stats.bes} BE`}
-            color={stats.total === 0 ? T.text : up ? T.ok : T.bad}
-          />
-          <Kpi
-            icon={Target} label="Win rate" delay={0.04}
-            value={`${stats.winrate.toFixed(1)}%`}
-            sub={`${stats.wins}W / ${stats.losses}L`}
-          />
-          <Kpi
-            icon={Gauge} label="Profit factor" delay={0.08}
-            value={fmtPF(stats.profitFactor)}
-            sub={`+${stats.grossWin.toFixed(1)}R / −${stats.grossLoss.toFixed(1)}R`}
-            color={stats.profitFactor >= 1.5 ? T.ok : stats.profitFactor < 1 && stats.total ? T.bad : T.text}
-          />
-          <Kpi
-            icon={Percent} label="Очікування" delay={0.12}
-            value={fmtR(stats.expectancy)}
-            sub="середній R на угоду"
-            color={stats.expectancy > 0 ? T.ok : stats.expectancy < 0 ? T.bad : T.text}
-          />
-          <Kpi
-            icon={TrendingUp} label="Просадка" delay={0.16}
-            value={`−${stats.maxDrawdownR.toFixed(2)}R`}
-            sub={stats.currentDDR > 0 ? `зараз −${stats.currentDDR.toFixed(2)}R` : 'зараз на піку'}
-            color={stats.maxDrawdownR > 0 ? T.warn : T.text3}
-          />
-          <Kpi
-            icon={Wallet} label="Баланс" delay={0.2}
-            value={money(Math.round(stats.balance))}
-            sub={`${stats.returnPct >= 0 ? '+' : ''}${stats.returnPct.toFixed(1)}% від старту`}
-            color={stats.returnPct > 0 ? T.ok : stats.returnPct < 0 ? T.bad : T.text}
-          />
+        {/* ─────────── Підсумок прогону ─────────── */}
+        <StatStrip stats={stats} />
+
+        <div className="mt-[18px]">
+          <EquityCurve stats={stats} />
         </div>
 
-        {/* ─────────── Швидкий запис ─────────── */}
+        <div className="mt-[18px]">
+          <BreakdownPanels stats={stats} />
+        </div>
+
+        {/* ─────────── Робоча зона: запис і список ─────────── */}
+        <div className="mb-4 mt-[34px]">
+          <h2 className="text-[20px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.025em' }}>
+            Угоди
+          </h2>
+          <p className="mt-1.5 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+            {stats.total} {stats.total === 1 ? 'запис' : 'записів'} · клік по рядку відкриє картку угоди
+          </p>
+        </div>
+
         <div className="mb-4">
           <QuickTradeBar
             saving={saving}
@@ -394,24 +344,11 @@ export default function BacktestSession() {
           />
         </div>
 
-        {/* ─────────── Таблиця ─────────── */}
-        <div className="mb-4">
-          <BacktestTable
-            trades={stats.trades}
-            onOpen={(t) => setSheet({ trade: t })}
-            onDelete={(t) => setConfirm(t)}
-          />
-        </div>
-
-        {/* ─────────── Аналітика ─────────── */}
-        <div className="grid gap-4">
-          <EquityPanel stats={stats} />
-          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-            <SessionPanel stats={stats} />
-            <WeekdayPanel stats={stats} />
-            <StreakPanel stats={stats} />
-          </div>
-        </div>
+        <BacktestTable
+          trades={stats.trades}
+          onOpen={(t) => setSheet({ trade: t })}
+          onDelete={(t) => setConfirm(t)}
+        />
       </div>
 
       {/* ─────────── Модалка угоди ─────────── */}
@@ -424,7 +361,12 @@ export default function BacktestSession() {
               type: sheet.preset.type,
               result: sheet.preset.result,
               rr: sheet.preset.rr,
-              tda_data: { session: sheet.preset.session, quality: sheet.preset.quality, pair: session.pair },
+              tda_data: {
+                session: sheet.preset.session,
+                quality: sheet.preset.quality,
+                pair: sheet.preset.pair || session.pair,
+                tags: sheet.preset.tags || [],
+              },
             } : null)}
             pair={session.pair}
             saving={saving}

@@ -405,3 +405,13 @@ body {
 .edge-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--edge-text4, #4a4a52);
 }
+
+/* Пошук на сторінці бектестів. Фокус ловимо на обгортці, бо рамку
+   малює вона, а не сам input. */
+.edge-search:hover {
+  border-color: rgba(var(--edge-acc-rgb, 139, 123, 255), 0.45);
+}
+.edge-search:focus-within {
+  border-color: rgba(var(--edge-acc-rgb, 139, 123, 255), 0.7);
+  box-shadow: 0 0 0 3px rgba(var(--edge-acc-rgb, 139, 123, 255), 0.1);
+}
