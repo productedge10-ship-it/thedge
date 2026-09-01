@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { T, EASE } from '../../lib/theme';
 import { fmtR } from '../../lib/backtestStats';
@@ -12,8 +12,19 @@ import { ACT, act, actGradient } from './accent';
    Наведення веде вертикальну лінію й показує картку угоди.
 ================================================================== */
 
-const W = 1240, H = 320, PAD_L = 68, PAD_R = 26, PAD_T = 26, PAD_B = 46;
-const FL = PAD_L / W, FR = PAD_R / W;
+/* Ширину беремо з реального контейнера, а не малюємо в умовний
+   viewBox і не масштабуємо: при масштабуванні кожен підпис їде на
+   дробову позицію й розмивається. Тепер один користувацький піксель
+   дорівнює одному пікселю SVG, і текст лишається чітким. */
+const H = 320, PAD_L = 46, PAD_R = 20, PAD_T = 22, PAD_B = 38;
+
+/* Скільки триває промальовування кривої. Решта — сітка, заливка,
+   мітки — підв'язана до цієї цифри, щоб уся поява читалась як один
+   рух, а не як п'ять окремих. */
+const DRAW = 1.1;
+
+/* Розміри підписів — у справжніх пікселях, тому дрібні */
+const FS_AXIS = 11.5, FS_TICK = 11.5, FS_LAST = 14, FS_BADGE = 11.5;
 
 const RANGES = [
   { label: 'Усі', keep: Infinity },
@@ -33,6 +44,18 @@ function domainOf(values) {
 export default function EquityCurve({ stats }) {
   const [range, setRange] = useState('Усі');
   const [hover, setHover] = useState(null);
+  const plot = useRef(null);
+  const [W, setW] = useState(1240);
+
+  useEffect(() => {
+    const el = plot.current;
+    if (!el) return undefined;
+    const measure = () => setW(Math.max(420, Math.round(el.clientWidth)));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const view = useMemo(() => {
     const eq = stats.equity;
@@ -77,12 +100,13 @@ export default function EquityCurve({ stats }) {
       if (dd < 0 && (ddIdx === -1 || dd < (pts[ddIdx].dd ?? 0))) ddIdx = i;
     });
     return { xy, d, area, zero, levels, ddIdx, y };
-  }, [pts, enough]);
+  }, [pts, enough, W]);
 
   const onMove = (e) => {
     if (!enough) return;
     const r = e.currentTarget.getBoundingClientRect();
-    const t = ((e.clientX - r.left) / r.width - FL) / (1 - FL - FR);
+    /* Один до одного з полотном: курсор у пікселях SVG, без часток */
+    const t = (e.clientX - r.left - PAD_L) / Math.max(1, W - PAD_L - PAD_R);
     const i = Math.max(1, Math.min(pts.length - 1, Math.round(t * (pts.length - 1))));
     if (i !== hover) setHover(i);
   };
@@ -93,10 +117,11 @@ export default function EquityCurve({ stats }) {
 
   const tipStyle = (() => {
     const i = hover || 1;
-    const pct = (FL + (i / Math.max(1, pts.length - 1)) * (1 - FL - FR)) * 100;
+    const x = geo ? geo.xy[i]?.[0] ?? PAD_L : PAD_L;
     const flip = i > (pts.length - 1) * 0.62;
     return {
-      left: `${pct}%`,
+      /* 20px — падінг картки: полотно починається саме звідти */
+      left: 20 + x,
       transform: `translateX(${flip ? 'calc(-100% - 14px)' : '14px'})`,
     };
   })();
@@ -146,14 +171,20 @@ export default function EquityCurve({ stats }) {
         </div>
       </div>
 
-      <div className="relative px-5 pb-[18px]" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+      <div className="relative px-5 pb-[18px]">
         {!enough ? (
-          <div className="grid h-[220px] place-items-center text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+          <div ref={plot} className="grid h-[220px] place-items-center text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
             Крива зʼявиться після першої угоди.
           </div>
         ) : (
           <>
-            <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" style={{ display: 'block', overflow: 'visible' }}>
+            <div ref={plot} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+            <svg
+              viewBox={`0 0 ${W} ${H}`}
+              width={W}
+              height={H}
+              style={{ display: 'block', overflow: 'visible', maxWidth: '100%' }}
+            >
               <defs>
                 <linearGradient id="eqUp" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={T.ok} stopOpacity="0.34" />
@@ -167,37 +198,55 @@ export default function EquityCurve({ stats }) {
                 <clipPath id="eqClipDn"><rect x="0" y={geo.zero} width={W} height={Math.max(0, H - geo.zero)} /></clipPath>
               </defs>
 
-              {geo.levels.map((v) => (
-                <g key={`lvl${v}`}>
+              {geo.levels.map((v, li) => (
+                <motion.g
+                  key={`lvl${v}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: 0.04 * li }}
+                >
                   <line
                     x1={PAD_L} x2={W - PAD_R} y1={geo.y(v)} y2={geo.y(v)}
                     stroke={v === 0 ? act(0.32) : T.line} strokeWidth={v === 0 ? 1.4 : 1}
                   />
                   <text
-                    x={PAD_L - 16} y={geo.y(v) + 6} textAnchor="end"
-                    fill={v === 0 ? ACT.tint : T.text4} fontSize={17} fontWeight="600" fontFamily={T.mono}
+                    x={PAD_L - 10} y={geo.y(v) + 4} textAnchor="end"
+                    fill={v === 0 ? ACT.tint : T.text3} fontSize={FS_AXIS} fontWeight="600" fontFamily={T.mono}
                   >
                     {v}R
                   </text>
-                </g>
+                </motion.g>
               ))}
 
-              <path d={geo.area} fill="url(#eqUp)" clipPath="url(#eqClipUp)" />
-              <path d={geo.area} fill="url(#eqDn)" clipPath="url(#eqClipDn)" />
+              {/* Заливка проявляється слідом за лінією, а не разом із
+                  нею: інакше вона стоїть готовою під олівцем, який ще
+                  тільки малює криву. */}
               <motion.path
-                d={geo.d} fill="none" stroke={line} strokeWidth={3} strokeLinecap="round"
+                d={geo.area} fill="url(#eqUp)" clipPath="url(#eqClipUp)"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: DRAW * 0.55 }}
+              />
+              <motion.path
+                d={geo.area} fill="url(#eqDn)" clipPath="url(#eqClipDn)"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: DRAW * 0.55 }}
+              />
+              <motion.path
+                d={geo.d} fill="none" stroke={line} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round"
                 initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                transition={{ duration: 0.8, ease: EASE }}
+                transition={{ duration: DRAW, ease: [0.32, 0.72, 0.35, 1] }}
               />
 
               {pts.map((p, i) => (
                 (i === 0 || i % 3 === 0 || i === pts.length - 1) ? (
-                  <text
-                    key={`tick${i}`} x={geo.xy[i][0]} y={H - 14} textAnchor="middle"
-                    fill={T.text4} fontSize={16} fontFamily={T.mono}
+                  <motion.text
+                    key={`tick${i}`} x={geo.xy[i][0]} y={H - 12} textAnchor="middle"
+                    fill={T.text3} fontSize={FS_TICK} fontWeight="500" fontFamily={T.mono}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    transition={{ duration: 0.35, delay: DRAW * (i / Math.max(1, pts.length - 1)) * 0.9 }}
                   >
-                    {p.i === 0 ? 'Старт' : `#${p.i}`}
-                  </text>
+                    {p.i === 0 ? 'Start' : `#${p.i}`}
+                  </motion.text>
                 ) : null
               ))}
 
@@ -207,22 +256,26 @@ export default function EquityCurve({ stats }) {
                 const label = `Max DD ${pts[geo.ddIdx].dd.toFixed(2)}R`;
                 /* Моноширинний шрифт дає передбачувану ширину, тому
                    плашку можна порахувати без вимірювання тексту */
-                const bw = label.length * 8.6 + 26;
-                const bh = 28;
+                const bw = label.length * 6.9 + 20;
+                const bh = 23;
                 const bx = Math.max(PAD_L, Math.min(W - PAD_R - bw, cx - bw / 2));
                 /* Дно просадки часто лежить біля самої осі, і плашка під
                    ним налазила на підписи угод. Якщо знизу місця немає —
                    вішаємо її над точкою. */
-                const below = cy + 20 + bh <= H - PAD_B - 4;
-                const by = below ? cy + 20 : cy - 20 - bh;
+                const below = cy + 16 + bh <= H - PAD_B - 4;
+                const by = below ? cy + 16 : cy - 16 - bh;
                 return (
-                  <g>
+                  <motion.g
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.35, delay: DRAW * 0.8 }}
+                  >
                     <line
                       x1={cx} x2={cx} y1={cy} y2={H - PAD_B}
                       stroke={T.warn} strokeOpacity="0.3" strokeWidth={1} strokeDasharray="3 5"
                     />
-                    <circle cx={cx} cy={cy} r={11} fill={T.warn} opacity="0.13" />
-                    <circle cx={cx} cy={cy} r={4.5} fill={T.surface} stroke={T.warn} strokeWidth={2.4} />
+                    <circle cx={cx} cy={cy} r={8} fill={T.warn} opacity="0.13" />
+                    <circle cx={cx} cy={cy} r={3.4} fill={T.surface} stroke={T.warn} strokeWidth={2} />
                     {/* Непрозора підкладка: без неї крізь плашку
                         просвічували крива й підписи осі */}
                     <rect x={bx} y={by} width={bw} height={bh} rx={9} fill={T.surface} />
@@ -231,29 +284,38 @@ export default function EquityCurve({ stats }) {
                       fill={`rgba(${T.warnRgb},0.16)`} stroke={`rgba(${T.warnRgb},0.34)`} strokeWidth={1}
                     />
                     <text
-                      x={bx + bw / 2} y={by + 19} textAnchor="middle"
-                      fill={T.warn} fontSize={14} fontWeight="700" letterSpacing="0.4"
+                      x={bx + bw / 2} y={by + 15.5} textAnchor="middle"
+                      fill={T.warn} fontSize={FS_BADGE} fontWeight="700" letterSpacing="0.3"
                       fontFamily={T.mono}
                     >
                       {label}
                     </text>
-                  </g>
+                  </motion.g>
                 );
               })()}
 
-              <circle cx={geo.xy[pts.length - 1][0]} cy={geo.xy[pts.length - 1][1]} r={13} fill={line} opacity="0.14" />
-              <circle cx={geo.xy[pts.length - 1][0]} cy={geo.xy[pts.length - 1][1]} r={5.5} fill={line} stroke={T.surface} strokeWidth={2} />
+              <motion.g
+                initial={{ opacity: 0, scale: 0.4 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 26, delay: DRAW }}
+                style={{ transformOrigin: `${geo.xy[pts.length - 1][0]}px ${geo.xy[pts.length - 1][1]}px` }}
+              >
+                <circle cx={geo.xy[pts.length - 1][0]} cy={geo.xy[pts.length - 1][1]} r={8} fill={line} opacity="0.14" />
+                <circle cx={geo.xy[pts.length - 1][0]} cy={geo.xy[pts.length - 1][1]} r={3.2} fill={line} stroke={T.surface} strokeWidth={1.8} />
+              </motion.g>
               {/* Коли дно просадки припадає на останню угоду, плашка
                   Max DD стоїть рівно тут — два підписи в одній точці
                   накладались. Поточний R у такому разі й так видно
                   у смузі цифр нагорі. */}
               {geo.ddIdx !== pts.length - 1 && (
-                <text
-                  x={geo.xy[pts.length - 1][0] - 14} y={geo.xy[pts.length - 1][1] - 18} textAnchor="end"
-                  fill={line} fontSize={19} fontWeight="600" fontFamily={T.mono}
+                <motion.text
+                  x={geo.xy[pts.length - 1][0] - 12} y={geo.xy[pts.length - 1][1] - 14} textAnchor="end"
+                  fill={line} fontSize={FS_LAST} fontWeight="700" fontFamily={T.mono}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: DRAW }}
                 >
                   {fmtR(pts[pts.length - 1].r)}
-                </text>
+                </motion.text>
               )}
 
               {hover != null && hover > 0 && (
@@ -262,17 +324,31 @@ export default function EquityCurve({ stats }) {
                     x1={geo.xy[hover][0]} x2={geo.xy[hover][0]} y1={PAD_T} y2={H - PAD_B}
                     stroke={act(0.68)} strokeWidth={1.2} strokeDasharray="3 5"
                   />
-                  <circle cx={geo.xy[hover][0]} cy={geo.xy[hover][1]} r={11} fill={line} opacity="0.14" />
-                  <circle cx={geo.xy[hover][0]} cy={geo.xy[hover][1]} r={5} fill={line} stroke={T.surface} strokeWidth={2} />
+                  <circle cx={geo.xy[hover][0]} cy={geo.xy[hover][1]} r={8} fill={line} opacity="0.14" />
+                  <circle cx={geo.xy[hover][0]} cy={geo.xy[hover][1]} r={3.2} fill={line} stroke={T.surface} strokeWidth={1.8} />
                 </g>
               )}
             </svg>
+            </div>
 
             {tip && hover > 0 && (
-              <div
+              /* Картка не зʼявляється ривком і не стрибає між точками:
+                 сама поява — коротке проявлення знизу вгору, а зсув
+                 по горизонталі йде пружиною, тому при веденні мишею
+                 вона ковзає слідом, а не телепортується. */
+              <motion.div
+                key="eq-tip"
+                initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1, left: tipStyle.left }}
+                transition={{
+                  opacity: { duration: 0.18, ease: 'easeOut' },
+                  y: { duration: 0.22, ease: EASE },
+                  scale: { duration: 0.22, ease: EASE },
+                  left: { type: 'spring', stiffness: 420, damping: 38, mass: 0.7 },
+                }}
                 className="pointer-events-none absolute top-[22px] z-10 min-w-[196px] overflow-hidden rounded-[14px]"
                 style={{
-                  ...tipStyle,
+                  transform: tipStyle.transform,
                   /* Суцільний фон, а не панельна змінна: --edge-panel
                      напівпрозорий (він розрахований на розмиту бічну
                      панель), і крізь випадайку просвічував вміст під нею. */
@@ -301,7 +377,7 @@ export default function EquityCurve({ stats }) {
                     </div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
           </>
         )}

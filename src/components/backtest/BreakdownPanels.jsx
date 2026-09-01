@@ -48,12 +48,7 @@ function Rows({ rows }) {
               animate={{ width: `${r.pct}%` }}
               transition={{ duration: 0.6, delay: 0.04 * i, ease: EASE }}
               className="h-full rounded-full"
-              style={{
-                background: r.tone
-                  ? `linear-gradient(90deg, ${r.tone}, ${r.tone})`
-                  : T.lineHi,
-                opacity: r.tone ? 1 : 0.7,
-              }}
+              style={{ background: r.tone || T.lineHi, opacity: r.tone ? 1 : 0.7 }}
             />
           </div>
         </div>
@@ -62,6 +57,8 @@ function Rows({ rows }) {
   );
 }
 
+/* Ховер — тільки кант: він світлішає, і все. Панель не клікається,
+   тому будь-який рух чи підсвітка обіцяли б дію, якої немає. */
 function Panel({ title, sub, rows, delay = 0 }) {
   return (
     <motion.section
@@ -69,7 +66,13 @@ function Panel({ title, sub, rows, delay = 0 }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay, ease: EASE }}
       className="rounded-[20px] px-[22px] pb-[22px] pt-5"
-      style={{ background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.surface})`, border: `1px solid ${T.line}` }}
+      style={{
+        background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.surface})`,
+        border: `1px solid ${T.line}`,
+        transition: 'border-color .3s ease',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; }}
     >
       <div className="text-[15.5px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.015em' }}>
         {title}

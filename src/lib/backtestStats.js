@@ -14,6 +14,13 @@ export const QUALITIES = ['A+', 'A', 'B', 'C'];
    зʼявляються угоди, вибір активу підказує вже їх, а не цей масив. */
 export const COMMON_PAIRS = ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY', 'BTCUSD', 'NAS100', 'US30', 'GER40'];
 export const RESULTS = ['WIN', 'LOSS', 'BE'];
+
+/* Як результат називається на екрані. У базі лишається WIN/LOSS —
+   міняти збережені значення заради підпису означало б переписувати
+   історію угод; тут тільки те, що бачить людина. Take і Stop — мова
+   самого трейду: угода закрилась по тейку або по стопу. */
+export const RESULT_LABEL = { WIN: 'Take', LOSS: 'Stop', BE: 'BE' };
+export const resultLabel = (r) => RESULT_LABEL[r] || r;
 export const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
 
 /* R угоди. LOSS завжди -1R: у бектесті ризик однаковий. */

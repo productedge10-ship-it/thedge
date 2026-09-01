@@ -1,32 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Check, SlidersHorizontal, Loader2, ChevronDown } from 'lucide-react';
+import { Zap, Check, SlidersHorizontal, Loader2, ChevronDown, Plus } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
-import { SESSIONS, QUALITIES, COMMON_PAIRS } from '../../lib/backtestStats';
-import { ACT, act, actGradient, actGradientHover } from './accent';
+import { SESSIONS, resultLabel } from '../../lib/backtestStats';
+import { ACT, act, actGradient, actGradientHover, segFill, SEG_TONE } from './accent';
+import AssetPicker from './AssetPicker';
+import { allSetups, customSetups, addCustomSetup } from '../../lib/backtestSetups';
 import DateField from '../ui/DateField';
 
 /* ==================================================================
    Швидкий рядок.
    Бектест — це сотні угод, і кожну відкривати модалкою неможливо.
    У видимому рядку те, що впливає на статистику завжди: актив,
-   напрям, результат, RR і сетап. Якість, сесія й дата ховаються
-   під «Деталі» — їх міняють раз на десяток угод.
+   напрям, результат, RR і сетап. Сесія й дата ховаються під
+   «Деталі» — їх міняють раз на десяток угод.
    Enter у полі RR або сетапу записує угоду.
 ================================================================== */
 
 /* Та сама пружина, що в картці угоди: вибір усюди їде однаково */
 const SEG_SPRING = { type: 'spring', stiffness: 380, damping: 34, mass: 0.8 };
 
-/* Тип активу — суто підказка в списку, щоб не вчитуватись у тікер */
-const KIND = {
-  NAS100: 'Індекси', US30: 'Індекси', GER40: 'Індекси',
-  XAUUSD: 'Метали',
-  BTCUSD: 'Крипто', ETHUSD: 'Крипто',
-  EURUSD: 'Forex', GBPUSD: 'Forex', USDJPY: 'Forex',
-};
-
-function Seg({ options, value, onChange, id }) {
+function Seg({ options, value, onChange, id, labelOf }) {
   return (
     <div className="flex items-center gap-[5px] rounded-xl p-[5px]" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
       {options.map((o) => {
@@ -46,13 +40,15 @@ function Seg({ options, value, onChange, id }) {
                 transition={SEG_SPRING}
                 className="absolute inset-0 rounded-[9px]"
                 style={{
-                  background: actGradient,
+                  /* Та сама палітра, що в картці угоди: сесії й напрям
+                     упізнаються кольором, решта — акцентом розділу */
+                  background: segFill(SEG_TONE[o] || ACT.rgb),
                   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
                   zIndex: -1,
                 }}
               />
             )}
-            {o}
+            {labelOf ? labelOf(o) : o}
           </button>
         );
       })}
@@ -66,123 +62,21 @@ const FieldLabel = ({ children }) => (
   </span>
 );
 
-/* ---------- вибір активу ----------
-
-   Бектест заводиться під один інструмент, але людина реально ганяє
-   в ньому і сусідні — без цього поля всі вони злипались в одну
-   статистику, і розділити її потім було нічим.
-
-   Список збирається з трьох джерел, у порядку корисності: актив
-   самого бектесту, вже вписані в нього активи, і тільки потім
-   загальний перелік. Внизу — поле для чого завгодно свого. */
-function PairPicker({ value, sessionPair, used, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState('');
-  const box = useRef(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const away = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
-    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', away);
-    document.addEventListener('keydown', esc);
-    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
-  }, [open]);
-
-  const pick = (p) => { onChange(p); setOpen(false); setDraft(''); };
-  const commit = () => { const v = draft.trim().toUpperCase(); if (v) pick(v); };
-
-  const options = [...new Set([sessionPair, ...used, ...COMMON_PAIRS].filter(Boolean))];
-
-  return (
-    <div ref={box} className="relative shrink-0">
-      <button
-        onClick={() => setOpen((s) => !s)}
-        className="flex h-[42px] items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200"
-        style={{
-          background: T.sunken,
-          border: `1px solid ${open ? ACT.to : T.line}`,
-          boxShadow: open ? `0 0 0 3px ${act(0.14)}` : 'none',
-        }}
-        onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = T.lineHi; }}
-        onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = T.line; }}
-      >
-        <span className="text-[14px] font-bold tracking-[0.05em]" style={{ fontFamily: T.mono, color: value ? T.text : T.text4 }}>
-          {value || 'актив'}
-        </span>
-        <ChevronDown
-          size={15}
-          strokeWidth={2.4}
-          style={{ color: ACT.tint, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
-        />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.16, ease: EASE }}
-            className="absolute left-0 top-[calc(100%+8px)] z-30 w-[210px] overflow-hidden rounded-[14px] p-1.5"
-            style={{
-              /* Суцільний фон, а не панельна змінна: --edge-panel
-                 напівпрозорий (він розрахований на розмиту бічну
-                 панель), і крізь випадайку просвічував вміст під нею. */
-              background: T.surfaceHi,
-              border: `1px solid ${T.lineHi}`,
-              boxShadow: 'var(--edge-panel-shadow, 0 24px 50px -18px rgba(0,0,0,0.9))',
-            }}
-          >
-            <div className="custom-scrollbar max-h-[230px] overflow-y-auto">
-              {options.map((p) => {
-                const on = p === value;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => pick(p)}
-                    className="flex w-full items-center justify-between gap-4 rounded-[10px] px-3 py-2.5 text-left transition-colors"
-                    style={{ background: on ? act(0.18) : 'transparent' }}
-                    onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.surfaceHi; }}
-                    onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = on ? act(0.18) : 'transparent'; }}
-                  >
-                    <span className="text-[13px] font-bold tracking-[0.05em]" style={{ fontFamily: T.mono, color: T.text }}>{p}</span>
-                    <span className="text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                      {p === sessionPair ? 'бектест' : KIND[p] || ''}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-1.5 pt-1.5" style={{ borderTop: `1px solid ${T.line}` }}>
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value.toUpperCase())}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
-                onBlur={commit}
-                placeholder="свій актив"
-                className="h-[32px] w-full rounded-lg bg-transparent px-3 text-[13px] font-bold outline-none"
-                style={{ fontFamily: T.mono, color: T.text }}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 export default function QuickTradeBar({
   onQuickAdd, onOpenDetails, saving,
-  defaultSession = 'London', sessionPair = '', usedPairs = [],
+  defaultSession = 'London', sessionPair = '', usedPairs = [], usedTags = [],
 }) {
   const [more, setMore] = useState(false);
+  /* Свої сетапи заводяться тут: угоду записують саме звідси, і
+     примушувати відкривати повну форму заради нової назви — зайвий
+     крок у найчастішій дії. */
+  const [mine, setMine] = useState(customSetups);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const setupBox = useRef(null);
   const [q, setQ] = useState({
     type: 'LONG',
     result: 'WIN',
     rr: '2',
-    quality: 'A',
     session: defaultSession,
     pair: sessionPair,
     setup: '',
@@ -199,6 +93,28 @@ export default function QuickTradeBar({
 
   const set = (p) => setQ((s) => ({ ...s, ...p }));
 
+  useEffect(() => {
+    if (!setupOpen) return undefined;
+    const away = (e) => { if (setupBox.current && !setupBox.current.contains(e.target)) setSetupOpen(false); };
+    document.addEventListener('mousedown', away);
+    return () => document.removeEventListener('mousedown', away);
+  }, [setupOpen]);
+
+  /* Підказки: вбудовані сетапи, свої, і ті, що вже зустрічались у
+     цьому бектесті. Порожнє поле показує весь список. */
+  const setups = allSetups({ custom: mine, used: usedTags });
+  const query = q.setup.trim().toLowerCase();
+  const matches = query ? setups.filter((x) => x.toLowerCase().includes(query)) : setups;
+  const canAddSetup = query !== '' && !setups.some((x) => x.toLowerCase() === query);
+
+  const pickSetup = (name) => { set({ setup: name }); setSetupOpen(false); };
+  const addSetup = () => {
+    const v = q.setup.trim();
+    if (!v) return;
+    setMine(addCustomSetup(v));
+    setSetupOpen(false);
+  };
+
   /* Сетап їде тегом — саме його показує колонка таблиці */
   const payload = (s) => {
     const rr = Number(s.rr);
@@ -213,6 +129,10 @@ export default function QuickTradeBar({
 
   const submit = () => {
     if (saving) return;
+    const v = q.setup.trim();
+    /* Записаний сетап одразу стає підказкою — навіть якщо його не
+       додавали через список окремо. */
+    if (v && !setups.some((x) => x.toLowerCase() === v.toLowerCase())) setMine(addCustomSetup(v));
     onQuickAdd(payload(q));
     setQ((s) => ({ ...s, setup: '' }));
   };
@@ -239,10 +159,18 @@ export default function QuickTradeBar({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <PairPicker value={q.pair} sessionPair={sessionPair} used={usedPairs} onChange={(v) => set({ pair: v })} />
+        <AssetPicker
+          value={q.pair}
+          onChange={(v) => set({ pair: v })}
+          height={42}
+          placeholder="актив"
+          className="w-[172px] shrink-0"
+          priority={[sessionPair, ...usedPairs].filter(Boolean)}
+          noteOf={(p) => (p === sessionPair ? 'бектест' : null)}
+        />
 
         <Seg id="dir" options={['LONG', 'SHORT']} value={q.type} onChange={(v) => set({ type: v })} />
-        <Seg id="res" options={['WIN', 'LOSS', 'BE']} value={q.result} onChange={(v) => set({ result: v })} />
+        <Seg id="res" options={['WIN', 'LOSS', 'BE']} value={q.result} onChange={(v) => set({ result: v })} labelOf={resultLabel} />
 
         {/* RR — головне поле, тому найпомітніше */}
         <div
@@ -266,17 +194,86 @@ export default function QuickTradeBar({
         </div>
 
         <div
-          className="flex h-[42px] min-w-[150px] flex-1 items-center rounded-xl"
-          style={{ background: T.sunken, border: `1px solid ${T.line}` }}
+          ref={setupBox}
+          className="relative flex h-[42px] min-w-[150px] flex-1 items-center rounded-xl"
+          style={{
+            background: T.sunken,
+            border: `1px solid ${setupOpen ? ACT.to : T.line}`,
+            boxShadow: setupOpen ? `0 0 0 3px ${act(0.13)}` : 'none',
+            transition: 'border-color .18s, box-shadow .18s',
+          }}
         >
           <input
             value={q.setup}
-            onChange={(e) => set({ setup: e.target.value })}
-            onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+            onChange={(e) => { set({ setup: e.target.value }); setSetupOpen(true); }}
+            onFocus={() => setSetupOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { setSetupOpen(false); submit(); }
+              if (e.key === 'Escape') { e.stopPropagation(); setSetupOpen(false); }
+            }}
             placeholder="Сетап або нотатка"
             className="h-full w-full bg-transparent px-3.5 text-[14px] outline-none"
             style={{ fontFamily: T.sans, color: T.text }}
           />
+
+          {/* Список того, що вже є: без нього в базі осідали «SFP» і
+              «sfp» як два різні сетапи. */}
+          <AnimatePresence>
+            {setupOpen && (matches.length > 0 || canAddSetup) && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.16, ease: EASE }}
+                className="absolute left-0 top-[calc(100%+8px)] z-40 w-[340px] max-w-[86vw] overflow-hidden rounded-[12px]"
+                style={{
+                  background: T.surfaceHi,
+                  border: `1px solid ${T.lineHi}`,
+                  boxShadow: '0 24px 56px -20px rgba(0,0,0,0.9)',
+                }}
+              >
+                {matches.length > 0 && (
+                  /* Дві колонки, коли сетапів більше за чотири: інакше
+                     список тягнеться вниз через півсторінки. */
+                  <div className={`custom-scrollbar max-h-[200px] overflow-y-auto p-1.5 ${matches.length > 4 ? 'grid grid-cols-2 gap-1' : 'flex flex-col'}`}>
+                    {matches.map((tag) => {
+                      const on = q.setup.trim().toLowerCase() === tag.toLowerCase();
+                      return (
+                        <button
+                          key={tag}
+                          onMouseDown={(e) => { e.preventDefault(); pickSetup(tag); }}
+                          className="flex min-w-0 items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold transition-colors"
+                          style={{ fontFamily: T.sans, color: on ? ACT.tint : T.text2, background: on ? act(0.14) : 'transparent' }}
+                          onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.surface; }}
+                          onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <span className="truncate">{tag}</span>
+                          {on && <Check size={12} strokeWidth={3} className="ml-auto shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {canAddSetup && (
+                  <button
+                    onMouseDown={(e) => { e.preventDefault(); addSetup(); }}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] font-semibold transition-colors"
+                    style={{
+                      fontFamily: T.sans,
+                      color: ACT.tint,
+                      borderTop: matches.length > 0 ? `1px solid ${T.line}` : undefined,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = act(0.1); }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <Plus size={13} strokeWidth={3} />
+                    Додати «{q.setup.trim()}»
+                  </button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="ml-auto flex items-center gap-2.5">
@@ -338,11 +335,6 @@ export default function QuickTradeBar({
       >
         <div className="overflow-hidden">
             <div className="mt-3 flex flex-wrap items-center gap-3 pt-4" style={{ borderTop: `1px solid ${T.line}` }}>
-              <div className="flex items-center gap-2.5">
-                <FieldLabel>Якість</FieldLabel>
-                <Seg id="qual" options={QUALITIES} value={q.quality} onChange={(v) => set({ quality: v })} />
-              </div>
-
               <div className="flex items-center gap-2.5">
                 <FieldLabel>Сесія</FieldLabel>
                 <Seg id="sess" options={SESSIONS} value={q.session} onChange={(v) => set({ session: v })} />

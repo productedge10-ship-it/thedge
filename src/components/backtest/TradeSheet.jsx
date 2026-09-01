@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Trash2, ImagePlus, Loader2, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react';
+import { X, Check, Trash2, ImagePlus, Loader2, TrendingUp, TrendingDown, CalendarDays, Plus } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
-import { SESSIONS, QUALITIES, COMMON_PAIRS, metaOf, pairOf } from '../../lib/backtestStats';
-import { ACT, act, actGradient, actGradientHover } from './accent';
+import { SESSIONS, metaOf, pairOf, resultLabel } from '../../lib/backtestStats';
+import { ACT, act, actGradient, actGradientHover, segFill as fill, SEG_TONE } from './accent';
 import DateField from '../ui/DateField';
+import { allSetups, customSetups, addCustomSetup, removeCustomSetup } from '../../lib/backtestSetups';
+import AssetPicker from './AssetPicker';
+import AssetIcon from '../ui/AssetIcon';
 
 /* ==================================================================
    Деталі угоди бектесту.
@@ -13,25 +16,12 @@ import DateField from '../ui/DateField';
    погляд і не перетворюється на анкету з двадцяти полів.
 ================================================================== */
 
-const SETUP_TAGS = ['Silver Bullet', 'SFP', 'Manipulation', 'BOS', 'OB retest', 'FVG', 'Swing', 'FOMO', 'Impatience'];
-
 /* Тип активу — підказка в списку, щоб не вчитуватись у тікер */
 const KIND = {
   NAS100: 'Індекси', US30: 'Індекси', GER40: 'Індекси',
   XAUUSD: 'Метали',
   BTCUSD: 'Крипто', ETHUSD: 'Крипто',
   EURUSD: 'Forex', GBPUSD: 'Forex', USDJPY: 'Forex',
-};
-
-/* Заливка активного сегмента. Напрям і результат беруть семантичний
-   колір, сесії — свій власний (їх три, і кольором вони впізнаються
-   швидше за текст), решта — акцент розділу. */
-const fill = (rgb) => `linear-gradient(180deg, rgba(${rgb},1), rgba(${rgb},0.82))`;
-
-const SEG_TONE = {
-  LONG: T.okRgb, WIN: T.okRgb,
-  SHORT: T.badRgb, LOSS: T.badRgb,
-  Asia: T.badRgb, London: T.infoRgb, 'New York': T.okRgb,
 };
 
 const resTone = (r) => (r === 'WIN' ? T.okRgb : r === 'LOSS' ? T.badRgb : ACT.rgb);
@@ -60,7 +50,7 @@ function Label({ children, hint, right }) {
 /* Заливка не перемальовується, а переїжджає: градієнт неможливо
    анімувати через CSS, тому активний стан — окремий шар із layoutId,
    який framer переносить пружиною з попередньої кнопки на нову. */
-function Seg({ id, options, value, onChange }) {
+function Seg({ id, options, value, onChange, labelOf, readOnly }) {
   return (
     <div
       className="mt-[9px] flex w-full items-center gap-[5px] rounded-xl p-[5px]"
@@ -72,12 +62,14 @@ function Seg({ id, options, value, onChange }) {
         return (
           <button
             key={o}
-            onClick={() => onChange(o)}
+            onClick={readOnly ? undefined : () => onChange(o)}
+            disabled={readOnly}
             className="relative flex h-[34px] flex-1 items-center justify-center whitespace-nowrap rounded-[9px] px-2.5 text-[12px] font-bold tracking-[0.07em]"
             style={{
               fontFamily: T.mono,
               color: on ? '#fff' : T.text3,
               transition: 'color .25s ease',
+              cursor: readOnly ? 'default' : 'pointer',
               zIndex: 1,
             }}
             onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
@@ -95,10 +87,24 @@ function Seg({ id, options, value, onChange }) {
                 }}
               />
             )}
-            {o}
+            {labelOf ? labelOf(o) : o}
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/* Нерухоме поле: та сама геометрія, що в редагованого, але без
+   керування. У режимі перегляду важливо, щоб картка виглядала так
+   само, — інакше публічна сторінка читається як інша форма. */
+function StaticField({ children, height = 46 }) {
+  return (
+    <div
+      className="mt-[9px] flex items-center gap-2.5 overflow-hidden rounded-xl px-3.5"
+      style={{ height, background: T.sunken, border: `1px solid ${T.line}` }}
+    >
+      {children}
     </div>
   );
 }
@@ -111,116 +117,12 @@ const fieldStyle = (focused) => ({
   transition: 'border-color .18s, box-shadow .18s',
 });
 
-function AssetPicker({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState('');
-  const box = useRef(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const away = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
-    /* Escape має закривати спершу випадайку, а не всю модалку. Ловимо
-       на фазі перехоплення й глушимо подію — інакше вікно закриється
-       разом зі списком, і людина втратить незбережену угоду. */
-    const esc = (e) => {
-      if (e.key !== 'Escape') return;
-      e.stopPropagation();
-      setOpen(false);
-    };
-    document.addEventListener('mousedown', away);
-    document.addEventListener('keydown', esc, true);
-    return () => {
-      document.removeEventListener('mousedown', away);
-      document.removeEventListener('keydown', esc, true);
-    };
-  }, [open]);
-
-  const pick = (p) => { onChange(p); setOpen(false); setDraft(''); };
-  const commit = () => { const v = draft.trim().toUpperCase(); if (v) pick(v); };
-  const options = [...new Set([value, ...COMMON_PAIRS].filter(Boolean))];
-
-  return (
-    <div ref={box} className="relative mt-[9px]">
-      <button
-        onClick={() => setOpen((s) => !s)}
-        className="flex h-[46px] w-full items-center justify-between gap-2.5 rounded-xl px-3.5"
-        style={fieldStyle(open)}
-        onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = T.lineHi; }}
-        onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = T.line; }}
-      >
-        <span
-          className="truncate text-[14.5px] font-bold tracking-[0.05em]"
-          style={{ fontFamily: T.mono, color: value ? T.text : T.text4 }}
-        >
-          {value || 'актив'}
-        </span>
-        <ChevronDown
-          size={15}
-          strokeWidth={2.2}
-          className="shrink-0"
-          style={{ color: ACT.tint, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
-        />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.16, ease: EASE }}
-            className="absolute inset-x-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-[14px] p-1.5"
-            style={{
-              /* Суцільний фон, а не панельна змінна: --edge-panel
-                 напівпрозорий (він розрахований на розмиту бічну
-                 панель), і крізь випадайку просвічував вміст під нею. */
-              background: T.surfaceHi,
-              border: `1px solid ${T.lineHi}`,
-              boxShadow: 'var(--edge-panel-shadow, 0 24px 50px -18px rgba(0,0,0,0.9))',
-            }}
-          >
-            <div className="custom-scrollbar max-h-[230px] overflow-y-auto">
-              {options.map((p) => {
-                const on = p === value;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => pick(p)}
-                    className="flex w-full items-center justify-between gap-3.5 rounded-[10px] px-3 py-2.5 text-left transition-colors"
-                    style={{ background: on ? act(0.18) : 'transparent' }}
-                    onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.surfaceHi; }}
-                    onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <span className="text-[13px] font-bold tracking-[0.05em]" style={{ fontFamily: T.mono, color: T.text }}>{p}</span>
-                    <span className="text-[11.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>{KIND[p] || ''}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-1.5 pt-1.5" style={{ borderTop: `1px solid ${T.line}` }}>
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value.toUpperCase())}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
-                onBlur={commit}
-                placeholder="свій актив"
-                className="h-8 w-full rounded-lg bg-transparent px-3 text-[13px] font-bold outline-none"
-                style={{ fontFamily: T.mono, color: T.text }}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 /* ==================================================================
    Модалка центрується не по вікну, а по робочій області.
 
    Сайдбар непрозорий і займає ліві ~300px. Вікно, відцентроване по
    viewport, математично стоїть посередині, але виглядає зсунутим
-   уліво: половину його «половини» з'їдає меню. Томуміряємо <main>
+   уліво: половину його «половини» зʼїдає меню. Тому міряємо <main>
    і накриваємо саме його.
 
    ResizeObserver, а не одноразовий вимір: сайдбар згортається, і
@@ -272,7 +174,12 @@ function IconBtn({ icon: Icon, label, onClick, danger }) {
   );
 }
 
-export default function TradeSheet({ initial, pair, saving, onClose, onSave, onDelete }) {
+export default function TradeSheet({
+  initial, pair, saving, onClose, onSave, onDelete, knownTags = [],
+  /* Публічна сторінка показує ту саму картку, але дивитись її може
+     будь-хто за посиланням — тому там усе тільки для читання. */
+  readOnly = false,
+}) {
   const meta = metaOf(initial);
   const [f, setF] = useState({
     id: initial?.id || null,
@@ -281,7 +188,9 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
     type: initial?.type || 'LONG',
     result: initial?.result || 'WIN',
     rr: initial?.rr != null ? String(Math.abs(initial.rr)) : '2',
-    quality: meta.quality || 'A',
+    /* Оцінку угоди більше не виставляють, але у старих записах вона
+       є — тягнемо як було, щоб редагування її не стирало. */
+    quality: meta.quality || null,
     session: meta.session || 'London',
     tags: meta.tags || [],
     notes: initial?.notes || '',
@@ -289,6 +198,9 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
   });
   const [focus, setFocus] = useState(null);
   const [drop, setDrop] = useState(false);
+  const [mine, setMine] = useState(customSetups);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
   const contentBox = useContentBox();
   const fileRef = useRef(null);
   const set = (p) => setF((s) => ({ ...s, ...p }));
@@ -317,6 +229,36 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
 
   const toggleTag = (tag) =>
     set({ tags: f.tags.includes(tag) ? f.tags.filter((x) => x !== tag) : [...f.tags, tag] });
+
+  /* Список сетапів: вбудовані, свої (їх заводять у швидкому рядку),
+     і ті, що вже зустрічались у цьому бектесті. Обрані в поточній
+     угоді теж, інакше сетап зі старого запису зник би з форми при
+     редагуванні. */
+  const setups = allSetups({ custom: mine, used: [...knownTags, ...f.tags] });
+
+  /* Додавання без підказок: список сетапів і так лежить плашками
+     вище, тому дублювати його випадайкою нема сенсу — тут просто
+     вписують назву, якої в ряду ще немає. */
+  const commitSetup = () => {
+    const v = draft.trim();
+    if (!v) { setAdding(false); setDraft(''); return; }
+    const known = setups.find((x) => x.toLowerCase() === v.toLowerCase());
+    if (known) {
+      if (!f.tags.includes(known)) toggleTag(known);
+    } else {
+      setMine(addCustomSetup(v));
+      set({ tags: [...f.tags, v] });
+    }
+    setDraft('');
+    setAdding(false);
+  };
+
+  /* Прибрати свій сетап зі списку — виправити описку інакше нічим */
+  const forgetSetup = (e, tag) => {
+    e.stopPropagation();
+    setMine(removeCustomSetup(tag));
+    set({ tags: f.tags.filter((x) => x !== tag) });
+  };
 
   const submit = () => {
     const rr = Number(String(f.rr).replace(',', '.'));
@@ -356,7 +298,7 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
         transition={{ duration: 0.3, ease: EASE }}
         onClick={(e) => e.stopPropagation()}
         onPaste={onPaste}
-        className="relative w-full max-w-[940px] overflow-hidden rounded-[26px]"
+        className="relative w-full max-w-[1140px] overflow-hidden rounded-[26px]"
         style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 44px 100px -34px rgba(0,0,0,0.95)' }}
       >
         {/* Волосяна лінія згори — єдине, що видає колір розділу до того,
@@ -373,16 +315,52 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
           style={{ borderBottom: `1px solid ${T.line}` }}
         >
           <div className="flex min-w-0 items-center gap-3.5">
+            {/* ---------- напрям угоди ----------
+
+                Стрічка, а не підміна картинки: стрілки стоять одна за
+                одною на відстані рівно у висоту плитки, і при
+                перемиканні вся стрічка проїжджає на один крок. Тому
+                для SHORT графік іде згори вниз, для LONG — знизу
+                вгору, і в кадрі завжди рівно одна стрілка.
+
+                Ніяких пружин і поштовхів: рух рівний від початку до
+                кінця, з мʼяким входом і виходом. Колір при цьому
+                переливається окремим шаром — градієнт CSS анімувати
+                не вміє, тому червоний просто проявляється поверх
+                зеленого. */}
             <div
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] transition-all duration-200"
+              className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[14px]"
               style={{
-                background: fill(short ? T.badRgb : T.okRgb),
+                background: fill(T.okRgb),
                 boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 10px 22px -12px rgba(${short ? T.badRgb : T.okRgb},0.9)`,
+                transition: 'box-shadow .5s ease',
               }}
             >
-              {short
-                ? <TrendingDown size={21} strokeWidth={2} style={{ color: '#fff' }} />
-                : <TrendingUp size={21} strokeWidth={2} style={{ color: '#fff' }} />}
+              <motion.span
+                aria-hidden
+                className="absolute inset-0"
+                style={{ background: fill(T.badRgb) }}
+                animate={{ opacity: short ? 1 : 0 }}
+                transition={{ duration: 0.5, ease: [0.65, 0, 0.35, 1] }}
+              />
+
+              <AnimatePresence initial={false}>
+                <motion.span
+                  key={f.type}
+                  className="absolute inset-0 grid place-items-center"
+                  /* 44px — рівно висота плитки: стрілка заходить точно
+                     з-за краю і виходить точно за край, без «стрибка»
+                     всередині кадру. */
+                  initial={{ y: short ? -44 : 44 }}
+                  animate={{ y: 0 }}
+                  exit={{ y: short ? 44 : -44 }}
+                  transition={{ duration: 0.55, ease: [0.65, 0, 0.35, 1] }}
+                >
+                  {short
+                    ? <TrendingDown size={21} strokeWidth={2.2} style={{ color: '#fff' }} />
+                    : <TrendingUp size={21} strokeWidth={2.2} style={{ color: '#fff' }} />}
+                </motion.span>
+              </AnimatePresence>
             </div>
 
             <div className="min-w-0">
@@ -399,7 +377,7 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
                     border: `1px solid rgba(${tone},0.3)`,
                   }}
                 >
-                  {f.result}
+                  {resultLabel(f.result)}
                 </span>
               </div>
               <div className="mt-[5px] truncate text-[12.5px]" style={{ fontFamily: T.mono, color: T.text3 }}>
@@ -409,29 +387,43 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {f.id && onDelete && <IconBtn icon={Trash2} label="Видалити" onClick={() => onDelete(f.id)} danger />}
+            {!readOnly && f.id && onDelete && <IconBtn icon={Trash2} label="Видалити" onClick={() => onDelete(f.id)} danger />}
             <IconBtn icon={X} label="Закрити (Esc)" onClick={onClose} />
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_372px]">
+        <div className="grid lg:grid-cols-[1fr_460px]">
           {/* ─────────── Ліва колонка: цифри ─────────── */}
           <div className="flex flex-col gap-[18px] px-6 pb-6 pt-[22px] lg:border-r" style={{ borderColor: T.line }}>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Напрям</Label>
-                <Seg id="type" options={['LONG', 'SHORT']} value={f.type} onChange={(v) => set({ type: v })} />
+                <Seg id="type" options={['LONG', 'SHORT']} value={f.type} onChange={(v) => set({ type: v })} readOnly={readOnly} />
               </div>
               <div>
                 <Label>Результат</Label>
-                <Seg id="result" options={['WIN', 'LOSS', 'BE']} value={f.result} onChange={(v) => set({ result: v })} />
+                <Seg id="result" options={['WIN', 'LOSS', 'BE']} value={f.result} onChange={(v) => set({ result: v })} labelOf={resultLabel} readOnly={readOnly} />
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-[1.1fr_1fr_1.15fr]">
               <div className="min-w-0">
                 <Label>Актив</Label>
-                <AssetPicker value={f.pair} onChange={(v) => set({ pair: v })} />
+                {readOnly ? (
+                  <StaticField>
+                    {f.pair && <AssetIcon symbol={f.pair} />}
+                    <span className="truncate text-[14.5px] font-bold tracking-[0.05em]" style={{ fontFamily: T.mono, color: T.text }}>
+                      {f.pair || '—'}
+                    </span>
+                  </StaticField>
+                ) : (
+                  <AssetPicker
+                    value={f.pair}
+                    onChange={(v) => set({ pair: v })}
+                    className="mt-[9px]"
+                    priority={pair ? [pair] : []}
+                  />
+                )}
               </div>
 
               <div className="min-w-0">
@@ -442,7 +434,7 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
                 >
                   <input
                     value={f.result === 'WIN' ? f.rr : f.result === 'LOSS' ? '−1' : '0'}
-                    disabled={f.result !== 'WIN'}
+                    disabled={readOnly || f.result !== 'WIN'}
                     onChange={(e) => set({ rr: e.target.value.replace(',', '.') })}
                     onFocus={() => setFocus('r')}
                     onBlur={() => setFocus(null)}
@@ -457,36 +449,39 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
                 <Label>Дата</Label>
                 {/* Наш календар, а не системний: попап ОС світлий і
                     малюється чужим шрифтом поверх темної модалки */}
-                <div className="mt-[9px]">
-                  <DateField
-                    value={f.date}
-                    onChange={(v) => set({ date: v })}
-                    height={46}
-                    fontSize={14}
-                    fontWeight={500}
-                    alwaysNumeric
-                    accent={ACT.tint}
-                    accentRgb={ACT.rgb}
-                    accentBorder={act(0.45)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="min-w-0">
-                <Label>Сесія</Label>
-                <Seg id="session" options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} />
-              </div>
-              <div className="min-w-0">
-                <Label>Якість</Label>
-                <Seg id="quality" options={QUALITIES} value={f.quality} onChange={(v) => set({ quality: v })} />
+                {readOnly ? (
+                  <StaticField>
+                    <CalendarDays size={15} strokeWidth={2.2} style={{ color: T.text4 }} />
+                    <span className="text-[14px] tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
+                      {dateLabel}
+                    </span>
+                  </StaticField>
+                ) : (
+                  <div className="mt-[9px]">
+                    <DateField
+                      value={f.date}
+                      onChange={(v) => set({ date: v })}
+                      height={46}
+                      fontSize={14}
+                      fontWeight={500}
+                      alwaysNumeric
+                      accent={ACT.tint}
+                      accentRgb={ACT.rgb}
+                      accentBorder={act(0.45)}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
             <div>
+              <Label>Сесія</Label>
+              <Seg id="session" options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} readOnly={readOnly} />
+            </div>
+
+            <div>
               <Label
-                hint="можна кілька"
+                hint={readOnly ? null : 'можна кілька'}
                 right={f.tags.length ? (
                   <span className="shrink-0 text-[11px] font-bold" style={{ fontFamily: T.mono, color: ACT.tint }}>
                     {f.tags.length} обрано
@@ -496,15 +491,28 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
                 Сетап
               </Label>
               <div className="mt-[11px] flex flex-wrap gap-[7px]">
-                {SETUP_TAGS.map((tag) => {
+                {readOnly && f.tags.length === 0 && (
+                  <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>Сетап не вказано</span>
+                )}
+                {(readOnly ? f.tags : setups).map((tag) => {
                   const on = f.tags.includes(tag);
+                  const own = mine.includes(tag);
                   return (
-                    <button
+                    <motion.button
                       key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className="flex h-[34px] items-center whitespace-nowrap rounded-[10px] px-3.5 text-[13px] font-semibold transition-all duration-200"
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.7 }}
+                      onClick={readOnly ? undefined : () => toggleTag(tag)}
+                      disabled={readOnly}
+                      className="group/tag relative flex h-[34px] items-center whitespace-nowrap rounded-[10px] pl-3.5 text-[13px] font-semibold transition-colors duration-200"
                       style={{
                         fontFamily: T.sans,
+                        /* Свої лишають місце під хрестик, щоб плашка
+                           не смикалась на наведенні */
+                        paddingRight: own && !readOnly ? 26 : 14,
+                        cursor: readOnly ? 'default' : 'pointer',
                         color: on ? T.text : T.text2,
                         background: on ? act(0.18) : T.surfaceHi,
                         border: `1px solid ${on ? act(0.5) : T.line}`,
@@ -513,9 +521,74 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
                       onMouseLeave={(e) => { if (!on) { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; } }}
                     >
                       {tag}
-                    </button>
+                      {own && !readOnly && (
+                        <span
+                          role="button"
+                          tabIndex={-1}
+                          title="Прибрати сетап зі списку"
+                          onClick={(e) => forgetSetup(e, tag)}
+                          className="absolute right-[7px] top-1/2 grid h-4 w-4 -translate-y-1/2 place-items-center rounded opacity-0 transition-opacity duration-150 group-hover/tag:opacity-100"
+                          style={{ color: T.text4 }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
+                        >
+                          <X size={11} strokeWidth={3} />
+                        </span>
+                      )}
+                    </motion.button>
                   );
                 })}
+
+                {readOnly ? null : adding ? (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.7 }}
+                    className="flex h-[34px] items-center gap-1.5 rounded-[10px] pl-3 pr-1.5"
+                    style={{ background: T.sunken, border: `1px solid ${ACT.to}`, boxShadow: `0 0 0 3px ${act(0.13)}` }}
+                  >
+                    <input
+                      autoFocus
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); commitSetup(); }
+                        if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); setDraft(''); }
+                      }}
+                      onBlur={commitSetup}
+                      placeholder="Назва сетапу"
+                      className="w-[140px] bg-transparent text-[13px] font-semibold outline-none"
+                      style={{ fontFamily: T.sans, color: T.text }}
+                    />
+                    <span
+                      role="button"
+                      onMouseDown={(e) => { e.preventDefault(); commitSetup(); }}
+                      className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md"
+                      style={{ background: actGradient, color: '#fff' }}
+                    >
+                      <Check size={12} strokeWidth={3} />
+                    </span>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    layout
+                    onClick={() => setAdding(true)}
+                    className="flex h-[34px] items-center gap-1.5 rounded-[10px] px-3 text-[13px] font-semibold transition-colors duration-200"
+                    style={{
+                      fontFamily: T.sans,
+                      color: T.text3,
+                      background: 'transparent',
+                      border: `1px dashed ${T.lineHi}`,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = ACT.tint; e.currentTarget.style.borderColor = act(0.5); e.currentTarget.style.background = act(0.07); }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <Plus size={13} strokeWidth={2.8} />
+                    Свій сетап
+                  </motion.button>
+                )}
+
               </div>
             </div>
           </div>
@@ -533,9 +606,10 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
                   <img
                     src={f.screenshot_url}
                     alt=""
-                    className="block max-h-[186px] w-full object-contain"
+                    className="block max-h-[260px] w-full object-contain"
                     style={{ background: T.bg }}
                   />
+                  {!readOnly && (
                   <button
                     onClick={() => set({ screenshot_url: null })}
                     title="Прибрати"
@@ -546,6 +620,14 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
                   >
                     <X size={14} strokeWidth={2.6} />
                   </button>
+                  )}
+                </div>
+              ) : readOnly ? (
+                <div
+                  className="mt-[11px] grid h-[260px] w-full place-items-center rounded-2xl text-[13px]"
+                  style={{ background: T.bg, border: `1px dashed ${T.line}`, fontFamily: T.sans, color: T.text4 }}
+                >
+                  Скріна немає
                 </div>
               ) : (
                 <button
@@ -555,7 +637,7 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
                   onDrop={(e) => { e.preventDefault(); setDrop(false); readFile(e.dataTransfer.files?.[0]); }}
                   onMouseEnter={() => setDrop(true)}
                   onMouseLeave={() => setDrop(false)}
-                  className="mt-[11px] flex h-[186px] w-full flex-col items-center justify-center rounded-2xl px-5 text-center transition-all duration-200"
+                  className="mt-[11px] flex h-[260px] w-full flex-col items-center justify-center rounded-2xl px-5 text-center transition-all duration-200"
                   style={{
                     background: drop ? act(0.08) : T.bg,
                     border: `1.5px dashed ${drop ? act(0.66) : T.lineHi}`,
@@ -594,10 +676,12 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
               >
                 <textarea
                   value={f.notes}
+                  readOnly={readOnly}
+                  placeholder={readOnly ? 'Записів до угоди немає.' : undefined}
                   onChange={(e) => set({ notes: e.target.value })}
                   onFocus={() => setFocus('n')}
                   onBlur={() => setFocus(null)}
-                  placeholder="Що бачив, чому зайшов, що зробив би інакше."
+                  {...(readOnly ? {} : { placeholder: 'Що бачив, чому зайшов, що зробив би інакше.' })}
                   className="h-full w-full resize-none border-none bg-transparent px-4 py-3.5 outline-none"
                   style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.55, color: T.text }}
                 />
@@ -616,31 +700,45 @@ export default function TradeSheet({ initial, pair, saving, onClose, onSave, onD
           </span>
 
           <div className="ml-auto flex items-center gap-2.5">
-            <button
-              onClick={onClose}
-              className="flex h-11 items-center rounded-xl px-[22px] text-[14.5px] font-semibold transition-all duration-200"
-              style={{ fontFamily: T.sans, color: T.text2, background: 'transparent' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
-            >
-              Скасувати
-            </button>
-            <button
-              onClick={submit}
-              disabled={saving}
-              className="flex h-11 items-center gap-2.5 whitespace-nowrap rounded-xl px-6 text-[14.5px] font-semibold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-              style={{
-                fontFamily: T.sans, color: '#fff',
-                background: actGradient,
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 30px -12px ${act(0.9)}`,
-                opacity: saving ? 0.6 : 1,
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = actGradientHover; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = actGradient; }}
-            >
-              {saving ? <Loader2 size={16} strokeWidth={3} className="animate-spin" /> : <Check size={16} strokeWidth={2.6} />}
-              {f.id ? 'Зберегти' : 'Додати угоду'}
-            </button>
+            {readOnly ? (
+              <button
+                onClick={onClose}
+                className="flex h-11 items-center rounded-xl px-6 text-[14.5px] font-semibold transition-all duration-200"
+                style={{ fontFamily: T.sans, color: T.text2, background: T.surfaceHi, border: `1px solid ${T.line}` }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; }}
+              >
+                Закрити
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={onClose}
+                  className="flex h-11 items-center rounded-xl px-[22px] text-[14.5px] font-semibold transition-all duration-200"
+                  style={{ fontFamily: T.sans, color: T.text2, background: 'transparent' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
+                >
+                  Скасувати
+                </button>
+                <button
+                  onClick={submit}
+                  disabled={saving}
+                  className="flex h-11 items-center gap-2.5 whitespace-nowrap rounded-xl px-6 text-[14.5px] font-semibold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
+                  style={{
+                    fontFamily: T.sans, color: '#fff',
+                    background: actGradient,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 30px -12px ${act(0.9)}`,
+                    opacity: saving ? 0.6 : 1,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = actGradientHover; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = actGradient; }}
+                >
+                  {saving ? <Loader2 size={16} strokeWidth={3} className="animate-spin" /> : <Check size={16} strokeWidth={2.6} />}
+                  {f.id ? 'Зберегти' : 'Додати угоду'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </motion.div>

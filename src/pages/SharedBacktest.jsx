@@ -13,6 +13,7 @@ import StatStrip from '../components/backtest/StatStrip';
 import EquityCurve from '../components/backtest/EquityCurve';
 import BreakdownPanels from '../components/backtest/BreakdownPanels';
 import BacktestTable from '../components/backtest/BacktestTable';
+import TradeSheet from '../components/backtest/TradeSheet';
 import { ACT, act, actGradient, actGradientHover } from '../components/backtest/accent';
 
 /* ==================================================================
@@ -33,6 +34,8 @@ export default function SharedBacktest() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [zoom, setZoom] = useState(null);
+  /* Картка угоди — та сама, що у власника, але тільки для читання */
+  const [sheet, setSheet] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -264,7 +267,7 @@ export default function SharedBacktest() {
             </p>
           </div>
 
-          <BacktestTable trades={stats.trades} readOnly onShot={setZoom} />
+          <BacktestTable trades={stats.trades} readOnly onOpen={setSheet} onShot={setZoom} />
 
           {/* ─────────── Тиха реклама ─────────── */}
           {!user && (
@@ -305,6 +308,19 @@ export default function SharedBacktest() {
           )}
         </div>
       </div>
+
+      {/* ─────────── Картка угоди ─────────── */}
+      <AnimatePresence>
+        {sheet && (
+          <TradeSheet
+            key="shared-sheet"
+            readOnly
+            initial={sheet}
+            pair={session?.pair}
+            onClose={() => setSheet(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ─────────── Лайтбокс ─────────── */}
       <AnimatePresence>

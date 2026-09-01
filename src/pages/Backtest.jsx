@@ -10,6 +10,8 @@ import { useAuth } from '../context/AuthContext';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import { computeStats, fmtR, fmtPF } from '../lib/backtestStats';
 import { DEMO_SESSIONS } from '../lib/backtestDemo';
+import { setBacktestPublic } from '../lib/backtestShare';
+import { notify } from '../utils/notify';
 import { ACT } from '../components/backtest/accent';
 import BacktestCard from '../components/backtest/BacktestCard';
 import NewBacktestModal from '../components/backtest/NewBacktestModal';
@@ -203,6 +205,29 @@ export default function Backtest() {
     }
   };
 
+  /* Поділитись прямо зі списку: відкриваємо доступ, якщо він ще
+     закритий, і кладемо лінк у буфер. Друге натискання на вже
+     відкритому прогоні просто копіює — доступ не перемикаємо, бо
+     випадково закрити чужу посилку гірше, ніж зайвий раз скопіювати. */
+  const [sharingId, setSharingId] = useState(null);
+
+  const shareSession = async (s) => {
+    if (sharingId) return;
+    setSharingId(s.id);
+    try {
+      if (!s.is_public) {
+        const next = await setBacktestPublic(user.id, s.id, true);
+        setSessions((list) => list.map((x) => (x.id === s.id ? { ...x, ...next } : x)));
+      }
+      await navigator.clipboard.writeText(`${window.location.origin}/shared/backtest/${s.id}`);
+      notify.success('Лінк скопійовано', 'Бектест відкритий для перегляду за посиланням.');
+    } catch (e) {
+      notify.error('Не вдалось поділитись', e.message);
+    } finally {
+      setSharingId(null);
+    }
+  };
+
   const removeSession = async (s) => {
     try {
       await supabase.from('backtest_trades').delete().eq('session_id', s.id);
@@ -294,25 +319,25 @@ export default function Backtest() {
             </p>
           </div>
 
+          {/* Ховер простий: градієнт трохи світлішає, і все. Кнопка
+              не рухається, не світиться й нічого не малює — на
+              сторінці вона єдина яскрава, їй не треба привертати
+              увагу ще й рухом. */}
           <button
             onClick={() => setCreating(true)}
-            className="flex shrink-0 items-center"
+            className="flex shrink-0 items-center active:scale-[0.98]"
             style={{
               fontFamily: T.sans, gap: 10, height: 46, padding: '0 22px', borderRadius: 13,
               background: `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`,
               color: '#fff', fontSize: 14.5, fontWeight: 600,
               boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 30px -12px rgba(${ACT.rgb},0.9)`,
-              transition: 'all .18s',
+              transition: 'background .2s ease, transform .12s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)';
               e.currentTarget.style.background = `linear-gradient(180deg, ${ACT.hoverFrom}, ${ACT.hoverTo})`;
-              e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.27), 0 16px 36px -12px rgba(${ACT.rgb},0.95)`;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'none';
               e.currentTarget.style.background = `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`;
-              e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 30px -12px rgba(${ACT.rgb},0.9)`;
             }}
           >
             <Plus size={16} strokeWidth={2.6} />
@@ -435,6 +460,8 @@ export default function Backtest() {
                       session={s}
                       onOpen={(x) => navigate(`/backtest/${x.id}`)}
                       onDelete={(x) => setConfirm(x)}
+                      onShare={shareSession}
+                      sharing={sharingId === s.id}
                     />
                   ))}
                 </AnimatePresence>

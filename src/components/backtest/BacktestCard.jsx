@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Trash2, Globe } from 'lucide-react';
+import { ArrowRight, Trash2, Globe, Link2, Loader2 } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { computeStats, sparkFromTrades, fmtPF, fmtR } from '../../lib/backtestStats';
-import { act } from './accent';
+import { ACT, act } from './accent';
 
 /* ==================================================================
    Картка бектесту у списку.
@@ -102,7 +102,7 @@ function Metric({ label, value, tone, last }) {
   );
 }
 
-export default function BacktestCard({ session, onOpen, onDelete }) {
+export default function BacktestCard({ session, onOpen, onDelete, onShare, sharing }) {
   const trades = session.trades || [];
   const s = computeStats(trades, session.initial_balance || 10000);
   const spark = sparkFromTrades(s.trades);
@@ -133,14 +133,6 @@ export default function BacktestCard({ session, onOpen, onDelete }) {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      {/* Волосяна лінія згори — те, що відрізняє картку від просто
-          прямокутника з кантом. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px"
-        style={{ background: `linear-gradient(90deg, transparent, ${act(0.8)}, transparent)` }}
-      />
-
       <div style={{ padding: '18px 20px 0' }}>
         <div className="flex items-center justify-between" style={{ gap: 10 }}>
           <div className="flex min-w-0 items-center" style={{ gap: 7 }}>
@@ -239,6 +231,28 @@ export default function BacktestCard({ session, onOpen, onDelete }) {
         </span>
 
         <span className="flex shrink-0 items-center" style={{ gap: 6 }}>
+          {/* Поділитись просто зі списку: щоб кинути комусь прогін,
+              не треба заходити в нього й шукати кнопку всередині. */}
+          {onShare && !session.demo && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onShare(session); }}
+              title={session.is_public ? 'Скопіювати лінк' : 'Відкрити доступ і скопіювати лінк'}
+              disabled={sharing}
+              className={`grid place-items-center transition-all duration-200 ${session.is_public ? '' : 'opacity-0 group-hover:opacity-100'}`}
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 8,
+                color: session.is_public ? ACT.tint : T.text3,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = ACT.tint; e.currentTarget.style.background = act(0.12); }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = session.is_public ? ACT.tint : T.text3; e.currentTarget.style.background = 'transparent'; }}
+            >
+              {sharing
+                ? <Loader2 size={13} strokeWidth={2.6} className="animate-spin" />
+                : <Link2 size={13} strokeWidth={2.2} />}
+            </button>
+          )}
           {onDelete && !session.demo && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(session); }}

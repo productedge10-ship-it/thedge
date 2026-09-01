@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 import { notify } from '../utils/notify';
 import { useAuth } from '../context/AuthContext';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
-import { computeStats, pairOf } from '../lib/backtestStats';
+import { computeStats, pairOf, tagsOf } from '../lib/backtestStats';
 import { isDemo, getDemoSession, addDemoTrade, updateDemoTrade, deleteDemoTrade } from '../lib/backtestDemo';
 import { setBacktestPublic } from '../lib/backtestShare';
 import QuickTradeBar from '../components/backtest/QuickTradeBar';
@@ -107,6 +107,14 @@ export default function BacktestSession() {
       const p = pairOf(trades[i]);
       if (p && !seen.includes(p)) seen.push(p);
     }
+    return seen;
+  }, [trades]);
+
+  /* Сетапи, які вже зустрічались у цьому бектесті — щоб форма
+     підказувала своє, а не тільки вбудований список. */
+  const usedTags = useMemo(() => {
+    const seen = [];
+    trades.forEach((t) => tagsOf(t).forEach((tag) => { if (tag && !seen.includes(tag)) seen.push(tag); }));
     return seen;
   }, [trades]);
 
@@ -339,6 +347,7 @@ export default function BacktestSession() {
             saving={saving}
             sessionPair={session?.pair || ''}
             usedPairs={usedPairs}
+            usedTags={usedTags}
             onQuickAdd={quickAdd}
             onOpenDetails={(preset) => setSheet({ preset })}
           />
@@ -363,12 +372,12 @@ export default function BacktestSession() {
               rr: sheet.preset.rr,
               tda_data: {
                 session: sheet.preset.session,
-                quality: sheet.preset.quality,
                 pair: sheet.preset.pair || session.pair,
                 tags: sheet.preset.tags || [],
               },
             } : null)}
             pair={session.pair}
+            knownTags={usedTags}
             saving={saving}
             onClose={() => setSheet(null)}
             onSave={saveSheet}
