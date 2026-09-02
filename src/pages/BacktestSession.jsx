@@ -128,12 +128,15 @@ export default function BacktestSession() {
     result: f.result,
     rr: Number(f.rr) || 0,
     notes: f.notes || '',
-    screenshot_url: f.screenshot_url || null,
+    /* У колонку — перший скрін (її читають таблиця й публічна
+       сторінка), весь список — у tda_data. */
+    screenshot_url: (f.shots && f.shots[0]) || f.screenshot_url || null,
     tda_data: {
       pair: f.pair || session?.pair,
       session: f.session,
       quality: f.quality,
       tags: f.tags || [],
+      shots: f.shots || [],
     },
   });
 

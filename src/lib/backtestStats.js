@@ -44,6 +44,16 @@ export const qualityOf = (t) => metaOf(t).quality || t.quality || null;
 export const tagsOf = (t) => metaOf(t).tags || t.tags || [];
 export const pairOf = (t, fallback) => metaOf(t).pair || t.pair || fallback || '';
 
+/* Скріни угоди. Історично був один — у колонці `screenshot_url`;
+   тепер їх кілька, і весь список лежить у tda_data. Колонку не
+   чіпаємо: у ній лишається перший скрін, тому таблиця й публічна
+   сторінка бачать те саме, що бачили раніше. */
+export const shotsOf = (t) => {
+  const list = metaOf(t).shots;
+  if (Array.isArray(list) && list.length) return list.filter(Boolean);
+  return t?.screenshot_url ? [t.screenshot_url] : [];
+};
+
 export const money = (v) => `${v < 0 ? '−' : ''}$${Math.abs(v).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}`;
 
 const weekdayIndex = (iso) => {

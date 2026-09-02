@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Trash2, ImagePlus, Loader2, TrendingUp, TrendingDown, CalendarDays, Plus } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
-import { SESSIONS, metaOf, pairOf, resultLabel } from '../../lib/backtestStats';
+import { SESSIONS, metaOf, pairOf, resultLabel, shotsOf } from '../../lib/backtestStats';
 import { ACT, act, actGradient, actGradientHover, segFill as fill, SEG_TONE } from './accent';
 import DateField from '../ui/DateField';
+import ImageSlider from '../ui/ImageSlider';
 import { allSetups, customSetups, addCustomSetup, removeCustomSetup } from '../../lib/backtestSetups';
 import AssetPicker from './AssetPicker';
 import AssetIcon from '../ui/AssetIcon';
@@ -35,12 +36,15 @@ function Label({ children, hint, right }) {
     <div className="flex items-baseline justify-between gap-2.5">
       <div className="flex min-w-0 items-baseline gap-2">
         <span
-          className="text-[9.5px] font-bold uppercase tracking-[0.19em]"
-          style={{ fontFamily: T.mono, color: T.text3 }}
+          /* Підписи полів були на T.text3 і на дрібному моноширинному
+             майже зливались із тлом. Тепер на тон світліші — читаються
+             з першого погляду, але не сперечаються зі значеннями. */
+          className="text-[10px] font-bold uppercase tracking-[0.18em]"
+          style={{ fontFamily: T.mono, color: T.text2 }}
         >
           {children}
         </span>
-        {hint && <span className="truncate text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>{hint}</span>}
+        {hint && <span className="truncate text-[11.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>{hint}</span>}
       </div>
       {right}
     </div>
@@ -50,10 +54,10 @@ function Label({ children, hint, right }) {
 /* Заливка не перемальовується, а переїжджає: градієнт неможливо
    анімувати через CSS, тому активний стан — окремий шар із layoutId,
    який framer переносить пружиною з попередньої кнопки на нову. */
-function Seg({ id, options, value, onChange, labelOf, readOnly }) {
+function Seg({ id, options, value, onChange, labelOf, readOnly, grow = true }) {
   return (
     <div
-      className="mt-[9px] flex w-full items-center gap-[5px] rounded-xl p-[5px]"
+      className={`mt-[9px] flex items-center gap-[5px] rounded-xl p-[5px] ${grow ? 'w-full' : 'w-fit'}`}
       style={{ background: T.sunken, border: `1px solid ${T.line}` }}
     >
       {options.map((o) => {
@@ -64,7 +68,7 @@ function Seg({ id, options, value, onChange, labelOf, readOnly }) {
             key={o}
             onClick={readOnly ? undefined : () => onChange(o)}
             disabled={readOnly}
-            className="relative flex h-[34px] flex-1 items-center justify-center whitespace-nowrap rounded-[9px] px-2.5 text-[12px] font-bold tracking-[0.07em]"
+            className={`relative flex h-[34px] items-center justify-center whitespace-nowrap rounded-[9px] text-[12px] font-bold tracking-[0.07em] ${grow ? 'flex-1 px-2.5' : 'px-5'}`}
             style={{
               fontFamily: T.mono,
               color: on ? '#fff' : T.text3,
@@ -194,7 +198,10 @@ export default function TradeSheet({
     session: meta.session || 'London',
     tags: meta.tags || [],
     notes: initial?.notes || '',
-    screenshot_url: initial?.screenshot_url || null,
+    /* Скрінів може бути кілька. У колонці бази лишається перший —
+       щоб таблиця й старі читачі бачили те саме, що й раніше, — а
+       весь список живе в tda_data. */
+    shots: shotsOf(initial),
   });
   const [focus, setFocus] = useState(null);
   const [drop, setDrop] = useState(false);
@@ -213,18 +220,28 @@ export default function TradeSheet({
     return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
   }, [onClose]);
 
-  const readFile = (file) => {
-    if (!file || !file.type?.startsWith('image/')) return;
-    const r = new FileReader();
-    r.onload = () => set({ screenshot_url: r.result });
-    r.readAsDataURL(file);
+  const addShot = (src) => { if (src) setF((s) => ({ ...s, shots: [...s.shots, src] })); };
+  const dropShot = (i) => setF((s) => ({ ...s, shots: s.shots.filter((_, idx) => idx !== i) }));
+
+  const readFiles = (files) => {
+    Array.from(files || [])
+      .filter((file) => file && file.type?.startsWith('image/'))
+      .forEach((file) => {
+        const r = new FileReader();
+        r.onload = () => addShot(r.result);
+        r.readAsDataURL(file);
+      });
   };
 
   const onPaste = (e) => {
+    if (readOnly) return;
     const text = e.clipboardData?.getData('text');
-    if (text && /^https?:\/\//.test(text.trim())) { set({ screenshot_url: text.trim() }); e.preventDefault(); return; }
-    const item = Array.from(e.clipboardData?.items || []).find((i) => i.type.indexOf('image') !== -1);
-    if (item) { e.preventDefault(); readFile(item.getAsFile()); }
+    if (text && /^https?:\/\//.test(text.trim())) { addShot(text.trim()); e.preventDefault(); return; }
+    const items = Array.from(e.clipboardData?.items || []).filter((i) => i.type.indexOf('image') !== -1);
+    if (items.length) {
+      e.preventDefault();
+      readFiles(items.map((i) => i.getAsFile()));
+    }
   };
 
   const toggleTag = (tag) =>
@@ -476,7 +493,9 @@ export default function TradeSheet({
 
             <div>
               <Label>Сесія</Label>
-              <Seg id="session" options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} readOnly={readOnly} />
+              {/* Три коротких слова не мають займати всю ширину колонки:
+                  розтягнута на 600px смуга виглядала як помилка верстки. */}
+              <Seg id="session" options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} readOnly={readOnly} grow={false} />
             </div>
 
             <div>
@@ -596,30 +615,59 @@ export default function TradeSheet({
           {/* ─────────── Права колонка: скрін і запис ─────────── */}
           <div className="flex flex-col gap-[18px] px-6 pb-6 pt-[22px]" style={{ background: T.sunken }}>
             <div>
-              <Label hint="Ctrl+V, файл або посилання">Графік</Label>
+              <Label
+                hint={readOnly ? null : 'Ctrl+V, файл або посилання'}
+                right={f.shots.length > 1 ? (
+                  <span className="shrink-0 text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
+                    {f.shots.length}
+                  </span>
+                ) : null}
+              >
+                Графік
+              </Label>
 
-              {f.screenshot_url ? (
-                <div
-                  className="group relative mt-[11px] overflow-hidden rounded-2xl"
-                  style={{ border: `1px solid ${T.line}` }}
-                >
-                  <img
-                    src={f.screenshot_url}
-                    alt=""
-                    className="block max-h-[260px] w-full object-contain"
-                    style={{ background: T.bg }}
-                  />
+              {f.shots.length > 0 ? (
+                /* Той самий слайдер, що в журналі: стрілки, лупа на
+                   наведенні й фулскрін по кліку. Заводити для бектесту
+                   власний перегляд не було сенсу — рівні на графіку
+                   читають однаково в обох місцях. */
+                <div className="mt-[11px] overflow-hidden rounded-2xl" style={{ border: `1px solid ${T.line}` }}>
+                  <ImageSlider images={f.shots} containerClassName="h-[260px] w-full" />
+
                   {!readOnly && (
-                  <button
-                    onClick={() => set({ screenshot_url: null })}
-                    title="Прибрати"
-                    className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-lg opacity-0 transition-all duration-200 group-hover:opacity-100"
-                    style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${T.line}`, color: T.text2, backdropFilter: 'blur(8px)' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.4)`; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; }}
-                  >
-                    <X size={14} strokeWidth={2.6} />
-                  </button>
+                    <div
+                      className="flex flex-wrap items-center gap-2 p-2.5"
+                      style={{ background: T.bg, borderTop: `1px solid ${T.line}` }}
+                    >
+                      {f.shots.map((src, i) => (
+                        <div
+                          key={`${src.slice(0, 24)}-${i}`}
+                          className="group/shot relative h-10 w-10 shrink-0 overflow-hidden rounded-lg"
+                          style={{ border: `1px solid ${T.line}` }}
+                        >
+                          <img src={src} alt="" className="h-full w-full object-cover" />
+                          <button
+                            onClick={() => dropShot(i)}
+                            title="Прибрати скрін"
+                            className="absolute inset-0 hidden place-items-center transition-colors group-hover/shot:grid"
+                            style={{ background: 'rgba(10,10,12,0.7)', color: '#fff' }}
+                          >
+                            <X size={12} strokeWidth={2.8} />
+                          </button>
+                        </div>
+                      ))}
+
+                      <button
+                        onClick={() => fileRef.current?.click()}
+                        title="Додати ще скрін"
+                        className="grid h-10 w-10 shrink-0 place-items-center rounded-lg transition-colors"
+                        style={{ border: `1px dashed ${T.lineHi}`, color: T.text3 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = ACT.tint; e.currentTarget.style.borderColor = act(0.5); e.currentTarget.style.background = act(0.07); }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <ImagePlus size={15} strokeWidth={2} />
+                      </button>
+                    </div>
                   )}
                 </div>
               ) : readOnly ? (
@@ -627,14 +675,14 @@ export default function TradeSheet({
                   className="mt-[11px] grid h-[260px] w-full place-items-center rounded-2xl text-[13px]"
                   style={{ background: T.bg, border: `1px dashed ${T.line}`, fontFamily: T.sans, color: T.text4 }}
                 >
-                  Скріна немає
+                  Скрінів немає
                 </div>
               ) : (
                 <button
                   onClick={() => fileRef.current?.click()}
                   onDragOver={(e) => { e.preventDefault(); setDrop(true); }}
                   onDragLeave={() => setDrop(false)}
-                  onDrop={(e) => { e.preventDefault(); setDrop(false); readFile(e.dataTransfer.files?.[0]); }}
+                  onDrop={(e) => { e.preventDefault(); setDrop(false); readFiles(e.dataTransfer.files); }}
                   onMouseEnter={() => setDrop(true)}
                   onMouseLeave={() => setDrop(false)}
                   className="mt-[11px] flex h-[260px] w-full flex-col items-center justify-center rounded-2xl px-5 text-center transition-all duration-200"
@@ -653,11 +701,18 @@ export default function TradeSheet({
                     Встав скрін графіка
                   </span>
                   <span className="mt-1.5 text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                    PNG, JPG або посилання TradingView
+                    PNG, JPG або посилання TradingView · можна кілька
                   </span>
                 </button>
               )}
-              <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => readFile(e.target.files?.[0])} />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={(e) => { readFiles(e.target.files); e.target.value = ''; }}
+              />
             </div>
 
             <div className="flex flex-1 flex-col">

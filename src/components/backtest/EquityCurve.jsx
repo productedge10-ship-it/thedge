@@ -115,15 +115,23 @@ export default function EquityCurve({ stats }) {
   const line = up ? T.ok : T.bad;
   const tip = hover != null && pts[hover] ? pts[hover] : null;
 
-  const tipStyle = (() => {
+  /* Картка стає ліворуч від точки, коли та вже близько до правого
+     краю — інакше вилазить за межі панелі.
+
+     Переворот іде окремою властивістю `x`, а не CSS-трансформом:
+     картка анімована, і framer сам пише transform (там y і scale),
+     тому мій translateX він просто затирав — біля останньої точки
+     переворот не спрацьовував зовсім. Відступ у 14px закладено
+     прямо в left, щоб обидва зсуви жили в одній системі.
+
+     Поріг рахуємо від реальної координати, а не від номера угоди:
+     при двох-трьох записах номер нічого не каже про те, де точка. */
+  const tipPos = (() => {
     const i = hover || 1;
     const x = geo ? geo.xy[i]?.[0] ?? PAD_L : PAD_L;
-    const flip = i > (pts.length - 1) * 0.62;
-    return {
-      /* 20px — падінг картки: полотно починається саме звідти */
-      left: 20 + x,
-      transform: `translateX(${flip ? 'calc(-100% - 14px)' : '14px'})`,
-    };
+    const flip = x > W * 0.62;
+    /* 20px — падінг картки: полотно починається саме звідти */
+    return { left: 20 + x + (flip ? -14 : 14), flip };
   })();
 
   return (
@@ -339,7 +347,13 @@ export default function EquityCurve({ stats }) {
               <motion.div
                 key="eq-tip"
                 initial={{ opacity: 0, y: 6, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1, left: tipStyle.left }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  left: tipPos.left,
+                  x: tipPos.flip ? '-100%' : '0%',
+                }}
                 transition={{
                   opacity: { duration: 0.18, ease: 'easeOut' },
                   y: { duration: 0.22, ease: EASE },
@@ -348,7 +362,6 @@ export default function EquityCurve({ stats }) {
                 }}
                 className="pointer-events-none absolute top-[22px] z-10 min-w-[196px] overflow-hidden rounded-[14px]"
                 style={{
-                  transform: tipStyle.transform,
                   /* Суцільний фон, а не панельна змінна: --edge-panel
                      напівпрозорий (він розрахований на розмиту бічну
                      панель), і крізь випадайку просвічував вміст під нею. */

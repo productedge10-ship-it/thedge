@@ -230,21 +230,42 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
           </span>
         </span>
 
-        <span className="flex shrink-0 items-center" style={{ gap: 6 }}>
+        {/* Дії й стрілка стоять упритул: прихована кнопка не просто
+            гасне, а стискається до нульової ширини разом із відступом.
+            Раніше вона лишала по собі дірку, і між лінком та стрілкою
+            зяяв простір, якого ніхто не замовляв.
+
+            Порядок — видалення, лінк, стрілка: рідкісна й небезпечна
+            дія найдалі від стрілки, якою картку відкривають. */}
+        <span className="flex shrink-0 items-center">
+          {onDelete && !session.demo && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(session); }}
+              title="Видалити бектест"
+              className="grid h-[26px] w-0 place-items-center overflow-hidden rounded-lg opacity-0 transition-all duration-200 group-hover:mr-1.5 group-hover:w-[26px] group-hover:opacity-100"
+              style={{ color: T.text3 }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <Trash2 size={13} strokeWidth={2.2} />
+            </button>
+          )}
+
           {/* Поділитись просто зі списку: щоб кинути комусь прогін,
-              не треба заходити в нього й шукати кнопку всередині. */}
+              не треба заходити в нього й шукати кнопку всередині.
+              Відкритий прогін світить лінком завжди — так видно, що
+              ним уже поділились. */}
           {onShare && !session.demo && (
             <button
               onClick={(e) => { e.stopPropagation(); onShare(session); }}
               title={session.is_public ? 'Скопіювати лінк' : 'Відкрити доступ і скопіювати лінк'}
               disabled={sharing}
-              className={`grid place-items-center transition-all duration-200 ${session.is_public ? '' : 'opacity-0 group-hover:opacity-100'}`}
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: 8,
-                color: session.is_public ? ACT.tint : T.text3,
-              }}
+              className={`grid h-[26px] place-items-center overflow-hidden rounded-lg transition-all duration-200 ${
+                session.is_public
+                  ? 'mr-2 w-[26px]'
+                  : 'w-0 opacity-0 group-hover:mr-2 group-hover:w-[26px] group-hover:opacity-100'
+              }`}
+              style={{ color: session.is_public ? ACT.tint : T.text3 }}
               onMouseEnter={(e) => { e.currentTarget.style.color = ACT.tint; e.currentTarget.style.background = act(0.12); }}
               onMouseLeave={(e) => { e.currentTarget.style.color = session.is_public ? ACT.tint : T.text3; e.currentTarget.style.background = 'transparent'; }}
             >
@@ -253,18 +274,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
                 : <Link2 size={13} strokeWidth={2.2} />}
             </button>
           )}
-          {onDelete && !session.demo && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(session); }}
-              title="Видалити бектест"
-              className="grid place-items-center opacity-0 transition-all duration-200 group-hover:opacity-100"
-              style={{ width: 26, height: 26, borderRadius: 8, color: T.text3 }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.background = 'transparent'; }}
-            >
-              <Trash2 size={13} strokeWidth={2.2} />
-            </button>
-          )}
+
           <ArrowRight
             size={16}
             strokeWidth={1.9}
