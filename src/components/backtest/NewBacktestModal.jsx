@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, Search, Plus, ChevronDown, ArrowRight } from 'lucide-react';
+import { X, Loader2, ArrowRight } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
-import { supabase } from '../../lib/supabase';
-import AssetIcon from '../ui/AssetIcon';
 import { ACT } from './accent';
+import AssetPicker from './AssetPicker';
 
 /* ==================================================================
    Створення бектесту.
@@ -18,7 +17,6 @@ import { ACT } from './accent';
    Геометрія з макета редизайну, кольори — проєктні токени.
 ================================================================== */
 
-const DEFAULT_PAIRS = ['GER40', 'EURUSD', 'NQ100', 'S&P500', 'GOLD', 'NZD/USD', 'BTC', 'ETH', 'SOL'];
 
 const mono = (size, extra = {}) => ({ fontFamily: T.mono, fontSize: size, ...extra });
 
@@ -154,185 +152,6 @@ function FloatField({ label, value, onChange, onKeyDown, placeholder, autoFocus,
   );
 }
 
-/* ------------------------------------------------------------------
-   Вибір активу.
-
-   Той самий, що в Log Trade: іконки прапорів і монет, пошук і свій
-   тікер, який одразу летить у user_assets — наступного разу він у
-   списку з будь-якого пристрою. Різні випадашки для одного й того
-   самого вибору змушували б щоразу згадувати, як воно тут працює.
------------------------------------------------------------------- */
-function AssetPicker({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [userPairs, setUserPairs] = useState([]);
-  const [adding, setAdding] = useState(false);
-  const boxRef = useRef(null);
-
-  useEffect(() => {
-    let alive = true;
-    supabase.from('user_assets').select('name').order('name')
-      .then(({ data }) => { if (alive && data) setUserPairs(data.map((d) => d.name)); });
-    return () => { alive = false; };
-  }, []);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onDown = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [open]);
-
-  const all = [...new Set([...DEFAULT_PAIRS, ...userPairs])];
-  const q = search.trim().toLowerCase();
-  const filtered = all.filter((p) => p.toLowerCase().includes(q));
-  const showAdd = q && !all.some((p) => p.toLowerCase() === q);
-
-  const add = async () => {
-    const name = search.trim().toUpperCase();
-    setAdding(true);
-    try {
-      const { error } = await supabase.from('user_assets').insert([{ name }]);
-      if (!error) setUserPairs((s) => [...s, name]);
-      onChange(name);
-      setSearch('');
-      setOpen(false);
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  return (
-    <div className="relative" ref={boxRef}>
-      <button
-        type="button"
-        onClick={() => { setOpen((v) => !v); setSearch(''); }}
-        className="flex w-full items-center justify-between"
-        style={{
-          gap: 14, padding: '11px 16px', borderRadius: 14,
-          background: T.sunken,
-          border: `1px solid ${open ? ACT.to : T.line}`,
-          boxShadow: open ? `0 0 0 4px rgba(${ACT.rgb},0.13)` : 'none',
-          transition: 'border-color .18s, box-shadow .18s',
-        }}
-        onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = T.lineHi; }}
-        onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = T.line; }}
-      >
-        <span className="min-w-0 text-left">
-          <span
-            className="block uppercase"
-            style={mono(9.5, { letterSpacing: '1.8px', fontWeight: 600, color: T.text3 })}
-          >
-            Актив
-          </span>
-          <span className="mt-[7px] flex items-center" style={{ gap: 9 }}>
-            <AssetIcon symbol={value} />
-            <span style={mono(15.5, { fontWeight: 700, letterSpacing: '0.8px', color: T.text })}>
-              {value}
-            </span>
-          </span>
-        </span>
-
-        <ChevronDown
-          size={18}
-          strokeWidth={2}
-          className="shrink-0"
-          style={{ color: '#9b8dff', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
-        />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.16, ease: EASE }}
-            className="absolute left-0 right-0 z-20 overflow-hidden"
-            style={{
-              top: 'calc(100% + 8px)',
-              borderRadius: 16,
-              background: T.surfaceHi,
-              border: `1px solid ${T.lineHi}`,
-              boxShadow: '0 28px 60px -20px rgba(0,0,0,0.9)',
-            }}
-          >
-            <div
-              className="flex items-center"
-              style={{ gap: 10, padding: '12px 14px', borderBottom: `1px solid ${T.line}` }}
-            >
-              <Search size={15} strokeWidth={1.9} className="shrink-0" style={{ color: T.text3 }} />
-              <input
-                autoFocus
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Пошук або свій тікер"
-                className="min-w-0 flex-1 bg-transparent outline-none"
-                style={{ fontFamily: T.sans, fontSize: 14, color: T.text }}
-              />
-            </div>
-
-            <div className="custom-scrollbar" style={{ maxHeight: 236, overflowY: 'auto', padding: 6 }}>
-              {filtered.map((p) => {
-                const on = p === value;
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => { onChange(p); setOpen(false); setSearch(''); }}
-                    className="flex w-full items-center text-left"
-                    style={{
-                      gap: 10, padding: '11px 12px', borderRadius: 11,
-                      background: on ? `rgba(${ACT.rgb},0.18)` : 'transparent',
-                      transition: 'background .15s',
-                    }}
-                    onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                    onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <AssetIcon symbol={p} />
-                    <span style={mono(13.5, { fontWeight: 700, letterSpacing: '0.7px', color: T.text })}>
-                      {p}
-                    </span>
-                  </button>
-                );
-              })}
-
-              {showAdd && (
-                <button
-                  type="button"
-                  onClick={add}
-                  disabled={adding}
-                  className="flex w-full items-center"
-                  style={{ gap: 10, padding: '11px 12px', borderRadius: 11, transition: 'background .15s' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${ACT.rgb},0.13)`; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                >
-                  {adding
-                    ? <Loader2 size={15} className="animate-spin" style={{ color: '#9b8dff' }} />
-                    : <Plus size={15} strokeWidth={2.4} style={{ color: '#9b8dff' }} />}
-                  <span style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text2 }}>
-                    Додати{' '}
-                    <span style={mono(13.5, { fontWeight: 700, color: T.text })}>
-                      {search.trim().toUpperCase()}
-                    </span>
-                  </span>
-                </button>
-              )}
-
-              {filtered.length === 0 && !showAdd && (
-                <div
-                  style={{ fontFamily: T.sans, padding: '20px 12px', textAlign: 'center', fontSize: 13, color: T.text3 }}
-                >
-                  Нічого не знайшлось
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 /* ================================================================== */
 
@@ -389,15 +208,6 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
           boxShadow: '0 44px 100px -34px #000',
         }}
       >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-px"
-          style={{
-            borderRadius: '26px 26px 0 0',
-            background: `linear-gradient(90deg, transparent, rgba(${ACT.rgb},0.8), transparent)`,
-          }}
-        />
-
         <div className="flex items-center justify-between" style={{ gap: 20, padding: '22px 26px' }}>
           <div className="min-w-0">
             <div
@@ -437,7 +247,10 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
               autoFocus
             />
 
-            <AssetPicker value={f.pair} onChange={(v) => set({ pair: v })} />
+            {/* Той самий вибір активу, що й у записі угоди: один
+                список і одні власні тікери, тому обраний тут актив
+                далі стоїть у формі за замовчуванням без сюрпризів. */}
+            <AssetPicker value={f.pair} onChange={(v) => set({ pair: v })} height={56} />
 
             <FloatField
               label="Стратегія · не обовʼязково"

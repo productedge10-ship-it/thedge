@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Trash2, ImagePlus, Loader2, TrendingUp, TrendingDown, CalendarDays, Plus } from 'lucide-react';
+import { X, Check, Trash2, ImagePlus, Loader2, CalendarDays, Plus, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { SESSIONS, metaOf, pairOf, resultLabel, shotsOf } from '../../lib/backtestStats';
 import { ACT, act, actGradient, actGradientHover, segFill as fill, SEG_TONE } from './accent';
@@ -24,8 +24,6 @@ const KIND = {
   BTCUSD: 'Крипто', ETHUSD: 'Крипто',
   EURUSD: 'Forex', GBPUSD: 'Forex', USDJPY: 'Forex',
 };
-
-const resTone = (r) => (r === 'WIN' ? T.okRgb : r === 'LOSS' ? T.badRgb : ACT.rgb);
 
 /* Пружина під пальці: плавний хід без пружинення в кінці. Та сама
    в усіх перемикачах розділу, щоб вибір усюди відчувався однаково. */
@@ -203,12 +201,20 @@ export default function TradeSheet({
        весь список живе в tda_data. */
     shots: shotsOf(initial),
   });
+  /* Клік по угоді відкриває її на перегляд, а не на редагування:
+     випадкове торкання поля в списку з сотні записів не має мовчки
+     міняти статистику. Нова угода, навпаки, одразу редагується —
+     її для того й відкрили. */
+  const [editing, setEditing] = useState(!initial?.id);
   const [focus, setFocus] = useState(null);
   const [drop, setDrop] = useState(false);
   const [mine, setMine] = useState(customSetups);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
   const contentBox = useContentBox();
+  /* Публічна сторінка не редагується взагалі, власна — поки не
+     натиснули «Редагувати». Далі по формі дивимось саме на locked. */
+  const locked = readOnly || !editing;
   const fileRef = useRef(null);
   const set = (p) => setF((s) => ({ ...s, ...p }));
 
@@ -234,7 +240,7 @@ export default function TradeSheet({
   };
 
   const onPaste = (e) => {
-    if (readOnly) return;
+    if (locked) return;
     const text = e.clipboardData?.getData('text');
     if (text && /^https?:\/\//.test(text.trim())) { addShot(text.trim()); e.preventDefault(); return; }
     const items = Array.from(e.clipboardData?.items || []).filter((i) => i.type.indexOf('image') !== -1);
@@ -286,7 +292,6 @@ export default function TradeSheet({
   };
 
   const short = f.type === 'SHORT';
-  const tone = resTone(f.result);
   const dateLabel = (() => {
     const d = String(f.date).split('-');
     return d.length === 3 ? `${d[2]}.${d[1]}.${d[0]}` : f.date;
@@ -318,14 +323,6 @@ export default function TradeSheet({
         className="relative w-full max-w-[940px] overflow-hidden rounded-[26px]"
         style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 44px 100px -34px rgba(0,0,0,0.95)' }}
       >
-        {/* Волосяна лінія згори — єдине, що видає колір розділу до того,
-            як людина щось натисне */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${act(0.8)}, transparent)` }}
-        />
-
         {/* ─────────── Шапка ─────────── */}
         <div
           className="flex items-center justify-between gap-5 px-6 py-5"
@@ -336,14 +333,12 @@ export default function TradeSheet({
 
                 Стрічка, а не підміна картинки: стрілки стоять одна за
                 одною на відстані рівно у висоту плитки, і при
-                перемиканні вся стрічка проїжджає на один крок. Тому
-                для SHORT графік іде згори вниз, для LONG — знизу
-                вгору, і в кадрі завжди рівно одна стрілка.
+                перемиканні вся стрічка проїжджає на один крок. Для
+                SHORT графік іде згори вниз, для LONG — знизу вгору, і
+                в кадрі завжди рівно одна стрілка.
 
-                Ніяких пружин і поштовхів: рух рівний від початку до
-                кінця, з мʼяким входом і виходом. Колір при цьому
-                переливається окремим шаром — градієнт CSS анімувати
-                не вміє, тому червоний просто проявляється поверх
+                Колір переливається окремим шаром: градієнт CSS
+                анімувати не вміє, тому червоний проявляється поверх
                 зеленого. */}
             <div
               className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[14px]"
@@ -366,8 +361,7 @@ export default function TradeSheet({
                   key={f.type}
                   className="absolute inset-0 grid place-items-center"
                   /* 44px — рівно висота плитки: стрілка заходить точно
-                     з-за краю і виходить точно за край, без «стрибка»
-                     всередині кадру. */
+                     з-за краю і виходить точно за край. */
                   initial={{ y: short ? -44 : 44 }}
                   animate={{ y: 0 }}
                   exit={{ y: short ? 44 : -44 }}
@@ -381,21 +375,10 @@ export default function TradeSheet({
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}>
-                  {f.id ? 'Угода' : 'Нова угода'}
-                </span>
-                <span
-                  className="rounded-[7px] px-2.5 py-1 text-[10.5px] font-bold tracking-[0.1em]"
-                  style={{
-                    fontFamily: T.mono,
-                    color: `rgb(${tone})`,
-                    background: `rgba(${tone},0.12)`,
-                    border: `1px solid rgba(${tone},0.3)`,
-                  }}
-                >
-                  {resultLabel(f.result)}
-                </span>
+              {/* Пігулки результату немає: він стоїть перемикачем за
+                  пару сантиметрів нижче й дублювати його нема сенсу. */}
+              <div className="text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}>
+                {f.id ? 'Угода' : 'Нова угода'}
               </div>
               <div className="mt-[5px] truncate text-[12.5px]" style={{ fontFamily: T.mono, color: T.text3 }}>
                 {f.pair || 'без активу'} · {f.session} · {dateLabel}
@@ -413,7 +396,7 @@ export default function TradeSheet({
         <div className="flex flex-col gap-5 px-6 pb-5 pt-[22px]" style={{ borderBottom: `1px solid ${T.line}` }}>
             <div>
               <Label
-                hint={readOnly ? null : 'Ctrl+V, файл або посилання'}
+                hint={locked ? null : 'Ctrl+V, файл або посилання'}
                 right={f.shots.length > 1 ? (
                   <span className="shrink-0 text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
                     {f.shots.length}
@@ -431,7 +414,7 @@ export default function TradeSheet({
                 <div className="mt-[11px] overflow-hidden rounded-2xl" style={{ border: `1px solid ${T.line}` }}>
                   <ImageSlider images={f.shots} containerClassName="h-[288px] w-full" />
 
-                  {!readOnly && (
+                  {!locked && (
                     <div
                       className="flex flex-wrap items-center gap-2 p-2.5"
                       style={{ background: T.bg, borderTop: `1px solid ${T.line}` }}
@@ -467,7 +450,7 @@ export default function TradeSheet({
                     </div>
                   )}
                 </div>
-              ) : readOnly ? (
+              ) : locked ? (
                 <div
                   className="mt-3 grid h-[288px] w-full place-items-center rounded-2xl text-[13px]"
                   style={{ background: T.bg, border: `1px dashed ${T.line}`, fontFamily: T.sans, color: T.text4 }}
@@ -528,12 +511,12 @@ export default function TradeSheet({
               >
                 <textarea
                   value={f.notes}
-                  readOnly={readOnly}
-                  placeholder={readOnly ? 'Записів до угоди немає.' : undefined}
+                  readOnly={locked}
+                  placeholder={locked ? 'Записів до угоди немає.' : undefined}
                   onChange={(e) => set({ notes: e.target.value })}
                   onFocus={() => setFocus('n')}
                   onBlur={() => setFocus(null)}
-                  {...(readOnly ? {} : { placeholder: 'Що бачив, чому зайшов, що зробив би інакше.' })}
+                  {...(locked ? {} : { placeholder: 'Що бачив, чому зайшов, що зробив би інакше.' })}
                   className="h-full w-full resize-none border-none bg-transparent px-4 py-3 outline-none"
                   style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.55, color: T.text }}
                 />
@@ -546,18 +529,18 @@ export default function TradeSheet({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Напрям</Label>
-                <Seg id="type" options={['LONG', 'SHORT']} value={f.type} onChange={(v) => set({ type: v })} readOnly={readOnly} />
+                <Seg id="type" options={['LONG', 'SHORT']} value={f.type} onChange={(v) => set({ type: v })} readOnly={locked} />
               </div>
               <div>
                 <Label>Результат</Label>
-                <Seg id="result" options={['WIN', 'LOSS', 'BE']} value={f.result} onChange={(v) => set({ result: v })} labelOf={resultLabel} readOnly={readOnly} />
+                <Seg id="result" options={['WIN', 'LOSS', 'BE']} value={f.result} onChange={(v) => set({ result: v })} labelOf={resultLabel} readOnly={locked} />
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-[1.1fr_1fr_1.15fr]">
               <div className="min-w-0">
                 <Label>Актив</Label>
-                {readOnly ? (
+                {locked ? (
                   <StaticField>
                     {f.pair && <AssetIcon symbol={f.pair} />}
                     <span className="truncate text-[14.5px] font-bold tracking-[0.05em]" style={{ fontFamily: T.mono, color: T.text }}>
@@ -582,7 +565,7 @@ export default function TradeSheet({
                 >
                   <input
                     value={f.result === 'WIN' ? f.rr : f.result === 'LOSS' ? '−1' : '0'}
-                    disabled={readOnly || f.result !== 'WIN'}
+                    disabled={locked || f.result !== 'WIN'}
                     onChange={(e) => set({ rr: e.target.value.replace(',', '.') })}
                     onFocus={() => setFocus('r')}
                     onBlur={() => setFocus(null)}
@@ -597,7 +580,7 @@ export default function TradeSheet({
                 <Label>Дата</Label>
                 {/* Наш календар, а не системний: попап ОС світлий і
                     малюється чужим шрифтом поверх темної модалки */}
-                {readOnly ? (
+                {locked ? (
                   <StaticField>
                     <CalendarDays size={15} strokeWidth={2.2} style={{ color: T.text4 }} />
                     <span className="text-[14px] tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
@@ -626,7 +609,7 @@ export default function TradeSheet({
               <Label>Сесія</Label>
               {/* Три коротких слова не тягнемо на всю ширину: розтягнута
                   смуга читається як помилка верстки. */}
-              <Seg id="session" options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} readOnly={readOnly} grow={false} />
+              <Seg id="session" options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} readOnly={locked} grow={false} />
             </div>
 
             <div>
@@ -640,10 +623,10 @@ export default function TradeSheet({
                 Сетап
               </Label>
               <div className="mt-[11px] flex flex-wrap gap-[7px]">
-                {readOnly && f.tags.length === 0 && (
+                {locked && f.tags.length === 0 && (
                   <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>Сетап не вказано</span>
                 )}
-                {(readOnly ? f.tags : setups).map((tag) => {
+                {(locked ? f.tags : setups).map((tag) => {
                   const on = f.tags.includes(tag);
                   const own = mine.includes(tag);
                   return (
@@ -653,15 +636,15 @@ export default function TradeSheet({
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.7 }}
-                      onClick={readOnly ? undefined : () => toggleTag(tag)}
-                      disabled={readOnly}
+                      onClick={locked ? undefined : () => toggleTag(tag)}
+                      disabled={locked}
                       className="group/tag relative flex h-[34px] items-center whitespace-nowrap rounded-[10px] pl-3.5 text-[13px] font-semibold transition-colors duration-200"
                       style={{
                         fontFamily: T.sans,
                         /* Свої лишають місце під хрестик, щоб плашка
                            не смикалась на наведенні */
-                        paddingRight: own && !readOnly ? 26 : 14,
-                        cursor: readOnly ? 'default' : 'pointer',
+                        paddingRight: own && !locked ? 26 : 14,
+                        cursor: locked ? 'default' : 'pointer',
                         color: on ? T.text : T.text2,
                         background: on ? act(0.18) : T.surfaceHi,
                         border: `1px solid ${on ? act(0.5) : T.line}`,
@@ -670,7 +653,7 @@ export default function TradeSheet({
                       onMouseLeave={(e) => { if (!on) { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; } }}
                     >
                       {tag}
-                      {own && !readOnly && (
+                      {own && !locked && (
                         <span
                           role="button"
                           tabIndex={-1}
@@ -688,7 +671,7 @@ export default function TradeSheet({
                   );
                 })}
 
-                {readOnly ? null : adding ? (
+                {locked ? null : adding ? (
                   <motion.div
                     layout
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -754,16 +737,36 @@ export default function TradeSheet({
           </span>
 
           <div className="ml-auto flex items-center gap-2.5">
-            {readOnly ? (
-              <button
-                onClick={onClose}
-                className="flex h-11 items-center rounded-xl px-6 text-[14.5px] font-semibold transition-all duration-200"
-                style={{ fontFamily: T.sans, color: T.text2, background: T.surfaceHi, border: `1px solid ${T.line}` }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; }}
-              >
-                Закрити
-              </button>
+            {locked ? (
+              <>
+                <button
+                  onClick={onClose}
+                  className="flex h-11 items-center rounded-xl px-[22px] text-[14.5px] font-semibold transition-all duration-200"
+                  style={{ fontFamily: T.sans, color: T.text2, background: 'transparent' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
+                >
+                  Закрити
+                </button>
+
+                {/* Редагування — окрема дія, а не режим за замовчуванням */}
+                {!readOnly && (
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="flex h-11 items-center gap-2.5 whitespace-nowrap rounded-xl px-6 text-[14.5px] font-semibold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
+                    style={{
+                      fontFamily: T.sans, color: '#fff',
+                      background: actGradient,
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 30px -12px ${act(0.9)}`,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = actGradientHover; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = actGradient; }}
+                  >
+                    <Pencil size={15} strokeWidth={2.4} />
+                    Редагувати
+                  </button>
+                )}
+              </>
             ) : (
               <>
                 <button
