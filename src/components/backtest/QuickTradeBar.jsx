@@ -59,7 +59,7 @@ function Seg({ options, value, onChange, id, labelOf }) {
 /* Підписи в рядку дрібні й моноширинні — на T.text3 вони зливались
    із карткою. Тримаємо на тон світліше. */
 const FieldLabel = ({ children }) => (
-  <span className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.mono, color: T.text2 }}>
+  <span className="text-[11.5px] font-bold uppercase tracking-[0.13em]" style={{ fontFamily: T.mono, color: T.text2 }}>
     {children}
   </span>
 );

@@ -367,7 +367,7 @@ export default function BacktestSession() {
       <AnimatePresence>
         {sheet && (
           <TradeSheet
-            key="sheet"
+            key={sheet.trade?.id || 'new'}
             initial={sheet.trade || (sheet.preset ? {
               date: sheet.preset.date,
               type: sheet.preset.type,

@@ -34,15 +34,15 @@ function Label({ children, hint, right }) {
     <div className="flex items-baseline justify-between gap-2.5">
       <div className="flex min-w-0 items-baseline gap-2">
         <span
-          /* Підписи полів були на T.text3 і на дрібному моноширинному
-             майже зливались із тлом. Тепер на тон світліші — читаються
-             з першого погляду, але не сперечаються зі значеннями. */
-          className="text-[10px] font-bold uppercase tracking-[0.18em]"
+          /* Підписи були 9.5px моноширинним із широким розрядженням —
+             формально є, а прочитати треба примружитись. Побільшали й
+             стиснули розрядження: більший кегль сам дає повітря. */
+          className="text-[11.5px] font-bold uppercase tracking-[0.13em]"
           style={{ fontFamily: T.mono, color: T.text2 }}
         >
           {children}
         </span>
-        {hint && <span className="truncate text-[11.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>{hint}</span>}
+        {hint && <span className="truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>{hint}</span>}
       </div>
       {right}
     </div>
@@ -283,12 +283,38 @@ export default function TradeSheet({
     set({ tags: f.tags.filter((x) => x !== tag) });
   };
 
+  /* Те, що поїде в базу. Порівнюємо саме цю форму, а не стан: у полі
+     RR лежить рядок («2», «2,0»), і без нормалізації однакові значення
+     виглядали б різними. */
+  const payloadOf = (state) => {
+    const rr = Number(String(state.rr).replace(',', '.'));
+    return {
+      ...state,
+      rr: state.result === 'BE' ? 0 : state.result === 'LOSS' ? 1 : Number.isFinite(rr) ? Math.abs(rr) : 0,
+    };
+  };
+
+  /* Знімок на момент входу в редагування. Якщо людина натиснула
+     «Редагувати», нічого не змінила й тиснула «Зберегти» — писати в
+     базу нема чого: зайвий запит, зайвий перерахунок статистики і
+     зайва мітка «оновлено» на угоді, якої ніхто не чіпав. */
+  const baseline = useRef(JSON.stringify(payloadOf(f)));
+
+  useEffect(() => {
+    if (editing) baseline.current = JSON.stringify(payloadOf(f));
+    /* Знімаємо рівно при вході в режим, тому в залежностях лише він */
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [editing]);
+
   const submit = () => {
-    const rr = Number(String(f.rr).replace(',', '.'));
-    onSave({
-      ...f,
-      rr: f.result === 'BE' ? 0 : f.result === 'LOSS' ? 1 : Number.isFinite(rr) ? Math.abs(rr) : 0,
-    });
+    const next = payloadOf(f);
+    /* Нова угода зберігається завжди — навіть незмінені значення за
+       замовчуванням це осмислений запис. */
+    if (f.id && JSON.stringify(next) === baseline.current) {
+      onClose();
+      return;
+    }
+    onSave(next);
   };
 
   const short = f.type === 'SHORT';
@@ -453,7 +479,7 @@ export default function TradeSheet({
               ) : locked ? (
                 <div
                   className="mt-3 grid h-[288px] w-full place-items-center rounded-2xl text-[13px]"
-                  style={{ background: T.bg, border: `1px dashed ${T.line}`, fontFamily: T.sans, color: T.text4 }}
+                  style={{ background: T.bg, border: `1px solid ${T.line}`, fontFamily: T.sans, color: T.text3 }}
                 >
                   Скрінів немає
                 </div>
@@ -507,7 +533,11 @@ export default function TradeSheet({
               </Label>
               <div
                 className="mt-[11px] flex h-[80px] overflow-hidden rounded-[14px]"
-                style={fieldStyle(focus === 'n')}
+                /* У перегляді поле не має вигляду поля: ні акцентної
+                   рамки на фокусі, ні натяку, що сюди можна писати. */
+                style={locked
+                  ? { background: T.sunken, border: `1px solid ${T.line}` }
+                  : fieldStyle(focus === 'n')}
               >
                 <textarea
                   value={f.notes}
@@ -518,7 +548,7 @@ export default function TradeSheet({
                   onBlur={() => setFocus(null)}
                   {...(locked ? {} : { placeholder: 'Що бачив, чому зайшов, що зробив би інакше.' })}
                   className="h-full w-full resize-none border-none bg-transparent px-4 py-3 outline-none"
-                  style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.55, color: T.text }}
+                  style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.55, color: locked ? T.text2 : T.text, cursor: locked ? 'default' : 'text' }}
                 />
               </div>
             </div>
@@ -529,11 +559,27 @@ export default function TradeSheet({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Напрям</Label>
-                <Seg id="type" options={['LONG', 'SHORT']} value={f.type} onChange={(v) => set({ type: v })} readOnly={locked} />
+                {locked ? (
+                  <StaticField height={44}>
+                    <span className="text-[13px] font-bold tracking-[0.07em]" style={{ fontFamily: T.mono, color: T.text }}>
+                      {f.type}
+                    </span>
+                  </StaticField>
+                ) : (
+                  <Seg id="type" options={['LONG', 'SHORT']} value={f.type} onChange={(v) => set({ type: v })} />
+                )}
               </div>
               <div>
                 <Label>Результат</Label>
-                <Seg id="result" options={['WIN', 'LOSS', 'BE']} value={f.result} onChange={(v) => set({ result: v })} labelOf={resultLabel} readOnly={locked} />
+                {locked ? (
+                  <StaticField height={44}>
+                    <span className="text-[13px] font-bold tracking-[0.07em]" style={{ fontFamily: T.mono, color: T.text }}>
+                      {resultLabel(f.result)}
+                    </span>
+                  </StaticField>
+                ) : (
+                  <Seg id="result" options={['WIN', 'LOSS', 'BE']} value={f.result} onChange={(v) => set({ result: v })} labelOf={resultLabel} />
+                )}
               </div>
             </div>
 
@@ -609,13 +655,23 @@ export default function TradeSheet({
               <Label>Сесія</Label>
               {/* Три коротких слова не тягнемо на всю ширину: розтягнута
                   смуга читається як помилка верстки. */}
-              <Seg id="session" options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} readOnly={locked} grow={false} />
+              {locked ? (
+                <div className="w-fit">
+                  <StaticField height={44}>
+                    <span className="text-[13px] font-bold tracking-[0.07em]" style={{ fontFamily: T.mono, color: T.text }}>
+                      {f.session}
+                    </span>
+                  </StaticField>
+                </div>
+              ) : (
+                <Seg id="session" options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} grow={false} />
+              )}
             </div>
 
             <div>
               <Label
                 right={f.tags.length ? (
-                  <span className="shrink-0 text-[11px] font-bold" style={{ fontFamily: T.mono, color: ACT.tint }}>
+                  <span className="shrink-0 text-[11px] font-bold" style={{ fontFamily: T.mono, color: locked ? T.text3 : ACT.tint }}>
                     {f.tags.length} обрано
                   </span>
                 ) : null}
@@ -645,9 +701,9 @@ export default function TradeSheet({
                            не смикалась на наведенні */
                         paddingRight: own && !locked ? 26 : 14,
                         cursor: locked ? 'default' : 'pointer',
-                        color: on ? T.text : T.text2,
-                        background: on ? act(0.18) : T.surfaceHi,
-                        border: `1px solid ${on ? act(0.5) : T.line}`,
+                        color: locked ? T.text2 : (on ? T.text : T.text2),
+                        background: locked ? T.sunken : (on ? act(0.18) : T.surfaceHi),
+                        border: `1px solid ${locked ? T.line : (on ? act(0.5) : T.line)}`,
                       }}
                       onMouseEnter={(e) => { if (!on) { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; } }}
                       onMouseLeave={(e) => { if (!on) { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; } }}
