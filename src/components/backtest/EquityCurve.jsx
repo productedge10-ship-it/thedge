@@ -206,6 +206,12 @@ export default function EquityCurve({ stats }) {
                 <clipPath id="eqClipDn"><rect x="0" y={geo.zero} width={W} height={Math.max(0, H - geo.zero)} /></clipPath>
               </defs>
 
+              {/* Ключ — це діапазон: при перемиканні «Усі / Останні 10 /
+                  Останні 5» група перемальовується заново й програє ту
+                  саму появу, що й при відкритті сторінки. Морфити сам
+                  шлях не вийшло б — у нових даних інша кількість точок,
+                  і команди кривої не збігаються поштучно. */}
+              <g key={range}>
               {geo.levels.map((v, li) => (
                 <motion.g
                   key={`lvl${v}`}
@@ -325,6 +331,8 @@ export default function EquityCurve({ stats }) {
                   {fmtR(pts[pts.length - 1].r)}
                 </motion.text>
               )}
+
+              </g>
 
               {hover != null && hover > 0 && (
                 <g>

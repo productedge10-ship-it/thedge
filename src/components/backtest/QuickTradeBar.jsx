@@ -30,9 +30,9 @@ function Seg({ options, value, onChange, id, labelOf }) {
             key={o}
             onClick={() => onChange(o)}
             className="relative flex h-8 items-center justify-center whitespace-nowrap rounded-[9px] px-[15px] text-[11.5px] font-bold tracking-[0.06em]"
-            style={{ fontFamily: T.mono, color: on ? '#ffffff' : T.text3, transition: 'color .25s ease', zIndex: 1 }}
-            onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
-            onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
+            style={{ fontFamily: T.mono, color: on ? '#ffffff' : T.text2, transition: 'color .25s ease', zIndex: 1 }}
+            onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text; }}
+            onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
           >
             {on && (
               <motion.span
@@ -56,8 +56,10 @@ function Seg({ options, value, onChange, id, labelOf }) {
   );
 }
 
+/* Підписи в рядку дрібні й моноширинні — на T.text3 вони зливались
+   із карткою. Тримаємо на тон світліше. */
 const FieldLabel = ({ children }) => (
-  <span className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.mono, color: T.text3 }}>
+  <span className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.mono, color: T.text2 }}>
     {children}
   </span>
 );
@@ -212,7 +214,7 @@ export default function QuickTradeBar({
               if (e.key === 'Escape') { e.stopPropagation(); setSetupOpen(false); }
             }}
             placeholder="Сетап або нотатка"
-            className="h-full w-full bg-transparent px-3.5 text-[14px] outline-none"
+            className="h-full w-full bg-transparent px-3.5 text-[14px] outline-none placeholder:text-[var(--edge-text3,#7A7A85)]"
             style={{ fontFamily: T.sans, color: T.text }}
           />
 

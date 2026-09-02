@@ -315,7 +315,7 @@ export default function TradeSheet({
         transition={{ duration: 0.3, ease: EASE }}
         onClick={(e) => e.stopPropagation()}
         onPaste={onPaste}
-        className="relative w-full max-w-[1140px] overflow-hidden rounded-[26px]"
+        className="relative w-full max-w-[940px] overflow-hidden rounded-[26px]"
         style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 44px 100px -34px rgba(0,0,0,0.95)' }}
       >
         {/* Волосяна лінія згори — єдине, що видає колір розділу до того,
@@ -409,9 +409,140 @@ export default function TradeSheet({
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_460px]">
-          {/* ─────────── Ліва колонка: цифри ─────────── */}
-          <div className="flex flex-col gap-[18px] px-6 pb-6 pt-[22px] lg:border-r" style={{ borderColor: T.line }}>
+        {/* ─────────── Графік і запис ─────────── */}
+        <div className="flex flex-col gap-5 px-6 pb-5 pt-[22px]" style={{ borderBottom: `1px solid ${T.line}` }}>
+            <div>
+              <Label
+                hint={readOnly ? null : 'Ctrl+V, файл або посилання'}
+                right={f.shots.length > 1 ? (
+                  <span className="shrink-0 text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
+                    {f.shots.length}
+                  </span>
+                ) : null}
+              >
+                Графік
+              </Label>
+
+              {f.shots.length > 0 ? (
+                /* Той самий слайдер, що в журналі: стрілки, лупа на
+                   наведенні й фулскрін по кліку. Заводити для бектесту
+                   власний перегляд не було сенсу — рівні на графіку
+                   читають однаково в обох місцях. */
+                <div className="mt-[11px] overflow-hidden rounded-2xl" style={{ border: `1px solid ${T.line}` }}>
+                  <ImageSlider images={f.shots} containerClassName="h-[288px] w-full" />
+
+                  {!readOnly && (
+                    <div
+                      className="flex flex-wrap items-center gap-2 p-2.5"
+                      style={{ background: T.bg, borderTop: `1px solid ${T.line}` }}
+                    >
+                      {f.shots.map((src, i) => (
+                        <div
+                          key={`${src.slice(0, 24)}-${i}`}
+                          className="group/shot relative h-10 w-10 shrink-0 overflow-hidden rounded-lg"
+                          style={{ border: `1px solid ${T.line}` }}
+                        >
+                          <img src={src} alt="" className="h-full w-full object-cover" />
+                          <button
+                            onClick={() => dropShot(i)}
+                            title="Прибрати скрін"
+                            className="absolute inset-0 hidden place-items-center transition-colors group-hover/shot:grid"
+                            style={{ background: 'rgba(10,10,12,0.7)', color: '#fff' }}
+                          >
+                            <X size={12} strokeWidth={2.8} />
+                          </button>
+                        </div>
+                      ))}
+
+                      <button
+                        onClick={() => fileRef.current?.click()}
+                        title="Додати ще скрін"
+                        className="grid h-10 w-10 shrink-0 place-items-center rounded-lg transition-colors"
+                        style={{ border: `1px dashed ${T.lineHi}`, color: T.text3 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = ACT.tint; e.currentTarget.style.borderColor = act(0.5); e.currentTarget.style.background = act(0.07); }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <ImagePlus size={15} strokeWidth={2} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : readOnly ? (
+                <div
+                  className="mt-3 grid h-[288px] w-full place-items-center rounded-2xl text-[13px]"
+                  style={{ background: T.bg, border: `1px dashed ${T.line}`, fontFamily: T.sans, color: T.text4 }}
+                >
+                  Скрінів немає
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDrop(true); }}
+                  onDragLeave={() => setDrop(false)}
+                  onDrop={(e) => { e.preventDefault(); setDrop(false); readFiles(e.dataTransfer.files); }}
+                  onMouseEnter={() => setDrop(true)}
+                  onMouseLeave={() => setDrop(false)}
+                  className="mt-3 flex h-[288px] w-full flex-col items-center justify-center rounded-2xl px-5 text-center transition-all duration-200"
+                  style={{
+                    background: drop ? act(0.08) : T.bg,
+                    border: `1.5px dashed ${drop ? act(0.66) : T.lineHi}`,
+                  }}
+                >
+                  <span
+                    className="grid h-[54px] w-[54px] place-items-center rounded-2xl"
+                    style={{ background: act(0.14), border: `1px solid ${act(0.28)}` }}
+                  >
+                    <ImagePlus size={25} strokeWidth={1.7} style={{ color: ACT.tint }} />
+                  </span>
+                  <span className="mt-3.5 text-[15.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
+                    Встав скрін графіка
+                  </span>
+                  <span className="mt-[7px] text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                    PNG, JPG або посилання TradingView
+                  </span>
+                </button>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={(e) => { readFiles(e.target.files); e.target.value = ''; }}
+              />
+            </div>
+
+            <div>
+              <Label
+                right={f.notes.length ? (
+                  <span className="shrink-0 text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
+                    {f.notes.length}
+                  </span>
+                ) : null}
+              >
+                Запис
+              </Label>
+              <div
+                className="mt-[11px] flex h-[80px] overflow-hidden rounded-[14px]"
+                style={fieldStyle(focus === 'n')}
+              >
+                <textarea
+                  value={f.notes}
+                  readOnly={readOnly}
+                  placeholder={readOnly ? 'Записів до угоди немає.' : undefined}
+                  onChange={(e) => set({ notes: e.target.value })}
+                  onFocus={() => setFocus('n')}
+                  onBlur={() => setFocus(null)}
+                  {...(readOnly ? {} : { placeholder: 'Що бачив, чому зайшов, що зробив би інакше.' })}
+                  className="h-full w-full resize-none border-none bg-transparent px-4 py-3 outline-none"
+                  style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.55, color: T.text }}
+                />
+              </div>
+            </div>
+        </div>
+
+        {/* ─────────── Цифри ─────────── */}
+        <div className="flex flex-col gap-[18px] px-6 pb-6 pt-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Напрям</Label>
@@ -493,14 +624,13 @@ export default function TradeSheet({
 
             <div>
               <Label>Сесія</Label>
-              {/* Три коротких слова не мають займати всю ширину колонки:
-                  розтягнута на 600px смуга виглядала як помилка верстки. */}
+              {/* Три коротких слова не тягнемо на всю ширину: розтягнута
+                  смуга читається як помилка верстки. */}
               <Seg id="session" options={SESSIONS} value={f.session} onChange={(v) => set({ session: v })} readOnly={readOnly} grow={false} />
             </div>
 
             <div>
               <Label
-                hint={readOnly ? null : 'можна кілька'}
                 right={f.tags.length ? (
                   <span className="shrink-0 text-[11px] font-bold" style={{ fontFamily: T.mono, color: ACT.tint }}>
                     {f.tags.length} обрано
@@ -610,139 +740,6 @@ export default function TradeSheet({
 
               </div>
             </div>
-          </div>
-
-          {/* ─────────── Права колонка: скрін і запис ─────────── */}
-          <div className="flex flex-col gap-[18px] px-6 pb-6 pt-[22px]" style={{ background: T.sunken }}>
-            <div>
-              <Label
-                hint={readOnly ? null : 'Ctrl+V, файл або посилання'}
-                right={f.shots.length > 1 ? (
-                  <span className="shrink-0 text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
-                    {f.shots.length}
-                  </span>
-                ) : null}
-              >
-                Графік
-              </Label>
-
-              {f.shots.length > 0 ? (
-                /* Той самий слайдер, що в журналі: стрілки, лупа на
-                   наведенні й фулскрін по кліку. Заводити для бектесту
-                   власний перегляд не було сенсу — рівні на графіку
-                   читають однаково в обох місцях. */
-                <div className="mt-[11px] overflow-hidden rounded-2xl" style={{ border: `1px solid ${T.line}` }}>
-                  <ImageSlider images={f.shots} containerClassName="h-[260px] w-full" />
-
-                  {!readOnly && (
-                    <div
-                      className="flex flex-wrap items-center gap-2 p-2.5"
-                      style={{ background: T.bg, borderTop: `1px solid ${T.line}` }}
-                    >
-                      {f.shots.map((src, i) => (
-                        <div
-                          key={`${src.slice(0, 24)}-${i}`}
-                          className="group/shot relative h-10 w-10 shrink-0 overflow-hidden rounded-lg"
-                          style={{ border: `1px solid ${T.line}` }}
-                        >
-                          <img src={src} alt="" className="h-full w-full object-cover" />
-                          <button
-                            onClick={() => dropShot(i)}
-                            title="Прибрати скрін"
-                            className="absolute inset-0 hidden place-items-center transition-colors group-hover/shot:grid"
-                            style={{ background: 'rgba(10,10,12,0.7)', color: '#fff' }}
-                          >
-                            <X size={12} strokeWidth={2.8} />
-                          </button>
-                        </div>
-                      ))}
-
-                      <button
-                        onClick={() => fileRef.current?.click()}
-                        title="Додати ще скрін"
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-lg transition-colors"
-                        style={{ border: `1px dashed ${T.lineHi}`, color: T.text3 }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = ACT.tint; e.currentTarget.style.borderColor = act(0.5); e.currentTarget.style.background = act(0.07); }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.background = 'transparent'; }}
-                      >
-                        <ImagePlus size={15} strokeWidth={2} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : readOnly ? (
-                <div
-                  className="mt-[11px] grid h-[260px] w-full place-items-center rounded-2xl text-[13px]"
-                  style={{ background: T.bg, border: `1px dashed ${T.line}`, fontFamily: T.sans, color: T.text4 }}
-                >
-                  Скрінів немає
-                </div>
-              ) : (
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  onDragOver={(e) => { e.preventDefault(); setDrop(true); }}
-                  onDragLeave={() => setDrop(false)}
-                  onDrop={(e) => { e.preventDefault(); setDrop(false); readFiles(e.dataTransfer.files); }}
-                  onMouseEnter={() => setDrop(true)}
-                  onMouseLeave={() => setDrop(false)}
-                  className="mt-[11px] flex h-[260px] w-full flex-col items-center justify-center rounded-2xl px-5 text-center transition-all duration-200"
-                  style={{
-                    background: drop ? act(0.08) : T.bg,
-                    border: `1.5px dashed ${drop ? act(0.66) : T.lineHi}`,
-                  }}
-                >
-                  <span
-                    className="grid h-[46px] w-[46px] place-items-center rounded-[14px]"
-                    style={{ background: act(0.14), border: `1px solid ${act(0.28)}` }}
-                  >
-                    <ImagePlus size={21} strokeWidth={1.7} style={{ color: ACT.tint }} />
-                  </span>
-                  <span className="mt-3 text-[14px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
-                    Встав скрін графіка
-                  </span>
-                  <span className="mt-1.5 text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                    PNG, JPG або посилання TradingView · можна кілька
-                  </span>
-                </button>
-              )}
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                multiple
-                hidden
-                onChange={(e) => { readFiles(e.target.files); e.target.value = ''; }}
-              />
-            </div>
-
-            <div className="flex flex-1 flex-col">
-              <Label
-                right={f.notes.length ? (
-                  <span className="shrink-0 text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
-                    {f.notes.length}
-                  </span>
-                ) : null}
-              >
-                Запис
-              </Label>
-              <div
-                className="mt-[11px] flex min-h-[132px] flex-1 overflow-hidden rounded-[14px]"
-                style={fieldStyle(focus === 'n')}
-              >
-                <textarea
-                  value={f.notes}
-                  readOnly={readOnly}
-                  placeholder={readOnly ? 'Записів до угоди немає.' : undefined}
-                  onChange={(e) => set({ notes: e.target.value })}
-                  onFocus={() => setFocus('n')}
-                  onBlur={() => setFocus(null)}
-                  {...(readOnly ? {} : { placeholder: 'Що бачив, чому зайшов, що зробив би інакше.' })}
-                  className="h-full w-full resize-none border-none bg-transparent px-4 py-3.5 outline-none"
-                  style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.55, color: T.text }}
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* ─────────── Дії ─────────── */}
@@ -750,8 +747,10 @@ export default function TradeSheet({
           className="flex flex-wrap items-center justify-between gap-4 px-6 pb-[22px] pt-[18px]"
           style={{ borderTop: `1px solid ${T.line}` }}
         >
+          {/* Порожній підвал краще за напис «нічого не обрано»: коли
+              сетапів немає, нема про що й повідомляти. */}
           <span className="min-w-0 truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            {f.tags.length ? f.tags.join(' · ') : 'Сетап не обрано'}
+            {f.tags.join(' · ')}
           </span>
 
           <div className="ml-auto flex items-center gap-2.5">

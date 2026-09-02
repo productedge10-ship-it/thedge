@@ -104,7 +104,7 @@ export default function AssetPicker({
             </span>
           </span>
         ) : (
-          <span className="flex items-center gap-2.5 truncate text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text4 }}>
+          <span className="flex items-center gap-2.5 truncate text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>
             <Search size={15} strokeWidth={2.4} className="shrink-0" />
             {placeholder}
           </span>
@@ -132,14 +132,14 @@ export default function AssetPicker({
             }}
           >
             <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: `1px solid ${T.line}` }}>
-              <Search size={13} strokeWidth={2.4} style={{ color: T.text4 }} />
+              <Search size={13} strokeWidth={2.4} style={{ color: T.text3 }} />
               <input
                 autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && canAdd) { e.preventDefault(); addAsset(); } }}
                 placeholder="Пошук або новий актив…"
-                className="w-full min-w-0 bg-transparent text-[13px] outline-none"
+                className="w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:text-[var(--edge-text3,#7A7A85)]"
                 style={{ fontFamily: T.sans, color: T.text }}
               />
             </div>
@@ -163,7 +163,7 @@ export default function AssetPicker({
                         {p}
                       </span>
                       {note && (
-                        <span className="ml-auto shrink-0 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.mono, color: T.text4 }}>
+                        <span className="ml-auto shrink-0 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.mono, color: T.text3 }}>
                           {note}
                         </span>
                       )}
