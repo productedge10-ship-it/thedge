@@ -1,30 +1,32 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, X, Plus, ArrowDownUp, LayoutGrid, Rows3,
+  Search, X, Plus, ArrowDownUp, LayoutGrid, Rows3, Pencil, Link as LinkIcon, Pin,
   NotebookPen, Trash2, Image as ImageIcon, Loader2,
-  Archive, ArchiveRestore, ChevronLeft, FolderInput,
+  Archive, ArchiveRestore, ChevronLeft, Inbox, Clock, Folder as FolderIcon,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { notify } from '../utils/notify';
 import useCloudState from '../hooks/useCloudState';
-import { T, EASE, useEdgeFonts, stagger, fadeUp } from '../lib/theme';
+import { T, EASE, useEdgeFonts } from '../lib/theme';
 import {
-  DEFAULT_TREE, CAT_COLORS, noteMatchesTag, splitTag, tagColor, orphanTags,
+  DEFAULT_TREE, CAT_COLORS, noteMatchesTag, tagLabel, tagColor,
 } from '../lib/noteTags';
 import {
   fetchNotes, saveNote as pushNote, removeNote, setNoteArchived, setNoteFolder,
-  migrateLegacyNotes, uid, todayISO,
+  migrateLegacyNotes, uid, todayISO, cardSupport,
 } from '../lib/notesStore';
 import {
   fetchFolders, createFolder, updateFolder, removeFolder, reorderFolders,
   createDefaultFolders, FOLDER_COLORS, NO_FOLDER,
 } from '../lib/foldersStore';
 import { removeImages } from '../lib/imageStore';
+import { cardOf, cardColor, coverOf, cardBackground, cardToSave } from '../lib/noteCard';
+import { mdPlain } from '../lib/mdLite';
 import FolderBoard, { FolderDialog } from '../components/notes/FolderBoard';
 import NotesBackdrop from '../components/notes/NotesBackdrop';
-import TagPicker, { TagChip } from '../components/notes/TagPicker';
 import NoteReader from '../components/notes/NoteReader';
 import NoteEditor from '../components/notes/NoteEditor';
 
@@ -37,7 +39,7 @@ import NoteEditor from '../components/notes/NoteEditor';
 
 const blankForm = (folderId = null) => ({
   id: null, title: '', description: '', images: [], chart_link: '',
-  tags: [], session_date: todayISO(), folder_id: folderId,
+  tags: [], session_date: todayISO(), folder_id: folderId, card: {},
 });
 
 const fmtDate = (iso) => {
@@ -54,50 +56,8 @@ const fmtShort = (iso) => {
   return d.toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' }).replace(/\sр\./, '');
 };
 
-/* ---------- панель інструментів ----------
 
-   Було: сім самостійних кнопок, кожна зі своєю рамкою. Кожна
-   рамка — це лінія, і сім ліній поспіль читаються як сім різних
-   за важливістю речей, хоча насправді там одна дія (створити) і
-   шість способів подивитись на те саме.
 
-   Стало: рамку має тільки зовнішня оболонка, а всередині —
-   кнопки без власних меж, розділені тонкими рисками. Разом вони
-   виглядають як один прилад, і акцентна кнопка справа нарешті
-   лишається єдиним яскравим плямою в рядку.
-
-   Висота всюди 40: 42 було довільним числом, від якого панель
-   здавалась на пів сходинки вищою за все інше на сторінці. */
-const ToolBtn = ({ children, onClick, title, active }) => (
-  <button
-    onClick={onClick}
-    title={title}
-    className="flex h-[40px] items-center gap-2 whitespace-nowrap rounded-[10px] px-3 text-[13.5px] font-semibold transition-colors"
-    style={{
-      fontFamily: T.sans,
-      background: active ? T.surfaceHi : 'transparent',
-      color: active ? T.text : T.text2,
-    }}
-    onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = T.surfaceHi; }}
-    onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-  >
-    {children}
-  </button>
-);
-
-/* Оболонка групи: одна рамка на кілька кнопок */
-const ToolGroup = ({ children }) => (
-  <div
-    className="flex items-center gap-0.5 rounded-xl p-1"
-    style={{ background: T.surface, border: `1px solid ${T.line}` }}
-  >
-    {children}
-  </div>
-);
-
-const Divider = () => (
-  <span className="mx-0.5 h-5 w-px shrink-0" style={{ background: T.line }} />
-);
 
 /* Єдина яскрава кнопка в рядку. Тінь навмисно слабша за колишню:
    на темному тлі акцент і так видно першим, а фіолетова заграва
@@ -124,6 +84,417 @@ const CtaBtn = ({ onClick, children }) => (
 );
 
 /* ================================================================== */
+
+/* Акцент у темі — CSS-змінна, а не hex. Тому альфу до неї не можна
+   дописати рядком: `var(--edge-acc)8c` браузер просто викидає, і
+   замість напівпрозорого бордера виходить його відсутність. Саме так
+   зникав ховер на пошуку й на картці «Нова папка». */
+const A = (a) => `rgba(${T.accRgb}, ${a})`;
+
+const SPRING = 'transform .34s cubic-bezier(.22,1.2,.36,1), border-color .2s, background .2s, box-shadow .28s, opacity .2s';
+
+/* Українська рахує до чотирьох: 1 папка, 2 папки, 5 папок — і 0 теж
+   папок, а не «0 папки». */
+const plural = (n, one, few, many) => {
+  const a = Math.abs(n) % 100;
+  const b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b === 1) return one;
+  if (b >= 2 && b <= 4) return few;
+  return many;
+};
+
+/* Кнопка полиці — з макета: градієнт, світлий волосок зверху,
+   підйом на два пікселі під курсором. Єдина яскрава пляма в рядку,
+   тому дозволено собі більше, ніж решті. */
+/* Кнопка панелі: сортування, архів. Тихий прямокутник, який
+   світлішає під курсором — на відміну від однієї яскравої дії
+   праворуч, ці лише перемикають те, що вже видно. */
+function PanelBtn({ onClick, active, children }) {
+  const [hov, setHov] = useState(false);
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      className="flex h-11 items-center gap-[9px] rounded-[13px] px-[15px]"
+      style={{
+        background: active ? A(0.17) : hov ? '#ffffff14' : '#ffffff0a',
+        border: `1px solid ${active ? A(0.5) : hov ? '#33333f' : '#21212b'}`,
+        transition: 'all .16s',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function GradientCta({ onClick, children }) {
+  const [hov, setHov] = useState(false);
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      className="relative flex h-11 shrink-0 items-center gap-[9px] overflow-hidden rounded-[13px] px-[21px]"
+      style={{
+        background: `linear-gradient(180deg, ${hov ? '#6355ff, #4a3bf5' : '#5546f8, #3f30e8'})`,
+        boxShadow: hov
+          ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 #ffffff4d`
+          : `0 12px 30px -12px ${A(0.70)}, inset 0 1px 0 #ffffff33`,
+        transform: `translateY(${hov ? '-2px' : '0'})`,
+        transition: 'transform .34s cubic-bezier(.22,1.2,.36,1), box-shadow .28s, background .2s',
+      }}
+    >
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,#ffffff99,transparent)' }} />
+      <Plus size={15} strokeWidth={2.4} style={{ color: '#ffffff' }} />
+      <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: '#ffffff', letterSpacing: '-0.1px' }}>{children}</span>
+    </button>
+  );
+}
+
+/* Лінійка над секцією: підпис, волосок у нікуди, підказка праворуч. */
+const SectionRule = ({ children, hint, right }) => (
+  <div className="flex items-center gap-3.5">
+    <span className="text-[9.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.2px', color: '#84829a' }}>
+      {children}
+    </span>
+    <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,#24242f,transparent)' }} />
+    {hint && (
+      <span className="flex items-center gap-[7px] text-[11.5px]" style={{ fontFamily: T.sans, color: '#5d5b6a' }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
+          <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+          <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+        </svg>
+        {hint}
+      </span>
+    )}
+    {right}
+  </div>
+);
+
+/* Картка останнього запису: чипом — папка, праворуч дата, далі
+   заголовок і два рядки тексту. Ховер піднімає на три пікселі. */
+function RecentCard({ note, folder, onOpen }) {
+  const [hov, setHov] = useState(false);
+  const c = folder?.color || '#8a8a94';
+  const d = new Date(note.updated_at || note.created_at || 0);
+  const date = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+  /* Було `note.body`, якого в нотатці немає, та ще й груба чистка
+     регуляркою: у прев'ю летіли пробіли замість слів. */
+  const text = mdPlain(note.description).replace(/\s+/g, ' ');
+
+  return (
+    <div
+      onClick={onOpen}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      className="relative cursor-pointer overflow-hidden rounded-[18px]"
+      style={{
+        padding: '20px 22px 18px',
+        background: 'linear-gradient(165deg,#121218,#0c0c11)',
+        border: `1px solid ${hov ? '#3a3a4a' : '#1e1e28'}`,
+        transform: hov ? 'translateY(-3px)' : 'none',
+        transition: 'all .2s',
+      }}
+    >
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,#ffffff1f,transparent)' }} />
+
+      <div className="flex items-center justify-between gap-2.5">
+        <span
+          className="inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-bold uppercase"
+          style={{ background: `${c}1f`, border: `1px solid ${c}42`, fontFamily: T.mono, letterSpacing: '1.3px', color: `${c}f2` }}
+        >
+          {folder?.name || 'Без папки'}
+        </span>
+        <span className="text-[10.5px]" style={{ fontFamily: T.mono, color: '#57555f' }}>{date}</span>
+      </div>
+
+      <div className="mt-3.5 text-[16px] font-semibold" style={{ fontFamily: T.display, color: '#ffffff', letterSpacing: '-0.3px' }}>
+        {(note.title || '').trim() || 'Без назви'}
+      </div>
+      <div className="mt-2 overflow-hidden text-[12.5px]" style={{ fontFamily: T.sans, color: '#75738a', lineHeight: 1.55, maxHeight: 39 }}>
+        {text}
+      </div>
+    </div>
+  );
+}
+
+/* Кнопка дії на картці запису: 29 пікселів, зʼявляється на ховері
+   картки. Небезпечна червоніє, решта світлішає — колір тут єдине, що
+   розрізняє їх, поки іконку не роздивились. */
+function CardBtn({ title, onClick, danger, accent, children }) {
+  const [hov, setHov] = useState(false);
+
+  return (
+    <div
+      role="button"
+      tabIndex={-1}
+      title={title}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className="grid h-[29px] w-[29px] shrink-0 place-items-center rounded-[9px]"
+      style={{
+        cursor: 'pointer',
+        transition: 'all .16s',
+        background: hov ? (danger ? '#ff8f8f24' : accent ? A(0.18) : '#ffffff1a') : '#ffffff0d',
+        border: `1px solid ${hov ? (danger ? '#ff8f8f66' : accent ? A(0.5) : '#42424f') : '#2c2c38'}`,
+        color: hov ? (danger ? '#ff9d9d' : accent ? '#c4baff' : '#ffffff') : '#a5a3b3',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* Плашка тега на картці — колір бере з дерева тегів, тому за нею
+   впізнають тему, не читаючи напис. */
+const TagPill = ({ name, color, small }) => (
+  <span
+    className="inline-flex max-w-full items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-full font-semibold"
+    style={{
+      padding: small ? '3px 8px' : '4px 9px',
+      fontSize: small ? 10 : 10.5,
+      letterSpacing: '0.2px',
+      fontFamily: T.sans,
+      background: `${color}1c`,
+      border: `1px solid ${color}3d`,
+      color: `${color}ee`,
+    }}
+  >
+    {name}
+  </span>
+);
+
+/* Картка запису в плитці. Корінець кольору першого тега, світло
+   з-за правого верхнього кута, дії на ховері. Мінімальна висота
+   тримає сітку рівною, коли в одних записів текст на два рядки, а в
+   інших на жоден. */
+function NoteTile({ note, color, date, pills, images, icon, cover, tall, bg, trade, pinned, onOpen, onEdit, onArchive, onDelete, onTrade }) {
+  const [hov, setHov] = useState(false);
+  const c = color;
+
+  return (
+    <article
+      onClick={onOpen}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      className="relative flex cursor-pointer flex-col overflow-hidden rounded-[18px]"
+      style={{
+        gridRow: tall ? 'span 2' : undefined,
+        minHeight: tall ? 444 : 214,
+        padding: '16px 18px 15px',
+        background: cardBackground(bg, c, hov),
+        backgroundSize: bg === 'dots' ? '9px 9px, cover' : undefined,
+        border: `1px solid ${hov ? `${c}66` : '#1d1d26'}`,
+        transition: SPRING,
+        boxShadow: hov ? `0 24px 48px -24px ${c}80` : '0 10px 24px -20px #000000cc',
+        transform: hov ? 'translateY(-4px)' : 'none',
+      }}
+    >
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,#ffffff26 40%,#ffffff26 60%,transparent)' }} />
+      <span className="pointer-events-none absolute inset-y-0 left-0 w-[3px]" style={{ background: `linear-gradient(180deg, ${c}, ${c}33)`, opacity: hov ? 1 : 0.4, transition: 'opacity .2s' }} />
+      <span
+        className="pointer-events-none absolute rounded-full"
+        style={{ right: -60, top: -70, width: 200, height: 170, background: c, filter: 'blur(60px)', opacity: hov ? 0.16 : 0.05, transition: 'opacity .26s' }}
+      />
+
+      {/* Обкладинка — перший скрін нотатки. Картинка тут не прикраса:
+          графік упізнають швидше, ніж заголовок. */}
+      {cover && (
+        <span
+          className="relative -mx-[18px] -mt-4 mb-3.5 block overflow-hidden"
+          style={{ height: tall ? 214 : 92, borderBottom: `1px solid ${c}33` }}
+        >
+          <img
+            src={cover}
+            alt=""
+            className="h-full w-full object-cover"
+            style={{ transform: hov ? 'scale(1.04)' : 'none', transition: 'transform .5s cubic-bezier(.22,1,.36,1)' }}
+          />
+          <span className="pointer-events-none absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(8,8,12,0.35), rgba(8,8,12,0.75))' }} />
+        </span>
+      )}
+
+      <div className="relative flex items-center justify-between gap-2.5" style={{ minHeight: 31 }}>
+        <div className="flex items-center gap-2">
+          {icon && (
+            <span
+              className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-lg text-[13px]"
+              style={{ background: `${c}1f`, border: `1px solid ${c}47` }}
+            >
+              {icon}
+            </span>
+          )}
+          <span style={{ fontFamily: T.mono, fontSize: 10.5, letterSpacing: '0.6px', color: '#63616d' }}>{date}</span>
+          {pinned && <Pin size={11} strokeWidth={2.4} style={{ color: c }} />}
+          {images > 0 && (
+            <span className="flex items-center gap-1" style={{ fontFamily: T.mono, fontSize: 10, color: '#57555f' }}>
+              <ImageIcon size={11} strokeWidth={2.2} /> {images}
+            </span>
+          )}
+        </div>
+
+        <div
+          className="flex items-center gap-1.5"
+          style={{ opacity: hov ? 1 : 0, transform: `translateY(${hov ? '0' : '-5px'})`, transition: 'all .2s', pointerEvents: hov ? 'auto' : 'none' }}
+        >
+          <CardBtn title="Редагувати" onClick={onEdit} accent><Pencil size={13} strokeWidth={1.9} /></CardBtn>
+          <CardBtn title={note.archived ? 'Повернути зі стрічки' : 'В архів'} onClick={onArchive}>
+            {note.archived ? <ArchiveRestore size={13} strokeWidth={1.9} /> : <Archive size={13} strokeWidth={1.9} />}
+          </CardBtn>
+          <CardBtn title="Видалити" onClick={onDelete} danger><Trash2 size={13} strokeWidth={1.9} /></CardBtn>
+        </div>
+      </div>
+
+      <div
+        className="relative mt-3"
+        style={{ fontFamily: T.display, fontSize: 17.5, fontWeight: 600, color: '#ffffff', letterSpacing: '-0.4px', lineHeight: 1.25 }}
+      >
+        {note.title || 'Без назви'}
+      </div>
+      {/* Коли зверху обкладинка, тексту в звичайній картці лишається
+          рівно на нуль рядків — і краще не показати нічого, ніж
+          обрізати речення на півслові. */}
+      {(!cover || tall) && (
+        <div
+          className="relative mt-[9px] overflow-hidden"
+          style={{ height: tall ? (cover ? 96 : 148) : 42, fontFamily: T.sans, fontSize: 13, color: '#7a788e', lineHeight: 1.6, whiteSpace: 'pre-line' }}
+        >
+          {mdPlain(note.description)}
+        </div>
+      )}
+
+      <div className="relative mt-auto flex min-w-0 flex-wrap items-center gap-1.5 pt-3.5">
+        {pills.map((t) => <TagPill key={t.id} name={t.name} color={t.color} />)}
+        {trade && (
+          <span
+            role="button"
+            tabIndex={-1}
+            title={`Відкрити бектест: ${trade.name}`}
+            onClick={(e) => { e.stopPropagation(); onTrade(trade); }}
+            className="inline-flex max-w-full items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold"
+            style={{ fontFamily: T.mono, letterSpacing: '0.4px', background: A(0.14), border: `1px solid ${A(0.4)}`, color: '#b3a8ff', cursor: 'pointer' }}
+          >
+            <LinkIcon size={10} strokeWidth={2.4} />
+            {trade.name}
+          </span>
+        )}
+      </div>
+    </article>
+  );
+}
+
+/* Той самий запис рядком. Колонки ті самі, що в шапці списку, тому
+   ширини тут не випадкові — вони мусять збігатись. */
+function NoteLine({ note, color, date, pills, icon, pinned, onOpen, onEdit, onArchive, onDelete }) {
+  const [hov, setHov] = useState(false);
+  const c = color;
+
+  return (
+    <div
+      onClick={onOpen}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      className="relative flex cursor-pointer items-center gap-[18px] overflow-hidden rounded-[15px]"
+      style={{
+        padding: '14px 18px',
+        background: `linear-gradient(90deg, ${hov ? '#15141d' : '#101016'}, #0b0b10)`,
+        border: `1px solid ${hov ? `${c}5e` : '#1c1c25'}`,
+        transition: SPRING,
+        boxShadow: hov ? `0 16px 34px -22px ${c}99` : 'none',
+        transform: hov ? 'translateX(4px)' : 'none',
+      }}
+    >
+      <span className="pointer-events-none absolute inset-y-0 left-0 w-[3px]" style={{ background: `linear-gradient(180deg, ${c}, ${c}33)`, opacity: hov ? 1 : 0.4, transition: 'opacity .2s' }} />
+      <span className="w-2 shrink-0" />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          {icon && <span className="shrink-0 text-[13px]">{icon}</span>}
+          {pinned && <Pin size={11} strokeWidth={2.4} style={{ color: c, flex: 'none' }} />}
+          <div
+            className="truncate"
+            style={{ fontFamily: T.display, fontSize: 15, fontWeight: 600, color: '#ffffff', letterSpacing: '-0.3px' }}
+          >
+            {note.title || 'Без назви'}
+          </div>
+        </div>
+        <div className="mt-1 truncate" style={{ fontFamily: T.sans, fontSize: 12, color: '#6d6b80' }}>
+          {mdPlain(note.description)}
+        </div>
+      </div>
+
+      <div className="flex w-[180px] shrink-0 items-center gap-1.5 overflow-hidden">
+        {pills.slice(0, 2).map((t) => <TagPill key={t.id} name={t.name} color={t.color} small />)}
+      </div>
+
+      <div className="w-24 shrink-0 text-right" style={{ fontFamily: T.mono, fontSize: 10.5, color: '#5b5967' }}>{date}</div>
+
+      <div
+        className="flex w-[104px] shrink-0 items-center justify-end gap-1.5"
+        style={{ opacity: hov ? 1 : 0, transition: 'opacity .2s', pointerEvents: hov ? 'auto' : 'none' }}
+      >
+        <CardBtn title="Редагувати" onClick={onEdit} accent><Pencil size={13} strokeWidth={1.9} /></CardBtn>
+        <CardBtn title={note.archived ? 'Повернути зі стрічки' : 'В архів'} onClick={onArchive}>
+          {note.archived ? <ArchiveRestore size={13} strokeWidth={1.9} /> : <Archive size={13} strokeWidth={1.9} />}
+        </CardBtn>
+        <CardBtn title="Видалити" onClick={onDelete} danger><Trash2 size={13} strokeWidth={1.9} /></CardBtn>
+      </div>
+    </div>
+  );
+}
+
+/* Швидка нотатка — перша клітинка сітки, а не кнопка десь угорі.
+   Пунктир і курсор-каретка кажуть головне: сюди пишуть. Підказка
+   «N» — та сама дія з клавіатури, без миші. */
+function QuickNoteCard({ onClick }) {
+  const [hov, setHov] = useState(false);
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      className="flex items-center gap-3.5 rounded-[18px]"
+      style={{
+        padding: '16px 18px',
+        cursor: 'text',
+        transition: 'all .2s',
+        border: `1.5px dashed ${hov ? A(0.55) : '#24242f'}`,
+        background: hov ? A(0.07) : '#ffffff03',
+      }}
+    >
+      <span
+        className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[13px]"
+        style={{
+          background: hov ? A(0.17) : '#ffffff0a',
+          border: `1px solid ${hov ? A(0.44) : '#26262f'}`,
+          color: hov ? '#b3a8ff' : '#7c7a8a',
+          transition: 'all .2s',
+        }}
+      >
+        <Pencil size={18} strokeWidth={1.8} />
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14.5px] font-semibold" style={{ fontFamily: T.display, color: '#c9c7d6' }}>Швидка нотатка</span>
+        <span className="mt-1 block text-[11.5px]" style={{ fontFamily: T.sans, color: '#65636f' }}>Почни писати — збережеться сюди</span>
+      </span>
+
+      <span
+        className="grid h-6 w-6 shrink-0 place-items-center rounded-[7px] text-[10px]"
+        style={{ background: '#ffffff0d', border: '1px solid #2a2a35', fontFamily: T.mono, color: '#66646f' }}
+      >
+        N
+      </span>
+    </div>
+  );
+}
 
 export default function Notes() {
   useEdgeFonts();
@@ -154,6 +525,14 @@ export default function Notes() {
   });
 
   const [search, setSearch] = useState('');
+  /* Полиця має власний пошук і власний вигляд: там шукають папку, а
+     не запис, і плитка/список стосуються папок, а не стрічки. */
+  const [shelfQuery, setShelfQuery] = useState('');
+  const [shelfView, setShelfView] = useState('grid');
+  const [shelfFocus, setShelfFocus] = useState(false);
+  const [shelfHover, setShelfHover] = useState(false);
+  const [feedFocus, setFeedFocus] = useState(false);
+  const [feedHover, setFeedHover] = useState(false);
   const [tag, setTag] = useState(null);
   const [sort, setSort] = useState('newest');
   const [view, setView] = useState('grid');
@@ -165,7 +544,10 @@ export default function Notes() {
   const [deleteId, setDeleteId] = useState(null);
   const [lightbox, setLightbox] = useState(null);
   /* Папка, яку щойно завели і яка ще не має своєї назви */
-  const [freshId, setFreshId] = useState(null);
+  const [creating, setCreating] = useState(false);
+  /* Про відсутню колонку `card` попереджаємо один раз за сесію */
+  const warnedCard = useRef(false);
+  const navigate = useNavigate();
 
   /* ---------- читання з бази ---------- */
   useEffect(() => {
@@ -211,24 +593,50 @@ export default function Notes() {
     return () => { alive = false; };
   }, [user?.id]);
 
-  /* Esc закриває верхній шар */
+  /* Клавіатура: Esc закриває верхній шар, ⌘K веде в пошук, N починає
+     нову нотатку. Дві останні працюють тільки тоді, коли жоден шар не
+     відкритий і курсор не в полі введення — інакше буква N просто не
+     друкувалась би. */
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key !== 'Escape') return;
-      if (lightbox) return setLightbox(null);
-      if (deleteId != null) return setDeleteId(null);
-      if (freshId) return setFreshId(null);
-      if (editing) return setEditing(null);
-      if (readId != null) return setReadId(null);
-      /* останнім шаром — вихід із папки на полицю */
-      if (openId != null) return setOpenId(null);
+    const typing = () => {
+      const el = document.activeElement;
+      if (!el) return false;
+      return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
     };
+    const busy = () => lightbox || deleteId != null || creating || editing || readId != null;
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (lightbox) return setLightbox(null);
+        if (deleteId != null) return setDeleteId(null);
+        if (creating) return setCreating(false);
+        if (editing) return setEditing(null);
+        if (readId != null) return setReadId(null);
+        /* останнім шаром — вихід із папки на полицю */
+        if (openId != null) return setOpenId(null);
+        return undefined;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        if (busy()) return undefined;
+        e.preventDefault();
+        const box = document.querySelector('input[placeholder="Пошук у папці"], input[placeholder="Пошук"]');
+        box?.focus();
+        return undefined;
+      }
+
+      if (e.key.toLowerCase() === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (busy() || typing() || openId == null || scope === 'archive') return undefined;
+        e.preventDefault();
+        setEditing(blankForm(openId !== NO_FOLDER ? openId : null));
+      }
+      return undefined;
+    };
+
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [lightbox, deleteId, freshId, editing, readId, openId]);
+  }, [lightbox, deleteId, creating, editing, readId, openId, scope]);
 
-  /* теги, що є в нотатках, але зникли з дерева — щоб не губились */
-  const orphans = useMemo(() => orphanTags(tree, notes), [tree, notes]);
 
   /* Архів свідомо не рахується в жодній цифрі поруч з робочою
      стрічкою: сенс архіву в тому, щоб він не маячив перед очима, а
@@ -237,10 +645,12 @@ export default function Notes() {
   const active = useMemo(() => notes.filter((n) => !n.archived), [notes]);
   const archived = useMemo(() => notes.filter((n) => n.archived), [notes]);
 
-  /* Полиця показується тільки коли папки справді є. Порожня полиця
-     з єдиною кнопкою — це зайвий екран між людиною і її нотатками. */
-  const hasFolders = folders.length > 0;
-  const onShelf = hasFolders && openId === null;
+  /* Полиця — головна сторінка записника, а не нагорода за те, що ти
+     завів папку. Коли її показ залежав від кількості папок,
+     видалення останньої скидало людину в плоский список — на вигляд
+     як відкат до старої версії. На порожній полиці лишаються «Без
+     папки» і «Нова папка», а це рівно те, чим заводять першу. */
+  const onShelf = openId === null;
 
   const looseCount = useMemo(
     () => active.filter((n) => !n.folder_id).length,
@@ -248,9 +658,68 @@ export default function Notes() {
   );
   const countOf = (id) => active.filter((n) => n.folder_id === id).length;
 
+  /* Прев'ю папки — перші рядки її записів, не вигадане речення.
+     Полиця з чотирьох однакових карток нічого не каже про те, що
+     всередині; три заголовки кажуть усе. */
+  const previewOf = (id) => {
+    const inside = active.filter((n) => (id === NO_FOLDER ? !n.folder_id : n.folder_id === id));
+    if (!inside.length) return '';
+    return inside
+      .slice()
+      .sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')))
+      .slice(0, 3)
+      .map((n) => (n.title || '').trim() || 'Без назви')
+      .join(' · ');
+  };
+
+  /* «2 год», «вчора», «3 дні» — час тут відносний, бо на полиці
+     важливо не коли саме, а наскільки давно. */
+  const updatedOf = (id) => {
+    const inside = active.filter((n) => (id === NO_FOLDER ? !n.folder_id : n.folder_id === id));
+    if (!inside.length) return '—';
+    const last = inside.reduce((acc, n) => {
+      const t = new Date(n.updated_at || n.created_at || 0).getTime();
+      return t > acc ? t : acc;
+    }, 0);
+    if (!last) return '—';
+    const mins = Math.round((Date.now() - last) / 60000);
+    if (mins < 1) return 'щойно';
+    if (mins < 60) return `${mins} хв`;
+    const hours = Math.round(mins / 60);
+    if (hours < 24) return `${hours} год`;
+    const days = Math.round(hours / 24);
+    if (days === 1) return 'вчора';
+    if (days < 31) return `${days} ${plural(days, 'день', 'дні', 'днів')}`;
+    const months = Math.round(days / 30);
+    return `${months} ${plural(months, 'місяць', 'місяці', 'місяців')}`;
+  };
+
+  /* Пошук на полиці шукає і по назвах папок, і по тому, що в них
+     лежить: людина частіше памʼятає запис, ніж полицю, на яку його
+     поклала. */
+  const shelfQ = shelfQuery.trim().toLowerCase();
+  const shelfFolders = useMemo(() => {
+    if (!shelfQ) return folders;
+    return folders.filter((f) => (f.name || '').toLowerCase().includes(shelfQ)
+      || active.some((n) => n.folder_id === f.id && (`${n.title || ''} ${n.body || ''}`).toLowerCase().includes(shelfQ)));
+  }, [folders, active, shelfQ]);
+
+  /* Записів за тиждень — єдине число на полиці, яке показує рух, а
+     не запас. */
+  const weekCount = useMemo(() => {
+    const edge = Date.now() - 7 * 86400000;
+    return active.filter((n) => new Date(n.created_at || 0).getTime() >= edge).length;
+  }, [active]);
+
+  const recent = useMemo(() => active
+    .slice()
+    .sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')))
+    .slice(0, 3), [active]);
+
   const openFolder = openId && openId !== NO_FOLDER
     ? folders.find((f) => f.id === openId) || null
     : null;
+
 
   /* Архів навмисно наскрізний: він показує все відпрацьоване разом,
      незалежно від полиці. Шукати старий запис по папках, коли ти вже
@@ -258,22 +727,32 @@ export default function Notes() {
      папки мали врятувати. */
   const scoped = useMemo(() => {
     const base = scope === 'archive' ? archived : active;
-    if (scope === 'archive' || !hasFolders || openId === null) return base;
+    if (scope === 'archive' || openId === null) return base;
     if (openId === NO_FOLDER) return base.filter((n) => !n.folder_id);
     return base.filter((n) => n.folder_id === openId);
-  }, [active, archived, scope, hasFolders, openId]);
+  }, [active, archived, scope, openId]);
 
   const inScope = scoped;
 
-  const counts = useMemo(() => {
-    const c = {};
-    inScope.forEach((n) => (n.tags || []).forEach((t) => {
-      c[t] = (c[t] || 0) + 1;
-      const [cat, sub] = splitTag(t);
-      if (sub) c[cat] = (c[cat] || 0) + 1;
-    }));
-    return c;
-  }, [inScope]);
+  /* Шапка папки: назва, колір і теги беруться з того, що зараз
+     відкрито. «Без папки» й архів — теж вигляди папки, просто без
+     власного запису в базі, тому колір у них нейтральний. */
+  const headTitle = scope === 'archive'
+    ? 'Архів'
+    : openFolder?.name || (openId === NO_FOLDER ? 'Без папки' : 'Записник');
+  const headColor = scope === 'archive' || !openFolder ? '#8a8a94' : openFolder.color;
+
+  /* Теги рядком — тільки ті, що справді зустрічаються тут, і одразу
+     з кількістю. «Всі» попереду скидає фільтр. */
+  const feedTags = useMemo(() => {
+    const seen = new Map();
+    inScope.forEach((n) => (n.tags || []).forEach((t) => seen.set(t, (seen.get(t) || 0) + 1)));
+    if (!seen.size) return [];
+    const rest = [...seen.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, count]) => ({ id, name: tagLabel(id), count, color: tagColor(id, tree) }));
+    return [{ id: null, name: 'всі', count: inScope.length, color: T.acc }, ...rest];
+  }, [inScope, tree]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -284,9 +763,16 @@ export default function Notes() {
         || (n.tags || []).some((t) => t.toLowerCase().includes(q));
       return hitSearch && noteMatchesTag(n.tags, tag);
     });
-    r.sort((a, b) => (sort === 'newest'
-      ? new Date(b.created_at) - new Date(a.created_at)
-      : new Date(a.created_at) - new Date(b.created_at)));
+    r.sort((a, b) => {
+      /* Закріплені завжди зверху, і тільки потім обраний порядок:
+         людина закріпила запис саме для того, щоб не шукати його. */
+      const pin = (cardOf(b).pin ? 1 : 0) - (cardOf(a).pin ? 1 : 0);
+      if (pin) return pin;
+      if (sort === 'title') return (a.title || '').localeCompare(b.title || '', 'uk');
+      return sort === 'newest'
+        ? new Date(b.created_at) - new Date(a.created_at)
+        : new Date(a.created_at) - new Date(b.created_at);
+    });
     return r;
   }, [inScope, search, tag, sort]);
 
@@ -309,6 +795,11 @@ export default function Notes() {
       archived: !!form.archived,
       /* Нова нотатка потрапляє в ту папку, з якої її почали писати */
       folder_id: form.folder_id ?? (openId && openId !== NO_FOLDER ? openId : null),
+      card: form.card || {},
+      /* Проставляємо одразу, а не чекаємо відповіді бази: інакше до
+         наступного перезавантаження нотатка показувала б стару дату
+         зміни — саме ту, від якої ми щойно пішли. */
+      updated_at: new Date().toISOString(),
     };
 
     const before = notes;
@@ -317,6 +808,13 @@ export default function Notes() {
 
     try {
       await pushNote(user.id, data);
+      /* Вигляд картки — єдине, що може не доїхати на відсталій схемі.
+         Сказати про це один раз чесніше, ніж мовчки з'їдати вибір і
+         показувати ту саму сіру картку. */
+      if (!cardSupport.ok && Object.keys(data.card || {}).length && !warnedCard.current) {
+        warnedCard.current = true;
+        notify.error('Вигляд картки не збережеться', 'У таблиці notes ще немає колонки card — сам запис збережено, оформлення живе до перезавантаження.');
+      }
     } catch (err) {
       setNotes(before);
       notify.error('Нотатка не збереглась', err.message);
@@ -351,7 +849,7 @@ export default function Notes() {
     const next = !n.archived;
     const before = notes;
 
-    setNotes((list) => list.map((x) => (x.id === n.id ? { ...x, archived: next } : x)));
+    setNotes((list) => list.map((x) => (x.id === n.id ? { ...x, archived: next, updated_at: new Date().toISOString() } : x)));
     if (readId === n.id) setReadId(null);
 
     try {
@@ -374,7 +872,7 @@ export default function Notes() {
     if ((n.folder_id || null) === next) return;
     const before = notes;
 
-    setNotes((list) => list.map((x) => (x.id === n.id ? { ...x, folder_id: next } : x)));
+    setNotes((list) => list.map((x) => (x.id === n.id ? { ...x, folder_id: next, updated_at: new Date().toISOString() } : x)));
 
     try {
       await setNoteFolder(user.id, n.id, next);
@@ -386,23 +884,27 @@ export default function Notes() {
 
   /* ---------- папки ---------- */
 
-  const addFolder = async () => {
+  /* «Нова папка» відкриває вікно, а не заводить рядок у базі.
+
+     Досі було навпаки: кнопка одразу створювала папку з технічною
+     назвою, а вікно лише пропонувало її перейменувати. Тому кожне
+     випадкове натискання — і кожне «передумав, закрию» — лишало на
+     полиці порожню «Нову папку». Тепер натискання не має жодних
+     наслідків, поки не натиснуто «Створити папку». */
+  const addFolder = () => setCreating(true);
+
+  const createFolderFrom = async (patch) => {
+    setCreating(false);
     const before = folders;
     try {
       const f = await createFolder(user.id, {
-        name: 'Нова папка',
-        color: FOLDER_COLORS[folders.length % FOLDER_COLORS.length],
+        name: patch.name,
+        color: patch.color,
+        pinned: patch.pinned,
+        icon: patch.icon,
         position: folders.length,
       });
-      setFolders((l) => [...l, f]);
-      /* Одразу питаємо назву. Без цього людина натискала «Нова
-         папка» тричі і отримувала три полиці з однаковим написом:
-         перейменування було окремою дією, про яку ще треба
-         здогадатись, бо олівець зʼявляється лише на ховері.
-
-         Питати назву в момент створення дешевше, ніж пояснювати
-         потім, де її змінити. */
-      setFreshId(f.id);
+      setFolders((l) => sortFolders([...l, f]));
       return f;
     } catch (err) {
       setFolders(before);
@@ -421,9 +923,15 @@ export default function Notes() {
 
   const renameFolder = async (f, patch) => {
     const before = folders;
-    setFolders((l) => sortFolders(l.map((x) => (x.id === f.id ? { ...x, ...patch } : x))));
+    /* Порожня назва — не назва. База підставляє «Без назви» сама, а
+       стан на екрані лишався з порожнім рядком: картка виглядала
+       безіменною, ніби папка зламалась. */
+    const safe = patch.name !== undefined
+      ? { ...patch, name: (patch.name || '').trim() || 'Без назви' }
+      : patch;
+    setFolders((l) => sortFolders(l.map((x) => (x.id === f.id ? { ...x, ...safe } : x))));
     try {
-      await updateFolder(user.id, f.id, patch);
+      await updateFolder(user.id, f.id, safe);
     } catch (err) {
       setFolders(before);
       notify.error('Не вдалось зберегти папку', err.message);
@@ -453,9 +961,18 @@ export default function Notes() {
 
   const saveOrder = async (ordered) => {
     const before = folders;
-    /* Позиції перенумеровуємо одразу — інакше наступне закріплення
+    /* Дошка знає лише про ті папки, які показує. Якби її список
+       ставав усім станом, папка, відфільтрована пошуком, зникала б
+       зі сторінки після чужого перетягування. Тому зшиваємо: нові
+       позиції беруть ті, кого справді пересували, решта лишається як
+       була.
+
+       Позиції перенумеровуємо одразу — інакше наступне закріплення
        сортувало б за старими значеннями і порядок стрибнув би. */
-    const next = ordered.map((f, i) => ({ ...f, position: i }));
+    const moved = new Map(ordered.map((f, i) => [f.id, i]));
+    const next = sortFolders(folders.map((f) => (
+      moved.has(f.id) ? { ...f, position: moved.get(f.id) } : f
+    )));
     setFolders(next);
     try {
       await reorderFolders(user.id, next);
@@ -471,203 +988,14 @@ export default function Notes() {
   };
 
   const reading = readId != null ? notes.find((n) => n.id === readId) : null;
-  const hasFilters = !!tag || !!search;
+
+  const neighbours = useMemo(() => {
+    const i = filtered.findIndex((n) => n.id === readId);
+    if (i === -1) return { prev: null, next: null };
+    return { prev: filtered[i - 1]?.id || null, next: filtered[i + 1]?.id || null };
+  }, [filtered, readId]);
 
   /* ---------- дрібні блоки ---------- */
-
-  const NoteCard = ({ n }) => {
-    const imgs = (n.images || []).filter((x) => typeof x === 'string');
-    const accent = (n.tags || []).length ? tagColor(n.tags[0], tree) : T.lineHi;
-
-    return (
-      <motion.article
-        layout
-        variants={fadeUp}
-        exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.15 } }}
-        onClick={() => setReadId(n.id)}
-        whileHover={{ y: -3 }}
-        transition={{ duration: 0.25, ease: EASE }}
-        className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl transition-colors duration-300"
-        style={{
-          background: T.surface,
-          border: `1px solid ${T.line}`,
-          boxShadow: '0 1px 0 rgba(255,255,255,0.03) inset',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
-        onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
-      >
-        {/* тонка смужка кольору першого тега — орієнтир, а не прикраса */}
-        <span className="absolute inset-y-0 left-0 w-[2px] transition-all duration-300 group-hover:w-[3px]" style={{ background: accent, opacity: 0.55 }} />
-
-        <div className="absolute right-3 top-3 z-10 flex gap-1.5 opacity-0 transition-all duration-200 group-hover:opacity-100">
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleArchive(n); }}
-            title={n.archived ? 'Повернути зі стрічки' : 'В архів'}
-            className="grid h-8 w-8 place-items-center rounded-lg transition-colors"
-            style={{ background: 'rgba(10,10,12,0.8)', border: `1px solid ${T.line}`, color: T.text3, backdropFilter: 'blur(8px)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = T.lineAcc; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
-          >
-            {n.archived
-              ? <ArchiveRestore size={14} strokeWidth={2.2} />
-              : <Archive size={14} strokeWidth={2.2} />}
-          </button>
-
-          <button
-            onClick={(e) => { e.stopPropagation(); setDeleteId(n.id); }}
-            title="Видалити"
-            className="grid h-8 w-8 place-items-center rounded-lg transition-colors"
-            style={{ background: 'rgba(10,10,12,0.8)', border: `1px solid ${T.line}`, color: T.text3, backdropFilter: 'blur(8px)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.4)`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
-          >
-            <Trash2 size={14} strokeWidth={2.2} />
-          </button>
-        </div>
-
-        {imgs.length > 0 ? (
-          <div className="relative ml-[2px] overflow-hidden" style={{ aspectRatio: '16/9', borderBottom: `1px solid ${T.line}` }}>
-            <img src={imgs[0]} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
-            {imgs.length > 1 && (
-              <span
-                className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-semibold tabular-nums"
-                style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${T.line}`, color: T.text2, backdropFilter: 'blur(8px)', fontFamily: T.sans }}
-              >
-                <ImageIcon size={11} strokeWidth={2.4} /> {imgs.length}
-              </span>
-            )}
-          </div>
-        ) : (
-          /* заглушка — тримає однакову висоту карток, коли скріна немає */
-          <div
-            className="relative ml-[2px] grid place-items-center overflow-hidden"
-            style={{
-              aspectRatio: '16/9',
-              borderBottom: `1px solid ${T.line}`,
-              background: `linear-gradient(160deg, ${T.surfaceHi}, ${T.sunken})`,
-            }}
-          >
-            <NotebookPen size={22} strokeWidth={1.5} style={{ color: T.text4, opacity: 0.5 }} />
-          </div>
-        )}
-
-        <div className="flex flex-1 flex-col gap-3 p-5 pl-6">
-          <span className="text-[12.5px] font-medium" style={{ fontFamily: T.sans, color: T.text4 }}>
-            {fmtDate(n.created_at)}
-          </span>
-
-          <h3
-            className="text-[18px] font-bold leading-[1.35]"
-            style={{
-              fontFamily: T.display, color: T.text, letterSpacing: '-0.015em',
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-            }}
-          >
-            {n.title}
-          </h3>
-
-          {n.description && (
-            <p
-              className="text-[14px]"
-              style={{
-                fontFamily: T.sans, color: T.text3, lineHeight: 1.68,
-                display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-              }}
-            >
-              {n.description}
-            </p>
-          )}
-
-          {(n.tags || []).length > 0 && (
-            <div className="mt-auto flex flex-wrap gap-1.5 pt-3" style={{ borderTop: `1px solid ${T.line}` }}>
-              {n.tags.slice(0, 3).map((t) => (
-                <TagChip key={t} id={t} tree={tree} onClick={(e) => { e?.stopPropagation?.(); setTag(t); }} />
-              ))}
-              {n.tags.length > 3 && (
-                <span className="self-center text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  +{n.tags.length - 3}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      </motion.article>
-    );
-  };
-
-  const NoteRow = ({ n }) => {
-    const imgs = (n.images || []).filter((x) => typeof x === 'string');
-    const accent = (n.tags || []).length ? tagColor(n.tags[0], tree) : T.lineHi;
-
-    return (
-      <motion.div
-        layout
-        variants={fadeUp}
-        exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
-        onClick={() => setReadId(n.id)}
-        whileHover={{ x: 3 }}
-        transition={{ duration: 0.22, ease: EASE }}
-        className="group relative flex cursor-pointer items-center gap-4 overflow-hidden rounded-xl px-5 py-4 transition-colors duration-300"
-        style={{ background: T.surface, border: `1px solid ${T.line}` }}
-        onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
-        onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
-      >
-        <span className="absolute inset-y-0 left-0 w-[2px]" style={{ background: accent, opacity: 0.55 }} />
-
-        <span className="w-[76px] shrink-0 text-[13px] font-medium tabular-nums" style={{ fontFamily: T.sans, color: T.text4 }}>
-          {fmtShort(n.created_at)}
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[15.5px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
-            {n.title}
-          </div>
-          {n.description && (
-            <div className="mt-0.5 truncate text-[13.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              {n.description}
-            </div>
-          )}
-        </div>
-
-        <div className="hidden shrink-0 items-center gap-1.5 lg:flex">
-          {(n.tags || []).slice(0, 2).map((t) => (
-            <TagChip key={t} id={t} tree={tree} onClick={(e) => { e?.stopPropagation?.(); setTag(t); }} />
-          ))}
-        </div>
-
-        {imgs.length > 0 && (
-          <span className="flex shrink-0 items-center gap-1.5 text-[12.5px] tabular-nums" style={{ fontFamily: T.sans, color: T.text4 }}>
-            <ImageIcon size={13} strokeWidth={2.2} /> {imgs.length}
-          </span>
-        )}
-
-        <div className="flex shrink-0 gap-1.5 opacity-0 transition-all group-hover:opacity-100">
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleArchive(n); }}
-            title={n.archived ? 'Повернути зі стрічки' : 'В архів'}
-            className="grid h-8 w-8 place-items-center rounded-lg transition-colors"
-            style={{ border: `1px solid ${T.line}`, color: T.text3 }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = T.lineAcc; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
-          >
-            {n.archived
-              ? <ArchiveRestore size={13} strokeWidth={2.2} />
-              : <Archive size={13} strokeWidth={2.2} />}
-          </button>
-
-          <button
-            onClick={(e) => { e.stopPropagation(); setDeleteId(n.id); }}
-            className="grid h-8 w-8 place-items-center rounded-lg transition-colors"
-            style={{ border: `1px solid ${T.line}`, color: T.text3 }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.4)`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
-          >
-            <Trash2 size={13} strokeWidth={2.2} />
-          </button>
-        </div>
-      </motion.div>
-    );
-  };
 
   /* ================================================================== */
 
@@ -677,178 +1005,338 @@ export default function Notes() {
 
       <div className="relative z-10 mx-auto w-full max-w-[1600px] px-4 pb-24 pt-5 sm:px-6 lg:w-[92%] lg:px-0 lg:pb-32 lg:pt-7">
 
-        {/* ─────────── Хедер ─────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE }}
-          className="mb-8 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between"
-        >
-          <div className="min-w-0">
-            <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
-              Нотатки
-            </div>
-            <h1
-              className="text-[28px] font-bold leading-none sm:text-[38px] lg:text-[46px]"
-              style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
-            >
-              {onShelf ? 'Записник' : (openFolder?.name || (openId === NO_FOLDER ? 'Без папки' : 'Записник'))}
-            </h1>
+        {/* ─────────── Хедер полиці ───────────
 
-            {/* Дорога назад показується тільки коли є куди повертатись */}
-            {hasFolders && openId !== null && (
-              <button
-                onClick={() => { setOpenId(null); setTag(null); setSearch(''); }}
-                className="mt-3 inline-flex items-center gap-1.5 text-[13.5px] font-semibold transition-colors"
-                style={{ fontFamily: T.sans, color: T.text3 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
+            Розкладка з макета: підпис із крапкою, велика назва
+            градієнтом, смужка з трьома числами, а праворуч — пошук,
+            перемикач вигляду й одна яскрава кнопка. */}
+        {onShelf ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASE }}
+            className="flex flex-wrap items-end justify-between gap-9"
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-[9px]">
+                <span className="h-[5px] w-[5px] rounded-full" style={{ background: '#8b7cff', boxShadow: `0 0 12px 2px ${A(0.67)}` }} />
+                <span className="text-[10px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: '#9b8dff' }}>
+                  Нотатки
+                </span>
+              </div>
+
+              <h1
+                className="mt-3.5 text-[40px] font-bold sm:text-[52px] lg:text-[58px]"
+                style={{
+                  fontFamily: T.display,
+                  letterSpacing: '-2.4px',
+                  lineHeight: 0.96,
+                  background: 'linear-gradient(170deg,#ffffff 30%,#a9a5bd)',
+                  WebkitBackgroundClip: 'text',
+                  backgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
               >
-                <ChevronLeft size={15} strokeWidth={2.6} />
-                до всіх папок
-              </button>
-            )}
+                Записник
+              </h1>
 
-            <p className="mt-3 text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              {onShelf ? (
-                <>
-                  {folders.length} {folders.length === 1 ? 'папка' : 'папок'} · {active.length} {active.length === 1 ? 'запис' : 'записів'}
-                </>
-              ) : (
-                <>
-                  {scope === 'archive' ? 'Архів · ' : ''}
-                  {inScope.length} {inScope.length === 1 ? 'запис' : 'записів'}
-                  {tag && <> · у фільтрі {filtered.length}</>}
-                </>
-              )}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* На полиці інструменти стрічки не потрібні: шукати й
-                сортувати нема чого, там лише папки. Лишаємо архів —
-                він наскрізний — і створення. */}
-            {onShelf ? (
-              <>
-                {archived.length > 0 && (
-                  <ToolGroup>
-                    <ToolBtn
-                      onClick={() => { setScope('archive'); setOpenId(NO_FOLDER); setTag(null); }}
-                      title="Показати архів"
-                    >
-                      <Archive size={15} strokeWidth={2.2} style={{ color: T.text3 }} />
-                      архів {archived.length}
-                    </ToolBtn>
-                  </ToolGroup>
-                )}
-                <CtaBtn onClick={addFolder}>Нова папка</CtaBtn>
-              </>
-            ) : (
-              <>
-            {/* Пошук стоїть окремо від решти: він єдиний тут
-                приймає введення, а не перемикає вигляд. */}
-            <div
-              className="flex h-[42px] w-full items-center gap-2.5 rounded-xl px-3.5 transition-colors sm:w-[240px]"
-              style={{ background: T.surface, border: `1px solid ${search ? T.lineHi : T.line}` }}
-              onFocusCapture={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
-              onBlurCapture={(e) => (e.currentTarget.style.borderColor = search ? T.lineHi : T.line)}
-            >
-              <Search size={15} strokeWidth={2.2} style={{ color: T.text4 }} />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Пошук…"
-                className="w-full bg-transparent text-[14px] outline-none"
-                style={{ fontFamily: T.sans, color: T.text }}
-              />
-              {search && (
-                <button onClick={() => setSearch('')} style={{ color: T.text4 }}>
-                  <X size={14} strokeWidth={2.5} />
-                </button>
-              )}
+              <div
+                className="mt-5 flex items-stretch overflow-hidden rounded-[14px]"
+                style={{ background: 'linear-gradient(180deg,#ffffff0c,#ffffff05)', border: '1px solid #1f1f29', backdropFilter: 'blur(8px)' }}
+              >
+                {[
+                  { v: folders.length, t: 'Папок', c: '#ffffff' },
+                  { v: active.length, t: 'Записів', c: '#ffffff' },
+                  { v: `+${weekCount}`, t: 'За тиждень', c: '#8bf5c0' },
+                ].map(({ v, t, c }, i) => (
+                  <div key={t} className="flex">
+                    {i > 0 && <span className="w-px" style={{ background: '#1f1f29' }} />}
+                    <div className="px-[18px] py-[11px]">
+                      <div className="text-[20px] font-bold leading-none" style={{ fontFamily: T.display, color: c }}>{v}</div>
+                      <div className="mt-[5px] text-[10.5px] font-semibold uppercase" style={{ fontFamily: T.sans, letterSpacing: '0.6px', color: '#7a788a' }}>{t}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Один прилад: чим фільтруємо, як сортуємо, що
-                показуємо. Усе це відповіді на питання «яку частину
-                записника я зараз бачу». */}
-            <ToolGroup>
-              <TagPicker
-                tree={tree}
-                onTreeChange={setTree}
-                selected={tag}
-                onSelect={setTag}
-                counts={counts}
-                label="Теги"
-                align="right"
-                width={310}
-              />
-
-              <Divider />
-
-              <ToolBtn onClick={() => setSort((s) => (s === 'newest' ? 'oldest' : 'newest'))} title="Порядок">
-                <ArrowDownUp size={15} strokeWidth={2.2} style={{ color: T.text3 }} />
-                {sort === 'newest' ? 'нові' : 'старі'}
-              </ToolBtn>
-
-              {/* Архів зʼявляється тільки коли в ньому щось є: поки
-                  людина нічого не архівувала, кнопка їй нічого не
-                  каже, а місце в панелі забирає. */}
-              {(archived.length > 0 || scope === 'archive') && (
-                <>
-                  <Divider />
-                  <ToolBtn
-                    onClick={() => { setScope((s) => (s === 'archive' ? 'active' : 'archive')); setTag(null); }}
-                    title={scope === 'archive' ? 'Повернутись до стрічки' : 'Показати архів'}
-                    active={scope === 'archive'}
+            <div className="flex items-center gap-2.5">
+              <div
+                onMouseEnter={() => setShelfHover(true)}
+                onMouseLeave={() => setShelfHover(false)}
+                className="flex h-11 w-[270px] items-center gap-2.5 rounded-[13px] py-0 pl-[15px] pr-2"
+                style={{
+                  /* Ховер — той самий стан, що й фокус, тільки в
+                     піввсили: поле має відгукнутись на наближення
+                     курсора, але не вдавати, що вже приймає текст. */
+                  background: shelfFocus ? '#ffffff12' : shelfHover ? '#ffffff0f' : '#ffffff0a',
+                  border: `1px solid ${shelfFocus ? `${A(0.55)}` : shelfHover ? '#32323f' : '#21212b'}`,
+                  boxShadow: shelfFocus
+                    ? `0 0 0 4px ${A(0.13)}, inset 0 1px 0 #ffffff14`
+                    : 'inset 0 1px 0 #ffffff0d',
+                  cursor: 'text',
+                  transition: 'all .2s',
+                }}
+                onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
+              >
+                <Search size={15} strokeWidth={1.8} style={{ color: '#8b899a', flex: 'none' }} />
+                <input
+                  value={shelfQuery}
+                  onChange={(e) => setShelfQuery(e.target.value)}
+                  onFocus={() => setShelfFocus(true)}
+                  onBlur={() => setShelfFocus(false)}
+                  placeholder="Пошук"
+                  className="w-full border-none bg-transparent text-[13.5px] font-medium outline-none"
+                  style={{ fontFamily: T.sans, color: T.text }}
+                />
+                {shelfQuery ? (
+                  <button
+                    onClick={() => setShelfQuery('')}
+                    className="grid h-6 w-6 shrink-0 place-items-center rounded-lg"
+                    style={{ color: '#8b899a' }}
                   >
-                    <Archive size={15} strokeWidth={2.2} style={{ color: scope === 'archive' ? T.acc : T.text3 }} />
-                    {scope === 'archive' ? 'зі стрічки' : `архів ${archived.length}`}
-                  </ToolBtn>
-                </>
-              )}
+                    <X size={13} strokeWidth={2.6} />
+                  </button>
+                ) : (
+                  <span
+                    className="shrink-0 rounded-[7px] px-[7px] py-[3px] text-[10px]"
+                    style={{ background: '#ffffff0d', border: '1px solid #2a2a35', fontFamily: T.mono, color: shelfFocus ? '#8b899a' : '#66646f', transition: 'color .2s' }}
+                  >
+                    ⌘K
+                  </span>
+                )}
+              </div>
 
-              <Divider />
+              <div className="flex rounded-[13px] p-[3px]" style={{ background: '#ffffff0a', border: '1px solid #21212b' }}>
+                {[{ k: 'grid', I: LayoutGrid, t: 'Плиткою' }, { k: 'list', I: Rows3, t: 'Списком' }].map(({ k, I, t }) => (
+                  <button
+                    key={k}
+                    onClick={() => setShelfView(k)}
+                    title={t}
+                    className="grid h-[33px] w-[35px] place-items-center rounded-[10px]"
+                    style={{
+                      background: shelfView === k ? '#ffffff14' : 'transparent',
+                      boxShadow: shelfView === k ? 'inset 0 1px 0 #ffffff1f' : 'none',
+                      color: shelfView === k ? '#ffffff' : '#7c7a8a',
+                      transition: 'all .16s',
+                    }}
+                  >
+                    <I size={15} strokeWidth={1.8} />
+                  </button>
+                ))}
+              </div>
 
-              {/* Плитка чи список — іконками: підписи тут нічого не
-                  додають, бо самі значки однозначні. */}
-              {[{ k: 'grid', I: LayoutGrid, t: 'Плитка' }, { k: 'list', I: Rows3, t: 'Список' }].map(({ k, I, t }) => (
-                <button
-                  key={k}
-                  onClick={() => setView(k)}
-                  title={t}
-                  className="grid h-[40px] w-[38px] place-items-center rounded-[10px] transition-colors"
+              <GradientCta onClick={addFolder}>Нова папка</GradientCta>
+            </div>
+          </motion.div>
+        ) : (
+          /* ─────────── Хедер папки ───────────
+
+             Той самий кістяк, що й на полиці, але предмет інший: тут
+             головне не «скільки в тебе папок», а «де я і що всередині».
+             Тому назва папки йде поруч зі своєю іконкою в її ж кольорі,
+             а під нею — два тихих факти: скільки записів і коли востаннє
+             щось міняли. */
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASE }}
+          >
+            <button
+              onClick={() => { setOpenId(null); setTag(null); setSearch(''); setScope('active'); }}
+              className="inline-flex items-center gap-[7px] text-[12.5px] font-semibold transition-colors"
+              style={{ fontFamily: T.sans, color: '#8a889a' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = T.text2)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#8a889a')}
+            >
+              <ChevronLeft size={14} strokeWidth={2} />
+              до всіх папок
+            </button>
+
+            <div className="mt-[18px] flex flex-wrap items-start justify-between gap-9">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3.5">
+                  <span
+                    className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl"
+                    style={{
+                      background: `${headColor}1f`,
+                      border: `1px solid ${headColor}4d`,
+                      boxShadow: `inset 0 1px 0 ${headColor}55, 0 12px 30px -14px ${headColor}99`,
+                      color: headColor,
+                    }}
+                  >
+                    {scope === 'archive'
+                      ? <Archive size={22} strokeWidth={1.7} />
+                      : openId === NO_FOLDER
+                        ? <Inbox size={22} strokeWidth={1.7} />
+                        : openFolder?.icon
+                          ? <span className="text-[22px]">{openFolder.icon}</span>
+                          : <FolderIcon size={22} strokeWidth={1.7} />}
+                  </span>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-[9px]">
+                      <span className="h-[5px] w-[5px] rounded-full" style={{ background: '#8b7cff', boxShadow: `0 0 12px 2px ${A(0.67)}` }} />
+                      <span className="text-[9.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.4px', color: '#9b8dff' }}>
+                        {scope === 'archive' ? 'Архів' : 'Папка'}
+                      </span>
+                    </div>
+                    <h1
+                      className="mt-2 truncate text-[32px] font-bold sm:text-[38px] lg:text-[44px]"
+                      style={{
+                        fontFamily: T.display,
+                        letterSpacing: '-1.8px',
+                        lineHeight: 1,
+                        background: 'linear-gradient(170deg,#ffffff 34%,#a9a5bd)',
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      {headTitle}
+                    </h1>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                  {[
+                    { I: NotebookPen, t: `${inScope.length} ${plural(inScope.length, 'запис', 'записи', 'записів')}` },
+                    { I: Clock, t: `оновлено ${updatedOf(openId)}` },
+                  ].map(({ I, t }) => (
+                    <span
+                      key={t}
+                      className="flex items-center gap-2 rounded-[11px] py-1.5 pl-2.5 pr-3"
+                      style={{ background: '#ffffff08', border: '1px solid #1f1f29' }}
+                    >
+                      <I size={13} strokeWidth={1.7} style={{ color: '#8b899a' }} />
+                      <span className="text-[12px] font-semibold" style={{ fontFamily: T.sans, color: '#b9b7c6' }}>{t}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2.5">
+                <div
+                  onMouseEnter={() => setFeedHover(true)}
+                  onMouseLeave={() => setFeedHover(false)}
+                  onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
+                  className="flex h-11 w-[262px] items-center gap-2.5 rounded-[13px] py-0 pl-[15px] pr-2"
                   style={{
-                    background: view === k ? `rgba(${T.accRgb},0.13)` : 'transparent',
-                    color: view === k ? T.acc : T.text4,
+                    background: feedFocus ? '#ffffff12' : feedHover ? '#ffffff0f' : '#ffffff0a',
+                    border: `1px solid ${feedFocus ? A(0.55) : feedHover ? '#32323f' : '#21212b'}`,
+                    boxShadow: feedFocus ? `0 0 0 4px ${A(0.13)}, inset 0 1px 0 #ffffff14` : 'inset 0 1px 0 #ffffff0d',
+                    cursor: 'text',
+                    transition: 'all .2s',
                   }}
-                  onMouseEnter={(e) => { if (view !== k) { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text3; } }}
-                  onMouseLeave={(e) => { if (view !== k) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text4; } }}
                 >
-                  <I size={15} strokeWidth={2.2} />
-                </button>
-              ))}
+                  <Search size={15} strokeWidth={1.8} style={{ color: '#8b899a', flex: 'none' }} />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onFocus={() => setFeedFocus(true)}
+                    onBlur={() => setFeedFocus(false)}
+                    placeholder="Пошук у папці"
+                    className="w-full border-none bg-transparent text-[13.5px] font-medium outline-none"
+                    style={{ fontFamily: T.sans, color: T.text }}
+                  />
+                  {search ? (
+                    <button onClick={() => setSearch('')} className="grid h-6 w-6 shrink-0 place-items-center rounded-lg" style={{ color: '#8b899a' }}>
+                      <X size={13} strokeWidth={2.6} />
+                    </button>
+                  ) : (
+                    <span
+                      className="shrink-0 rounded-[7px] px-[7px] py-[3px] text-[10px]"
+                      style={{ background: '#ffffff0d', border: '1px solid #2a2a35', fontFamily: T.mono, color: feedFocus ? '#8b899a' : '#66646f', transition: 'color .2s' }}
+                    >
+                      ⌘K
+                    </span>
+                  )}
+                </div>
 
-              {/* Поки папок немає, полиці не існує — але завести
-                  першу звідкись треба. Одна тиха кнопка, а не
-                  порожній екран з пропозицією організувати нотатки. */}
-              {!hasFolders && (
-                <>
-                  <Divider />
-                  <ToolBtn onClick={addFolder} title="Завести першу папку">
-                    <FolderInput size={15} strokeWidth={2.2} style={{ color: T.text3 }} />
-                    папки
-                  </ToolBtn>
-                </>
-              )}
-            </ToolGroup>
+                <PanelBtn onClick={() => setSort((v) => (v === 'newest' ? 'oldest' : v === 'oldest' ? 'title' : 'newest'))}>
+                  <ArrowDownUp size={14} strokeWidth={1.8} style={{ color: '#8b899a' }} />
+                  <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: '#c2c0ce' }}>
+                    {sort === 'newest' ? 'нові' : sort === 'oldest' ? 'старі' : 'за назвою'}
+                  </span>
+                </PanelBtn>
 
-            <CtaBtn onClick={() => setEditing(blankForm(openId && openId !== NO_FOLDER ? openId : null))}>
-              Нова нотатка
-            </CtaBtn>
-              </>
+                {/* Архів зʼявляється тільки коли в ньому щось є: поки
+                    людина нічого не архівувала, кнопка їй нічого не
+                    каже, а місце в панелі забирає. */}
+                {(archived.length > 0 || scope === 'archive') && (
+                  <PanelBtn
+                    active={scope === 'archive'}
+                    onClick={() => { setScope((v) => (v === 'archive' ? 'active' : 'archive')); setTag(null); }}
+                  >
+                    <Archive size={14} strokeWidth={1.8} style={{ color: scope === 'archive' ? '#c4baff' : '#8b899a' }} />
+                    <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: scope === 'archive' ? '#ffffff' : '#c2c0ce' }}>
+                      {scope === 'archive' ? 'зі стрічки' : `архів ${archived.length}`}
+                    </span>
+                  </PanelBtn>
+                )}
+
+                <div className="flex rounded-[13px] p-[3px]" style={{ background: '#ffffff0a', border: '1px solid #21212b' }}>
+                  {[{ k: 'grid', I: LayoutGrid, t: 'Плиткою' }, { k: 'list', I: Rows3, t: 'Списком' }].map(({ k, I, t }) => (
+                    <button
+                      key={k}
+                      onClick={() => setView(k)}
+                      title={t}
+                      className="grid h-[33px] w-[35px] place-items-center rounded-[10px]"
+                      style={{
+                        background: view === k ? '#ffffff14' : 'transparent',
+                        boxShadow: view === k ? 'inset 0 1px 0 #ffffff1f' : 'none',
+                        color: view === k ? '#ffffff' : '#7c7a8a',
+                        transition: 'all .16s',
+                      }}
+                    >
+                      <I size={15} strokeWidth={1.8} />
+                    </button>
+                  ))}
+                </div>
+
+                <GradientCta onClick={() => setEditing(blankForm(openId && openId !== NO_FOLDER ? openId : null))}>
+                  Нова нотатка
+                </GradientCta>
+              </div>
+            </div>
+
+            {/* Теги папки — рядком, а не у випадайці.
+
+                Випадайка ховала те, чим фільтрують найчастіше, і при
+                цьому не показувала, скільки за кожним тегом стоїть
+                записів. Тут видно і те, і те, а зайвого не буде: у
+                рядку тільки ті теги, які справді зустрічаються в цій
+                папці. */}
+            {feedTags.length > 0 && (
+              <div className="mt-[30px] flex flex-wrap items-center gap-2.5 pb-0.5">
+                <span className="mr-1 text-[9.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2px', color: '#5d5b6a' }}>
+                  Теги
+                </span>
+                {feedTags.map((t) => {
+                  const on = tag === t.id;
+                  return (
+                    <button
+                      key={t.id || 'all'}
+                      onClick={() => setTag(on ? null : t.id)}
+                      className="flex items-center gap-[7px] rounded-full px-3 py-1.5 text-[12px] font-semibold"
+                      style={{
+                        fontFamily: T.sans,
+                        background: on ? `${t.color}2b` : '#ffffff08',
+                        border: `1px solid ${on ? `${t.color}80` : '#20202a'}`,
+                        color: on ? '#ffffff' : '#9d9bad',
+                        boxShadow: on ? `0 0 20px -6px ${t.color}80` : 'none',
+                        transition: 'all .16s',
+                      }}
+                    >
+                      {t.name}
+                      <span style={{ fontFamily: T.mono, fontSize: 10, color: on ? t.color : '#5f5d6b' }}>{t.count}</span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* ─────────── Полиця з папками ─────────── */}
         {onShelf && !loading && (
@@ -856,10 +1344,20 @@ export default function Notes() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: EASE }}
+            className="mt-[46px]"
           >
+            <SectionRule hint={!shelfQ && folders.length > 1 ? 'Перетягни, щоб змінити порядок' : null}>Папки</SectionRule>
+
             <FolderBoard
-              folders={folders}
+              folders={shelfFolders}
+              view={shelfView}
+              /* Поки список відфільтрований, порядок міняти нічим: на
+                 екрані не всі папки, і «перед сусідом» означало б не
+                 те, що людина бачить. */
+              sortable={!shelfQ}
               countOf={countOf}
+              previewOf={previewOf}
+              updatedOf={updatedOf}
               looseCount={looseCount}
               onOpen={setOpenId}
               onCreate={addFolder}
@@ -867,46 +1365,42 @@ export default function Notes() {
               onDelete={dropFolder}
               onReorder={saveOrder}
             />
+
+            {/* Останні записи — щоб з полиці можна було повернутись до
+                вчорашнього, не згадуючи, в якій воно папці. */}
+            {recent.length > 0 && (
+              <>
+                <div className="mt-[52px]">
+                  <SectionRule
+                    right={(
+                      <button
+                        onClick={() => setOpenId(NO_FOLDER)}
+                        className="text-[12px] font-semibold transition-colors"
+                        style={{ fontFamily: T.sans, color: '#a99cff' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#c4baff')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#a99cff')}
+                      >
+                        Всі записи →
+                      </button>
+                    )}
+                  >
+                    Останні записи
+                  </SectionRule>
+                </div>
+
+                <div className="mt-[18px] grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))' }}>
+                  {recent.map((n) => (
+                    <RecentCard
+                      key={n.id}
+                      note={n}
+                      folder={folders.find((f) => f.id === n.folder_id) || null}
+                      onOpen={() => setReadId(n.id)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </motion.div>
-        )}
-
-        {/* активний фільтр */}
-        <AnimatePresence>
-          {!onShelf && hasFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.22, ease: EASE }}
-              className="mb-5 flex flex-wrap items-center gap-2.5 overflow-hidden"
-            >
-              <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                Знайдено {filtered.length}
-              </span>
-              {tag && <TagChip id={tag} tree={tree} showPath onRemove={() => setTag(null)} />}
-              {(tag || search) && (
-                <button
-                  onClick={() => { setTag(null); setSearch(''); }}
-                  className="text-[13px] font-semibold transition-colors"
-                  style={{ fontFamily: T.sans, color: T.text3 }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
-                >
-                  скинути
-                </button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* забуті теги — з видалених категорій */}
-        {!onShelf && orphans.length > 0 && !tag && (
-          <div className="mb-5 flex flex-wrap items-center gap-2">
-            <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              Теги поза списком:
-            </span>
-            {orphans.map((t) => <TagChip key={t} id={t} tree={tree} showPath onClick={() => setTag(t)} />)}
-          </div>
         )}
 
         {/* ─────────── Записи ─────────── */}
@@ -918,64 +1412,131 @@ export default function Notes() {
             </span>
           </div>
         ) : onShelf ? null : filtered.length === 0 ? (
-          <div className="flex flex-col items-center px-5 py-24 text-center">
-            <div
-              className="mb-6 grid h-16 w-16 place-items-center rounded-2xl"
-              style={{ border: `1px dashed ${T.lineHi}`, color: T.text3 }}
+          /* Порожньо буває з двох різних причин, і плутати їх не
+             можна: коли в папці ще нічого немає — це запрошення
+             написати, коли нічого не знайшлось — підказка змінити
+             запит. */
+          <div
+            className="mt-6 flex flex-col items-center justify-center rounded-[20px] px-6 py-14 text-center"
+            style={{ border: '1.5px dashed #24242f', background: '#ffffff03' }}
+          >
+            <span
+              className="grid h-12 w-12 place-items-center rounded-[15px]"
+              style={{ background: '#ffffff0a', border: '1px solid #26262f', color: '#7c7a8a' }}
             >
-              <NotebookPen size={24} strokeWidth={1.7} />
+              {inScope.length > 0 ? <Search size={20} strokeWidth={1.8} /> : <NotebookPen size={20} strokeWidth={1.8} />}
+            </span>
+
+            <div className="mt-3.5 text-[15px] font-semibold" style={{ fontFamily: T.display, color: '#9694a6' }}>
+              {inScope.length > 0
+                ? 'Нічого не знайшлось'
+                : scope === 'archive' ? 'Архів порожній' : 'Тут поки порожньо'}
             </div>
-            <div className="mb-2.5 text-[21px] font-bold" style={{ fontFamily: T.display, color: T.text }}>
-              {scope === 'archive' && inScope.length === 0 ? 'Архів порожній' : null}
-              {scope !== 'archive' && inScope.length === 0 ? 'Тут поки порожньо' : null}
-              {inScope.length > 0 ? 'Нічого не знайшлось' : null}
+            <div className="mt-1.5 max-w-[420px] text-[12px]" style={{ fontFamily: T.sans, color: '#54525f', lineHeight: 1.7 }}>
+              {inScope.length > 0
+                ? 'Спробуй інший запит або скинь фільтр по тегах'
+                : scope === 'archive'
+                  ? 'Сюди потрапляє відпрацьоване: те, що вже зроблено, але викидати шкода.'
+                  : 'Записуй усе, що варто памʼятати. Теги допоможуть знайти це через місяць.'}
             </div>
-            <p className="mb-7 max-w-[420px] text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.7 }}>
-              {scope === 'archive' && inScope.length === 0
-                ? 'Сюди потрапляє відпрацьоване: те, що вже зроблено або взято до відома, але викидати шкода. Зі стрічки нотатка ховається, з записника — ні.'
-                : null}
-              {scope !== 'archive' && inScope.length === 0
-                ? 'Записуй усе, що варто памʼятати: розбір сетапу, думку про власну голову, ідею на потім. Теги допоможуть знайти це через місяць.'
-                : null}
-              {inScope.length > 0 ? 'Спробуй прибрати фільтр або пошукати іншими словами.' : null}
-            </p>
-            {notes.length === 0 ? (
-              <button
-                onClick={() => setEditing(blankForm(openId && openId !== NO_FOLDER ? openId : null))}
-                className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-bold"
-                style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
-              >
-                <Plus size={15} strokeWidth={3} /> Написати першу
-              </button>
-            ) : (
-              <button
-                onClick={() => { setTag(null); setSearch(''); }}
-                className="h-11 rounded-xl px-5 text-[14px] font-semibold"
-                style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
-              >
-                Скинути фільтри
-              </button>
-            )}
+
+            <div className="mt-5">
+              {inScope.length > 0 ? (
+                <button
+                  onClick={() => { setTag(null); setSearch(''); }}
+                  className="h-10 rounded-xl px-4 text-[13px] font-semibold"
+                  style={{ background: '#ffffff0a', border: '1px solid #2a2a35', color: '#c2c0ce', fontFamily: T.sans }}
+                >
+                  Скинути фільтри
+                </button>
+              ) : scope !== 'archive' && (
+                <GradientCta onClick={() => setEditing(blankForm(openId && openId !== NO_FOLDER ? openId : null))}>
+                  Написати першу
+                </GradientCta>
+              )}
+            </div>
           </div>
         ) : view === 'grid' ? (
-          <motion.div
-            layout
-            variants={stagger}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-            style={{ alignItems: 'start' }}
+          <div
+            className="mt-5 grid items-stretch gap-4"
+            /* Рядок сітки фіксований: інакше «висока» картка тягла б за
+               собою всіх сусідів по рядку, і вибір однієї нотатки
+               міняв би вигляд решти. */
+            style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gridAutoRows: '214px' }}
           >
-            <AnimatePresence mode="popLayout" initial={false}>
-              {filtered.map((n) => <NoteCard key={n.id} n={n} />)}
-            </AnimatePresence>
-          </motion.div>
+            {/* Швидка нотатка стоїть першою клітинкою, а не кнопкою
+                десь угорі: почати писати має бути так само близько,
+                як прочитати вже написане. */}
+            {scope !== 'archive' && <QuickNoteCard onClick={() => setEditing(blankForm(openId && openId !== NO_FOLDER ? openId : null))} />}
+
+            {filtered.map((n) => (
+              <NoteTile
+                key={n.id}
+                note={n}
+                color={cardColor(n, (t) => tagColor(t, tree))}
+                icon={cardOf(n).icon}
+                pinned={cardOf(n).pin}
+                cover={coverOf(n)}
+                tall={cardOf(n).size === 'tall'}
+                bg={cardOf(n).bg}
+                trade={cardOf(n).trade}
+                onTrade={(t) => navigate(`/backtest/${t.id}`)}
+                date={fmtShort(n.created_at)}
+                images={(n.images || []).filter((x) => typeof x === 'string').length}
+                pills={(n.tags || []).slice(0, 3).map((t) => ({ id: t, name: tagLabel(t), color: tagColor(t, tree) }))}
+                onOpen={() => setReadId(n.id)}
+                onEdit={() => openEdit(n)}
+                onArchive={() => toggleArchive(n)}
+                onDelete={() => setDeleteId(n.id)}
+              />
+            ))}
+          </div>
         ) : (
-          <motion.div layout variants={stagger} initial="hidden" animate="visible" className="flex flex-col gap-2">
-            <AnimatePresence mode="popLayout" initial={false}>
-              {filtered.map((n) => <NoteRow key={n.id} n={n} />)}
-            </AnimatePresence>
-          </motion.div>
+          <div className="mt-5 flex flex-col gap-2">
+            <div className="flex items-center gap-[18px] px-[19px] pb-1">
+              <span className="w-2 shrink-0" />
+              {[
+                { w: 0, t: 'Нотатка', a: 'left' },
+                { w: 180, t: 'Теги', a: 'left' },
+                { w: 96, t: 'Дата', a: 'right' },
+              ].map(({ w, t, a }) => (
+                <span
+                  key={t}
+                  style={{
+                    flex: w ? 'none' : 1,
+                    width: w || undefined,
+                    minWidth: w ? undefined : 0,
+                    textAlign: a,
+                    fontFamily: T.mono,
+                    fontSize: 9,
+                    letterSpacing: '1.8px',
+                    color: '#5d5b6a',
+                    textTransform: 'uppercase',
+                    fontWeight: 700,
+                  }}
+                >
+                  {t}
+                </span>
+              ))}
+              <span className="w-[104px] shrink-0" />
+            </div>
+
+            {filtered.map((n) => (
+              <NoteLine
+                key={n.id}
+                note={n}
+                color={cardColor(n, (t) => tagColor(t, tree))}
+                icon={cardOf(n).icon}
+                pinned={cardOf(n).pin}
+                date={fmtShort(n.created_at)}
+                pills={(n.tags || []).map((t) => ({ id: t, name: tagLabel(t), color: tagColor(t, tree) }))}
+                onOpen={() => setReadId(n.id)}
+                onEdit={() => openEdit(n)}
+                onArchive={() => toggleArchive(n)}
+                onDelete={() => setDeleteId(n.id)}
+              />
+            ))}
+          </div>
         )}
       </div>
 
@@ -995,6 +1556,18 @@ export default function Notes() {
             onMove={(fid) => moveNote(reading, fid)}
             onTagClick={(t) => { setTag(t); setReadId(null); }}
             onImage={setLightbox}
+            onToggleCheck={(description) => saveNote({ ...reading, description, session_date: (reading.created_at || todayISO()).slice(0, 10) })}
+            onPin={(pin) => saveNote({
+              ...reading,
+              card: cardToSave({ ...cardOf(reading), pin }),
+              session_date: (reading.created_at || todayISO()).slice(0, 10),
+            })}
+            onTrade={(t) => navigate(`/backtest/${t.id}`)}
+            /* Сусідні нотатки беремо з того самого списку, який людина
+               бачить: якщо ввімкнено фільтр, «далі» має вести всередині
+               нього, а не в те, що зараз сховане. */
+            onPrev={neighbours.prev ? () => setReadId(neighbours.prev) : null}
+            onNext={neighbours.next ? () => setReadId(neighbours.next) : null}
           />
         )}
       </AnimatePresence>
@@ -1015,21 +1588,15 @@ export default function Notes() {
         )}
       </AnimatePresence>
 
-      {/* назва для щойно створеної папки */}
+      {/* вікно нової папки */}
       <AnimatePresence>
-        {freshId && folders.some((f) => f.id === freshId) && (
+        {creating && (
           <FolderDialog
-            key="fresh-folder"
+            key="new-folder"
             fresh
-            folder={folders.find((f) => f.id === freshId)}
-            onSave={(patch) => {
-              renameFolder(folders.find((f) => f.id === freshId), patch);
-              setFreshId(null);
-            }}
-            /* Закрив без назви — папка лишається з технічним
-               «Нова папка». Видаляти її тут було б надто різко:
-               людина натиснула «створити», а не «передумав». */
-            onClose={() => setFreshId(null)}
+            folder={{ name: '', color: FOLDER_COLORS[folders.length % FOLDER_COLORS.length], pinned: false, icon: '' }}
+            onSave={createFolderFrom}
+            onClose={() => setCreating(false)}
           />
         )}
       </AnimatePresence>
