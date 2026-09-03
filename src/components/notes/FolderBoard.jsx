@@ -185,6 +185,7 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
       <div
         draggable={!plain}
         onClick={onOpen}
+        title={plain ? 'Це не папка, а місце для записів без папки. Зникне сама, щойно розкладеш їх по папках.' : undefined}
         {...dnd}
         style={{
           position: 'relative',
@@ -256,7 +257,25 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
               : <FolderIcon name={iconOf(folder.id)} color={hov ? c : '#8f8da0'} />}
           </div>
 
-          {!plain && (
+          {/* «Без папки» — не папка, а місце для решти записів: її
+              нема за що видаляти й нема куди перетягувати. Раніше на
+              ній просто нічого не зʼявлялось на ховері, і це читалось
+              як «кнопки зламались». Тепер на тому ж місці стоїть
+              пояснення. */}
+          {plain ? (
+            <span
+              className="text-[10.5px] font-bold uppercase"
+              style={{
+                fontFamily: T.mono,
+                letterSpacing: '1.4px',
+                color: '#7d7b8e',
+                opacity: hov ? 1 : 0,
+                transition: 'opacity .22s',
+              }}
+            >
+              системна
+            </span>
+          ) : (
             <Actions
               pinned={folder.pinned}
               onPin={onPin}
@@ -354,6 +373,7 @@ function Row({ folder, count, preview, updated, color, dragging, plain, onOpen, 
       onClick={onOpen}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      title={plain ? 'Це не папка, а місце для записів без папки. Зникне сама, щойно розкладеш їх по папках.' : undefined}
       {...dnd}
       style={{
         position: 'relative',
@@ -413,7 +433,25 @@ function Row({ folder, count, preview, updated, color, dragging, plain, onOpen, 
 
       <div style={{ flex: 'none', width: 64, textAlign: 'right', fontFamily: T.mono, fontSize: 10.5, color: '#5b5967' }}>{updated}</div>
 
-      {plain ? <div style={{ flex: 'none', width: 131 }} /> : (
+      {plain ? (
+        <div
+          style={{
+            flex: 'none',
+            width: 131,
+            textAlign: 'right',
+            fontFamily: T.mono,
+            fontSize: 10.5,
+            letterSpacing: '1.4px',
+            textTransform: 'uppercase',
+            fontWeight: 700,
+            color: '#7d7b8e',
+            opacity: hov ? 1 : 0,
+            transition: 'opacity .22s',
+          }}
+        >
+          системна
+        </div>
+      ) : (
         <Actions
           pinned={folder.pinned}
           onPin={onPin}
