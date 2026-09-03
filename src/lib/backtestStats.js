@@ -14,6 +14,13 @@ export const QUALITIES = ['A+', 'A', 'B', 'C'];
    зʼявляються угоди, вибір активу підказує вже їх, а не цей масив. */
 export const COMMON_PAIRS = ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY', 'BTCUSD', 'NAS100', 'US30', 'GER40'];
 export const RESULTS = ['WIN', 'LOSS', 'BE'];
+
+/* Як результат називається на екрані. У базі лишається WIN/LOSS —
+   міняти збережені значення заради підпису означало б переписувати
+   історію угод; тут тільки те, що бачить людина. Take і Stop — мова
+   самого трейду: угода закрилась по тейку або по стопу. */
+export const RESULT_LABEL = { WIN: 'Take', LOSS: 'Stop', BE: 'BE' };
+export const resultLabel = (r) => RESULT_LABEL[r] || r;
 export const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
 
 /* R угоди. LOSS завжди -1R: у бектесті ризик однаковий. */
@@ -36,6 +43,16 @@ export const sessionOf = (t) => metaOf(t).session || t.session || '—';
 export const qualityOf = (t) => metaOf(t).quality || t.quality || null;
 export const tagsOf = (t) => metaOf(t).tags || t.tags || [];
 export const pairOf = (t, fallback) => metaOf(t).pair || t.pair || fallback || '';
+
+/* Скріни угоди. Історично був один — у колонці `screenshot_url`;
+   тепер їх кілька, і весь список лежить у tda_data. Колонку не
+   чіпаємо: у ній лишається перший скрін, тому таблиця й публічна
+   сторінка бачать те саме, що бачили раніше. */
+export const shotsOf = (t) => {
+  const list = metaOf(t).shots;
+  if (Array.isArray(list) && list.length) return list.filter(Boolean);
+  return t?.screenshot_url ? [t.screenshot_url] : [];
+};
 
 export const money = (v) => `${v < 0 ? '−' : ''}$${Math.abs(v).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}`;
 

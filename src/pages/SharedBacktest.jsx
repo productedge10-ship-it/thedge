@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Loader2, Lock, ArrowRight, FlaskConical, Target, X,
-} from 'lucide-react';
+import { Loader2, Lock, ArrowRight, FlaskConical, X } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
-import {
-  computeStats, fmtPF, fmtR, money, rText, sessionOf, qualityOf, pairOf,
-} from '../lib/backtestStats';
+import { computeStats } from '../lib/backtestStats';
 import { loadPublicBacktest } from '../lib/backtestShare';
 import PlanBackdrop from '../components/trading/PlanBackdrop';
 import { EdgeMonogram, EdgeWordmark } from '../components/core/Layout';
-import { EquityPanel, SessionPanel, WeekdayPanel, StreakPanel } from '../components/backtest/BacktestCharts';
+import StatStrip from '../components/backtest/StatStrip';
+import EquityCurve from '../components/backtest/EquityCurve';
+import BreakdownPanels from '../components/backtest/BreakdownPanels';
+import BacktestTable from '../components/backtest/BacktestTable';
+import TradeSheet from '../components/backtest/TradeSheet';
+import { ACT, act, actGradient, actGradientHover } from '../components/backtest/accent';
 
 /* ==================================================================
    Публічний бектест.
@@ -21,33 +22,6 @@ import { EquityPanel, SessionPanel, WeekdayPanel, StreakPanel } from '../compone
    вона береться і чого вона коштує в просадці. Угоди — списком нижче,
    без можливості щось змінити.
 ================================================================== */
-
-const qColor = (q) => ({ 'A+': T.ok, A: T.acc, B: T.warn, C: T.bad }[q] || T.text3);
-const resColor = (r) => ({ WIN: T.ok, LOSS: T.bad, BE: T.text3 }[r] || T.text3);
-
-function Kpi({ label, value, tone, hint }) {
-  return (
-    <div
-      className="min-w-0 rounded-2xl px-4 py-3.5"
-      style={{ background: T.surface, border: `1px solid ${T.line}` }}
-    >
-      <div
-        className="mb-1.5 truncate text-[11.5px] font-bold uppercase tracking-[0.12em]"
-        style={{ fontFamily: T.sans, color: T.text4 }}
-      >
-        {label}
-      </div>
-      <div className="text-[21px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: tone || T.text }}>
-        {value}
-      </div>
-      {hint && (
-        <div className="mt-0.5 truncate text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          {hint}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function SharedBacktest() {
   useEdgeFonts();
@@ -60,6 +34,8 @@ export default function SharedBacktest() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [zoom, setZoom] = useState(null);
+  /* Картка угоди — та сама, що у власника, але тільки для читання */
+  const [sheet, setSheet] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -115,13 +91,28 @@ export default function SharedBacktest() {
         </span>
 
         <div className="ml-auto flex items-center gap-2">
+          {/* Для залогінених головна дія — повернутись до своїх бектестів,
+              тому вона в кольорі розділу, як «Новий бектест» у списку */}
           {user ? (
             <button
               onClick={() => navigate('/backtest')}
-              className="group flex h-9 items-center gap-2 rounded-xl px-3.5 text-[13.5px] font-semibold transition-colors duration-200"
-              style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; }}
+              className="group flex h-9 items-center gap-2 rounded-xl px-4 text-[13.5px] font-semibold"
+              style={{
+                fontFamily: T.sans, color: '#fff',
+                background: actGradient,
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 10px 24px -12px ${act(0.9)}`,
+                transition: 'all .18s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.background = actGradientHover;
+                e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.27), 0 14px 30px -12px rgba(${ACT.rgb},0.95)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.background = actGradient;
+                e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.2), 0 10px 24px -12px ${act(0.9)}`;
+              }}
             >
               Мої бектести
               <ArrowRight size={14} strokeWidth={2.4} className="transition-transform duration-300 group-hover:translate-x-0.5" />
@@ -154,7 +145,7 @@ export default function SharedBacktest() {
   if (loading) {
     return (
       <div className="grid min-h-screen place-items-center" style={{ background: T.bg }}>
-        <Loader2 className="animate-spin" size={30} style={{ color: T.acc }} />
+        <Loader2 className="animate-spin" size={30} style={{ color: ACT.tint }} />
       </div>
     );
   }
@@ -186,8 +177,7 @@ export default function SharedBacktest() {
     );
   }
 
-  const { session, trades } = data;
-  const up = stats.netR >= 0;
+  const { session } = data;
 
   return (
     <div className="relative min-h-screen" style={{ background: T.bg }}>
@@ -205,25 +195,32 @@ export default function SharedBacktest() {
             className="mb-8"
           >
             <div className="mb-2.5 flex items-center gap-2">
-              <FlaskConical size={13} strokeWidth={2.3} style={{ color: T.acc }} />
+              <FlaskConical size={13} strokeWidth={2.3} style={{ color: ACT.tint }} />
               <span
-                className="text-[12px] font-bold uppercase tracking-[0.22em]"
-                style={{ fontFamily: T.sans, color: T.acc }}
+                className="text-[10px] font-bold uppercase tracking-[0.26em]"
+                style={{ fontFamily: T.mono, color: ACT.tint }}
               >
                 Бектест
               </span>
             </div>
 
             <h1
-              className="mb-4 text-[30px] font-bold leading-[1.1] sm:text-[40px]"
-              style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em', overflowWrap: 'anywhere' }}
+              className="mb-4 text-[28px] font-bold leading-none sm:text-[38px]"
+              style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.032em', overflowWrap: 'anywhere' }}
             >
               {session.name}
             </h1>
 
             <div className="flex flex-wrap items-center gap-2">
+              {session.pair && (
+                <span
+                  className="rounded-lg px-[11px] py-1.5 text-[11px] font-bold tracking-[0.1em]"
+                  style={{ fontFamily: T.mono, color: ACT.tint, background: act(0.18), border: `1px solid ${act(0.45)}` }}
+                >
+                  {session.pair}
+                </span>
+              )}
               {[
-                session.pair,
                 session.strategy_name,
                 `Старт $${Number(session.initial_balance).toLocaleString('uk-UA')}`,
                 'Ризик 1%',
@@ -231,8 +228,8 @@ export default function SharedBacktest() {
               ].filter(Boolean).map((chip) => (
                 <span
                   key={chip}
-                  className="rounded-lg px-2.5 py-1 text-[13px] font-semibold"
-                  style={{ fontFamily: T.sans, color: T.text2, background: T.surface, border: `1px solid ${T.line}` }}
+                  className="rounded-lg px-[11px] py-1.5 text-[12.5px] font-medium"
+                  style={{ fontFamily: T.sans, color: T.text3, background: T.surface, border: `1px solid ${T.line}` }}
                 >
                   {chip}
                 </span>
@@ -249,130 +246,28 @@ export default function SharedBacktest() {
             )}
           </motion.header>
 
-          {/* ─────────── KPI ─────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: EASE, delay: 0.05 }}
-            className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-6"
-          >
-            <Kpi label="Net R" value={fmtR(stats.netR)} tone={up ? T.ok : T.bad} hint={money(stats.netMoney)} />
-            <Kpi label="Winrate" value={`${stats.winrate.toFixed(0)}%`} hint={`${stats.wins}W / ${stats.losses}L`} />
-            <Kpi label="Profit factor" value={fmtPF(stats.profitFactor)} tone={stats.profitFactor >= 1.5 ? T.ok : stats.profitFactor >= 1 ? T.warn : T.bad} />
-            <Kpi label="Очікування" value={fmtR(stats.expectancy)} tone={stats.expectancy >= 0 ? T.ok : T.bad} hint="на угоду" />
-            <Kpi label="Макс. просадка" value={`−${stats.maxDrawdownR.toFixed(2)}R`} tone={T.warn} />
-            <Kpi label="Угод" value={stats.total} hint={`${stats.be} BE`} />
-          </motion.div>
+          {/* ─────────── Підсумок прогону ─────────── */}
+          <StatStrip stats={stats} />
 
-          {/* ─────────── Графіки ─────────── */}
-          <div className="mb-5">
-            <EquityPanel stats={stats} />
+          <div className="mt-[18px]">
+            <EquityCurve stats={stats} />
           </div>
 
-          <div className="mb-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-            <SessionPanel stats={stats} />
-            <WeekdayPanel stats={stats} />
-            <StreakPanel stats={stats} />
+          <div className="mt-[18px]">
+            <BreakdownPanels stats={stats} />
           </div>
 
           {/* ─────────── Угоди ─────────── */}
-          <motion.section
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: EASE, delay: 0.1 }}
-            className="overflow-hidden rounded-2xl"
-            style={{ background: T.surface, border: `1px solid ${T.line}` }}
-          >
-            <div
-              className="flex items-center gap-2.5 px-5 py-4"
-              style={{ borderBottom: `1px solid ${T.line}` }}
-            >
-              <Target size={14} strokeWidth={2.3} style={{ color: T.acc }} />
-              <span className="text-[12px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                Усі угоди
-              </span>
-              <span className="ml-auto text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
-                {trades.length}
-              </span>
-            </div>
+          <div className="mb-4 mt-[34px]">
+            <h2 className="text-[20px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.025em' }}>
+              Угоди
+            </h2>
+            <p className="mt-1.5 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+              {stats.total} {stats.total === 1 ? 'запис' : 'записів'} · тільки перегляд
+            </p>
+          </div>
 
-            <div className="divide-y" style={{ borderColor: T.line }}>
-              {trades.map((t) => {
-                const q = qualityOf(t);
-                return (
-                  <div
-                    key={t.id}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 lg:px-5"
-                    style={{ borderTop: `1px solid ${T.line}` }}
-                  >
-                    <span className="w-[86px] shrink-0 text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text3 }}>
-                      {t.date}
-                    </span>
-
-                    <span
-                      className="shrink-0 rounded-md px-2 py-0.5 text-[12.5px] font-bold"
-                      style={{
-                        fontFamily: T.sans,
-                        color: t.type === 'SHORT' ? T.info : T.ok,
-                        background: t.type === 'SHORT' ? `rgba(${T.infoRgb},0.10)` : `rgba(${T.okRgb},0.10)`,
-                      }}
-                    >
-                      {t.type}
-                    </span>
-
-                    <span className="shrink-0 text-[13px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
-                      {pairOf(t, session.pair)}
-                    </span>
-
-                    <span className="hidden shrink-0 text-[13px] lg:block" style={{ fontFamily: T.sans, color: T.text4 }}>
-                      {sessionOf(t)}
-                    </span>
-
-                    {q && (
-                      <span
-                        className="shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-bold"
-                        style={{ fontFamily: T.sans, color: qColor(q), background: `${qColor(q)}14` }}
-                      >
-                        {q}
-                      </span>
-                    )}
-
-                    <span
-                      className="ml-auto shrink-0 text-[13.5px] font-bold tabular-nums"
-                      style={{ fontFamily: T.mono, color: resColor(t.result) }}
-                    >
-                      {rText(t)}
-                    </span>
-
-                    {t.screenshot_url && (
-                      <button
-                        onClick={() => setZoom(t.screenshot_url)}
-                        className="shrink-0 text-[12.5px] font-semibold"
-                        style={{ fontFamily: T.sans, color: T.acc }}
-                      >
-                        графік
-                      </button>
-                    )}
-
-                    {t.notes && (
-                      <p
-                        className="order-last w-full min-w-0 text-[13px]"
-                        style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.6 }}
-                      >
-                        {t.notes}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-
-              {trades.length === 0 && (
-                <p className="px-5 py-10 text-center text-[14px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  У цьому прогоні ще немає угод.
-                </p>
-              )}
-            </div>
-          </motion.section>
+          <BacktestTable trades={stats.trades} readOnly onOpen={setSheet} onShot={setZoom} />
 
           {/* ─────────── Тиха реклама ─────────── */}
           {!user && (
@@ -382,15 +277,15 @@ export default function SharedBacktest() {
               transition={{ duration: 0.5, ease: EASE, delay: 0.2 }}
               className="mt-14 flex flex-col items-start gap-4 rounded-2xl p-6 sm:flex-row sm:items-center sm:p-7"
               style={{
-                background: `linear-gradient(120deg, rgba(${T.accRgb},0.06), ${T.surface} 60%)`,
+                background: `linear-gradient(120deg, ${act(0.06)}, ${T.surface} 60%)`,
                 border: `1px solid ${T.line}`,
               }}
             >
               <span
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl"
-                style={{ background: `rgba(${T.accRgb},0.10)`, border: `1px solid rgba(${T.accRgb},0.22)` }}
+                style={{ background: act(0.10), border: `1px solid ${act(0.22)}` }}
               >
-                <FlaskConical size={18} strokeWidth={2} style={{ color: T.acc }} />
+                <FlaskConical size={18} strokeWidth={2} style={{ color: ACT.tint }} />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[16px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
@@ -413,6 +308,19 @@ export default function SharedBacktest() {
           )}
         </div>
       </div>
+
+      {/* ─────────── Картка угоди ─────────── */}
+      <AnimatePresence>
+        {sheet && (
+          <TradeSheet
+            key="shared-sheet"
+            readOnly
+            initial={sheet}
+            pair={session?.pair}
+            onClose={() => setSheet(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ─────────── Лайтбокс ─────────── */}
       <AnimatePresence>

@@ -24,6 +24,7 @@ import ErrorComposerModal from '../errors/ErrorComposerModal';
 import AssetIcon from '../ui/AssetIcon';
 import ImageSlider from '../ui/ImageSlider';
 import Popover from '../ui/Popover';
+import useCachedList, { listCache } from '../../hooks/useCachedList';
 
 /* ==================================================================
    Запис угоди — «Ledger»: редакційна одноколонна форма. Підпис зліва,
@@ -93,40 +94,6 @@ const todayLocal = () => {
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
-
-/* ---------- кеш власних довідників браузера ----------
-
-   user_assets / user_sessions / prop_accounts — це не дані угоди, а
-   персональні налаштування трейдера (свої активи, сесії, рахунки).
-   Вони майже ніколи не змінюються між відкриттями модалки, тож без
-   кешу кожен клік «Log Trade» бив у Supabase трьома зайвими
-   запитами ще до того, як людина щось увела. Модульний кеш живе,
-   поки відкрита вкладка: перше відкриття тягне дані, наступні —
-   миттєві. Мутації (додав/перейменував/видалив) одразу оновлюють
-   і кеш, і UI, тому застарілих даних ніхто не бачить. */
-const refCache = { assets: null, sessions: null, accounts: null };
-
-function useCachedList(cacheKey, table, select, order) {
-  const [items, setItems] = useState(refCache[cacheKey] || []);
-
-  useEffect(() => {
-    if (refCache[cacheKey]) return;
-    supabase.from(table).select(select).order(order)
-      .then(({ data }) => {
-        if (data) {
-          refCache[cacheKey] = data;
-          setItems(data);
-        }
-      });
-  }, [cacheKey, table, select, order]);
-
-  const update = (next) => {
-    refCache[cacheKey] = next;
-    setItems(next);
-  };
-
-  return [items, update];
-}
 
 /* ---------- дрібні цеглинки ---------- */
 
@@ -956,13 +923,13 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
     }
     setComposerOpen(false);
 
-    if (refCache.accounts) {
-      setAccounts(refCache.accounts);
-      if (refCache.accounts.length > 0 && !accToSet) setAccount(refCache.accounts[0].firm_name);
+    if (listCache.accounts) {
+      setAccounts(listCache.accounts);
+      if (listCache.accounts.length > 0 && !accToSet) setAccount(listCache.accounts[0].firm_name);
     } else {
       supabase.from('prop_accounts').select('id, firm_name, balance, status').then(({ data }) => {
         if (data) {
-          refCache.accounts = data;
+          listCache.accounts = data;
           setAccounts(data);
           if (data.length > 0 && !accToSet) setAccount(data[0].firm_name);
         }
@@ -1146,8 +1113,8 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                 happened_at: tradeDate,
                 note: `${selectedPair} · ${tradeType} · ${result}`,
               });
-              if (refCache.accounts) {
-                refCache.accounts = refCache.accounts.map((a) => (a.id === updatedAcc.id ? updatedAcc : a));
+              if (listCache.accounts) {
+                listCache.accounts = listCache.accounts.map((a) => (a.id === updatedAcc.id ? updatedAcc : a));
               }
             }
           }
