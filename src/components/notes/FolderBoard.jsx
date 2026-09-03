@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Pin, X, Plus, Sparkles } from 'lucide-react';
+import { Check, Pin, X, Plus, Sparkles, Smile } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { FOLDER_COLORS, NO_FOLDER } from '../../lib/foldersStore';
 import EmojiPicker from '../ui/EmojiPicker';
@@ -545,6 +545,11 @@ const PRESETS = [
 
 const NAME_MAX = 32;
 
+/* Шість найчастіших — рукою, решта за «смайликом». Ряд швидкого
+   вибору існує не заради економії кліка, а щоб було видно: іконку
+   тут взагалі можна поставити. */
+const QUICK_ICONS = ['📈', '💡', '🧠', '📊', '🔥', '📚'];
+
 export function FolderDialog({ folder, fresh, onSave, onClose }) {
   /* Щойно створеній папці підставлене «Нова папка» стирати
      доводиться самому — це слово там технічне, а не запропоноване.
@@ -657,15 +662,12 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                 {/* Іконка стоїть у самому полі назви: це не окреме
                     рішення, а частина того самого — як папку назвали
                     і як її впізнають. */}
-                <button
-                  type="button"
-                  title="Вибрати емодзі"
-                  onClick={() => setEmojiOpen((v) => !v)}
+                <span
                   className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] text-[16px]"
                   style={{ background: `${color}20`, border: `1px solid ${color}5e` }}
                 >
                   {icon || <FolderIcon name="folder" color={color} size={15} />}
-                </button>
+                </span>
 
                 <input
                   ref={ref}
@@ -682,20 +684,6 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                   {named ? `${named.length}/${NAME_MAX}` : ''}
                 </span>
 
-                {emojiOpen && (
-                  <div className="absolute left-0 top-full z-50 mt-2">
-                    <EmojiPicker
-                      value={icon}
-                      color={color}
-                      /* Після вибору повертаємо курсор у назву:
-                         емодзі обирають мимохідь, а писати все одно
-                         далі назву. */
-                      onPick={(e) => { setIcon(e); setEmojiOpen(false); requestAnimationFrame(() => ref.current?.focus()); }}
-                      onClear={() => { setIcon(''); setEmojiOpen(false); requestAnimationFrame(() => ref.current?.focus()); }}
-                      onClose={() => setEmojiOpen(false)}
-                    />
-                  </div>
-                )}
               </div>
 
               <div className="mt-2.5 flex flex-wrap items-center gap-[7px]">
@@ -768,6 +756,84 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
 
                 {custom && (
                   <span className="text-[11px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.6px', color: '#a3a1b2' }}>{color}</span>
+                )}
+              </div>
+
+              <div className="mt-5"><DialogLabel>Іконка</DialogLabel></div>
+              {/* Швидкий ряд плюс повний вибір за «плюсом». Ховати
+                  іконку тільки в полі назви було помилкою: те, чого не
+                  видно в формі, для людини не існує. */}
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIcon('')}
+                  title="Без емодзі"
+                  className="grid h-9 w-9 place-items-center rounded-[10px]"
+                  style={{
+                    background: icon ? '#ffffff08' : `${color}24`,
+                    border: `1px solid ${icon ? '#22222c' : `${color}80`}`,
+                    transition: 'all .16s',
+                  }}
+                >
+                  <FolderIcon name="folder" color={icon ? '#8b8998' : color} size={16} />
+                </button>
+
+                {QUICK_ICONS.map((e) => {
+                  const on = icon === e;
+                  return (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => setIcon(e)}
+                      className="grid h-9 w-9 place-items-center rounded-[10px] text-[17px]"
+                      style={{
+                        background: on ? `${color}24` : '#ffffff08',
+                        border: `1px solid ${on ? `${color}80` : '#22222c'}`,
+                        boxShadow: on ? `0 0 18px -8px ${color}cc` : 'none',
+                        transition: 'all .16s',
+                      }}
+                    >
+                      {e}
+                    </button>
+                  );
+                })}
+
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setEmojiOpen((v) => !v)}
+                    title="Усі емодзі"
+                    className="grid h-9 w-9 place-items-center rounded-[10px]"
+                    style={{
+                      background: emojiOpen ? `${color}2b` : '#ffffff08',
+                      border: emojiOpen ? `1px solid ${color}cc` : '1px dashed #2d2d3a',
+                      color: emojiOpen ? color : '#8b8998',
+                      transition: 'all .16s',
+                    }}
+                  >
+                    <Smile size={16} strokeWidth={1.9} />
+                  </button>
+
+                  {emojiOpen && (
+                    <div className="absolute left-0 top-full z-50 mt-2">
+                      <EmojiPicker
+                        value={icon}
+                        color={color}
+                        /* Після вибору повертаємо курсор у назву:
+                           емодзі обирають мимохідь, а писати все одно
+                           далі назву. */
+                        onPick={(e) => { setIcon(e); setEmojiOpen(false); requestAnimationFrame(() => ref.current?.focus()); }}
+                        onClear={() => { setIcon(''); setEmojiOpen(false); requestAnimationFrame(() => ref.current?.focus()); }}
+                        onClose={() => setEmojiOpen(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {icon && (
+                  <span className="text-[12px]" style={{ fontFamily: T.sans, color: '#8b8998' }}>
+                    {icon} — так папку буде видно в списку
+                  </span>
                 )}
               </div>
 
@@ -884,7 +950,7 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
             style={{ borderTop: '1px solid #1c1c25', background: '#0a0a0e', borderRadius: '0 0 24px 24px' }}
           >
             <div className="hidden items-center gap-3.5 sm:flex">
-              {[{ k: '⌘↵', t: fresh ? 'створити' : 'зберегти' }, { k: 'esc', t: 'закрити' }].map(({ k, t }) => (
+              {[{ k: 'esc', t: 'закрити' }].map(({ k, t }) => (
                 <span key={k} className="flex items-center gap-[7px] text-[12px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
                   <span
                     className="rounded-md px-1.5 py-[3px]"

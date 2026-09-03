@@ -34,12 +34,16 @@ export const CARD_BGS = [
   { id: 'none', name: 'Без фону' },
   { id: 'tint', name: 'Тонований' },
   { id: 'gradient', name: 'Градієнт' },
-  { id: 'dots', name: 'Сітка' },
+  { id: 'glow', name: 'Сяйво' },
+  { id: 'dots', name: 'Крапки' },
+  { id: 'grid', name: 'Сітка' },
+  { id: 'lines', name: 'Смуги' },
+  { id: 'aurora', name: 'Аврора' },
 ];
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
-const DEFAULTS = { color: null, icon: '', cover: 'auto', size: 'normal', bg: 'none', trade: null, pin: false };
+const DEFAULTS = { color: null, icon: '', cover: 'auto', size: 'normal', bg: 'none', trade: null, pin: false, voice: [] };
 
 /* Читаємо завжди через це: у старих записів поля немає взагалі, а в
    нових воно могло приїхати з чужого клієнта. */
@@ -62,6 +66,12 @@ export const cardOf = (note) => {
     /* Закріплення теж тут: у нотаток немає своєї колонки під нього, а
        заводити другу міграцію заради одного прапорця не варто. */
     pin: !!raw.pin,
+    /* Голосові: адреса файла плюс тривалість. Лежать тут, а не в
+       `images`, бо звук — не картинка: читалка малює його плеєром, а
+       не тегом <img>. */
+    voice: Array.isArray(raw.voice)
+      ? raw.voice.filter((v) => v && v.url).map((v) => ({ url: String(v.url), sec: Number(v.sec) || 0 }))
+      : [],
   };
 };
 
@@ -77,6 +87,7 @@ export const cardToSave = (card) => {
   if (c.bg !== 'none') out.bg = c.bg;
   if (c.trade) out.trade = c.trade;
   if (c.pin) out.pin = true;
+  if (c.voice.length) out.voice = c.voice;
   return out;
 };
 
@@ -92,11 +103,81 @@ export const cardColor = (note, tagColorOf) => {
 
 /* Фон картки в CSS. Колір той самий, що й у корінця, тому картка
    лишається однією плямою, а не двома. */
+/* Фон картки.
+
+   Повертаємо не рядок для `background`, а окремі властивості.
+
+   Це не стиль, а вимога: скорочення `background` скидає
+   `background-size` до `auto`. React оновлює інлайнові стилі по
+   одній властивості, тож варто було миші зайти й вийти — картка
+   перемальовувала `background`, розмір крапок злітав до
+   стандартного, і візерунок зникав. Саме через це фон «встановився
+   і пропав після наведення».
+================================================================== */
 export const cardBackground = (bg, c, hovered) => {
-  if (bg === 'tint') return `linear-gradient(165deg, ${c}24, #0b0b10)`;
-  if (bg === 'gradient') return `linear-gradient(135deg, ${c}4d, ${c}12 60%, #0b0b10)`;
-  if (bg === 'dots') return `radial-gradient(${c}59 0.9px, transparent 0.9px), linear-gradient(165deg, ${hovered ? '#16151f' : '#111116'}, #0b0b10)`;
-  return `linear-gradient(165deg, ${hovered ? '#16151f' : '#111116'}, #0b0b10)`;
+  const base = `linear-gradient(165deg, ${hovered ? '#16151f' : '#111116'}, #0b0b10)`;
+  const plain = { backgroundColor: 'transparent', backgroundImage: base, backgroundSize: 'auto' };
+
+  if (bg === 'tint') {
+    return { ...plain, backgroundImage: `linear-gradient(165deg, ${c}2b, #0b0b10 70%)` };
+  }
+
+  if (bg === 'gradient') {
+    return { ...plain, backgroundImage: `linear-gradient(135deg, ${c}59, ${c}14 55%, #0b0b10)` };
+  }
+
+  /* Світло з-за верхнього кута — те саме, що вже є на ховері картки,
+     але постійне й сильніше. */
+  if (bg === 'glow') {
+    return {
+      ...plain,
+      backgroundImage: `radial-gradient(120% 90% at 12% -10%, ${c}4d, transparent 62%), ${base}`,
+    };
+  }
+
+  if (bg === 'dots') {
+    return {
+      backgroundColor: '#0d0d12',
+      backgroundImage: `radial-gradient(${c}80 1px, transparent 1px), ${base}`,
+      backgroundSize: '10px 10px, cover',
+    };
+  }
+
+  /* Тонка міліметрівка: дві лінії під прямим кутом. Читається як
+     папір у клітинку, а не як шум. */
+  if (bg === 'grid') {
+    return {
+      backgroundColor: '#0d0d12',
+      backgroundImage: `linear-gradient(${c}2b 1px, transparent 1px), linear-gradient(90deg, ${c}2b 1px, transparent 1px), ${base}`,
+      backgroundSize: '22px 22px, 22px 22px, cover',
+    };
+  }
+
+  if (bg === 'lines') {
+    return {
+      backgroundColor: '#0d0d12',
+      backgroundImage: `repeating-linear-gradient(135deg, ${c}24 0 1px, transparent 1px 9px), ${base}`,
+      backgroundSize: 'auto, cover',
+    };
+  }
+
+  /* Три різнокольорові плями, що перетікають одна в одну: колір
+     картки, його сусід по колу і темрява. Найгучніший варіант —
+     тому й останній у списку. */
+  if (bg === 'aurora') {
+    return {
+      backgroundColor: '#0b0b10',
+      backgroundImage: [
+        `radial-gradient(90% 70% at 8% 0%, ${c}66, transparent 60%)`,
+        `radial-gradient(80% 60% at 100% 20%, ${c}33, transparent 65%)`,
+        `radial-gradient(70% 80% at 60% 110%, ${c}26, transparent 60%)`,
+        base,
+      ].join(', '),
+      backgroundSize: 'auto, auto, auto, cover',
+    };
+  }
+
+  return plain;
 };
 
 /* Обкладинка — перший скрін нотатки. Окремого поля під неї немає

@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  X, Pencil, Trash2, ExternalLink, Archive, ArchiveRestore, Share2, Copy, Pin, PinOff,
+  X, Pencil, Trash2, ExternalLink, Archive, ArchiveRestore, Copy, Pin, PinOff,
   FolderInput, ChevronLeft, ChevronRight, Image as ImageIcon, Link as LinkIcon, Check,
+  Minimize2, Maximize2, AudioLines,
 } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { notify } from '../../utils/notify';
 import { TagChip } from './TagPicker';
 import { renderMd, mdPlain, toggleCheck } from '../../lib/mdLite';
 import { cardOf, cardColor } from '../../lib/noteCard';
+import VoicePlayer from './VoicePlayer';
 
 /* ==================================================================
    Читалка нотатки.
@@ -25,6 +27,8 @@ import { cardOf, cardColor } from '../../lib/noteCard';
 ================================================================== */
 
 const A = (a) => `rgba(${T.accRgb}, ${a})`;
+
+const SHOTS_KEY = 'edge.notes.shots';
 
 /* Вікно стоїть по центру робочої області, а не екрана: зліва бічна
    панель застосунку, і центр екрана — не той центр, який видно. */
@@ -149,6 +153,20 @@ export default function NoteReader({
   const contentBox = useContentBox();
   const [moveOpen, setMoveOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  /* Розмір скрінів памʼятається між нотатками й заходами.
+
+     У базу це не пишемо: вибір стосується не нотатки, а того, як
+     людині зручно читати — на телефоні хочеться згорнуто, на
+     великому екрані розгорнуто, і в кожної нотатки те саме. Тому
+     localStorage, а не колонка. */
+  const [bigShots, setBigShots] = useState(() => {
+    try { return localStorage.getItem(SHOTS_KEY) !== 'small'; } catch { return true; }
+  });
+
+  const setShots = (big) => {
+    setBigShots(big);
+    try { localStorage.setItem(SHOTS_KEY, big ? 'big' : 'small'); } catch { /* приватний режим */ }
+  };
   const copyTimer = useRef(null);
 
   useEffect(() => {
@@ -178,6 +196,7 @@ export default function NoteReader({
 
   const images = (note.images || []).filter((x) => typeof x === 'string');
   const card = cardOf(note);
+  const voices = card.voice || [];
   const c = cardColor(note, () => null) || T.acc;
   const folder = folders.find((f) => f.id === note.folder_id) || null;
   const words = wordsIn(note.description);
@@ -217,20 +236,11 @@ export default function NoteReader({
     notify.error('Не вдалось скопіювати', 'Браузер не дав доступ до буфера.');
   };
 
-  const share = async () => {
-    const text = [note.title, '', mdPlain(note.description)].join('\n').trim();
-    if (navigator.share) {
-      try { await navigator.share({ title: note.title || 'Нотатка', text }); return; } catch { /* скасували */ }
-    }
-    if (await putInBuffer(text)) notify.success('Скопійовано', 'Нотатка в буфері — можна вставляти.');
-    else notify.error('Не вдалось поділитись', 'Браузер не дав доступ ані до буфера, ані до системного вікна.');
-  };
-
   const facts = [
     ['Створено', fmtDate(note.created_at)],
     ['Змінено', since(note.updated_at || note.created_at)],
     ['Обсяг', `${words} ${plural(words, 'слово', 'слова', 'слів')}`],
-    ['Вкладень', String(images.length)],
+    ['Вкладень', String(images.length + voices.length)],
   ];
 
   return (
@@ -313,7 +323,6 @@ export default function NoteReader({
                 <span className="text-[12.5px] font-bold" style={{ fontFamily: T.sans, color: '#ffffff' }}>Редагувати</span>
               </button>
 
-              <HeadBtn icon={Share2} label="Поділитись" onClick={share} />
               {onArchive && (
                 <HeadBtn
                   icon={note.archived ? ArchiveRestore : Archive}
@@ -367,42 +376,118 @@ export default function NoteReader({
                   : <span style={{ color: '#6f6d7d' }}>Тут порожньо — сам текст ще не написаний.</span>}
               </div>
 
-              {(images.length > 0 || note.chart_link) && (
-                <div className="mt-6 flex flex-wrap items-center gap-2 pt-[18px]" style={{ borderTop: '1px solid #1a1a23' }}>
-                  <span className="mr-0.5 text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: '#9a98ab' }}>
-                    Вкладення
+              {voices.length > 0 && (
+                /* Голосові стоять окремим блоком над вкладеннями: це
+                   не файл при нотатці, а її частина — часто єдина,
+                   якщо думку записали на ходу. */
+                <div className="mt-6 pt-[18px]" style={{ borderTop: '1px solid #1a1a23' }}>
+                  <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: '#9a98ab' }}>
+                    Голосові · {voices.length}
                   </span>
 
-                  {images.map((src, i) => (
-                    <button
-                      key={src}
-                      onClick={() => onImage(src)}
-                      className="flex items-center gap-2 rounded-[10px] py-1.5 pl-2 pr-3"
-                      style={{ background: '#ffffff08', border: '1px solid #22222c', transition: 'all .16s' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff12'; e.currentTarget.style.borderColor = '#33333f'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#22222c'; }}
-                    >
-                      <span className="grid h-6 w-6 place-items-center overflow-hidden rounded-md" style={{ border: '1px solid #23232e' }}>
-                        <img src={src} alt="" className="h-full w-full object-cover" />
-                      </span>
-                      <span className="text-[12px] font-semibold" style={{ fontFamily: T.sans, color: '#c2c0ce' }}>
-                        скрін {i + 1}
-                      </span>
-                    </button>
-                  ))}
+                  <div className="mt-3 flex flex-col gap-2">
+                    {voices.map((v, i) => (
+                      <VoicePlayer
+                        key={v.url}
+                        src={v.url}
+                        sec={v.sec}
+                        color={c}
+                        label={`Голосове ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                  {note.chart_link && (
-                    <a
-                      href={note.chart_link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-2 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold"
-                      style={{ background: '#ffffff08', border: '1px solid #22222c', color: '#c2c0ce', fontFamily: T.sans }}
-                    >
-                      <ExternalLink size={13} strokeWidth={1.9} style={{ color: c }} />
-                      джерело
-                    </a>
+              {(images.length > 0 || note.chart_link) && (
+                <div className="mt-6 pt-[18px]" style={{ borderTop: '1px solid #1a1a23' }}>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: '#9a98ab' }}>
+                      Вкладення{images.length ? ` · ${images.length}` : ''}
+                    </span>
+
+                    <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,#1e1e27,transparent)' }} />
+
+                    {/* Скріни спершу великі: графік у нотатці — це
+                        частина думки, а не файл при ній, і роздивитись
+                        його треба без зайвого кліка. Але коли скрінів
+                        кілька, вони відсувають текст за екран — тому
+                        поруч стоїть згортання в рядок плашок. */}
+                    {images.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShots(!bigShots)}
+                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-semibold"
+                        style={{
+                          fontFamily: T.sans,
+                          background: '#ffffff08',
+                          border: '1px solid #22222c',
+                          color: '#a3a1b2',
+                          transition: 'all .16s',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff12'; e.currentTarget.style.borderColor = '#33333f'; e.currentTarget.style.color = '#ffffff'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#22222c'; e.currentTarget.style.color = '#a3a1b2'; }}
+                      >
+                        {bigShots ? <Minimize2 size={12} strokeWidth={2} /> : <Maximize2 size={12} strokeWidth={2} />}
+                        {bigShots ? 'зменшити' : 'збільшити'}
+                      </button>
+                    )}
+                  </div>
+
+                  {bigShots && images.length > 0 && (
+                    <div className="mt-3 flex flex-col gap-3">
+                      {images.map((src, i) => (
+                        <button
+                          key={src}
+                          type="button"
+                          onClick={() => onImage(src)}
+                          className="group/shot relative block w-full overflow-hidden rounded-2xl"
+                          style={{ border: `1px solid ${c}2b`, background: '#0d0d12', cursor: 'zoom-in' }}
+                        >
+                          <img src={src} alt="" className="block w-full" style={{ maxHeight: 460, objectFit: 'contain' }} />
+                          <span
+                            className="absolute right-2.5 top-2.5 rounded-md px-2 py-1 text-[10.5px] opacity-0 transition-opacity duration-200 group-hover/shot:opacity-100"
+                            style={{ fontFamily: T.mono, background: 'rgba(10,10,12,0.82)', border: '1px solid #23232e', color: '#c2c0ce', backdropFilter: 'blur(8px)' }}
+                          >
+                            скрін {i + 1} · на весь екран
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   )}
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {!bigShots && images.map((src, i) => (
+                      <button
+                        key={src}
+                        onClick={() => onImage(src)}
+                        className="flex items-center gap-2 rounded-[10px] py-1.5 pl-2 pr-3"
+                        style={{ background: '#ffffff08', border: '1px solid #22222c', transition: 'all .16s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff12'; e.currentTarget.style.borderColor = '#33333f'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#22222c'; }}
+                      >
+                        <span className="grid h-6 w-6 place-items-center overflow-hidden rounded-md" style={{ border: '1px solid #23232e' }}>
+                          <img src={src} alt="" className="h-full w-full object-cover" />
+                        </span>
+                        <span className="text-[12px] font-semibold" style={{ fontFamily: T.sans, color: '#c2c0ce' }}>
+                          скрін {i + 1}
+                        </span>
+                      </button>
+                    ))}
+
+                    {note.chart_link && (
+                      <a
+                        href={note.chart_link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-2 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold"
+                        style={{ background: '#ffffff08', border: '1px solid #22222c', color: '#c2c0ce', fontFamily: T.sans }}
+                      >
+                        <ExternalLink size={13} strokeWidth={1.9} style={{ color: c }} />
+                        джерело
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
