@@ -66,12 +66,26 @@ const isMissingColumn = (error, column) => {
   return msg.includes(column) && /schema cache|does not exist/i.test(msg);
 };
 
+/* Рядок без id нікуди не годиться: ані як ключ, ані як адреса для
+   оновлення. Той самий id двічі — теж збій, а не дві папки. */
+const clean = (rows) => {
+  const seen = new Set();
+  return (rows || []).filter((r) => {
+    if (!r || r.id == null || r.id === '' || seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  });
+};
+
 const toApp = (row) => ({
   id: row.id,
   name: row.name || 'Без назви',
   color: row.color || FOLDER_COLORS[0],
   position: typeof row.position === 'number' ? row.position : 0,
   pinned: !!row.pinned,
+  /* Емодзі-іконка. Порожній рядок означає «звичайна», і це не те
+     саме, що «ще не вибрали»: людина може свідомо її прибрати. */
+  icon: typeof row.icon === 'string' ? row.icon : '',
 });
 
 /* Закріплені йдуть першими вже з бази, щоб порядок не залежав від
@@ -86,55 +100,77 @@ const toApp = (row) => ({
 export async function fetchFolders(userId) {
   const { data, error } = await supabase
     .from('note_folders')
-    .select('id, name, color, position, pinned')
+    .select(COLS)
     .eq('user_id', userId)
     .order('pinned', { ascending: false })
     .order('position', { ascending: true })
     .order('created_at', { ascending: true });
 
-  if (!error) return (data || []).map(toApp);
+  if (!error) return clean(data).map(toApp);
 
-  /* Будь-яка інша помилка це вже не «схема відстала», і мовчки
-     ковтати її не можна. */
-  if (!isMissingColumn(error, 'pinned')) throw error;
+  /* Спершу пробуємо без іконки: вона приїхала останньою міграцією і
+     її бракує найчастіше. */
+  if (isMissingColumn(error, 'icon')) {
+    const noIcon = await supabase
+      .from('note_folders')
+      .select(COLS_NO_ICON)
+      .eq('user_id', userId)
+      .order('pinned', { ascending: false })
+      .order('position', { ascending: true })
+      .order('created_at', { ascending: true });
+    if (!noIcon.error) return clean(noIcon.data).map(toApp);
+    if (!isMissingColumn(noIcon.error, 'pinned')) throw noIcon.error;
+  } else if (!isMissingColumn(error, 'pinned')) {
+    /* Будь-яка інша помилка це вже не «схема відстала», і мовчки
+       ковтати її не можна. */
+    throw error;
+  }
 
   const fallback = await supabase
     .from('note_folders')
-    .select('id, name, color, position')
+    .select(COLS_NO_PIN)
     .eq('user_id', userId)
     .order('position', { ascending: true })
     .order('created_at', { ascending: true });
 
   if (fallback.error) throw fallback.error;
-  return (fallback.data || []).map(toApp);
+  return clean(fallback.data).map(toApp);
 }
 
 /* Колонки перелічуємо явно, але `pinned` серед них може ще не
    існувати — тоді впав би і сам запит, і створення папки разом з
    ним. Тому список полів у читанні після вставки той самий, що й у
    fetchFolders, з тим самим відступом на відсталу схему. */
-const COLS = 'id, name, color, position, pinned';
+const COLS = 'id, name, color, position, pinned, icon';
 const COLS_NO_PIN = 'id, name, color, position';
+const COLS_NO_ICON = 'id, name, color, position, pinned';
 
-export async function createFolder(userId, { name, color, position }) {
-  const row = {
+export async function createFolder(userId, { name, color, position, pinned, icon }) {
+  const base = {
     user_id: userId,
     name: (name || '').trim() || 'Нова папка',
     color: color || FOLDER_COLORS[0],
     position: position ?? 0,
   };
 
-  const { data, error } = await supabase
-    .from('note_folders').insert([row]).select(COLS).single();
+  /* Пробуємо від найповнішого набору до найбіднішого: краще завести
+     папку без іконки, ніж не завести взагалі через колонку, якої на
+     цій базі ще немає. */
+  const tries = [
+    { row: { ...base, pinned: !!pinned, icon: icon || '' }, cols: COLS },
+    { row: { ...base, pinned: !!pinned }, cols: COLS_NO_ICON },
+    { row: base, cols: COLS_NO_PIN },
+  ];
 
-  if (!error) return toApp(data);
-  if (!isMissingColumn(error, 'pinned')) throw error;
-
-  const second = await supabase
-    .from('note_folders').insert([row]).select(COLS_NO_PIN).single();
-
-  if (second.error) throw second.error;
-  return toApp(second.data);
+  let last = null;
+  for (const t of tries) {
+    // eslint-disable-next-line no-await-in-loop
+    const { data, error } = await supabase.from('note_folders').insert([t.row]).select(t.cols).single();
+    if (!error) return toApp(data);
+    if (!isMissingColumn(error, 'icon') && !isMissingColumn(error, 'pinned')) throw error;
+    last = error;
+  }
+  throw last;
 }
 
 /* Стартовий набір заводиться рівно один раз — і ознакою цього є не
@@ -165,30 +201,34 @@ export async function createDefaultFolders(userId) {
 }
 
 export async function updateFolder(userId, id, patch) {
-  const build = (withPin) => {
+  const build = (level) => {
     const row = { updated_at: new Date().toISOString() };
     if (patch.name !== undefined) row.name = (patch.name || '').trim() || 'Без назви';
     if (patch.color !== undefined) row.color = patch.color;
-    if (withPin && patch.pinned !== undefined) row.pinned = !!patch.pinned;
+    if (level >= 1 && patch.pinned !== undefined) row.pinned = !!patch.pinned;
+    if (level >= 2 && patch.icon !== undefined) row.icon = patch.icon || '';
     return row;
   };
 
-  const push = (withPin) => supabase
+  const push = (level) => supabase
     .from('note_folders')
-    .update(build(withPin))
+    .update(build(level))
     .eq('id', id)
     .eq('user_id', userId);
 
-  const { error } = await push(true);
-  if (!error) return;
+  /* Перейменування й колір мають доїхати навіть на базі, де іконок
+     чи закріплення ще немає: втратити нову назву через невиконану
+     міграцію чужої можливості — гірше, ніж не зберегти емодзі. */
+  const first = await push(2);
+  if (!first.error) return;
+  if (!isMissingColumn(first.error, 'icon') && !isMissingColumn(first.error, 'pinned')) throw first.error;
 
-  /* Перейменування й колір мають доїхати навіть на базі, де
-     закріплення ще немає: втратити нову назву через невиконану
-     міграцію чужої можливості — гірше, ніж не закріпити папку. */
-  if (!isMissingColumn(error, 'pinned')) throw error;
+  const second = await push(1);
+  if (!second.error) return;
+  if (!isMissingColumn(second.error, 'pinned')) throw second.error;
 
-  const { error: second } = await push(false);
-  if (second) throw second;
+  const third = await push(0);
+  if (third.error) throw third.error;
 }
 
 /* Нотатки не чіпаємо: за них відповідає on delete set null у схемі,
@@ -208,27 +248,40 @@ export async function removeFolder(userId, id) {
    індексом. Пишемо всі рядки одним upsert — інакше при перетягуванні
    через півсписку летіло б десять окремих запитів. */
 export async function reorderFolders(userId, ordered) {
-  const row = (f, i, withPin) => ({
-    id: f.id,
-    user_id: userId,
-    name: f.name,
-    color: f.color,
+  /* Тільки UPDATE, і тільки по існуючому id.
+
+     Раніше тут був один `upsert` на весь список. Коротший запит, але
+     вставка в ньому теж дозволена: варто конфлікту по `id` не
+     спрацювати — і замість оновлення позицій база заводила стільки
+     нових папок, скільки їх було. Саме тому перетягування створювало
+     «Нову папку» з нізвідки.
+
+     Оновлень десяток, вони йдуть паралельно, і жодне з них не вміє
+     створити рядок — а це головне. */
+  const list = (ordered || []).filter((f) => f && f.id);
+  if (!list.length) return;
+
+  const patch = (i, withPin, f) => ({
     position: i,
     updated_at: new Date().toISOString(),
     ...(withPin ? { pinned: !!f.pinned } : null),
   });
 
-  const push = (withPin) => supabase
+  const push = (withPin) => Promise.all(list.map((f, i) => supabase
     .from('note_folders')
-    .upsert(ordered.map((f, i) => row(f, i, withPin)), { onConflict: 'id' });
+    .update(patch(i, withPin, f))
+    .eq('id', f.id)
+    .eq('user_id', userId)));
 
-  const { error } = await push(true);
-  if (!error) return;
+  const first = await push(true);
+  const bad = first.find((r) => r.error)?.error;
+  if (!bad) return;
 
-  /* Та сама відстала схема, що й у fetchFolders: без колонки
-     `pinned` має зберегтись хоча б порядок, а не нічого. */
-  if (!isMissingColumn(error, 'pinned')) throw error;
+  /* Відстала схема без колонки `pinned`: порядок має зберегтись і
+     там. */
+  if (!isMissingColumn(bad, 'pinned')) throw bad;
 
-  const { error: second } = await push(false);
-  if (second) throw second;
+  const second = await push(false);
+  const worse = second.find((r) => r.error)?.error;
+  if (worse) throw worse;
 }

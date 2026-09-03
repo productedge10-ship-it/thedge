@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Trash2, ImagePlus, Loader2, CalendarDays, Plus, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
+import { X, Check, Trash2, ImagePlus, Loader2, CalendarDays, Plus, Pencil, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { SESSIONS, metaOf, pairOf, resultLabel, shotsOf } from '../../lib/backtestStats';
 import { ACT, act, actGradient, actGradientHover, segFill as fill, SEG_TONE } from './accent';
@@ -249,6 +249,9 @@ export default function TradeSheet({
       readFiles(items.map((i) => i.getAsFile()));
     }
   };
+
+  /* Список сетапів згорнутий, поки він не потрібен. */
+  const [setupsOpen, setSetupsOpen] = useState(false);
 
   const toggleTag = (tag) =>
     set({ tags: f.tags.includes(tag) ? f.tags.filter((x) => x !== tag) : [...f.tags, tag] });
@@ -678,6 +681,57 @@ export default function TradeSheet({
               >
                 Сетап
               </Label>
+              {/* Згорнутий вигляд: у рядку лише те, що обрано.
+
+                  Розкладені плашками, сетапи займали чверть форми, і
+                  щоразу це був той самий список — людина ставить
+                  один-два і більше до них не повертається. Тепер увесь
+                  набір ховається за одним рядком, як у полі вибору.
+
+                  Розкриття — grid-template-rows: 0fr → 1fr. Це єдиний
+                  спосіб анімувати висоту невідомого вмісту без
+                  вимірювань, і головне: висота лишається справжньою,
+                  тож навіть якщо анімація не відпрацює, нічого не
+                  обріжеться. */}
+              {!locked && (
+                <button
+                  onClick={() => setSetupsOpen((o) => !o)}
+                  className="mt-[11px] flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors duration-200"
+                  style={{ background: T.sunken, border: `1px solid ${setupsOpen ? T.lineHi : T.line}` }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = setupsOpen ? T.lineHi : T.line)}
+                >
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                    {f.tags.length ? f.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-lg px-2 py-1 text-[12.5px] font-semibold"
+                        style={{ fontFamily: T.sans, color: T.text, background: act(0.18), border: `1px solid ${act(0.5)}` }}
+                      >
+                        {tag}
+                      </span>
+                    )) : (
+                      <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                        {setupsOpen ? 'Обери сетап зі списку' : 'Сетап не вказано'}
+                      </span>
+                    )}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    strokeWidth={2.4}
+                    style={{ color: T.text3, flex: 'none', transform: `rotate(${setupsOpen ? 180 : 0}deg)`, transition: 'transform .22s ease' }}
+                  />
+                </button>
+              )}
+
+              <div
+                style={locked ? undefined : {
+                  display: 'grid',
+                  gridTemplateRows: setupsOpen ? '1fr' : '0fr',
+                  transition: 'grid-template-rows .26s ease',
+                }}
+              >
+                <div style={locked ? undefined : { overflow: 'hidden' }}>
               <div className="mt-[11px] flex flex-wrap gap-[7px]">
                 {locked && f.tags.length === 0 && (
                   <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>Сетап не вказано</span>
@@ -777,6 +831,8 @@ export default function TradeSheet({
                   </motion.button>
                 )}
 
+              </div>
+                </div>
               </div>
             </div>
         </div>
