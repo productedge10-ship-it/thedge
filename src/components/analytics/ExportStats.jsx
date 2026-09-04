@@ -104,7 +104,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Roboto:wght@400;700;800&display=swap">
       <style>
-        @page { size: 1200px 675px; margin: 0; }
+        @page { size: 1600px 900px; margin: 0; }
         html,body { margin:0; padding:0; background:#0A0A0C; }
         svg { display:block; width:100%; height:auto; }
       </style></head><body>${svg}</body></html>`);
@@ -183,7 +183,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
                 </div>
 
                 <p className="mt-3 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  1200×675 — формат, під який заточені превʼю в X, Telegram і Discord.
+                  1600×900 — формат, під який заточені превʼю в X, Telegram і Discord.
                 </p>
               </div>
 
