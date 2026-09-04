@@ -13,6 +13,11 @@
       назавжди: людина ще не зрозуміла, навіщо їй це. Питаємо рівно в
       мить, коли вона сама натиснула дзвіночок.
 
+      А якщо дозволу немає взагалі — нагадування все одно спрацює,
+      просто карткою в самій сторінці. Заблоковані системні сповіщення
+      не мають перетворювати дзвіночок на кнопку, яка нічого не
+      робить.
+
    2. Один таймер, а не таймер на подію. setTimeout на кожну з
       сімдесяти подій — це сімдесят таймерів, які браузер у фоні
       душить і зсуває. Замість цього один тик раз на 20 секунд, який
@@ -24,7 +29,28 @@
       сповіщення вдруге, а вкладка, відкрита у двох вікнах, — вчетверо.
 ================================================================== */
 
-export const LEAD_MIN = 10;          // за скільки хвилин попереджаємо
+export const LEAD_MIN = 10;          // за скільки хвилин попереджаємо за замовчуванням
+
+/* Скільки саме — вирішує людина для кожної події окремо. Хвилини не
+   випадкові: 15 і 30 — щоб встигнути закрити або підтягнути стоп, 5 —
+   щоб просто бути за екраном, 0 — коли цікавить сама цифра, а не
+   підготовка до неї. */
+export const LEAD_OPTIONS = [
+  { min: 0, label: 'у момент виходу', short: 'вчасно' },
+  { min: 5, label: 'за 5 хвилин', short: '5 хв' },
+  { min: 10, label: 'за 10 хвилин', short: '10 хв' },
+  { min: 15, label: 'за 15 хвилин', short: '15 хв' },
+  { min: 30, label: 'за 30 хвилин', short: '30 хв' },
+  { min: 60, label: 'за годину', short: '1 год' },
+];
+
+export const leadLabel = (min) => LEAD_OPTIONS.find((o) => o.min === min)?.short || `${min} хв`;
+
+/* Подія для показу всередині сторінки. Системне сповіщення бачить
+   лише той, хто дав дозвіл, а нагадування має спрацювати в будь-якому
+   разі — інакше людина, що натиснула дзвіночок, лишиться ні з чим і
+   навіть не дізнається чому. */
+export const ALERT_EVENT = 'edge:news-alert';
 const TICK = 20 * 1000;              // як часто звіряємось із годинником
 const FIRED_KEY = 'edge_news_fired';
 const GRACE = 90 * 1000;             /* Якщо вкладка спала й момент
@@ -81,6 +107,15 @@ function fire(ev, minutes) {
     ev.forecast ? `прогноз ${ev.forecast}` : null,
   ].filter(Boolean).join(' · ');
 
+  /* Спершу — картка в самій сторінці: вона працює завжди. */
+  try {
+    window.dispatchEvent(new CustomEvent(ALERT_EVENT, {
+      detail: { id: ev.id, title: ev.title, ccy: ev.ccy, minutes, forecast: ev.forecast || '', at: ev.at },
+    }));
+  } catch { /* середовище без window — нічого страшного */ }
+
+  if (!notifySupported() || Notification.permission !== 'granted') return;
+
   try {
     const n = new Notification(ev.title, {
       body,
@@ -99,13 +134,9 @@ function fire(ev, minutes) {
    тисне дзвіночок, і перепідписуватись на кожну зміну означало б
    гасити й піднімати таймер по десять разів на хвилину. */
 export function startNewsWatcher(getWatched) {
-  if (!notifySupported()) return () => {};
-
   let fired = prune(readFired());
 
   const tick = () => {
-    if (Notification.permission !== 'granted') return;
-
     const now = Date.now();
     const list = getWatched() || [];
 
@@ -115,9 +146,10 @@ export function startNewsWatcher(getWatched) {
       if (Number.isNaN(t)) return;
 
       const left = t - now;
-      const window0 = LEAD_MIN * 60 * 1000;
+      const lead = Number.isFinite(ev.lead) ? ev.lead : LEAD_MIN;
+      const window0 = lead * 60 * 1000;
 
-      /* Вікно: від «за 10 хвилин» до «прострочили на GRACE».
+      /* Вікно: від обраного заздалегідь до «прострочили на GRACE».
          Верхня межа потрібна, бо інакше подія на наступний тиждень
          теж вважалась би такою, що ось-ось. */
       if (left > window0 || left < -GRACE) return;

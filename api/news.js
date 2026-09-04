@@ -8,7 +8,7 @@
    браузера — серверу воно не писане.
 
    Два режими:
-     /api/news?week=this|next|last   — тижневий фід
+     /api/news?week=0|-1|2|this|next  — тижневий фід (зсув тижнів)
      /api/news?desc=CPI%20m%2Fm      — опис показника
 
    ---
@@ -33,39 +33,39 @@
    індекс, машина сама не здогадається.
 ================================================================== */
 
-const HOST = 'https://nfs.faireconomy.media';
+/* Головне джерело — календар TradingView. Він публічний, віддає
+   довільний діапазон дат і містить фактичні значення після виходу.
 
-/* Для кожного тижня — список кандидатів по порядку.
+   Раніше тут стояли тижневі файли faireconomy (дзеркало ForexFactory),
+   і саме через них календар умів рівно три тижні. Зараз із тих файлів
+   живий лише ff_calendar_thisweek.json — решта (lastweek, nextweek,
+   thismonth, nextmonth) віддає 404, тому і минулий, і наступний
+   тиждень були порожні. Файл поточного тижня лишаємо запасним
+   варіантом: якщо TradingView не відповість, сторінка все одно
+   покаже хоч цей тиждень. */
+const TV = 'https://economic-calendar.tradingview.com/events';
+const FF_THIS = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 
-   Наступний тиждень окремий випадок: ff_calendar_nextweek.json
-   зʼявляється не одразу, а коли FF добʼє розклад — зазвичай ближче
-   до кінця поточного тижня. До того моменту файл віддає помилку, і
-   раніше це вилітало користувачу як «Календар не завантажився»,
-   хоча ламатись тут нічому.
+/* Тільки валюти, якими торгують. Календар TradingView охоплює весь
+   світ, включно з подіями, що не рухають нічого, крім локальних
+   облігацій. */
+const MAJORS = new Set(['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'NZD', 'CHF', 'CNY']);
 
-   Тому запасний шлях: місячні фіди, з яких вирізається потрібний
-   діапазон дат. Вони існують завжди. */
-const FEEDS = {
-  last: [`${HOST}/ff_calendar_lastweek.json`],
-  this: [`${HOST}/ff_calendar_thisweek.json`],
-  next: [
-    `${HOST}/ff_calendar_nextweek.json`,
-    `${HOST}/ff_calendar_thismonth.json`,
-    `${HOST}/ff_calendar_nextmonth.json`,
-  ],
-};
+/* Єврозона окремо: у TradingView усі її країни йдуть під одним EUR,
+   тож без відбору в списку двадцять однакових «GDP Growth Rate YoY»
+   від Латвії до Кіпру. Лишаємо загальноєвропейські дані й чотири
+   найбільші економіки — те, на що реально дивиться ринок. */
+const EURO = new Set(['EU', 'EA', 'DE', 'FR', 'IT', 'ES']);
 
-/* Понеділок наступного тижня і неділя після нього. */
-const nextWeekRange = () => {
-  const now = new Date();
-  const dow = (now.getDay() + 6) % 7;               // 0 = понеділок
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - dow + 7);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 7);
-  return [start.getTime(), end.getTime()];
-};
+/* Аукціони облігацій — окрема каста подій: виходять пачками, назви
+   різняться лише строком, а на валюту не впливають майже ніяк.
+
+   Категорії 'bnd' для цього замало: частина аукціонів приїжджає під
+   'gov' (німецький Bubill, наприклад), тому додатково дивимось на
+   назву. Саме через це в списку на 7 вересня висів «DE 9-Month
+   Bubill Auction», якого на ForexFactory немає й близько. */
+const SKIP_CATEGORY = new Set(['bnd']);
+const AUCTION = /auction|bubill|bobl|\bbtf\b|\bbtp\b|\bbill\b|\bgilt\b|\bbund\b|\bschatz\b/i;
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
@@ -75,8 +75,118 @@ const DESC_TTL = 30 * 24 * 3600 * 1000;   // опис індикатора не 
 
 /* ---------- тижневий фід ---------- */
 
-async function grab(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+/* Зсув тижня від поточного: 0 — цей, -1 — минулий, 2 — через два.
+   Рядкові 'last'/'this'/'next' лишились для сумісності зі старими
+   посиланнями й кешем у браузерах. */
+const offsetOf = (week) => {
+  const named = { last: -1, this: 0, next: 1 };
+  if (week in named) return named[week];
+  const n = parseInt(week, 10);
+  /* Обмеження не з примхи: календар не має сенсу на роки вперед, а
+     без стелі один зациклений клієнт може ганяти запити нескінченно. */
+  return Number.isFinite(n) ? Math.max(-26, Math.min(26, n)) : 0;
+};
+
+/* Понеділок потрібного тижня і неділя після нього, в UTC. */
+const weekRange = (offset) => {
+  const now = new Date();
+  const monday = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() - ((now.getUTCDay() + 6) % 7) + offset * 7,
+  );
+  return [new Date(monday), new Date(monday + 7 * 86400000)];
+};
+
+/* TradingView віддає число і одиницю окремо, ще й у двох виглядах:
+   actual — уже зручне для читання (203), actualRaw — справжнє
+   (203000). Відношення між ними і є масштаб: саме так 203 стає
+   «203K», а не голим числом, яке ні про що не каже. */
+const fmt = (v, raw, unit) => {
+  if (v === null || v === undefined) return '';
+
+  let suffix = '';
+  if (unit === '%') suffix = '%';
+  else if (typeof raw === 'number' && v !== 0) {
+    const k = Math.round(Math.abs(raw / v));
+    if (k >= 1e12) suffix = 'T';
+    else if (k >= 1e9) suffix = 'B';
+    else if (k >= 1e6) suffix = 'M';
+    else if (k >= 1e3) suffix = 'K';
+  }
+
+  const num = Math.abs(v) >= 1000 ? Number(v.toFixed(0)) : Number(v.toFixed(2));
+  const money = unit && unit !== '%' ? unit : '';
+  return `${money}${num}${suffix}`;
+};
+
+/* Ваги TradingView: 1 — високий, 0 — середній, решта — низький. */
+const impactOfTv = (e) => {
+  const name = `${e.indicator || ''} ${e.title || ''}`;
+  if (/holiday/i.test(name)) return 'Holiday';
+  if (e.importance >= 1) return 'High';
+  if (e.importance === 0) return 'Medium';
+  return 'Low';
+};
+
+/* Назви єврозонних подій без країни нечитабельні: «Inflation Rate
+   YoY» тричі поспіль — це Німеччина, Італія та Іспанія, і зрозуміти
+   це можна хіба що по часу виходу. */
+const titleOf = (e) => {
+  const c = e.country;
+  const local = e.currency === 'EUR' && c && c !== 'EU' && c !== 'EA';
+  return local ? `${c} ${e.title || ''}`.trim() : (e.title || '').trim();
+};
+
+async function tvWeek(offset) {
+  const [from, to] = weekRange(offset);
+  const url = `${TV}?from=${from.toISOString()}&to=${to.toISOString()}`;
+
+  const res = await fetch(url, {
+    headers: { 'User-Agent': UA, Origin: 'https://www.tradingview.com', Accept: 'application/json' },
+  });
+  if (!res.ok) throw new Error(`${res.status}`);
+
+  const j = await res.json();
+  const list = Array.isArray(j?.result) ? j.result : null;
+  if (!list) throw new Error('несподівана відповідь');
+
+  /* Верхню межу TradingView трактує включно, тож понеділок
+     наступного тижня приїжджає разом із цим — і потім висить у
+     списку днем, якого в стрічці немає. */
+  const till = to.getTime();
+
+  return list
+    .filter((e) => new Date(e.date).getTime() < till)
+    .filter((e) => MAJORS.has(e.currency))
+    .filter((e) => !SKIP_CATEGORY.has(e.category))
+    .filter((e) => !AUCTION.test(e.title || ''))
+    .filter((e) => e.currency !== 'EUR' || EURO.has(e.country))
+    .map((e) => ({
+      title: titleOf(e),
+      country: e.currency,
+      date: e.date,
+      impact: impactOfTv(e),
+      actual: fmt(e.actual, e.actualRaw, e.unit),
+      forecast: fmt(e.forecast, e.forecastRaw, e.unit),
+      previous: fmt(e.previous, e.previousRaw, e.unit),
+    }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    /* У самому фіді трапляються дублі — та сама подія двома
+       записами з різними id (італійський Construction Output,
+       засідання ECOFIN). У списку це виглядає як помилка нашого
+       календаря, тому прибираємо: час плюс валюта плюс назва
+       унікальні для реальної події. */
+    .filter((e, i, all) => {
+      const same = (x) => `${x.date}|${x.country}|${x.title}`;
+      return all.findIndex((x) => same(x) === same(e)) === i;
+    });
+}
+
+/* Запасний шлях — єдиний живий файл faireconomy. Він знає лише
+   поточний тиждень, тому для інших зсувів рятувати нема чим. */
+async function ffThisWeek() {
+  const res = await fetch(FF_THIS, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
   if (!res.ok) throw new Error(`${res.status}`);
   const rows = await res.json();
   if (!Array.isArray(rows)) throw new Error('не масив');
@@ -84,33 +194,25 @@ async function grab(url) {
 }
 
 async function feed(week) {
-  const key = `w:${week}`;
+  const offset = offsetOf(week);
+  const key = `w:${offset}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return { rows: hit.rows, state: 'hit' };
 
-  const urls = FEEDS[week] || FEEDS.this;
-  const monthly = week === 'next';
-  const [from, to] = monthly ? nextWeekRange() : [0, Infinity];
   let last = null;
+  try {
+    const rows = await tvWeek(offset);
+    cache.set(key, { at: Date.now(), rows });
+    return { rows, state: 'miss' };
+  } catch (e) {
+    last = e;
+  }
 
-  for (const url of urls) {
+  if (offset === 0) {
     try {
-      let rows = await grab(url);
-
-      /* Місячний фід містить зайве — лишаємо тільки потрібний
-         тиждень. Тижневий фільтрувати не треба, він уже такий. */
-      if (monthly && !url.includes('week')) {
-        rows = rows.filter((r) => {
-          const t = new Date(r.date).getTime();
-          return !Number.isNaN(t) && t >= from && t < to;
-        });
-        /* Порожньо — цей місяць просто не покриває потрібні дні,
-           пробуємо наступний. */
-        if (!rows.length) continue;
-      }
-
+      const rows = await ffThisWeek();
       cache.set(key, { at: Date.now(), rows });
-      return { rows, state: 'miss' };
+      return { rows, state: 'fallback' };
     } catch (e) {
       last = e;
     }
@@ -120,10 +222,6 @@ async function feed(week) {
      порожній екран: календар на тиждень уперед не псується від
      того, що йому двадцять хвилин. */
   if (hit) return { rows: hit.rows, state: 'stale' };
-
-  /* Наступний тиждень FF просто ще не опублікував. Це не помилка й
-     не має виглядати як помилка — віддаємо порожньо з поясненням. */
-  if (week === 'next') return { rows: [], state: 'empty' };
 
   throw last || new Error('фід недоступний');
 }
