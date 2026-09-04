@@ -182,3 +182,34 @@ export async function removeImages(urls) {
   if (!paths.length) return;
   try { await supabase.storage.from(BUCKET).remove(paths); } catch { /* мовчки */ }
 }
+
+/* ------------------------------------------------------------------
+   Голосові.
+
+   Кладемо в те саме відро, що й картинки: назва `note-images` тут
+   вже неточна, зате не треба заводити ще одне сховище й ще раз
+   роздавати на нього права. Шлях той самий — користувач/нотатка, —
+   тому голосові видаленої нотатки прибираються тим же префіксом.
+
+   Стиснення немає навмисно: браузер уже пише в opus, а це десятки
+   кілобайт на хвилину. Чіпати його — псувати мову заради нічого.
+------------------------------------------------------------------ */
+export async function uploadAudio(userId, noteId, blob) {
+  if (!userId) throw new Error('Немає користувача');
+
+  /* `audio/webm;codecs=opus` — валідний тип для браузера, але для
+     перевірки дозволених типів у сховищі це вже інший рядок, ніж
+     `audio/webm`. Обрізаємо кодек, інакше відро відмовляє. */
+  const type = String(blob.type || 'audio/webm').split(';')[0];
+  const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
+  const path = `${userId}/${noteId || 'loose'}/${randomName()}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, blob, { contentType: type, upsert: false, cacheControl: '31536000' });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}

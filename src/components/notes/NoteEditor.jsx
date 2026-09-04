@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, ImagePlus, Link2, Check, Loader2, Maximize2, Pencil, Plus, ChevronDown, Link, Eye,
+  X, ImagePlus, Link2, Check, Loader2, Maximize2, Pencil, Plus, ChevronDown, Link, Eye, Mic,
 } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { notify } from '../../utils/notify';
-import { uploadImage, uploadDataUrl, isHttpUrl, isDataUrl } from '../../lib/imageStore';
+import { uploadImage, uploadDataUrl, uploadAudio, isHttpUrl, isDataUrl } from '../../lib/imageStore';
 import { uid } from '../../lib/notesStore';
 import { supabase } from '../../lib/supabase';
 import { renderMd, highlightMd } from '../../lib/mdLite';
+import VoiceCapture from './VoiceCapture';
 import TagPicker, { TagChip } from './TagPicker';
 import DateField from '../ui/DateField';
 import { CARD_COLORS, CARD_ICONS, CARD_SIZES, CARD_BGS, cardOf, cardToSave, cardBackground } from '../../lib/noteCard';
@@ -105,6 +106,7 @@ const TOOLS = [
   { label: 'H', title: 'Заголовок', prefix: '## ', weight: 700 },
   { label: '•', title: 'Список', prefix: BULLET, weight: 600 },
   { label: '☑', title: 'Чекліст', prefix: BOX, weight: 500 },
+  { label: '1.', title: 'Нумерований список', prefix: '1. ', weight: 600, numbered: true },
   { label: '⌗', title: 'Код', wrap: '`', weight: 500 },
 ];
 
@@ -216,6 +218,8 @@ export default function NoteEditor({
   const [dropHover, setDropHover] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
   const contentBox = useContentBox();
   const [lookOpen, setLookOpen] = useState(false);
   const [tradeOpen, setTradeOpen] = useState(false);
@@ -338,6 +342,50 @@ export default function NoteEditor({
     takeFiles(e.dataTransfer.files);
   };
 
+  /* ---------- голос ----------
+
+     Текст лягає туди, де стоїть курсор, а не в кінець: людина
+     диктує посеред думки так само часто, як на початку. Голосове
+     їде у сховище одразу — інакше воно жило б у пам'яті вкладки й
+     зникло б разом із нею. */
+  const insertAtCursor = (text) => {
+    if (!text) return;
+    const el = bodyRef.current;
+    const body = form.description || '';
+    const at = el?.selectionStart ?? body.length;
+    const before = body.slice(0, at);
+    const after = body.slice(at);
+    const glue = before && !/\s$/.test(before) ? ' ' : '';
+    const next = before + glue + text + after;
+    patch({ description: next });
+    const caret = (before + glue + text).length;
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(caret, caret); });
+  };
+
+  const attachVoice = async (clip) => {
+    setVoiceBusy(true);
+    try {
+      const url = await uploadAudio(userId, idRef.current, clip.blob);
+      const card = cardOf(form);
+      patch({ card: cardToSave({ ...card, voice: [...card.voice, { url, sec: clip.sec }] }) });
+      setVoiceOpen(false);
+      notify.success('Голосове додано', 'Воно буде в нотатці разом зі скрінами.');
+    } catch (e) {
+      /* Найчастіша причина — відро приймає лише картинки. Текст
+         помилки з бази («mime type audio/webm is not supported»)
+         людині нічого не каже, тому підказуємо, що робити. */
+      const mime = /mime type/i.test(e.message || '');
+      notify.error(
+        'Не вдалось зберегти голосове',
+        mime
+          ? 'Сховище приймає тільки картинки. Дозволь аудіо для відра note-images у Supabase → Storage.'
+          : e.message,
+      );
+    } finally {
+      setVoiceBusy(false);
+    }
+  };
+
   /* Список бектестів тягнемо один раз і лише на вимогу. */
   const loadTrades = async () => {
     if (trades !== null) return;
@@ -382,7 +430,14 @@ export default function NoteEditor({
       const cut = rest.indexOf('\n', to - lineStart);
       const zone = cut === -1 ? rest : rest.slice(0, cut);
       const tail = cut === -1 ? '' : rest.slice(cut);
-      const marked = zone.split('\n').map((l) => (l.startsWith(tool.prefix) ? l : tool.prefix + l)).join('\n');
+
+      /* Нумерація рахується по ходу: виділив три рядки — отримав
+         1. 2. 3., а не три однакові одиниці. */
+      const marked = zone.split('\n').map((l, i) => {
+        if (tool.numbered) return /^\d{1,3}[.)]\s/.test(l) ? l : `${i + 1}. ${l}`;
+        return l.startsWith(tool.prefix) ? l : tool.prefix + l;
+      }).join('\n');
+
       next = head + marked + tail;
       caret = from + tool.prefix.length;
     }
@@ -414,13 +469,18 @@ export default function NoteEditor({
 
     const lineStart = text.lastIndexOf('\n', from - 1) + 1;
     const line = text.slice(lineStart, from);
-    const marker = markerOf(line);
+
+    /* Нумерований список рахує сам: наступний пункт це попередній
+       номер плюс один, інакше людина після кожного рядка друкує
+       цифру вручну й збивається на десятому. */
+    const num = /^(\d{1,3})([.)])\s(.*)$/.exec(line);
+    const marker = num ? `${num[1]}${num[2]} ` : markerOf(line);
     if (!marker) return;
 
     e.preventDefault();
 
     /* Порожній пункт — сигнал «список закінчився» */
-    if (line.trim() === marker.trim()) {
+    if (num ? !num[3].trim() : line.trim() === marker.trim()) {
       const next = text.slice(0, lineStart) + text.slice(from);
       patch({ description: next });
       requestAnimationFrame(() => { el.focus(); el.setSelectionRange(lineStart, lineStart); });
@@ -429,7 +489,9 @@ export default function NoteEditor({
 
     /* Наступний пункт завжди порожній: галочку успадковувати не
        можна, інакше новий рядок одразу виглядав би зробленим. */
-    const carry = marker === DONE ? BOX : marker === '- [x] ' ? '- [ ] ' : marker;
+    const carry = num
+      ? `${Number(num[1]) + 1}${num[2]} `
+      : marker === DONE ? BOX : marker === '- [x] ' ? '- [ ] ' : marker;
     const next = `${text.slice(0, from)}\n${carry}${text.slice(to)}`;
     const caret = from + 1 + carry.length;
     patch({ description: next });
@@ -661,12 +723,44 @@ export default function NoteEditor({
 
               <span className="mx-1 h-5 w-px" style={{ background: '#22222c' }} />
 
+              {/* Диктовка стоїть у тому ж ряду, що й розмітка: це
+                  такий самий спосіб набрати текст, просто голосом. */}
+              <div className="relative">
+                <button
+                  type="button"
+                  title="Продиктувати"
+                  onClick={() => { setVoiceOpen((v) => !v); setLookOpen(false); setTradeOpen(false); }}
+                  className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold"
+                  style={{
+                    background: voiceOpen ? A(0.17) : '#ffffff08',
+                    border: `1px solid ${voiceOpen ? A(0.5) : '#21212b'}`,
+                    color: voiceOpen ? '#ffffff' : '#a9a7b8',
+                    fontFamily: T.sans,
+                    transition: 'all .16s',
+                  }}
+                >
+                  <Mic size={13} strokeWidth={1.9} />
+                  Голос
+                </button>
+
+                {voiceOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-2">
+                    <VoiceCapture
+                      busy={voiceBusy}
+                      onClose={() => setVoiceOpen(false)}
+                      onInsert={(text) => { insertAtCursor(text); setVoiceOpen(false); }}
+                      onAttach={attachVoice}
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Розмітку треба бачити, а не уявляти. Поки її не було
                   видно ніде, `**жирне**` лишалось зірочками аж до
                   збереження — і виглядало як помилка, а не як розмітка. */}
               <button
                 type="button"
-                title={preview ? 'Повернутись до письма' : 'Показати, як це виглядатиме'}
+                title={preview ? 'Повернутись до письма' : 'Показати, як нотатка виглядатиме після збереження'}
                 onClick={() => setPreview((v) => !v)}
                 className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold"
                 style={{
@@ -678,7 +772,7 @@ export default function NoteEditor({
                 }}
               >
                 <Eye size={13} strokeWidth={1.9} />
-                Вигляд
+                {preview ? 'Писати далі' : 'Як виглядатиме'}
               </button>
 
               <span className="flex-1" />
@@ -1183,8 +1277,12 @@ export default function NoteEditor({
                           <span
                             className="block h-full w-full rounded-lg"
                             style={{
-                              background: cardBackground(b.id, look, false),
-                              backgroundSize: b.id === 'dots' ? '6px 6px, cover' : undefined,
+                              ...cardBackground(b.id, look, false),
+                              /* Мініатюра вдвічі менша за картку, тож
+                                 і візерунок має бути вдвічі дрібніший —
+                                 інакше в квадратику 34×34 видно одну
+                                 крапку й ніякої різниці між варіантами. */
+                              backgroundSize: cardBackground(b.id, look, false).backgroundSize?.replace(/(\d+)px (\d+)px/g, (_, a2, b2) => `${Math.round(a2 / 2)}px ${Math.round(b2 / 2)}px`),
                               border: b.id === 'none' ? '1px solid #23232c' : 'none',
                             }}
                           />
@@ -1274,8 +1372,7 @@ export default function NoteEditor({
                     <div
                       className="relative mt-2.5 overflow-hidden rounded-[14px] px-3.5 py-3"
                       style={{
-                        background: cardBackground(card.bg, look, false),
-                        backgroundSize: card.bg === 'dots' ? '9px 9px, cover' : undefined,
+                        ...cardBackground(card.bg, look, false),
                         border: `1px solid ${look}3d`,
                       }}
                     >

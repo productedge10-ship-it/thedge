@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { EDGE_LOGO } from './edgeLogo';
 
 /* ==================================================================
    Картка статистики.
@@ -14,34 +15,17 @@ import { supabase } from './supabase';
    лінком видно вже інший — це не сніпет, а витік поточного стану.
 ================================================================== */
 
-/* ---------- палітра ----------
-
-   Взята з логотипа: фіолетовий → синій → бірюзовий. Раніше картка
-   була зелена на чорному — колір за замовчуванням для будь-якого
-   торгового застосунку, і саме тому вона не запамʼятовувалась.
-   Тепер картка забарвлена так само, як знак, і впізнається з
-   мініатюри в чужій стрічці.
-
-   Мінус — не червоний, а рожевий: чистий червоний на темному тлі
-   кричить і здешевлює. Rose тримає ту саму інформацію спокійніше. */
 const P = {
-  bg:      '#05060A',
-  line:    '#22232c',
+  bg:      '#0A0A0C',
+  line:    '#26262c',
   text:    '#FAFAFA',
   text2:   '#B4B4BD',
   text3:   '#7A7A85',
   text4:   '#4A4A52',
-
-  violet:  '#8B5CF6',
-  indigo:  '#4F46E5',
-  blue:    '#3B82F6',
-  cyan:    '#22D3EE',
-  teal:    '#2DD4BF',
-
-  acc:     '#7C6BFF',
-  ok:      '#2DD4BF',
-  bad:     '#FB7185',
-  warn:    '#FBBF24',
+  acc:     '#8b7bff',
+  ok:      '#34d399',
+  bad:     '#f87171',
+  warn:    '#fbbf24',
 };
 
 const r2 = (v) => Math.round(Number(v) * 100) / 100;
@@ -139,6 +123,12 @@ export function buildCard(stats, { title, period, metrics, author }) {
     period: PERIOD_EN[period] || period || 'All Time',
     author: author || '',
     trades: stats.trades?.length || 0,
+    /* Рядок під головним числом: скільки угод і за який відрізок.
+       Рахуємо тут, щоб і PNG, і публічна сторінка бачили те саме. */
+    sub: [
+      `${stats.trades?.length || 0} closed trades`,
+      stats.months ? `${stats.months} months in journal` : '',
+    ].filter(Boolean).join(' · '),
     createdAt: new Date().toISOString(),
     hero: {
       label: 'Net R',
@@ -155,23 +145,8 @@ export function buildCard(stats, { title, period, metrics, author }) {
 const esc = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-const toneColor = (tone) => ({ ok: P.ok, bad: P.bad, warn: P.warn }[tone] || P.text);
 
-function curvePath(values, x, y, w, h) {
-  if (!values.length) return '';
-  const min = Math.min(0, ...values);
-  const max = Math.max(0, ...values);
-  const span = max - min || 1;
-  const step = values.length > 1 ? w / (values.length - 1) : w;
 
-  return values
-    .map((v, i) => {
-      const px = x + i * step;
-      const py = y + h - ((v - min) / span) * h;
-      return `${i ? 'L' : 'M'}${px.toFixed(1)},${py.toFixed(1)}`;
-    })
-    .join(' ');
-}
 
 /* Логотип має бути логотипом і в картинці теж, тому «THE EDGE» тут
    набрано тим самим Space Grotesk, що й у меню. Картка малюється
@@ -190,79 +165,114 @@ function serial(iso) {
   return h.toString(16).toUpperCase().slice(-4).padStart(4, '0');
 }
 
-export function renderCardSvg(card) {
-  const W = 1200;
-  const H = 675;
-  const M = 88;
-  const up = card.hero.up;
-  const accent = up ? P.ok : P.bad;
+const MONO = "'SF Mono', ui-monospace, Menlo, Consolas, monospace";
 
-  /* Картка живе на сторінці інлайном, а не картинкою — інакше не
-     підхопився б фірмовий шрифт. Тому ідентифікатори градієнтів
-     мають бути унікальні: два прев'ю в одному документі інакше
-     перетягнули б defs одне в одного. */
+/* Кольори значень у підвалі.
+
+   Беремо холодну трійцю з макета й ідемо по колу — так рядок цифр
+   читається як одна композиція, а не як світлофор. Але поганий
+   результат мусить лишатись поганим: збиток і попередження свій
+   колір зберігають, інакше картка бреше. */
+const CELL_TONES = [
+  ['#5eead4', '#2dd4bf'],
+  ['#7dd3fc', '#38bdf8'],
+  ['#c4b5fd', '#8b5cf6'],
+  ['#ffffff', '#ffffff'],
+];
+const HARD_TONES = { bad: ['#fb7185', '#f43f5e'], warn: ['#fbbf24', '#f59e0b'] };
+
+/* Значення на картці приходять одним рядком: «71%», «1.62R»,
+   «5.86». У макеті число й одиниця набрані по-різному, тому
+   розділяємо їх тут, а не змушуємо кожну метрику знати про верстку. */
+const splitUnit = (raw) => {
+  const m = String(raw).match(/^(.*?)([%R]|R\b)?$/);
+  const value = m ? m[1] : String(raw);
+  const unit = m && m[2] ? m[2] : '';
+  return { value: value || String(raw), unit };
+};
+
+export function renderCardSvg(card) {
+  /* 1600×900 — формат ширококадрового постера з макета. Ті самі
+     16:9, що й раніше, тільки вдвічі більший запас на дрібний текст:
+     у стрічці картку тиснуть до 600px завширшки, і на 1200 підписи
+     розсипались у кашу. */
+  const W = 1600;
+  const H = 900;
+  const LEFT = 452;
+
+  /* Ідентифікатори градієнтів мають бути унікальні: два прев'ю в
+     одному документі інакше перетягнули б defs одне в одного. */
   const u = Math.random().toString(36).slice(2, 8);
 
-  /* ---------- сітка метрик ----------
+  const hero = splitHero(card.hero.value);
+  /* До восьми показників — рівно стільки, скільки можна вибрати в
+     застосунку. Понад чотири вони їдуть другим рядом, а крива
+     стискається: віддати їй ту саму висоту означало б або підняти
+     цифри на неї, або обрізати нижній ряд. */
+  const items = card.metrics.slice(0, 8);
+  const metricRows = items.length > 4 ? 2 : 1;
 
-     Net R звідси прибрано: він уже стоїть головним числом, і
-     повторений унизу з підписом «total result» читався як помилка
-     верстки. Дублювати найголовніше — найшвидший спосіб зробити з
-     постера дашборд.
-
-     Розділових ліній між комірками теж немає. Рівний крок і спільна
-     базова лінія тримають рядок краще за волосини, а кожна зайва
-     риска на такій картці працює проти неї. */
-  const picked = card.metrics.filter((m) => m.id !== 'net');
-  const items = (picked.length ? picked : card.metrics).slice(0, 4);
-  const cols = Math.max(1, items.length);
-  const step = (W - M * 2) / cols;
-
-  const GY = 512;                       // базова лінія підписів
-  const cells = items.map((m, i) => {
-    const x = M + i * step;
-    return `
-      <text x="${x.toFixed(1)}" y="${GY}" fill="#5c5c68" font-family="${SANS}"
-            font-size="11" font-weight="700" letter-spacing="2.6">${esc(m.label.toUpperCase())}</text>
-      <text x="${x.toFixed(1)}" y="${GY + 46}" fill="${toneColor(m.tone)}" font-family="${BRAND}"
-            font-size="40" font-weight="700" letter-spacing="-1.5">${esc(m.value)}</text>
-      ${m.sub ? `<text x="${x.toFixed(1)}" y="${GY + 70}" fill="#4a4a55" font-family="${SANS}"
-            font-size="12.5">${esc(m.sub)}</text>` : ''}`;
-  }).join('');
+  /* Геометрія підвалу залежить від кількості рядів, тому рахуємо її
+     один раз тут, а не розкидаємо магічні числа по розмітці. */
+  const chartY = 356;
+  const chartH = metricRows > 1 ? 200 : 280;
+  const footY = metricRows > 1 ? 600 : 712;
+  const rowY = (r) => (metricRows > 1 ? [652, 772][r] : 760);
+  const valueSize = metricRows > 1 ? 38 : 44;
 
   /* ---------- крива ----------
+     Своя система координат 1032×280, як у макеті: так шлях лишається
+     читабельним, а масштабування бере на себе viewBox. */
+  const CW = 1032;
+  const CH = 280;
+  const top = 26;
+  const base = 244;
 
-     Без рамки, осей і підпису «EQUITY CURVE». Це не графік для
-     читання цифр, а силует результату: форма зрозуміла без слів, а
-     підпис лише крав би увагу в головного числа.
-
-     Зона побільшала — раніше крива тулилась у куті й виглядала як
-     віджет, приліплений збоку. */
-  const cx = 646;
-  const cy = 206;
-  const cwid = W - M - cx;
-  const chgt = 200;
-  const path = curvePath(card.curve, cx, cy, cwid, chgt);
-
-  const last = (() => {
-    if (card.curve.length < 2) return null;
-    const min = Math.min(0, ...card.curve);
-    const max = Math.max(0, ...card.curve);
+  const curve = card.curve.length > 1 ? card.curve : [];
+  const path = (() => {
+    if (!curve.length) return '';
+    const min = Math.min(0, ...curve);
+    const max = Math.max(0, ...curve);
     const span = max - min || 1;
-    const v = card.curve[card.curve.length - 1];
-    return { x: cx + cwid, y: cy + chgt - ((v - min) / span) * chgt };
+    /* Останню точку не доводимо до самого краю: там стоїть маркер
+       радіусом 17, і вкладений svg зрізав би йому половину. */
+    const step = curve.length > 1 ? (CW - 22) / (curve.length - 1) : CW;
+    return curve.map((v, i) => {
+      const x = i * step;
+      const y = base - ((v - min) / span) * (base - top);
+      return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
+    }).join(' ');
   })();
 
-  /* ---------- головне число ----------
-     Суфікс «R» відділяється й ставиться меншим, піднятим до верхньої
-     лінії — так, як набирають валюту на банкнотах і в фінансових
-     звітах. Цифра лишається цифрою, одиниця не змагається з нею за
-     розмір. */
-  const hm = String(card.hero.value).match(/^([+\-−]?[\d.,]+)(.*)$/);
-  const heroNum = hm ? hm[1] : String(card.hero.value);
-  const heroSuf = hm ? hm[2] : '';
+  const lastY = (() => {
+    if (!curve.length) return base;
+    const min = Math.min(0, ...curve);
+    const max = Math.max(0, ...curve);
+    const span = max - min || 1;
+    return base - ((curve[curve.length - 1] - min) / span) * (base - top);
+  })();
 
-  const footY = 600;
+  const cells = items.map((m, i) => {
+    const col = i % 4;
+    const row = Math.floor(i / 4);
+    const cellX = LEFT + 64 + col * ((W - LEFT - 128) / 4);
+    const labelY = rowY(row);
+    const { value, unit } = splitUnit(m.value);
+    const tone = HARD_TONES[m.tone] || CELL_TONES[i % CELL_TONES.length];
+
+    const sep = col ? `<line x1="${(cellX - 26).toFixed(1)}" y1="${labelY - 12}" x2="${(cellX - 26).toFixed(1)}" y2="${labelY + 66}"
+          stroke="#ffffff" stroke-opacity="0.07"/>` : '';
+
+    return `${sep}
+    <text x="${cellX.toFixed(1)}" y="${labelY}" fill="#8b8fb0" font-family="${MONO}" font-size="11"
+          font-weight="700" letter-spacing="3">${esc(m.label.toUpperCase())}</text>
+    <g filter="url(#cell${i % 4}${u})">
+      <text x="${cellX.toFixed(1)}" y="${labelY + 52}" font-family="${BRAND}" font-weight="700" letter-spacing="-2">
+        <tspan fill="${tone[0]}" font-size="${valueSize}">${esc(value)}</tspan>${unit ? `<tspan fill="#5b5f7d" font-size="${Math.round(valueSize * 0.45)}" font-weight="600" letter-spacing="-0.4" dx="5">${esc(unit)}</tspan>` : ''}
+      </text>
+    </g>`;
+  }).join('');
+
   const code = serial(card.createdAt);
   const stamp = new Date(card.createdAt)
     .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -270,142 +280,169 @@ export function renderCardSvg(card) {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
-    <linearGradient id="bg${u}" x1="0.1" y1="0" x2="0.9" y2="1">
-      <stop offset="0%" stop-color="#0B0C15"/>
-      <stop offset="48%" stop-color="#06070C"/>
-      <stop offset="100%" stop-color="#040509"/>
-    </linearGradient>
-
-    <!-- ── світло в кутах ──
-         Не декор: два джерела в кольорах знака тримають композицію
-         по діагоналі й не дають чорному полю здатись пласким. -->
-    <radialGradient id="lightA${u}" cx="86%" cy="4%" r="58%">
-      <stop offset="0%" stop-color="${P.violet}" stop-opacity="0.26"/>
-      <stop offset="100%" stop-color="${P.violet}" stop-opacity="0"/>
+    <!-- Ліва панель: одна велика радіальна розтяжка від фіолетового
+         до бірюзового. Вона ж і є впізнаваним обличчям картки. -->
+    <radialGradient id="side${u}" cx="0.2" cy="0.1" r="1.3">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="26%" stop-color="#7c3aed"/>
+      <stop offset="52%" stop-color="#4338ca"/>
+      <stop offset="82%" stop-color="#0e7490"/>
+      <stop offset="100%" stop-color="#0f766e"/>
     </radialGradient>
-    <radialGradient id="lightB${u}" cx="4%" cy="96%" r="52%">
-      <stop offset="0%" stop-color="${P.teal}" stop-opacity="0.14"/>
-      <stop offset="100%" stop-color="${P.teal}" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="vig${u}" cx="46%" cy="48%" r="74%">
-      <stop offset="52%" stop-color="#000000" stop-opacity="0"/>
-      <stop offset="100%" stop-color="#000000" stop-opacity="0.52"/>
+    <radialGradient id="sideGlow${u}" cx="0.78" cy="0.92" r="0.7">
+      <stop offset="0%" stop-color="#5eead4" stop-opacity="0.5"/>
+      <stop offset="62%" stop-color="#5eead4" stop-opacity="0"/>
     </radialGradient>
 
-    <pattern id="guard${u}" width="7" height="7" patternUnits="userSpaceOnUse">
-      <rect x="0" y="0" width="1" height="7" fill="#ffffff" fill-opacity="0.014"/>
+    <radialGradient id="glowA${u}" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.34"/>
+      <stop offset="45%" stop-color="#3730a3" stop-opacity="0.16"/>
+      <stop offset="74%" stop-color="#3730a3" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB${u}" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.2"/>
+      <stop offset="46%" stop-color="#1e3a8a" stop-opacity="0.1"/>
+      <stop offset="74%" stop-color="#1e3a8a" stop-opacity="0"/>
+    </radialGradient>
+
+    <pattern id="dotsL${u}" width="26" height="26" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.8" fill="#ffffff" fill-opacity="0.05"/>
+    </pattern>
+    <pattern id="dotsR${u}" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.7" fill="#ffffff" fill-opacity="0.028"/>
     </pattern>
 
-    <linearGradient id="bar${u}" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="${P.violet}"/>
-      <stop offset="34%" stop-color="${P.blue}"/>
-      <stop offset="64%" stop-color="${P.teal}"/>
-      <stop offset="100%" stop-color="${P.teal}" stop-opacity="0"/>
+    <!-- Головне число заливається градієнтом, а не кольором: одна
+         цифра на пів картки суцільним білим виглядає як заголовок
+         документа, а не як результат. -->
+    <linearGradient id="hero${u}" x1="0.1" y1="0" x2="0.75" y2="1">
+      <stop offset="6%" stop-color="#ffffff"/>
+      <stop offset="34%" stop-color="#c4b5fd"/>
+      <stop offset="66%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#5eead4"/>
+    </linearGradient>
+    <filter id="heroGlow${u}" x="-30%" y="-40%" width="160%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="34" flood-color="#7c3aed" flood-opacity="0.7"/>
+    </filter>
+
+    <linearGradient id="curveFill${u}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#67e8f9" stop-opacity="0.4"/>
+      <stop offset="52%" stop-color="#6d54f0" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0.02"/>
+    </linearGradient>
+    <linearGradient id="curveLine${u}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="42%" stop-color="#6d8bf5"/>
+      <stop offset="76%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#99f6e4"/>
     </linearGradient>
 
-    <!-- Головне число: біле згори, кольорове знизу. Повністю
-         кольорова цифра на темному втрачає читабельність, повністю
-         біла — характер. Градієнт дає і те, і те. -->
-    <linearGradient id="heroFill${u}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="52%" stop-color="#FFFFFF"/>
-      <stop offset="100%" stop-color="${accent}"/>
+    <linearGradient id="footLine${u}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.3"/>
+      <stop offset="26%" stop-color="#2b2b42"/>
+      <stop offset="84%" stop-color="#2b2b42"/>
+      <stop offset="100%" stop-color="#2b2b42" stop-opacity="0"/>
     </linearGradient>
-    <radialGradient id="heroGlow${u}" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="${accent}" stop-opacity="0.20"/>
-      <stop offset="100%" stop-color="${accent}" stop-opacity="0"/>
-    </radialGradient>
-
-    <linearGradient id="fill${u}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${accent}" stop-opacity="0.32"/>
-      <stop offset="100%" stop-color="${accent}" stop-opacity="0"/>
+    <linearGradient id="subLine${u}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2b2b42"/>
+      <stop offset="100%" stop-color="#2b2b42" stop-opacity="0"/>
     </linearGradient>
 
-    <linearGradient id="sheen${u}" x1="0" y1="0" x2="1" y2="0.55">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.03"/>
-      <stop offset="45%" stop-color="#ffffff" stop-opacity="0.006"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-    </linearGradient>
+    ${CELL_TONES.map((t, i) => `<filter id="cell${i}${u}" x="-40%" y="-60%" width="180%" height="240%">
+      <feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="${t[1]}" flood-opacity="0.35"/>
+    </filter>`).join('')}
+
+    <filter id="discBlur${u}" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="34"/>
+    </filter>
   </defs>
 
-  <rect width="${W}" height="${H}" fill="url(#bg${u})"/>
-  <rect width="${W}" height="${H}" fill="url(#guard${u})"/>
-  <rect width="${W}" height="${H}" fill="url(#lightA${u})"/>
-  <rect width="${W}" height="${H}" fill="url(#lightB${u})"/>
-  <rect width="${W}" height="${H}" fill="url(#sheen${u})"/>
-  <rect width="${W}" height="${H}" fill="url(#vig${u})"/>
-  <rect x="0" y="0" width="${W}" height="3" fill="url(#bar${u})"/>
+  <rect width="${W}" height="${H}" fill="#07070f"/>
 
-  <!-- ═══ паспарту ═══
-       Тонка внутрішня рамка з кутовими мітками. Дві дрібниці, але
-       саме вони змушують око читати це як документ, який видали, а
-       не картинку, яку зробили. -->
-  <rect x="30" y="30" width="${W - 60}" height="${H - 60}" rx="12" fill="none"
-        stroke="#ffffff" stroke-opacity="0.055"/>
-  <g stroke="${P.violet}" stroke-opacity="0.5" stroke-width="1.4" fill="none" stroke-linecap="square">
-    <path d="M30 56 L30 30 L56 30"/>
-    <path d="M${W - 56} 30 L${W - 30} 30 L${W - 30} 56"/>
-    <path d="M${W - 30} ${H - 56} L${W - 30} ${H - 30} L${W - 56} ${H - 30}"/>
-    <path d="M56 ${H - 30} L30 ${H - 30} L30 ${H - 56}"/>
+  <!-- ═══════════ ліва панель ═══════════ -->
+  <g>
+    <rect width="${LEFT}" height="${H}" fill="url(#side${u})"/>
+    <rect width="${LEFT}" height="${H}" fill="url(#sideGlow${u})"/>
+    <rect width="${LEFT}" height="${H}" fill="url(#dotsL${u})"/>
+    <rect width="${LEFT}" height="1" fill="#ffffff" fill-opacity="0.27"/>
+    <rect x="${LEFT - 1}" width="1" height="${H}" fill="#ffffff" fill-opacity="0.18"/>
+
+    <!-- знак у двох кільцях: суцільному й пунктирному -->
+    <g transform="translate(52,60)">
+      <circle cx="100" cy="100" r="95" fill="#0b0b18" fill-opacity="0.55" filter="url(#discBlur${u})"/>
+      <circle cx="100" cy="100" r="100" fill="none" stroke="#ffffff" stroke-opacity="0.24"/>
+      <circle cx="100" cy="100" r="126" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-dasharray="6 8"/>
+      <image href="${EDGE_LOGO}" x="7" y="7" width="186" height="186" preserveAspectRatio="xMidYMid meet"/>
+    </g>
+
+    <!-- період, підпис і номер — унизу, як вихідні дані документа -->
+    <g transform="translate(52,${H - 56})">
+      <rect x="0" y="-186" width="${(String(card.period).length * 11.4 + 56).toFixed(0)}" height="40" rx="20"
+            fill="#0b0b18" fill-opacity="0.35" stroke="#ffffff" stroke-opacity="0.25"/>
+      <circle cx="26" cy="-166" r="3" fill="#ffffff"/>
+      <text x="42" y="-161" fill="#ffffff" font-family="${MONO}" font-size="11.5"
+            font-weight="700" letter-spacing="3.4">${esc(String(card.period).toUpperCase())}</text>
+
+      <text x="0" y="-88" fill="#ffffff" font-family="${BRAND}" font-size="34"
+            font-weight="700" letter-spacing="-1">${esc(card.author ? `@${card.author.replace(/^@/, '')}` : '@theedge')}</text>
+      <text x="0" y="-52" fill="#ffffff" fill-opacity="0.66" font-family="${MONO}" font-size="12"
+            font-weight="700" letter-spacing="3.2">№ ${code} · ${stamp}</text>
+    </g>
   </g>
 
-  <!-- ═══ знак ═══
-       Тільки вордмарк, без графічного знака поруч. Набір збігається
-       з EdgeWordmark один в один — Space Grotesk 800, верхній
-       регістр, розрядка 4.4, «THE» тихіше, «EDGE» кольором. Логотип
-       має бути тим самим логотипом скрізь, інакше картка в чужій
-       стрічці читається як від іншого продукту. -->
-  <text x="${M}" y="${card.author ? 96 : 104}" font-family="${BRAND}" font-size="19"
-        font-weight="800" letter-spacing="4.8"><tspan fill="#e8e9ef">THE </tspan><tspan fill="${P.violet}">EDGE</tspan></text>
-
-  ${card.author ? `<text x="${M + 1}" y="118" fill="#7d7d8c" font-family="${SANS}"
-        font-size="11.5" font-weight="600" letter-spacing="2.4">${esc(card.author.toUpperCase())}</text>` : ''}
-
-  <rect x="${W - M - 168}" y="85" width="168" height="30" rx="15" fill="none"
-        stroke="#ffffff" stroke-opacity="0.16"/>
-  <text x="${W - M - 84}" y="105" fill="#a5a5b4" font-family="${SANS}" font-size="12"
-        font-weight="700" letter-spacing="2.2" text-anchor="middle">${esc(card.period.toUpperCase())}</text>
-
-  <line x1="${M}" y1="172" x2="${W - M}" y2="172" stroke="#ffffff" stroke-opacity="0.07"/>
-  <rect x="${M}" y="171" width="64" height="2" fill="url(#bar${u})"/>
-
-  <!-- ═══ головне число ═══ -->
-  <ellipse cx="${M + 210}" cy="318" rx="340" ry="155" fill="url(#heroGlow${u})"/>
-
-  <text x="${M}" y="226" fill="#75757f" font-family="${SANS}" font-size="12"
-        font-weight="700" letter-spacing="3.6">${esc(card.title.toUpperCase())}</text>
-
-  <text x="${M - 7}" y="372" fill="url(#heroFill${u})" font-family="${BRAND}" font-weight="700" xml:space="preserve"><tspan font-size="158" letter-spacing="-7.5">${esc(heroNum)}</tspan>${heroSuf ? `<tspan font-size="60" dx="11" dy="-54" letter-spacing="-1">${esc(heroSuf)}</tspan>` : ''}</text>
-
-  ${card.trades ? `<text x="${M}" y="414" fill="#75757f" font-family="${SANS}" font-size="12"
-        font-weight="700" letter-spacing="3.2">OVER ${card.trades} TRADES</text>` : ''}
-
-  <!-- ═══ крива ═══ -->
-  ${card.curve.length > 1 ? `
+  <!-- ═══════════ права частина ═══════════ -->
   <g>
-    <path d="${path} L${cx + cwid},${cy + chgt} L${cx},${cy + chgt} Z" fill="url(#fill${u})"/>
-    <path d="${path}" fill="none" stroke="${accent}" stroke-width="2.6"
-          stroke-linejoin="round" stroke-linecap="round"/>
-    ${last ? `
-    <line x1="${last.x.toFixed(1)}" y1="${(last.y + 8).toFixed(1)}" x2="${last.x.toFixed(1)}" y2="${cy + chgt}"
-          stroke="${accent}" stroke-opacity="0.28" stroke-width="1" stroke-dasharray="2 4"/>
-    <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="12" fill="${accent}" fill-opacity="0.16"/>
-    <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="5" fill="#ffffff"/>` : ''}
-  </g>` : ''}
+    <ellipse cx="${LEFT + 160}" cy="170" rx="380" ry="330" fill="url(#glowA${u})"/>
+    <ellipse cx="${W - 160}" cy="430" rx="350" ry="310" fill="url(#glowB${u})"/>
+    <rect x="${LEFT}" width="${W - LEFT}" height="${H}" fill="url(#dotsR${u})"/>
 
-  <!-- ═══ метрики ═══ -->
-  <line x1="${M}" y1="472" x2="${W - M}" y2="472" stroke="#ffffff" stroke-opacity="0.07"/>
-  ${cells}
+    <text x="${LEFT + 64}" y="72" fill="#8b8fb0" font-family="${MONO}" font-size="12.5"
+          font-weight="700" letter-spacing="6">${esc(card.title.toUpperCase())}</text>
 
-  <!-- ═══ підвал ═══ -->
-  <line x1="${M}" y1="${footY}" x2="${W - M}" y2="${footY}" stroke="#ffffff" stroke-opacity="0.06"/>
+    <!-- головне число: знак і одиниця дрібніші за саме число -->
+    <g filter="url(#heroGlow${u})">
+      <text x="${LEFT + 58}" y="268" fill="url(#hero${u})" font-family="${BRAND}" font-weight="700" letter-spacing="-9">
+        <tspan font-size="158">${esc(hero.sign)}</tspan><tspan font-size="204">${esc(hero.value)}</tspan><tspan font-size="158">R</tspan>
+      </text>
+    </g>
 
-  <text x="${M}" y="${footY + 34}" fill="#55555f" font-family="${BRAND}" font-size="11"
-        font-weight="700" letter-spacing="3.2">EDGE JOURNAL</text>
+    <text x="${LEFT + 64}" y="322" fill="#a5a8c4" font-family="${SANS}" font-size="15.5"
+          letter-spacing="0.3">${esc(card.sub || `${card.trades} closed trades`)}</text>
+    <rect x="${LEFT + 64 + (String(card.sub || `${card.trades} closed trades`).length * 7.6) + 16}" y="316"
+          width="${Math.max(40, W - LEFT - 128 - (String(card.sub || `${card.trades} closed trades`).length * 7.6) - 16).toFixed(0)}"
+          height="1" fill="url(#subLine${u})"/>
 
-  <text x="${W - M}" y="${footY + 34}" fill="#55555f" font-family="${SANS}" font-size="11.5"
-        font-weight="600" letter-spacing="1.6" text-anchor="end">№ ${code} · ${stamp}</text>
+    ${curve.length ? `
+    <svg x="${LEFT + 64}" y="${chartY}" width="${W - LEFT - 128}" height="${chartH}" viewBox="0 0 ${CW} ${CH}" preserveAspectRatio="none">
+      <path d="M0 ${base} H${CW}" stroke="#ffffff" stroke-width="1" opacity="0.08" vector-effect="non-scaling-stroke"/>
+      <path d="M0 170 H${CW}" stroke="#ffffff" stroke-width="1" opacity="0.05" stroke-dasharray="3 9" vector-effect="non-scaling-stroke"/>
+      <path d="M0 96 H${CW}" stroke="#ffffff" stroke-width="1" opacity="0.05" stroke-dasharray="3 9" vector-effect="non-scaling-stroke"/>
+
+      <path d="${path} L${CW - 22} ${CH} L0 ${CH} Z" fill="url(#curveFill${u})"/>
+      <path d="${path}" fill="none" stroke="url(#curveLine${u})" stroke-width="11"
+            stroke-linejoin="round" stroke-linecap="round" opacity="0.2" vector-effect="non-scaling-stroke"/>
+      <path d="${path}" fill="none" stroke="url(#curveLine${u})" stroke-width="4.8"
+            stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <path d="M${CW - 22} ${lastY.toFixed(1)} V${base}" stroke="#99f6e4" stroke-width="1"
+            stroke-dasharray="4 7" opacity="0.42" vector-effect="non-scaling-stroke"/>
+      <circle cx="${CW - 22}" cy="${lastY.toFixed(1)}" r="17" fill="#99f6e4" opacity="0.14"/>
+      <circle cx="${CW - 22}" cy="${lastY.toFixed(1)}" r="6.5" fill="#0a0a14" stroke="#b7fce8"
+              stroke-width="3" vector-effect="non-scaling-stroke"/>
+    </svg>` : ''}
+
+    <rect x="${LEFT + 64}" y="${footY}" width="${W - LEFT - 128}" height="1" fill="url(#footLine${u})"/>
+    ${cells}
+  </g>
 </svg>`;
+}
+
+/* Головне число приходить рядком «+24.8R». Розбираємо його на знак,
+   саме число й одиницю: у макеті вони набрані трьома різними
+   кеглями, і склеєним рядком цього не зробити. */
+function splitHero(raw) {
+  const m = String(raw).match(/^([+−-]?)([\d.,]+)/);
+  if (!m) return { sign: '', value: String(raw) };
+  return { sign: m[1] === '-' ? '−' : m[1], value: m[2] };
 }
 
 /* ---------- шрифти всередині картинки ----------
@@ -468,6 +505,13 @@ export async function brandFontCss() {
    Без зовнішніх бібліотек: малюємо svg у canvas і забираємо dataURL.
    Множник 2 дає картинку, яку не соромно вставити в твіт. */
 export async function svgToPng(svg, scale = 2) {
+  /* Розмір беремо з самої розмітки, а не з константи: картка вже
+     двічі змінювала формат, і кожного разу PNG виходив обрізаним,
+     бо полотно лишалось старим. */
+  const box = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
+  const CW = box ? Number(box[1]) : 1600;
+  const CH = box ? Number(box[2]) : 900;
+
   const css = await brandFontCss();
   const withFonts = css
     ? svg.replace('<defs>', `<defs><style type="text/css">${css}</style>`)
@@ -480,8 +524,8 @@ export async function svgToPng(svg, scale = 2) {
 
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = 1200 * scale;
-      canvas.height = 675 * scale;
+      canvas.width = CW * scale;
+      canvas.height = CH * scale;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);

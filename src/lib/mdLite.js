@@ -197,6 +197,27 @@ export function renderMd(src, opts = {}) {
       return;
     }
 
+    /* Нумерований список. Номер малюємо той, що написаний: якщо
+       людина навмисно почала з 3, переписувати за неї не треба. */
+    const num = /^(\d{1,3})[.)]\s+(.*)$/.exec(l);
+    if (num) {
+      if (!list || list.type !== 'num') { flush(); list = { type: 'num', items: [] }; }
+      list.items.push(h('div', {
+        key: i,
+        style: { display: 'flex', alignItems: 'flex-start', gap: 10, color: text },
+      },
+      h('span', {
+        key: 'n',
+        style: {
+          flex: 'none', minWidth: 18, marginTop: 1, textAlign: 'right',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontSize: '0.86em', fontWeight: 700, color: accent,
+        },
+      }, `${num[1]}.`),
+      h('span', { key: 't' }, inline(num[2], 0, style))));
+      return;
+    }
+
     /* Список */
     const item = /^(?:•|[-*])\s+(.*)$/.exec(l);
     if (item) {
@@ -226,6 +247,7 @@ export function mdPlain(src) {
     .replace(/^#{1,4}\s+/gm, '')
     .replace(/^>\s?/gm, '')
     .replace(/^(?:☐|☑|•|[-*])\s+/gm, '')
+    .replace(/^\d{1,3}[.)]\s+/gm, '')
     .replace(/^-\s\[[ xX]\]\s*/gm, '')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/__([^_]+)__/g, '$1')
@@ -294,6 +316,7 @@ export function highlightMd(src, opts = {}) {
     const quote = /^(>\s?)(.*)$/.exec(line);
     const check = /^(☐\s|☑\s|-\s\[[ xX]\]\s)(.*)$/.exec(line);
     const item = /^([•*-]\s)(.*)$/.exec(line);
+    const num = /^(\d{1,3}[.)]\s)(.*)$/.exec(line);
 
     let bodyStyle = { color: text };
 
@@ -313,6 +336,9 @@ export function highlightMd(src, opts = {}) {
     } else if (item) {
       push(item[1], { color: accent, opacity: 0.75 });
       rest = item[2];
+    } else if (num) {
+      push(num[1], { color: accent, opacity: 0.85, ...FAUX_BOLD });
+      rest = num[2];
     }
 
     /* ---- усередині рядка ---- */

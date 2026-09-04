@@ -86,17 +86,21 @@ function Field({ id, label, hint, value, onChange, placeholder, tone, inputRef, 
 
   return (
     <div>
-      <label
-        htmlFor={id}
-        className="mb-2 flex items-baseline justify-between text-[13px] font-semibold"
-        style={{ fontFamily: T.sans, color: wanted ? T.acc : T.text2 }}
-      >
-        <span className="flex items-center gap-2">
-          {tone && <span className="h-2 w-2 rounded-full" style={{ background: tone }} />}
-          {label}
-        </span>
-        {hint && <span className="text-[12px]" style={{ color: T.text3 }}>{hint}</span>}
-      </label>
+      {/* Порожній підпис лишав би над полем висоту рядка — і сусідні
+          поля в тому ж ряду ставали б на різній висоті. */}
+      {(label || hint) && (
+        <label
+          htmlFor={id}
+          className="mb-2 flex items-baseline justify-between text-[13px] font-semibold"
+          style={{ fontFamily: T.sans, color: wanted ? T.acc : T.text2 }}
+        >
+          <span className="flex items-center gap-2">
+            {tone && <span className="h-2 w-2 rounded-full" style={{ background: tone }} />}
+            {label}
+          </span>
+          {hint && <span className="text-[12px]" style={{ color: T.text3 }}>{hint}</span>}
+        </label>
+      )}
       <input
         id={id}
         ref={inputRef}
@@ -486,10 +490,12 @@ export default function Calculator() {
                     картки: у Card стоїть overflow-hidden заради
                     заокруглення й світла за курсором, і він обрізав
                     випадайку по нижньому краю картки. */}
+                {/* Підписи над цими двома полями прибрані: заголовок
+                    «Рахунок» стоїть рядком вище, а самі поля кажуть
+                    про себе — у випадайці видно назву рахунку, у
+                    сусідньому полі суму. Два зайві написи лише
+                    подвоювали ту саму думку. */}
                 <div className="min-w-0 flex-1">
-                  <label className="mb-2 block text-[13px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
-                    Звідки капітал
-                  </label>
                   <Popover
                     triggerClass="block w-full"
                     renderTrigger={({ open, toggle }) => (
@@ -568,7 +574,6 @@ export default function Calculator() {
                     id="calc-balance"
                     inputRef={balanceRef}
                     required
-                    label="Депозит, $"
                     value={balance}
                     onChange={(v) => {
                       setBalance(v);
@@ -576,7 +581,7 @@ export default function Calculator() {
                       localStorage.setItem('calc_selected_account', 'custom');
                       localStorage.setItem('calc_custom_balance', v);
                     }}
-                    placeholder="10000"
+                    placeholder="Депозит, $"
                   />
                 </div>
               </div>

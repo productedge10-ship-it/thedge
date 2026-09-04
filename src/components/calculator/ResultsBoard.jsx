@@ -85,13 +85,17 @@ export default function ResultsBoard({
                   initial={{ opacity: 0.4 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.2, ease: EASE }}
-                  className="text-[46px] font-black leading-none tabular-nums sm:text-[54px]"
+                  className={`leading-none tabular-nums ${ready ? 'text-[46px] font-black sm:text-[54px]' : 'text-[40px] font-light sm:text-[46px]'}`}
                   style={{
                     fontFamily: T.mono,
-                    color: ready ? T.text : T.text3,
+                    color: ready ? T.text : T.text4,
                     letterSpacing: '-0.03em',
                   }}
                 >
+                  {/* Поки числа немає, прочерк малювався тим самим
+                      наджирним накресленням, що й сам обʼєм, — і
+                      виглядав не як «поки порожньо», а як товста
+                      риска через пів картки. Тонше й тьмяніше. */}
                   {ready ? lotSize : '—'}
                 </motion.span>
                 <span className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>
@@ -148,7 +152,11 @@ export default function ResultsBoard({
                 style={{ overflow: 'hidden' }}
               >
                 <div className="mt-5" style={{ borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>
-                  <div className="flex h-2.5 overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  {/* Смуга була в десять пікселів — на тлі решти
+                      цифр вона читалась як головний елемент картки,
+                      хоч це лише пропорція. Пʼять достатньо, щоб
+                      побачити співвідношення. */}
+                  <div className="flex h-[5px] overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
                     <motion.div
                       className="h-full"
                       initial={false}
