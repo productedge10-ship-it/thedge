@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Maximize2, X, ImageOff, ZoomIn, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2, X, ImageOff, ZoomIn, Search, Trash2 } from 'lucide-react';
 import { T, EASE, SPRING } from '../../lib/theme';
 import { tvImage } from '../../lib/imageStore';
 
@@ -94,7 +94,10 @@ function Lens({ src, containerRef, enabled, seedRef }) {
   );
 }
 
-export default function ImageSlider({ images = [], containerClassName = '' }) {
+/* onDelete передають лише там, де картинки можна прибирати — у
+   формах. У переглядах його немає, і кнопка не зʼявляється: та сама
+   панель, різні права. */
+export default function ImageSlider({ images = [], containerClassName = '', onDelete }) {
   const [index, setIndex] = useState(0);
   const [full, setFull] = useState(false);
   const [lensOn, setLensOn] = useState(false);
@@ -161,7 +164,7 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
     </motion.button>
   );
 
-  const ToolBtn = ({ icon: Icon, label, active, onClick }) => (
+  const ToolBtn = ({ icon: Icon, label, active, danger, onClick }) => (
     <motion.button
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       whileHover={{ scale: 1.06 }}
@@ -170,10 +173,10 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
       title={label}
       className="grid h-9 w-9 place-items-center rounded-lg"
       style={{
-        background: active ? `rgba(${T.accRgb},0.16)` : 'rgba(10,10,12,0.82)',
+        background: danger ? 'rgba(255,123,123,0.16)' : active ? `rgba(${T.accRgb},0.16)` : 'rgba(10,10,12,0.82)',
         backdropFilter: 'blur(12px)',
-        border: `1px solid ${active ? T.lineAcc : T.line}`,
-        color: active ? T.acc : T.text2,
+        border: `1px solid ${danger ? 'rgba(255,123,123,0.45)' : active ? T.lineAcc : T.line}`,
+        color: danger ? '#ff9d9d' : active ? T.acc : T.text2,
       }}
     >
       <Icon size={16} strokeWidth={2.4} />
@@ -221,6 +224,14 @@ export default function ImageSlider({ images = [], containerClassName = '' }) {
             onClick={() => setLensOn((v) => !v)}
           />
           <ToolBtn icon={Maximize2} label="Fullscreen" onClick={() => setFull(true)} />
+          {onDelete && (
+            <ToolBtn
+              icon={Trash2}
+              label="Видалити цей кадр"
+              danger
+              onClick={() => onDelete(list[index], index)}
+            />
+          )}
         </div>
 
         {count > 1 && (

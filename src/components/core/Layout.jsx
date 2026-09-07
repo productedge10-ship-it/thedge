@@ -835,7 +835,7 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
       {/* -------- Nav -------- */}
       {/* Скрол потрібен в обох станах: на невисокому екрані список
           розділів довший за рейку і раніше просто вилазив за панель. */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 custom-scrollbar">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 sidebar-scroll">
         {/* Меню збирається зі списку в lib/settings.js. Порожня група
             зникає разом з усіма своїми пунктами — заголовок над
             порожнечею виглядає як помилка. */}

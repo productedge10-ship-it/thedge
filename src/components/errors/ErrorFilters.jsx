@@ -1,165 +1,249 @@
-import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Search, X, ArrowUpDown, ChevronDown } from 'lucide-react';
-import { T, EASE } from '../../lib/theme';
-import { CATS, hexA } from './utils';
-import AssetPickerModal from '../modals/AssetPickerModal';
+import { useEffect, useRef, useState } from 'react';
+import { Search, ChevronDown, ArrowDownUp, X } from 'lucide-react';
+import { T } from '../../lib/theme';
+import { CATS, getCat } from './utils';
 
 /* ==================================================================
-   Фільтри журналу помилок.
-   Пошук — головний елемент рядка, далі актив і порядок, а знизу
-   категорії чипами: по них одразу видно, чого назбиралось найбільше.
+   Фільтри журналу.
+
+   Один рядок, у якому пошук займає весь вільний простір, а решта —
+   рівно стільки, скільки треба під найдовший підпис. Категорії й
+   активи — випадашки з лічильниками: цифра поруч із назвою одразу
+   каже, чи є сенс туди тиснути.
+
+   Сортування зроблено кнопкою-циклом, а не ще однією випадашкою:
+   варіантів три, і перебрати їх кліком швидше, ніж відкривати
+   список заради вибору з трьох.
 ================================================================== */
 
-export default function ErrorFilters({ query, setQuery, assetFilter, setAsset, sort, setSort, catFilter, setCatFilter, entries }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
+const A = (a) => `rgba(${T.accRgb}, ${a})`;
 
-  const counts = useMemo(() => {
-    const c = {};
-    entries.forEach((e) => e.cats.forEach((id) => { c[id] = (c[id] || 0) + 1; }));
-    return c;
-  }, [entries]);
+const SORTS = [
+  { id: 'newest', label: 'Спочатку нові' },
+  { id: 'oldest', label: 'Спочатку старі' },
+  { id: 'open', label: 'Спочатку нерозібрані' },
+];
 
-  const chips = [
-    { id: null, label: 'Всі', count: entries.length, color: T.acc },
-    ...CATS.map((c) => ({ id: c.id, label: c.label, count: counts[c.id] || 0, color: c.color })),
-  ];
+/* Випадашка живе поруч із кнопкою, а закривається кліком повз неї
+   або Esc: без цього список лишається висіти над сторінкою й ловить
+   кліки, призначені карткам під ним. */
+function useAway(open, close) {
+  const box = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!box.current?.contains(e.target)) close(); };
+    const esc = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open, close]);
+
+  return box;
+}
+
+const Panel = ({ width, children }) => (
+  <div
+    className="absolute left-0 z-40 mt-2 max-h-[340px] overflow-auto rounded-[14px] p-1.5"
+    style={{
+      top: '100%',
+      width,
+      background: '#14141b',
+      border: '1px solid #2c2c38',
+      boxShadow: '0 26px 54px -18px #000',
+    }}
+  >
+    {children}
+  </div>
+);
+
+export default function ErrorFilters({
+  entries, query, setQuery, assetFilter, setAsset, sort, setSort, catFilter, setCatFilter,
+}) {
+  const list = Array.isArray(entries) ? entries : [];
+
+  const [focus, setFocus] = useState(false);
+  const [catOpen, setCatOpen] = useState(false);
+  const [assetOpen, setAssetOpen] = useState(false);
+
+  const catBox = useAway(catOpen, () => setCatOpen(false));
+  const assetBox = useAway(assetOpen, () => setAssetOpen(false));
+
+  const counts = {};
+  list.forEach((e) => (e.cats || []).forEach((id) => { counts[id] = (counts[id] || 0) + 1; }));
+
+  const assets = {};
+  list.forEach((e) => { if (e.pair) assets[e.pair] = (assets[e.pair] || 0) + 1; });
+
+  const curCat = catFilter ? getCat(catFilter) : null;
+  const catColor = curCat?.color || T.acc;
+  const sortIdx = Math.max(0, SORTS.findIndex((s) => s.id === sort));
+  const hasFilter = !!(catFilter || (assetFilter && assetFilter !== 'all') || query.trim());
+
+  const row = (on, color, height) => ({
+    fontFamily: T.sans,
+    background: on ? `${color}24` : 'transparent',
+    border: `1px solid ${on ? `${color}5e` : 'transparent'}`,
+    color: on ? '#ffffff' : '#a5a3b3',
+    height,
+    transition: 'all .14s',
+  });
 
   return (
-    <>
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.1, ease: EASE }}
-        className="mb-6 flex flex-col gap-3"
+    <div className="mb-6 flex flex-wrap items-center gap-2.5">
+      {/* ─── пошук ─── */}
+      <div
+        className="flex h-11 min-w-[240px] flex-1 items-center gap-2.5 rounded-[13px] px-4"
+        style={{
+          background: focus ? '#ffffff12' : '#ffffff0a',
+          border: `1px solid ${focus ? A(0.55) : '#21212b'}`,
+          boxShadow: focus ? `0 0 0 4px ${A(0.13)}, inset 0 1px 0 #ffffff14` : 'inset 0 1px 0 #ffffff0d',
+          transition: 'all .2s',
+        }}
       >
-        <div className="flex flex-wrap items-center gap-2">
-          {/* пошук */}
-          <div className="relative min-w-[240px] flex-1">
-            <Search
-              size={16}
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-200"
-              style={{ color: query ? T.acc : T.text4 }}
-            />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Шукати за парою або описом…"
-              className="h-11 w-full rounded-xl pl-11 pr-10 text-[14px] outline-none transition-all duration-200"
-              style={{
-                background: T.sunken,
-                border: `1px solid ${query ? T.lineAcc : T.line}`,
-                color: T.text,
-                fontFamily: T.sans,
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = T.lineAcc;
-                e.currentTarget.style.boxShadow = `0 0 0 3px rgba(${T.accRgb},0.10)`;
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = query ? T.lineAcc : T.line;
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            />
-            {query && (
-              <button
-                onClick={() => setQuery('')}
-                className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg transition-colors duration-200"
-                style={{ color: T.text4 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
-              >
-                <X size={14} strokeWidth={2.6} />
-              </button>
-            )}
-          </div>
+        <Search size={16} strokeWidth={1.9} className="shrink-0" style={{ color: '#9a98ab' }} />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setFocus(true)}
+          onBlur={() => setFocus(false)}
+          placeholder="Пошук за парою або описом"
+          className="w-full border-none bg-transparent text-[14px] font-medium outline-none"
+          style={{ fontFamily: T.sans, color: '#ffffff' }}
+        />
+      </div>
 
-          {/* актив */}
-          <div className="relative">
-            <button
-              onClick={() => setPickerOpen(true)}
-              className="flex h-11 items-center gap-2 whitespace-nowrap rounded-xl pl-3.5 pr-9 text-[13.5px] font-semibold transition-colors duration-200"
-              style={{
-                background: T.sunken,
-                border: `1px solid ${assetFilter !== 'all' ? T.lineAcc : T.line}`,
-                color: assetFilter !== 'all' ? T.acc : T.text2,
-                fontFamily: assetFilter !== 'all' ? T.mono : T.sans,
-              }}
-              onMouseEnter={(e) => { if (assetFilter === 'all') e.currentTarget.style.borderColor = T.lineHi; }}
-              onMouseLeave={(e) => { if (assetFilter === 'all') e.currentTarget.style.borderColor = T.line; }}
-            >
-              {assetFilter === 'all' ? 'Усі активи' : assetFilter}
-            </button>
-
-            {assetFilter !== 'all' ? (
-              <button
-                onClick={(e) => { e.stopPropagation(); setAsset('all'); }}
-                title="Скинути актив"
-                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md"
-                style={{ color: T.acc }}
-              >
-                <X size={12} strokeWidth={3} />
-              </button>
-            ) : (
-              <ChevronDown size={13} strokeWidth={2.4} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" style={{ color: T.text4 }} />
-            )}
-          </div>
-
-          {/* порядок */}
-          <button
-            onClick={() => setSort(sort === 'newest' ? 'oldest' : 'newest')}
-            className="flex h-11 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 text-[13.5px] font-semibold transition-colors duration-200"
-            style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
+      {/* ─── категорія ─── */}
+      <div className="relative" ref={catBox}>
+        <button
+          onClick={() => { setCatOpen((v) => !v); setAssetOpen(false); }}
+          className="flex h-11 min-w-[196px] items-center gap-2.5 rounded-[13px] px-3.5"
+          style={{
+            background: catOpen ? '#ffffff12' : '#ffffff0a',
+            border: `1px solid ${catOpen || catFilter ? `${catColor}80` : '#21212b'}`,
+            transition: 'all .16s',
+          }}
+        >
+          <span
+            className="h-[7px] w-[7px] flex-none rounded-full"
+            style={{ background: catColor, boxShadow: `0 0 9px 1px ${catColor}aa` }}
+          />
+          <span
+            className="min-w-0 flex-1 whitespace-nowrap text-left text-[13.5px] font-semibold"
+            style={{ fontFamily: T.sans, color: '#ffffff' }}
           >
-            <motion.span
-              className="flex"
-              animate={{ rotate: sort === 'newest' ? 0 : 180 }}
-              transition={{ duration: 0.3, ease: EASE }}
-              style={{ color: T.text4 }}
-            >
-              <ArrowUpDown size={15} />
-            </motion.span>
-            {sort === 'newest' ? 'спочатку нові' : 'спочатку старі'}
-          </button>
-        </div>
+            {curCat ? curCat.label : 'Усі категорії'}
+          </span>
+          <ChevronDown
+            size={14}
+            strokeWidth={1.9}
+            style={{ color: '#9a98ab', flex: 'none', transform: `rotate(${catOpen ? 180 : 0}deg)`, transition: 'transform .2s' }}
+          />
+        </button>
 
-        {/* категорії */}
-        <div className="flex flex-wrap gap-2">
-          {chips.map((ch) => {
-            const active = catFilter === ch.id;
-            const empty = ch.id !== null && !ch.count;
-            return (
-              <button
-                key={ch.id || 'all'}
-                onClick={() => setCatFilter(active && ch.id !== null ? null : ch.id)}
-                className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors duration-200"
-                style={{
-                  fontFamily: T.sans,
-                  color: active ? ch.color : empty ? T.text4 : T.text3,
-                  background: active ? hexA(ch.color, 0.12) : 'transparent',
-                  border: `1px solid ${active ? hexA(ch.color, 0.38) : T.line}`,
-                  opacity: empty ? 0.55 : 1,
-                }}
-                onMouseEnter={(e) => { if (!active) { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; } }}
-                onMouseLeave={(e) => { if (!active) { e.currentTarget.style.color = empty ? T.text4 : T.text3; e.currentTarget.style.borderColor = T.line; } }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: ch.color, opacity: active ? 1 : 0.5 }} />
-                {ch.label}
-                <span className="tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>{ch.count}</span>
-              </button>
-            );
-          })}
-        </div>
-      </motion.div>
+        {catOpen && (
+          <Panel width={258}>
+            {[{ id: null, label: 'Усі категорії', color: T.acc, count: list.length }, ...CATS.map((c) => ({ ...c, count: counts[c.id] || 0 }))].map((c) => {
+              const on = catFilter === c.id;
+              const zero = !c.count && c.id;
+              return (
+                <button
+                  key={c.id || 'all'}
+                  onClick={() => { setCatFilter(on ? null : c.id); setCatOpen(false); }}
+                  className="flex w-full items-center gap-2.5 rounded-[10px] px-3 text-[13.5px] font-semibold"
+                  style={{ ...row(on, c.color, 38), color: on ? '#ffffff' : zero ? '#6a6878' : '#a5a3b3' }}
+                >
+                  <span
+                    className="h-[7px] w-[7px] flex-none rounded-full"
+                    style={{ background: c.color, opacity: zero ? 0.35 : 1, boxShadow: on ? `0 0 9px 1px ${c.color}cc` : 'none' }}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-left">{c.label}</span>
+                  <span className="flex-none text-[11px]" style={{ fontFamily: T.mono, color: zero ? '#4d4b58' : '#75738a' }}>
+                    {c.count}
+                  </span>
+                </button>
+              );
+            })}
+          </Panel>
+        )}
+      </div>
 
-      <AssetPickerModal
-        isOpen={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        selectedAsset={assetFilter === 'all' ? null : assetFilter}
-        onSelect={(symbol) => setAsset(symbol)}
-      />
-    </>
+      {/* ─── актив ─── */}
+      <div className="relative" ref={assetBox}>
+        <button
+          onClick={() => { setAssetOpen((v) => !v); setCatOpen(false); }}
+          className="flex h-11 min-w-[158px] items-center gap-2.5 rounded-[13px] px-3.5"
+          style={{
+            background: assetOpen ? '#ffffff12' : '#ffffff0a',
+            border: `1px solid ${assetOpen || (assetFilter && assetFilter !== 'all') ? A(0.5) : '#21212b'}`,
+            transition: 'all .16s',
+          }}
+        >
+          <span
+            className="min-w-0 flex-1 whitespace-nowrap text-left text-[13.5px] font-semibold"
+            style={{ fontFamily: T.sans, color: '#ffffff' }}
+          >
+            {assetFilter && assetFilter !== 'all' ? assetFilter : 'Усі активи'}
+          </span>
+          <ChevronDown
+            size={14}
+            strokeWidth={1.9}
+            style={{ color: '#9a98ab', flex: 'none', transform: `rotate(${assetOpen ? 180 : 0}deg)`, transition: 'transform .2s' }}
+          />
+        </button>
+
+        {assetOpen && (
+          <Panel width={194}>
+            {[{ key: 'all', name: 'Усі активи', count: list.length },
+              ...Object.keys(assets).sort().map((k) => ({ key: k, name: k, count: assets[k] }))].map((a) => {
+              const on = assetFilter === a.key;
+              return (
+                <button
+                  key={a.key}
+                  onClick={() => { setAsset(on ? 'all' : a.key); setAssetOpen(false); }}
+                  className="flex w-full items-center gap-2.5 rounded-[9px] px-3 text-[13.5px] font-semibold"
+                  style={row(on, T.acc, 36)}
+                >
+                  <span className="min-w-0 flex-1 truncate text-left">{a.name}</span>
+                  <span className="flex-none text-[11px]" style={{ fontFamily: T.mono, color: '#75738a' }}>
+                    {a.count}
+                  </span>
+                </button>
+              );
+            })}
+          </Panel>
+        )}
+      </div>
+
+      {/* ─── сортування ─── */}
+      <button
+        onClick={() => setSort(SORTS[(sortIdx + 1) % SORTS.length].id)}
+        className="flex h-11 items-center gap-2.5 rounded-[13px] px-4"
+        style={{ background: '#ffffff0a', border: '1px solid #21212b', transition: 'all .16s' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff14'; e.currentTarget.style.borderColor = '#33333f'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff0a'; e.currentTarget.style.borderColor = '#21212b'; }}
+      >
+        <ArrowDownUp size={15} strokeWidth={1.9} style={{ color: '#9a98ab' }} />
+        <span className="whitespace-nowrap text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: '#d4d2e0' }}>
+          {SORTS[sortIdx].label}
+        </span>
+      </button>
+
+      {hasFilter && (
+        <button
+          onClick={() => { setCatFilter(null); setAsset('all'); setQuery(''); }}
+          className="flex h-11 items-center gap-2 rounded-[13px] px-3.5 text-[13px] font-semibold"
+          style={{ background: '#ffffff06', border: '1px dashed #2d2d3a', color: '#9a98ab', fontFamily: T.sans, transition: 'all .16s' }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.5); e.currentTarget.style.color = '#a99cff'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#2d2d3a'; e.currentTarget.style.color = '#9a98ab'; }}
+        >
+          <X size={12} strokeWidth={2.6} />
+          Скинути
+        </button>
+      )}
+    </div>
   );
 }
