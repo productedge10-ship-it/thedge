@@ -4,7 +4,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Refe
 import { CheckCircle2, XCircle, AlertTriangle, Flame, Gauge, Info, PieChart as PieChartIcon, Radar as RadarIcon, HelpCircle, X, Brain, Activity, Zap, ShieldCheck, ChevronDown, ArrowUpRight, ArrowRight, Cpu, Sparkles, Target, Crosshair, TrendingDown, Droplet } from 'lucide-react';
 import { motion, useMotionValue, useMotionTemplate, useTransform, useSpring, AnimatePresence } from 'framer-motion';
 import { Panel, Delta, ChartTip, axis, Meter } from './ui';
-import { PsychologistPanel } from './PsychologistPanel';
+/* PsychologistPanel більше не імпортується: усе, що працює на моделі,
+   живе у вкладці AI (components/analytics/AiLab.jsx). */
 import { EMOTION_COLOR, EMOTION_LABEL, signed, r1, r2, sum } from './data';
 
 // ==========================================
@@ -572,7 +573,7 @@ function NeuroProfile({ s, onOpenTrade }) {
 // ==========================================
 // ГОЛОВНИЙ КОМПОНЕНТ
 // ==========================================
-export default function Psychology({ s, onOpenTrade = (t) => console.log('open trade', t) }) {
+export default function Psychology({ s, onOpenTrade = (t) => console.log('open trade', t), onOpenAi }) {
   const [profileView, setProfileView] = useState('radar');
   const [isRiskInfoOpen, setIsRiskInfoOpen] = useState(false);
   const [ledgerOpen, setLedgerOpen] = useState(false);
@@ -1205,9 +1206,37 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
 
         {/* Права колонка */}
         <div className="flex flex-col gap-4 lg:sticky top-5">
-          <motion.div variants={fadeUpVariant}>
-            <PsychologistPanel stats={s} />
-          </motion.div>
+
+          {/* ===== ВКАЗІВНИК НА РОЗДІЛ AI =====
+
+              Тут стояв чат із моделлю — між справжніми графіками, і
+              через це виглядав як така сама їхня частина. Людина не
+              могла відрізнити число, порахане з її угод, від тексту,
+              згенерованого моделлю, а це різниця між «так є» і «так
+              вважає програма».
+
+              Чат переїхав у власну вкладку. Порожнє місце не лишаємо:
+              хто ним користувався, шукатиме його саме тут. */}
+          {onOpenAi && (
+            <motion.div variants={fadeUpVariant}>
+              <button
+                type="button"
+                onClick={onOpenAi}
+                className="group w-full rounded-[14px] border border-[#232328] bg-[var(--edge-surface)] p-4 text-left transition-colors hover:border-[#8b7bff]/35"
+              >
+                <span className="mb-2 inline-flex items-center gap-[6px] text-[10px] font-bold uppercase tracking-[0.14em] text-[#7A7A85]">
+                  <Sparkles size={13} className="text-[#8b7bff]" /> AI-психолог
+                </span>
+                <p className="m-0 text-[12.5px] leading-[1.6] text-[#B4B4BD]">
+                  Переїхав у власний розділ — щоб було видно, де цифри з журналу,
+                  а де думка моделі.{' '}
+                  <span className="font-semibold text-[#8b7bff] group-hover:underline">
+                    Відкрити AI →
+                  </span>
+                </p>
+              </button>
+            </motion.div>
+          )}
 
           {/* ===== ВЕРДИКТ ПО ДИСЦИПЛІНІ (перероблено) ===== */}
           <motion.div variants={fadeUpVariant}>
