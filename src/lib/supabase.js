@@ -21,7 +21,46 @@ const entryHadAuthToken = /[?&]code=/.test(entryUrl)
 
 export const hadAuthTokenInUrl = () => entryHadAuthToken
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+const realClient = createClient(supabaseUrl, supabaseKey)
+
+/* ==================================================================
+   Демо-режим.
+
+   На шляху /demo застосунок працює з підробленим клієнтом: ті самі
+   сторінки, ті самі модалки, але відповідає localStorage. Так демо
+   не потребує окремої «полегшеної» версії інтерфейсу, яка все одно
+   роз'їхалася б із продуктом.
+
+   Перевірка саме за адресою, а не за прапорцем у сховищі: прапорець
+   можна забути погасити, і тоді справжній журнал почав би читати
+   вигадані угоди. Адреса такого не пробачає — вона або /demo, або ні.
+================================================================== */
+const onDemoPath = () => typeof window !== 'undefined'
+  && window.location.pathname.startsWith('/demo')
+
+let demoClientRef = null
+
+const pickClient = () => {
+  if (!onDemoPath()) return realClient
+  if (!demoClientRef) {
+    /* Вантажимо синхронно з уже зібраного модуля: демо-клієнт
+       маленький і не тягне за собою мережу. */
+    // eslint-disable-next-line global-require
+    demoClientRef = window.__edgeDemoClient || null
+  }
+  return demoClientRef || realClient
+}
+
+export const setDemoClient = (client) => {
+  demoClientRef = client
+  if (typeof window !== 'undefined') window.__edgeDemoClient = client
+}
+
+/* Проксі, а не готовий об'єкт: демо-клієнт реєструється вже після
+   того, як модулі застосунку імпортували supabase. */
+export const supabase = new Proxy({}, {
+  get: (_t, prop) => pickClient()[prop],
+})
 
 /* ==================================================================
    Ознака «людина прийшла за посиланням для відновлення пароля».

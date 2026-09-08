@@ -706,6 +706,20 @@ function RailTooltip({ children }) {
 /* ------------------------------------------------------------------ */
 /* Атрибут для туру. Ставиться автоматично з адреси розділу, тому
    новий пункт меню стає доступною ціллю без жодної правки тут. */
+/* У демо той самий сайдбар веде на /demo/*: інакше перший же клік
+   викидав би людину із пісочниці в захищену частину застосунку. */
+const withDemo = (to) => (typeof window !== 'undefined'
+  && window.location.pathname.startsWith('/demo') ? `/demo${to}` : to);
+
+/* У пісочниці лишаються чотири розділи. Показувати всі — означає
+   водити людину по вітрині: половина сторінок без її даних порожні
+   й нічого не пояснюють. Ці чотири покривають увесь цикл: план,
+   запис, рахунок, розрахунок ризику. */
+export const DEMO_ROUTES = ['/plan', '/journal', '/calculator', '/accounts'];
+
+export const inDemo = () => typeof window !== 'undefined'
+  && window.location.pathname.startsWith('/demo');
+
 function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick, isDanger, tour }) {
   const Inner = ({ isActive }) => (
     <div
@@ -764,7 +778,7 @@ function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick
   }
 
   return (
-    <NavLink to={to} end={end} data-tour={tour || `nav-${to}`} className="block outline-none select-none">
+    <NavLink to={withDemo(to)} end={end} data-tour={tour || `nav-${to}`} className="block outline-none select-none">
       {({ isActive }) => <Inner isActive={isActive} />}
     </NavLink>
   );
@@ -841,7 +855,9 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
             порожнечею виглядає як помилка. */}
         <div className="flex flex-col pb-4">
           {NAV.map((g) => {
-            const items = g.items.filter((it) => !hiddenNav.includes(it.to));
+            const items = g.items
+              .filter((it) => !hiddenNav.includes(it.to))
+              .filter((it) => !inDemo() || DEMO_ROUTES.includes(it.to));
             if (!items.length) return null;
 
             return (
@@ -870,10 +886,18 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
         <div className="flex flex-col gap-[2px]">
           {/* Анкета живе тут, поруч із довідкою: її шукають саме там,
               де «налаштування про мене», а не серед розділів журналу */}
-          <NavItem collapsed={collapsed} onClick={openOnboarding} icon={Sparkles} label="Про тебе" tour="about" />
-          <NavItem collapsed={collapsed} onClick={openSettings} icon={Settings} label="Settings" tour="settings" />
+          {/* У пісочниці немає ані анкети, ані налаштувань, ані виходу:
+              це дії над акаунтом, якого в демо просто не існує. */}
+          {!inDemo() && (
+            <>
+              <NavItem collapsed={collapsed} onClick={openOnboarding} icon={Sparkles} label="Про тебе" tour="about" />
+              <NavItem collapsed={collapsed} onClick={openSettings} icon={Settings} label="Settings" tour="settings" />
+            </>
+          )}
           <NavItem collapsed={collapsed} to="/faq" icon={HelpCircle} label="FAQ / Help" />
-          <NavItem collapsed={collapsed} onClick={signOut} icon={LogOut} label="Sign out" isDanger />
+          {!inDemo() && (
+            <NavItem collapsed={collapsed} onClick={signOut} icon={LogOut} label="Sign out" isDanger />
+          )}
         </div>
         
         {/* Версія. Світлодіод прибрано: у згорнутій рейці він висів
