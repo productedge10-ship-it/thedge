@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, ShieldAlert, Sparkles, Loader2, BookOpen } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, ShieldAlert, Sparkles, Loader2, BookOpen, Bot } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { T } from '../lib/theme';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,7 @@ import Assets from '../components/analytics/Assets';
 import History from '../components/analytics/History';
 import WhatIf from '../components/analytics/WhatIf';
 import Risk from '../components/analytics/Risk';
+import AiLab from '../components/analytics/AiLab';
 import { EMOTION_LABEL } from '../components/analytics/data';
 import ExportStats from '../components/analytics/ExportStats';
 
@@ -71,6 +72,12 @@ export default function Analytics() {
     { id: 'WhatIf', label: 'Що якби', icon: FlaskConical },
     { id: 'Risk', label: 'Ризик', icon: ShieldAlert },
     { id: 'History', label: 'Історія угод', icon: HistoryIcon },
+    /* AI останнім і з власною міткою.
+       Межа між арифметикою і думкою моделі має бути видна в самій
+       навігації: решта розділів рахує формули по журналу, цей —
+       єдиний, де відповідатиме модель. Поки її немає, мітка каже
+       «скоро», а не мовчить. */
+    { id: 'AI', label: 'AI', icon: Bot, soon: true },
   ];
 
   return (
@@ -174,7 +181,7 @@ export default function Analytics() {
 
           {/* розділи */}
           <nav className="hide-scrollbar -mb-px flex items-center gap-1 overflow-x-auto">
-            {NAV.map(({ id, label, icon: Icon, badge }) => {
+            {NAV.map(({ id, label, icon: Icon, badge, soon }) => {
               const on = tab === id;
               return (
                 <button
@@ -194,6 +201,16 @@ export default function Analytics() {
                       {badge}
                     </em>
                   )}
+                  {/* «Скоро» акцентним, а не червоним: це не
+                      попередження й не помилка, а обіцянка. */}
+                  {soon && (
+                    <em
+                      className="not-italic rounded-[20px] px-[7px] py-[2px] text-[9.5px] font-bold uppercase tracking-[0.1em]"
+                      style={{ background: `rgba(${T.accRgb},0.12)`, color: T.acc }}
+                    >
+                      скоро
+                    </em>
+                  )}
                   {/* активний розділ підкреслений — рядок читається як вкладки */}
                   <span
                     className="absolute inset-x-2 bottom-0 h-[2px] rounded-full transition-all duration-200"
@@ -211,6 +228,13 @@ export default function Analytics() {
 
       {/* ---------- КОНТЕНТ ---------- */}
       <main className="animate-fade-in mx-auto w-full max-w-[1800px] px-4 pb-16 pt-6 lg:px-8" key={tab}>
+        {/* Розділ AI живе поза перевіркою на порожній журнал: там поки
+            нічого не рахується, тож «спочатку запиши угоду» було б
+            неправдою. Заглушка має відкриватись завжди. */}
+        {tab === 'AI' ? (
+          <AiLab s={s} />
+        ) : (
+        <>
         {/* Три стани замість одного. Порожній журнал — не помилка, а
             нормальний перший день, і сказати про це треба інакше, ніж
             про мережевий збій. */}
@@ -298,7 +322,7 @@ export default function Analytics() {
 
         {tab === 'Overview' && <Overview s={s} />}
         {tab === 'Performance' && <Performance s={s} />}
-        {tab === 'Psychology' && <Psychology s={s} />}
+        {tab === 'Psychology' && <Psychology s={s} onOpenAi={() => setTab('AI')} />}
         {tab === 'Assets' && <Assets s={s} />}
         {/* Симулятор працює з угодами, а не з готовою статистикою:
             він сам перераховує криву під кожен набір правил. */}
@@ -307,6 +331,8 @@ export default function Analytics() {
             угод — це не розподіл, з якого можна щось симулювати. */}
         {tab === 'Risk' && <Risk trades={rows || []} />}
         {tab === 'History' && <History s={s} />}
+        </>
+        )}
         </>
         )}
       </main>
