@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Lock, MonitorSmartphone } from 'lucide-react';
-import { C, F, A, useInView, reducedMotion } from './base';
+import { C, F, A, useInView, reducedMotion, SHELL } from './base';
 
 /* ==================================================================
    Автоімпорт MT5 + твої дані.
@@ -98,7 +98,7 @@ export default function AutoImport() {
   };
 
   return (
-    <section id="autoimport" ref={ref} style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 72px' }}>
+    <section id="autoimport" ref={ref} style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <style>{`
         @keyframes lnTicketFly{0%{left:-16%;opacity:0}12%{opacity:1}86%{opacity:1}100%{left:100%;opacity:0}}
       `}</style>
@@ -109,7 +109,7 @@ export default function AutoImport() {
             <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
             <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>АВТОІМПОРТ</span>
           </div>
-          <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,3.2vw,42px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 10px', color: '#fff' }}>
+          <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 10px', color: '#fff' }}>
             Угоди приїжджають самі.
           </h2>
           <p style={{ fontFamily: F.sans, fontSize: 16.5, color: '#8a8a9c', margin: 0, maxWidth: 520 }}>

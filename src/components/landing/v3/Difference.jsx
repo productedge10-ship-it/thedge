@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronsLeftRight } from 'lucide-react';
-import { C, F, A, lerp, useInView, reducedMotion } from './base';
+import { C, F, A, lerp, useInView, reducedMotion, SHELL } from './base';
 
 /* ==================================================================
    Різниця — машина дисципліни.
@@ -137,13 +137,13 @@ export default function Difference() {
   );
 
   return (
-    <section ref={wrapRef} style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 72px' }}>
+    <section ref={wrapRef} style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
         <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>РІЗНИЦЯ</span>
       </div>
 
-      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,3.2vw,42px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 28px', color: '#fff' }}>
+      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 28px', color: '#fff' }}>
         Ти програєш не ринку.
         <br />
         Ти програєш тим самим трьом звичкам.

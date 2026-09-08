@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import { computeStats, fmtR, fmtPF } from '../lib/backtestStats';
-import { DEMO_SESSIONS } from '../lib/backtestDemo';
+import { DEMO_SESSIONS, isDemo } from '../lib/backtestDemo';
 import { setBacktestPublic } from '../lib/backtestShare';
 import { notify } from '../utils/notify';
 import { ACT } from '../components/backtest/accent';
@@ -145,14 +145,31 @@ export default function Backtest() {
   const [sort, setSort] = useState('recent');
   const [confirm, setConfirm] = useState(null);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+  /* Перезавантажуємо список тільки коли змінюється користувач.
+     load() оголошена в тілі компонента й пересоздається щорендера —
+     у deps її не тягнемо навмисно. */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [user]);
 
   async function load() {
     setLoading(true);
     try {
+      /* Явний фільтр по user_id, а не покладатись на RLS. У власника
+         адмінська політика admin_read_all відкриває SELECT на всі
+         рядки — і особиста сторінка бектестів раптом показувала чужі
+         тестові прогони, які до того ж не можна видалити (DELETE
+         лишається тільки для своїх). Решта сторінок застосунку теж
+         фільтрують по user_id вручну — тримаємось того самого. */
+      if (!user?.id) {
+        setSessions(DEMO_SESSIONS);
+        setUsingDemo(true);
+        return;
+      }
+
       const { data: rows, error } = await supabase
         .from('backtest_sessions')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
 
@@ -229,12 +246,54 @@ export default function Backtest() {
   };
 
   const removeSession = async (s) => {
-    try {
-      await supabase.from('backtest_trades').delete().eq('session_id', s.id);
-      await supabase.from('backtest_sessions').delete().eq('id', s.id);
+    /* Демо живе тільки в памʼяті: у базі його немає, а спроба
+       видалити рядок із нечисловим id ('demo-sb') валиться на
+       невалідному uuid. Тому демо просто прибираємо зі списку —
+       банер уже попереджає, що після перезавантаження воно
+       повернеться. */
+    if (usingDemo || isDemo(s.id)) {
       setSessions((list) => list.filter((x) => x.id !== s.id));
+      setConfirm(null);
+      return;
+    }
+
+    try {
+      /* Спершу угоди. Якщо між ними й сесією стоїть зовнішній ключ
+         без cascade, видалення самої сесії інакше падає на 23503 —
+         а раніше цю помилку просто ковтали, і картка «зникала» лише
+         в інтерфейсі до першого перезавантаження. */
+      const { error: tErr } = await supabase
+        .from('backtest_trades')
+        .delete()
+        .eq('session_id', s.id)
+        .eq('user_id', user.id);
+      if (tErr) throw tErr;
+
+      const { data: gone, error: sErr } = await supabase
+        .from('backtest_sessions')
+        .delete()
+        .eq('id', s.id)
+        .eq('user_id', user.id)
+        .select('id');
+      if (sErr) throw sErr;
+
+      /* .select() повернув порожньо — рядок не наш або його вже
+         немає. RLS у такому разі не кидає помилку, просто нічого не
+         чіпає. Картку не прибираємо, щоб інтерфейс не розходився з
+         базою. */
+      if (!gone || gone.length === 0) {
+        notify.error(
+          'Бектест не видалено',
+          'Схоже, він належить іншому акаунту або вже видалений — онови сторінку.',
+        );
+        return;
+      }
+
+      setSessions((list) => list.filter((x) => x.id !== s.id));
+      notify.success('Бектест видалено', `«${s.name}» більше немає.`);
     } catch (e) {
       console.error(e);
+      notify.error('Не вдалось видалити бектест', e.message || 'Спробуй ще раз.');
     } finally {
       setConfirm(null);
     }
