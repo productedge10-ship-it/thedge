@@ -1,27 +1,28 @@
-import { motion } from 'framer-motion';
-import { Bot, CalendarDays, Clock, MessageSquare, Radar } from 'lucide-react';
-import { T } from '../../lib/theme';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarDays, Lock, MessageSquare, Radar, Sparkles } from 'lucide-react';
+import { C, F, A, Cat, KEYFRAMES, reducedMotion } from '../landing/v3/base';
+import { EMOTION_LABEL, r1, signed } from './data';
 
 /* ==================================================================
    Розділ AI.
 
-   Сюди зібрано все, що працюватиме на моделі. Причина розділення
-   проста і не технічна: у попередній версії чат-психолог стояв
-   усередині «Психології», між справжніми графіками, і виглядав як
-   така сама їхня частина. Людина не могла відрізнити число,
-   порахуване з її угод, від тексту, згенерованого моделлю, — а це
-   різниця між «так є» і «так вважає програма».
+   Сюди зібрано все, що працюватиме на моделі. Причина розділення не
+   технічна: у попередній версії чат-психолог стояв усередині
+   «Психології», між справжніми графіками, і виглядав як така сама
+   їхня частина. Людина не могла відрізнити число, порахане з її
+   угод, від тексту, згенерованого моделлю, — а це різниця між «так
+   є» і «так вважає програма».
 
-   Тепер межа проходить по вкладці. Все, що ліворуч, — арифметика по
-   журналу. Все, що тут, — думка моделі, і поки її немає, тут чесно
-   написано, що її немає.
+   Оформлення взяте з лендінга (components/landing/v3/base): ті самі
+   кольори, картки, підсвітки й той самий живий кіт. Людина, яка
+   прийшла з головної, впізнає розділ, про який їй там обіцяли, — а
+   не потрапляє на екран, зроблений іншими руками.
 
-   Заглушка не порожня навмисно. «Скоро буде» без пояснення нічого не
-   каже; список того, що саме готується, дає зрозуміти, чи варто
-   цього чекати.
+   Заглушка не порожня навмисно. «Скоро буде» саме по собі нічого не
+   каже. Тут показано, як розбір виглядатиме, і зібрано його з
+   реальних чисел журналу — з чесною позначкою, що це поки формула, а
+   не модель.
 ================================================================== */
-
-const EASE = [0.22, 1, 0.36, 1];
 
 const PLANNED = [
   {
@@ -40,119 +41,317 @@ const PLANNED = [
     text: 'Помічає, що поведінка змінилась, раніше ніж це стане видно на кривій. Розмір позиції, темп входів, час доби.',
   },
   {
-    icon: Bot,
+    icon: Sparkles,
     title: 'Питання до угоди',
     text: 'Відкрив угоду — спитав, чому вона пішла не так. Відповідь спирається на сусідні угоди, а не на загальні правила.',
   },
 ];
 
+/* Приклад розбору. Рахується формулами — тими самими, що вже живуть у
+   решті аналітики. Модель писатиме інакше й глибше, але показати, як
+   це виглядатиме, можна вже зараз. */
+function buildSample(s) {
+  const n = s?.trades?.length || 0;
+  if (!n) return null;
+
+  const emo = [...(s.emotionStats || [])].filter((e) => e.trades);
+  const best = emo.length ? [...emo].sort((a, b) => b.avg - a.avg)[0] : null;
+  const worst = emo.length ? [...emo].sort((a, b) => a.avg - b.avg)[0] : null;
+  const leak = (s.mistakeLedger || []).find((m) => m.count > 0);
+  const ses = [...(s.bySession || [])].filter((x) => x.trades);
+  const bestSes = ses.length ? [...ses].sort((a, b) => b.net - a.net)[0] : null;
+
+  const lines = [];
+
+  if (best && worst && best.emotion !== worst.emotion) {
+    lines.push(
+      `Твоя перевага живе в одному режимі: у стані «${EMOTION_LABEL[best.emotion]}» середня угода ${signed(best.avg, 2)}R, у стані «${EMOTION_LABEL[worst.emotion]}» — ${signed(worst.avg, 2)}R. Це не ринок, це стан входу.`
+    );
+  }
+  if (leak) {
+    lines.push(
+      `Найдорожча звичка — «${leak.name}»: ${leak.count} разів, ${r1(leak.cost)}R збитку. Прибрати її дешевше, ніж шукати новий сетап.`
+    );
+  }
+  if (Number.isFinite(s.avgAfterLoss) && Number.isFinite(s.avgAfterWin)) {
+    lines.push(
+      `Після збитку середній результат ${signed(s.avgAfterLoss, 2)}R проти ${signed(s.avgAfterWin, 2)}R після плюса.` +
+      (s.avgAfterLoss < s.avgAfterWin
+        ? ' Пауза на пів години після мінуса — найдешевший фікс у журналі.'
+        : ' Відновлюєшся після мінуса добре — це сильна сторона.')
+    );
+  }
+  if (bestSes) {
+    lines.push(`Найкраще платить ${bestSes.session}: ${signed(bestSes.net)}R за ${bestSes.trades} угод.`);
+  }
+
+  return lines.length ? lines : null;
+}
+
 export default function AiLab({ s }) {
-  const n = s?.trades?.length ?? 0;
+  const reduced = reducedMotion();
+  const n = s?.trades?.length || 0;
+  const sample = useMemo(() => buildSample(s), [s]);
+
+  /* Друк по два символи за такт — так само, як у коуча на лендінгу.
+     Посимвольно виглядає як зламаний термінал, а цілим блоком зникає
+     сам ефект «він зараз думає». */
+  const [typed, setTyped] = useState('');
+  const [done, setDone] = useState(false);
+  const timer = useRef(0);
+  const full = sample ? sample[0] : '';
+
+  useEffect(() => {
+    if (!full || reduced) { setTyped(full); setDone(true); return undefined; }
+    let i = 0;
+    setTyped(''); setDone(false);
+    timer.current = setInterval(() => {
+      i += 2;
+      if (i >= full.length) { clearInterval(timer.current); setTyped(full); setDone(true); }
+      else setTyped(full.slice(0, i));
+    }, 18);
+    return () => clearInterval(timer.current);
+  }, [full, reduced]);
 
   return (
-    <div className="mx-auto w-full max-w-[1100px]">
-      {/* ---------- герой ---------- */}
-      <motion.section
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: EASE }}
-        className="relative overflow-hidden rounded-[22px]"
+    <div className="ln-root" style={{ maxWidth: 1180, margin: '0 auto' }}>
+      <style>{KEYFRAMES}</style>
+
+      {/* ---------- шапка розділу ---------- */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>
+          ТВІЙ КОУЧ
+        </span>
+        <span
+          style={{
+            fontFamily: F.sans, fontSize: 10.5, fontWeight: 700, letterSpacing: '1.4px',
+            color: C.accSoft, background: A(0.1), border: `1px solid ${A(0.26)}`,
+            borderRadius: 999, padding: '4px 10px',
+          }}
+        >
+          СКОРО
+        </span>
+      </div>
+
+      <h2
         style={{
-          background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.surface})`,
-          border: `1px solid ${T.line}`,
+          fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(27px,3.2vw,42px)',
+          letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 12px', color: '#fff',
         }}
       >
-        {/* Світло згори — статичне. Анімований градієнт за сплячим
-            котом виглядав би як завантаження, а тут нічого не
-            вантажиться. */}
+        Кіт уже читає твій журнал.<br />Говорити ще вчиться.
+      </h2>
+
+      <p style={{ fontFamily: F.sans, fontSize: 16.5, lineHeight: 1.5, color: '#8a8a9c', margin: '0 0 32px', maxWidth: 660 }}>
+        Не чатбот, прикручений до дашборда. Поки модель не вміє сказати про твої
+        угоди те, чого ти сам у них не бачиш, її тут не буде.
+      </p>
+
+      <div style={{ display: 'flex', gap: 36, flexWrap: 'wrap', alignItems: 'stretch' }}>
+
+        {/* ---------- кіт ---------- */}
         <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[320px]"
-          style={{ background: `radial-gradient(600px 260px at 50% 0%, rgba(${T.accRgb},0.16), transparent 70%)` }}
-        />
-
-        <div className="relative flex flex-col items-center px-6 py-14 text-center sm:px-10 sm:py-16">
-          <SleepingCat />
-
+          style={{
+            flex: '0 1 260px', minWidth: 200, position: 'relative',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', gap: 22,
+          }}
+        >
           <span
-            className="mt-8 inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em]"
+            aria-hidden
             style={{
-              color: T.acc,
-              background: `rgba(${T.accRgb},0.10)`,
-              border: `1px solid rgba(${T.accRgb},0.24)`,
+              position: 'absolute', top: '8%', width: 270, height: 270, borderRadius: '50%',
+              background: `radial-gradient(circle,${A(0.24)},transparent 68%)`, filter: 'blur(50px)',
+              animation: reduced ? 'none' : 'lnBreathe 6s ease-in-out infinite',
             }}
-          >
-            <Clock size={12} strokeWidth={2.6} />
-            скоро
+          />
+
+          {/* Той самий живий кіт, що в сайдбарі й на головній, — просто
+              більший. Малювати для цієї сторінки окремого, схожого, але
+              не того, було б помітно, навіть якщо не розумієш чому. */}
+          <span style={{ position: 'relative' }}>
+            <Cat size={190} />
           </span>
 
-          <h2
-            className="mt-5 text-[30px] font-bold leading-[1.15] sm:text-[38px]"
-            style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.035em' }}
-          >
-            AI-розбір ще спить
-          </h2>
-
-          <p
-            className="mt-4 max-w-[52ch] text-[14.5px] leading-[1.65]"
-            style={{ fontFamily: T.sans, color: T.text3 }}
-          >
-            Ми не хочемо ставити сюди чат, який відповідає загальними словами.
-            Поки модель не вміє сказати про твій журнал те, чого ти сам у ньому
-            не бачиш, її тут не буде.
-          </p>
-
-          {/* Рядок про кількість угод — не прикраса. Модель без даних
-              вигадує; тому перше, що має бути готове до її появи, —
-              це журнал, а не сама модель. */}
-          <p
-            className="mt-6 text-[12.5px] leading-relaxed"
-            style={{ fontFamily: T.sans, color: T.text4 }}
-          >
-            {n >= 50
-              ? `У тебе вже ${n} угод — цього вистачить, щоб їй було що читати з першого дня.`
-              : n > 0
-                ? `У журналі ${n} ${plural(n)}. Найкорисніше, що можна зробити до її появи, — вести журнал далі: модель без даних вигадує.`
-                : 'Найкорисніше, що можна зробити до її появи, — почати вести журнал: модель без даних вигадує.'}
-          </p>
+          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6, width: '100%', maxWidth: 260 }}>
+            {[
+              ['ЖУРНАЛ ПРОЧИТАНО', true],
+              ['ЦИФРИ РАХУЮТЬСЯ', true],
+              ['МОДЕЛЬ НАВЧАЄТЬСЯ', false],
+            ].map(([label, on]) => (
+              <div
+                key={label}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  background: on ? A(0.1) : 'rgba(255,255,255,.03)',
+                  border: `1px solid ${on ? A(0.3) : 'rgba(255,255,255,.07)'}`,
+                  borderRadius: 11, padding: '9px 12px',
+                }}
+              >
+                <span
+                  style={{
+                    width: 6, height: 6, borderRadius: 999, flexShrink: 0,
+                    background: on ? C.acc : 'rgba(255,255,255,.2)',
+                    boxShadow: on ? `0 0 10px 1px ${A(0.9)}` : 'none',
+                  }}
+                />
+                <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '.6px', color: on ? '#fff' : '#7d7d90' }}>
+                  {label}
+                </span>
+                {!on && (
+                  <Lock size={11} strokeWidth={2.4} style={{ marginLeft: 'auto', color: C.dim, flexShrink: 0 }} />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </motion.section>
+
+        {/* ---------- приклад розбору ---------- */}
+        <div
+          style={{
+            flex: '1 1 520px', minWidth: 320, position: 'relative', overflow: 'hidden',
+            background: 'linear-gradient(160deg,#0e0e14,#0b0b10)',
+            border: `1px solid ${C.line}`, borderRadius: 22, padding: 24,
+            minHeight: 430, display: 'flex', flexDirection: 'column', gap: 14,
+          }}
+        >
+          <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${A(0.5)},transparent)` }} />
+          <span aria-hidden style={{ position: 'absolute', top: -70, left: -50, width: 280, height: 280, background: 'radial-gradient(circle,rgba(74,59,245,.13),transparent 70%)', filter: 'blur(60px)' }} />
+
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+            <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.4px', color: C.text4 }}>
+              ТАК ЦЕ ВИГЛЯДАТИМЕ
+            </span>
+            <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.2px', color: C.dim }}>
+              {n} УГОД
+            </span>
+          </div>
+
+          {sample ? (
+            <>
+              {/* Зведення по журналу — те, з чого коуч робитиме висновок.
+                  Без обставин порада виглядає як здогадка. */}
+              <div
+                style={{
+                  position: 'relative', borderRadius: 14, padding: '13px 15px 12px',
+                  background: 'rgba(255,255,255,.02)', border: `1px solid ${C.line}`,
+                  display: 'flex', flexWrap: 'wrap', gap: 18,
+                }}
+              >
+                {[
+                  ['результат', `${signed(s.net)}R`, s.net >= 0 ? C.ok : C.bad],
+                  ['дисципліна', `${s.adherence}%`, s.adherence >= 70 ? C.ok : C.warn],
+                  ['вінрейт', `${s.wr}%`, C.text],
+                  ['ціна тілту', `${r1(s.tiltCost)}R`, C.bad],
+                ].map(([k, v, color]) => (
+                  <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <span style={{ fontFamily: F.sans, fontSize: 10.5, letterSpacing: '1.2px', textTransform: 'uppercase', color: C.text5 }}>{k}</span>
+                    <span style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 700, color }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Репліка коуча. Аватар — той самий кіт, що ліворуч:
+                  говорить одна істота, а не дві схожі. */}
+              <div style={{ position: 'relative', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <Cat size={34} />
+                <div
+                  style={{
+                    background: A(0.08), border: `1px solid ${A(0.2)}`, borderRadius: 16,
+                    borderTopLeftRadius: 5, padding: '13px 16px', fontFamily: F.sans,
+                    fontSize: 14, lineHeight: 1.6, color: '#dcdce8', maxWidth: 460,
+                  }}
+                >
+                  {typed}
+                  {!done && <span style={{ animation: 'lnCaret 1s step-end infinite', color: C.accSoft }}>▍</span>}
+                </div>
+              </div>
+
+              {/* Решта висновків — без друку: три бульбашки, що
+                  друкуються одна за одною, перетворюють екран на
+                  чекання. */}
+              {done && sample.slice(1).map((line) => (
+                <div
+                  key={line}
+                  style={{
+                    position: 'relative', marginLeft: 46, animation: reduced ? 'none' : 'lnFadeUp .35s ease-out',
+                    background: 'rgba(255,255,255,.025)', border: `1px solid ${C.lineSoft}`,
+                    borderRadius: 14, padding: '11px 15px',
+                    fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.6, color: C.text3, maxWidth: 460,
+                  }}
+                >
+                  {line}
+                </div>
+              ))}
+
+              {/* Найважливіший рядок картки. Без нього це виглядало б
+                  як уже працюючий AI — тобто рівно та плутанина, через
+                  яку розділ і винесли окремо. */}
+              <div
+                style={{
+                  position: 'relative', marginTop: 'auto', paddingTop: 14,
+                  borderTop: '1px solid rgba(255,255,255,.06)',
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                }}
+              >
+                <Lock size={13} strokeWidth={2.2} style={{ color: C.dim, marginTop: 2, flexShrink: 0 }} />
+                <span style={{ fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.55, color: C.text5 }}>
+                  Текст вище зібрала формула з твого журналу. Модель писатиме
+                  інакше — і про те, що формулою не дістати: чому саме ці угоди
+                  йдуть разом і що з цим робити завтра.
+                </span>
+              </div>
+            </>
+          ) : (
+            <div style={{ position: 'relative', margin: 'auto', textAlign: 'center', maxWidth: 340 }}>
+              <span style={{ fontFamily: F.display, fontSize: 19, fontWeight: 700, color: C.text2, display: 'block', marginBottom: 10 }}>
+                Читати поки нема чого
+              </span>
+              <p style={{ fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.6, color: C.text4, margin: 0 }}>
+                Найкорисніше, що можна зробити до появи моделі, — вести журнал.
+                Без даних вона вигадує, а з двадцятьма угодами вже має що сказати.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ---------- що готується ---------- */}
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div
+        style={{
+          marginTop: 36, display: 'grid', gap: 14,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        }}
+      >
         {PLANNED.map((p, i) => (
-          <motion.article
+          <article
             key={p.title}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.12 + i * 0.07, ease: EASE }}
-            className="group relative overflow-hidden rounded-[16px] p-5"
-            style={{ background: T.surface, border: `1px solid ${T.line}` }}
+            style={{
+              position: 'relative', overflow: 'hidden', padding: 20,
+              background: 'linear-gradient(160deg,#0e0e14,#0b0b10)',
+              border: `1px solid ${C.line}`, borderRadius: 18,
+              animation: reduced ? 'none' : `lnFadeUp .4s ease-out ${0.05 * i}s both`,
+            }}
           >
-            <div className="flex items-start gap-3.5">
-              <span
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]"
-                style={{ background: `rgba(${T.accRgb},0.10)`, border: `1px solid rgba(${T.accRgb},0.22)` }}
-              >
-                <p.icon size={16} strokeWidth={2.1} style={{ color: T.acc }} />
-              </span>
+            <span style={{ position: 'absolute', top: 0, left: 20, right: 20, height: 1, background: `linear-gradient(90deg,transparent,${A(0.32)},transparent)` }} />
 
-              <div className="min-w-0">
-                <h3
-                  className="text-[14.5px] font-bold leading-tight"
-                  style={{ fontFamily: T.sans, color: T.text }}
-                >
-                  {p.title}
-                </h3>
-                <p
-                  className="mt-2 text-[13px] leading-[1.6]"
-                  style={{ fontFamily: T.sans, color: T.text3 }}
-                >
-                  {p.text}
-                </p>
-              </div>
-            </div>
-          </motion.article>
+            <span
+              style={{
+                display: 'grid', placeItems: 'center', width: 34, height: 34, borderRadius: 10,
+                background: A(0.1), border: `1px solid ${A(0.22)}`, marginBottom: 13,
+              }}
+            >
+              <p.icon size={16} strokeWidth={2.1} style={{ color: C.acc }} />
+            </span>
+
+            <h3 style={{ fontFamily: F.sans, fontSize: 14.5, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>
+              {p.title}
+            </h3>
+            <p style={{ fontFamily: F.sans, fontSize: 13, lineHeight: 1.6, color: C.text4, margin: 0 }}>
+              {p.text}
+            </p>
+          </article>
         ))}
       </div>
 
@@ -163,170 +362,16 @@ export default function AiLab({ s }) {
           насправді це формула. Сказати про це прямо коштує три
           рядки, а недомовленість коштувала б довіри до всіх чисел
           одразу. */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.45 }}
-        className="mx-auto mt-5 max-w-[62ch] text-center text-[12.5px] leading-[1.7]"
-        style={{ fontFamily: T.sans, color: T.text4 }}
+      <p
+        style={{
+          margin: '28px auto 0', maxWidth: '62ch', textAlign: 'center',
+          fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.7, color: C.text5,
+        }}
       >
         Усе, що показують інші розділи аналітики, порахували формули по твоїх
         угодах — нейромережі там немає жодної. Там, де написано «вердикт», це
         арифметика, а не думка.
-      </motion.p>
-    </div>
-  );
-}
-
-const plural = (n) => {
-  const a = Math.abs(n) % 100;
-  const b = a % 10;
-  if (a > 10 && a < 20) return 'угод';
-  if (b > 1 && b < 5) return 'угоди';
-  if (b === 1) return 'угода';
-  return 'угод';
-};
-
-/* ==================================================================
-   Сплячий кіт.
-
-   Той самий маскот, що в бічній панелі: та сама сітка 34×34, та сама
-   форма голови й вушок, ті самі градієнти. Інакше на сторінці
-   зʼявився б другий кіт — схожий, але не той, і це помітно навіть
-   якщо не розумієш чому.
-
-   Відмінності рівно дві й обидві по суті: очі заплющені (він спить, а
-   не дивиться на курсор) і груди піднімаються від дихання. Спить —
-   бо ще не готовий, а не тому що зламався.
-================================================================== */
-function SleepingCat() {
-  return (
-    <div className="relative" style={{ width: 168, height: 168 }}>
-      {/* Ореол-подушка під котом. Він саме під ним, а не навколо
-          картки: так видно, що спить кіт, а не світиться блок. */}
-      <div
-        aria-hidden
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{
-          width: 190,
-          height: 190,
-          background: `radial-gradient(circle, rgba(${T.accRgb},0.20), transparent 65%)`,
-          filter: 'blur(6px)',
-        }}
-      />
-
-      {/* Zzz. Три літери, кожна зі своїм зсувом фази — інакше вони
-          злітають строєм і виглядають як анімація завантаження. */}
-      {[
-        { x: 118, y: 34, size: 13, delay: 0 },
-        { x: 132, y: 20, size: 17, delay: 1.1 },
-        { x: 148, y: 4, size: 22, delay: 2.2 },
-      ].map((z) => (
-        <motion.span
-          key={z.delay}
-          aria-hidden
-          className="absolute font-bold"
-          style={{
-            left: z.x,
-            top: z.y,
-            fontFamily: T.display,
-            fontSize: z.size,
-            color: T.acc,
-          }}
-          animate={{ opacity: [0, 0.85, 0.85, 0], y: [4, -6, -10, -16] }}
-          transition={{ duration: 3.3, repeat: Infinity, delay: z.delay, ease: 'easeOut' }}
-        >
-          z
-        </motion.span>
-      ))}
-
-      {/* Дихання. Дуже повільне і дуже дрібне: якщо помітно, що це
-          анімація, кіт перестає спати й починає пульсувати. */}
-      <motion.svg
-        viewBox="0 0 34 34"
-        width={168}
-        height={168}
-        className="relative"
-        style={{ overflow: 'visible', filter: 'drop-shadow(0 10px 22px rgba(0,0,0,0.65))' }}
-        animate={{ scale: [1, 1.022, 1], y: [0, 0.6, 0] }}
-        transition={{ duration: 4.6, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <defs>
-          <linearGradient id="aiHeadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#4A4E69" />
-            <stop offset="50%" stopColor="#2A2D40" />
-            <stop offset="100%" stopColor="#12131A" />
-          </linearGradient>
-          <linearGradient id="aiEarGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#C4B5FD" />
-            <stop offset="100%" stopColor="#2A2D40" />
-          </linearGradient>
-        </defs>
-
-        {/* Вушка. Уві сні трохи розведені в боки — так само, як у
-            справжнього кота, коли він не слухає. */}
-        <path
-          d="M 7.5 13 C 5 8 5 4 7 3.5 C 9 3 12 7 14 9.5"
-          fill="url(#aiEarGrad)"
-          stroke="#C4B5FD"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          transform="rotate(-9 10 12)"
-        />
-        <path
-          d="M 26.5 13 C 29 8 29 4 27 3.5 C 25 3 22 7 20 9.5"
-          fill="url(#aiEarGrad)"
-          stroke="#C4B5FD"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          transform="rotate(9 24 12)"
-        />
-
-        {/* Мордочка — рівно та сама крива, що в маскота */}
-        <path
-          d="M17 29C8 29 5 24 5 16C5 10 9 7 17 7C25 7 29 10 29 16C29 24 26 29 17 29Z"
-          fill="url(#aiHeadGrad)"
-          stroke={`rgba(${T.accRgb},0.55)`}
-          strokeWidth="1.5"
-        />
-
-        {/* Заплющені очі — дуги донизу. Пряма риска читалась би як
-            «примружився», дуга — як «спить». */}
-        <path
-          d="M7.6 17.2 C9.2 19.4 12.8 19.4 14.4 17.2"
-          fill="none"
-          stroke="#C9D4EA"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-        <path
-          d="M19.6 17.2 C21.2 19.4 24.8 19.4 26.4 17.2"
-          fill="none"
-          stroke="#C9D4EA"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-
-        {/* Рум'янець сплячого */}
-        <ellipse cx="8.6" cy="21.4" rx="2.3" ry="1.2" fill="#FF9ECF" opacity="0.28" />
-        <ellipse cx="25.4" cy="21.4" rx="2.3" ry="1.2" fill="#FF9ECF" opacity="0.28" />
-
-        {/* Носик і рот */}
-        <path d="M16.4 22.2 L17 23 L17.6 22.2 Z" fill="#FF8FB8" />
-        <path
-          d="M17 23.1 L17 23.9 M17 23.9 C16.2 25 15 24.6 14.7 23.8 M17 23.9 C17.8 25 19 24.6 19.3 23.8"
-          fill="none"
-          stroke="#D14E7E"
-          strokeWidth="0.6"
-          strokeLinecap="round"
-        />
-
-        {/* Вуса */}
-        <path d="M2 18L6 19M2 21L6 20.5" stroke="rgba(255,255,255,0.45)" strokeWidth="1" strokeLinecap="round" />
-        <path d="M32 18L28 19M32 21L28 20.5" stroke="rgba(255,255,255,0.45)" strokeWidth="1" strokeLinecap="round" />
-      </motion.svg>
+      </p>
     </div>
   );
 }

@@ -310,18 +310,20 @@ export default function Analytics() {
               {s.trades.length < 10 && ' Ще замало, щоб шукати закономірності — веди журнал далі.'}
             </p>
           </div>
-          <span
-            className="whitespace-nowrap rounded-[20px] px-[13px] py-[7px] text-[11px] font-bold uppercase tracking-[0.08em]"
-            style={s.adherence >= 70
-              ? { background: `rgba(${T.okRgb},0.10)`, border: `1px solid rgba(${T.okRgb},0.22)`, color: T.ok }
-              : { background: `rgba(${T.warnRgb},0.10)`, border: `1px solid rgba(${T.warnRgb},0.22)`, color: T.warn }}
-          >
-            {s.adherence >= 70 ? 'По плану' : 'Дисципліна просідає'}
-          </span>
+          {/* Жовтий ярлик «дисципліна просідає» прибрано свідомо.
+
+              Він висів у кутку постійно, кричав кольором тривоги й не
+              вів нікуди: подивитись на нього можна, зробити з ним —
+              нічого. Те саме число живе у віджеті «Дисципліна» на
+              дошці, де поруч видно, скільки саме коштували порушення,
+              і звідти вже зрозуміло, що робити. */}
         </header>
 
-        {tab === 'Overview' && <Overview s={s} />}
-        {tab === 'Performance' && <Performance s={s} />}
+        {/* Огляд отримує ще й сирі угоди: кожен віджет на дошці може
+            мати власний період, і рахувати його треба не з уже
+            обрізаної статистики, а з повного журналу. */}
+        {tab === 'Overview' && <Overview s={s} rows={rows || []} />}
+        {tab === 'Performance' && <Performance s={s} rows={rows || []} />}
         {tab === 'Psychology' && <Psychology s={s} onOpenAi={() => setTab('AI')} />}
         {tab === 'Assets' && <Assets s={s} />}
         {/* Симулятор працює з угодами, а не з готовою статистикою:
