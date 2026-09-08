@@ -114,23 +114,45 @@ function FanTip({ active, payload, label }) {
   );
 }
 
-export default function Risk({ trades }) {
-  const [cfg, setCfg] = useState(PRESET);
+export default function Risk({ trades, carried }) {
+  /* Джерело для кнопки «взяти з журналу».
+
+     Коли прийшла передача з першого кроку симулятора, журналом тут
+     вважається вже відфільтрована історія: людина щойно вирішила, що
+     тих угод у її системі немає, і підставляти їх назад було б
+     дивно. Без передачі все як було — весь журнал. */
+  const source = carried?.trades?.length ? carried.trades : trades;
+
+  /* Початковий стан рахується один раз, у ледачому ініціалізаторі.
+     Синхронізувати повзунки з пропом через ефект не можна: повзунки —
+     це стан людини, і переписувати їх позаду неї означає стерти те,
+     що вона щойно накрутила. Тому крок монтується наново (ключем
+     ззовні), а не «підправляється» на льоту. */
+  const seed = () => {
+    const m = carried ? fromTrades(carried.trades) : null;
+    return m ? { ...PRESET, winRate: m.winRate, rr: m.rr, perDay: m.perDay } : PRESET;
+  };
+
+  const [cfg, setCfg] = useState(seed);
 
   /* Повзунок дає десятки подій підряд, а один прогін — це 1200
      симуляцій. Без затримки палець тягне повзунок, а сторінка рахує
      кожен його піксель. */
-  const [live, setLive] = useState(PRESET);
+  const [live, setLive] = useState(seed);
   useEffect(() => {
     const t = setTimeout(() => setLive(cfg), 110);
     return () => clearTimeout(t);
   }, [cfg]);
 
-  const mine = useMemo(() => fromTrades(trades), [trades]);
+  const mine = useMemo(() => fromTrades(source), [source]);
   const sim = useMemo(() => simulate(live), [live]);
   const v = verdict(sim, live);
 
-  const changed = JSON.stringify(cfg) !== JSON.stringify(PRESET);
+  /* «Скинути» повертає до стартових значень цього кроку: якщо цифри
+     приїхали з першого кроку, повертатись треба до них, а не до
+     заводського пресету. */
+  const start = seed();
+  const changed = JSON.stringify(cfg) !== JSON.stringify(start);
   const last = sim.band[sim.band.length - 1];
   const set = (id) => (n) => setCfg((s) => ({ ...s, [id]: n }));
 
@@ -151,12 +173,12 @@ export default function Risk({ trades }) {
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = 0.8)}
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = 1)}
               >
-                <Download size={11} strokeWidth={2.5} /> взяти з журналу
+                <Download size={11} strokeWidth={2.5} /> {carried ? 'взяти з кроку 1' : 'взяти з журналу'}
               </button>
             )}
             {changed && (
               <button
-                onClick={() => setCfg(PRESET)}
+                onClick={() => setCfg(start)}
                 className="inline-flex items-center gap-1.5 transition-colors"
                 style={{ color: T.text3 }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}

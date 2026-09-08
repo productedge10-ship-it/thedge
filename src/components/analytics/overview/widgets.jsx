@@ -223,7 +223,7 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
             <Line
               type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={false}
               activeDot={{ r: 4, fill: color, stroke: '#0c0c11', strokeWidth: 2 }}
-              isAnimationActive animationDuration={900}
+              isAnimationActive animationDuration={420}
             />
           </LineChart>
         ) : (
@@ -244,7 +244,7 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
             <Area
               type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={`url(#${gid})`}
               activeDot={{ r: 4, fill: color, stroke: '#0c0c11', strokeWidth: 2 }}
-              isAnimationActive animationDuration={1100}
+              isAnimationActive animationDuration={520}
             />
           </AreaChart>
         )}
@@ -594,7 +594,7 @@ export const WIDGETS = {
                 type="monotone" dataKey="value" name="Еквіті"
                 stroke={P.acc} strokeWidth={2.6}
                 fill={o.view === 'line' ? 'none' : 'url(#ov-eq)'}
-                isAnimationActive animationDuration={1200}
+                isAnimationActive animationDuration={520}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -649,7 +649,7 @@ export const WIDGETS = {
               <YAxis {...ax} />
               {o.tip !== 'off' && <RTooltip {...tip} formatter={(v) => [fmt(v), 'Результат']} cursor={{ fill: 'rgba(255,255,255,.03)' }} />}
               <ReferenceLine y={0} stroke={P.line} />
-              <Bar dataKey={key} radius={[5, 5, 0, 0]} isAnimationActive animationDuration={900}>
+              <Bar dataKey={key} radius={[5, 5, 0, 0]} isAnimationActive animationDuration={420}>
                 {rows.map((x) => (
                   <Cell key={x.session} fill={x[key] >= 0 ? P.ok : P.bad} fillOpacity={0.85} />
                 ))}
@@ -686,7 +686,7 @@ export const WIDGETS = {
               <YAxis {...ax} />
               {o.tip !== 'off' && <RTooltip {...tip} formatter={(v) => [fmt(v), 'Результат']} cursor={{ fill: 'rgba(255,255,255,.03)' }} />}
               <ReferenceLine y={0} stroke={P.line} />
-              <Bar dataKey={o.metric} radius={[5, 5, 0, 0]} isAnimationActive animationDuration={900}>
+              <Bar dataKey={o.metric} radius={[5, 5, 0, 0]} isAnimationActive animationDuration={420}>
                 {rows.map((x) => (
                   <Cell key={x.day} fill={x[o.metric] >= 0 ? P.acc : P.bad} fillOpacity={0.85} />
                 ))}
@@ -751,8 +751,8 @@ export const WIDGETS = {
                   <YAxis {...ax} />
                   {o.tip !== 'off' && <RTooltip {...tip} formatter={(v, n) => [`${signed(v, 2)}R`, n]} />}
                   <ReferenceLine y={0} stroke={P.line} />
-                  <Area type="monotone" dataKey="fa" name="По плану" stroke={P.ok} strokeWidth={2} fill="url(#ov-pf)" isAnimationActive animationDuration={900} />
-                  <Area type="monotone" dataKey="ba" name="Порушення" stroke={P.bad} strokeWidth={2} fill="url(#ov-pb)" isAnimationActive animationDuration={900} />
+                  <Area type="monotone" dataKey="fa" name="По плану" stroke={P.ok} strokeWidth={2} fill="url(#ov-pf)" isAnimationActive animationDuration={420} />
+                  <Area type="monotone" dataKey="ba" name="Порушення" stroke={P.bad} strokeWidth={2} fill="url(#ov-pb)" isAnimationActive animationDuration={420} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

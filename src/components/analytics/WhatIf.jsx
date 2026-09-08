@@ -5,7 +5,7 @@ import {
   CartesianGrid, Tooltip as RTooltip, ReferenceLine,
 } from 'recharts';
 import {
-  FlaskConical, AlertTriangle, Info, RotateCcw, Dices, Shuffle,
+  FlaskConical, AlertTriangle, Info, RotateCcw, Dices, Shuffle, ArrowRight,
 } from 'lucide-react';
 import { T } from '../../lib/theme';
 import { Panel } from './ui';
@@ -70,7 +70,7 @@ function Stat({ label, value, sub, tone }) {
   );
 }
 
-export default function WhatIf({ trades: real }) {
+export default function WhatIf({ trades: real, onCarry }) {
   const [on, setOn] = useState([]);
   const [keep, setKeep] = useState({});
 
@@ -314,6 +314,47 @@ export default function WhatIf({ trades: real }) {
               tone={sim.maxDD < base.maxDD ? T.ok : sim.maxDD > base.maxDD ? T.bad : T.text3}
             />
           </div>
+
+          {/* Передача на другий крок.
+
+              Цифра «стало» — це вже інша система, ніж та, якою людина
+              торгувала. Далі природно спитати не «скільки я втратив»,
+              а «що буде, якщо триматись цього». Кнопка бере саме
+              відфільтровану історію, а не весь журнал: інакше в
+              прогноз поїхали б ті самі угоди, які щойно викинули.
+
+              Порога в десять угод немає тут навмисно — його перевіряє
+              сам прогноз, і краще один раз в одному місці. */}
+          {onCarry && (
+            <button
+              onClick={() => onCarry({
+                trades: kept,
+                label: `${sim.trades} угод · WR ${sim.wr}% · ${fmtR(sim.net)}`,
+              })}
+              className="group flex items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left transition-colors duration-150"
+              style={{
+                background: `rgba(${T.accRgb},0.07)`,
+                border: `1px solid ${T.lineAcc}`,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.12)`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.07)`; }}
+            >
+              <span className="min-w-0">
+                <span className="block text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
+                  Прогнати цю систему вперед
+                </span>
+                <span className="mt-0.5 block text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.5 }}>
+                  Візьме вінрейт і RR того, що лишилось, і покаже 1200 можливих продовжень.
+                </span>
+              </span>
+              <ArrowRight
+                size={16}
+                strokeWidth={2.3}
+                className="shrink-0 transition-transform duration-200 group-hover:translate-x-1"
+                style={{ color: T.acc }}
+              />
+            </button>
+          )}
 
           {/* Надійність — поруч із цифрою, а не в кінці сторінки: саме
               тут людина вирішує, вірити їй чи ні. */}

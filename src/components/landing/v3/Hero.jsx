@@ -373,14 +373,41 @@ export default function Hero() {
 
 /* ---------- стрічка ---------- */
 
-const TICKER = ['MetaTrader 5', 'Форекс', 'Крипта', 'Індекси', 'Пропфірми', 'CSV-експорт', 'Українська', 'English', 'Русский'];
+/* Слова в стрічці — це не декор, а єдине місце на першому екрані, де
+   поруч стоять усі запити, за якими продукт шукають: «щоденник
+   трейдера», «імпорт історії MT5», «психологія трейдингу». Тому
+   список тримаємо як пошукові фрази, а не як перелік ринків.
+
+   Стрічка малюється двічі, щоб цикл не мав шва. Другий прогін
+   позначений aria-hidden: для читалки й для пошуковика це той самий
+   текст двічі, і дубль тут ні до чого. */
+const TICKER = [
+  'Щоденник трейдера',
+  'Журнал угод',
+  'Trading journal',
+  'Автоімпорт з MetaTrader 5',
+  'Імпорт історії угод MT5',
+  'Статистика торгівлі',
+  'Аналітика угод',
+  'R-multiple · профіт-фактор · просадка',
+  'AI-коуч для трейдера',
+  'Психологія трейдингу',
+  'Тілт і овертрейдинг',
+  'Чекліст перед сесією',
+  'Тижневий розбір угод',
+  'Бектест стратегії',
+  'Журнал для пропфірми',
+  'Форекс · Крипта · Індекси',
+  'CSV-експорт',
+  'Українська · English · Русский',
+];
 
 export function Ticker() {
   return (
     <section style={{ height: 80, borderTop: `1px solid ${C.lineSoft}`, borderBottom: `1px solid ${C.lineSoft}`, overflow: 'hidden', display: 'flex', alignItems: 'center', background: '#0a0a0e' }}>
-      <div style={{ display: 'flex', width: 'max-content', animation: 'lnMarquee 34s linear infinite' }}>
+      <div style={{ display: 'flex', width: 'max-content', animation: 'lnMarquee 62s linear infinite' }}>
         {[0, 1].map((run) => (
-          <div key={run} style={{ display: 'flex', alignItems: 'center', gap: 38, paddingRight: 38 }}>
+          <div key={run} aria-hidden={run === 1} style={{ display: 'flex', alignItems: 'center', gap: 38, paddingRight: 38 }}>
             {TICKER.map((label) => (
               <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 38, fontFamily: F.mono, fontSize: 13, letterSpacing: '1.4px', color: C.dim, whiteSpace: 'nowrap' }}>
                 {label}

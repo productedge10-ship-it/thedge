@@ -262,7 +262,7 @@ export const PERF_WIDGETS = {
                 type="monotone" dataKey={o.metric} stroke="#a78bfa" strokeWidth={2.4}
                 fill={`url(#pw-roll-${id})`}
                 activeDot={{ r: 4, fill: '#a78bfa', stroke: '#0c0c11', strokeWidth: 2 }}
-                isAnimationActive animationDuration={1100}
+                isAnimationActive animationDuration={520}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -322,7 +322,7 @@ export const PERF_WIDGETS = {
               <YAxis {...AX} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${signed(v, 2)}R · ${p.payload.n} угод`, 'Середня']} cursor={{ fill: '#ffffff08' }} />}
               <ReferenceLine y={0} stroke={P.lineHover} />
-              <Bar dataKey="avg" radius={[5, 5, 0, 0]} maxBarSize={44} isAnimationActive animationDuration={900}>
+              <Bar dataKey="avg" radius={[5, 5, 0, 0]} maxBarSize={44} isAnimationActive animationDuration={420}>
                 {rows.map((c) => <Cell key={c.depth} fill={c.avg >= 0 ? P.ok : P.bad} />)}
               </Bar>
             </BarChart>
@@ -354,7 +354,7 @@ export const PERF_WIDGETS = {
             <Area
               type="monotone" dataKey="dd" stroke={P.bad} strokeWidth={2} fill={`url(#pw-dd-${id})`}
               activeDot={{ r: 4, fill: P.bad, stroke: '#0c0c11', strokeWidth: 2 }}
-              isAnimationActive animationDuration={1100}
+              isAnimationActive animationDuration={520}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -383,7 +383,7 @@ export const PERF_WIDGETS = {
               <YAxis {...AX} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: '#ffffff08' }} />}
               <ReferenceLine y={0} stroke={P.lineHover} />
-              <Bar dataKey={o.metric} radius={[5, 5, 0, 0]} maxBarSize={44} isAnimationActive animationDuration={900}>
+              <Bar dataKey={o.metric} radius={[5, 5, 0, 0]} maxBarSize={44} isAnimationActive animationDuration={420}>
                 {rows.map((x) => <Cell key={x.day} fill={x[o.metric] >= 0 ? '#b3a8ff' : P.bad} />)}
               </Bar>
             </BarChart>
@@ -412,7 +412,7 @@ export const PERF_WIDGETS = {
               <YAxis {...AX} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: '#ffffff08' }} />}
               <ReferenceLine y={0} stroke={P.lineHover} />
-              <Bar dataKey={o.metric} radius={[5, 5, 0, 0]} maxBarSize={54} isAnimationActive animationDuration={900}>
+              <Bar dataKey={o.metric} radius={[5, 5, 0, 0]} maxBarSize={54} isAnimationActive animationDuration={420}>
                 {rows.map((x) => <Cell key={x.session} fill={x[o.metric] >= 0 ? '#4ecdc4' : P.bad} />)}
               </Bar>
             </BarChart>
@@ -440,7 +440,7 @@ export const PERF_WIDGETS = {
               <YAxis {...AX} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${signed(v)}R · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: '#ffffff08' }} />}
               <ReferenceLine y={0} stroke={P.lineHover} />
-              <Bar dataKey="net" radius={[4, 4, 0, 0]} isAnimationActive animationDuration={900}>
+              <Bar dataKey="net" radius={[4, 4, 0, 0]} isAnimationActive animationDuration={420}>
                 {rows.map((h) => <Cell key={h.hour} fill={h.net >= 0 ? '#7dd3fc' : P.bad} fillOpacity={0.85} />)}
               </Bar>
             </BarChart>
@@ -463,7 +463,7 @@ export const PERF_WIDGETS = {
             <XAxis dataKey="name" {...AX} tick={{ ...AX.tick, fontSize: 9.5 }} interval={0} />
             <YAxis {...AX} allowDecimals={false} />
             {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [`${v} угод`, 'Кількість']} cursor={{ fill: '#ffffff08' }} />}
-            <Bar dataKey="value" radius={[5, 5, 0, 0]} isAnimationActive animationDuration={900}>
+            <Bar dataKey="value" radius={[5, 5, 0, 0]} isAnimationActive animationDuration={420}>
               {s.buckets.map((b) => <Cell key={b.name} fill={b.color} fillOpacity={0.85} />)}
             </Bar>
           </BarChart>
@@ -497,7 +497,7 @@ export const PERF_WIDGETS = {
                 formatter={(v, n) => [n === 'R' ? `${signed(v, 2)}R` : `${v} хв`, n === 'R' ? 'Результат' : 'Утримання']}
               />}
               <ReferenceLine y={0} stroke={P.lineHover} />
-              <Scatter data={rows} isAnimationActive animationDuration={900}>
+              <Scatter data={rows} isAnimationActive animationDuration={420}>
                 {rows.map((p, i) => <Cell key={i} fill={p.rr >= 0 ? P.ok : P.bad} fillOpacity={0.55} />)}
               </Scatter>
             </ScatterChart>
@@ -528,7 +528,7 @@ export const PERF_WIDGETS = {
               <YAxis yAxisId="r" orientation="right" {...AX} domain={[0, 100]} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n) => [n === 'Вінрейт' ? `${v}%` : `${signed(v)}R`, n]} cursor={{ fill: '#ffffff08' }} />}
               <ReferenceLine yAxisId="l" y={0} stroke={P.lineHover} />
-              <Bar yAxisId="l" dataKey="net" name="Чистий R" radius={[5, 5, 0, 0]} maxBarSize={54} isAnimationActive animationDuration={900}>
+              <Bar yAxisId="l" dataKey="net" name="Чистий R" radius={[5, 5, 0, 0]} maxBarSize={54} isAnimationActive animationDuration={420}>
                 {s.byMonth.map((m) => <Cell key={m.key} fill={m.net >= 0 ? P.ok : P.bad} fillOpacity={0.8} />)}
               </Bar>
               <Line
@@ -573,7 +573,7 @@ export const PERF_WIDGETS = {
                 type="monotone" dataKey="value" stroke="#8b7cff" strokeWidth={2.6}
                 fill={o.view === 'line' ? 'none' : `url(#pw-eq-${id})`}
                 activeDot={{ r: 4, fill: '#8b7cff', stroke: '#0c0c11', strokeWidth: 2 }}
-                isAnimationActive animationDuration={1200}
+                isAnimationActive animationDuration={520}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -600,7 +600,7 @@ export const PERF_WIDGETS = {
               <YAxis type="category" dataKey="emotion" {...AX} width={68} tickFormatter={(v) => ({ calm: 'Спокій', confident: 'Впевненість', anxious: 'Тривога', tilt: 'Тільт', fomo: 'FOMO' }[v] || v)} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: '#ffffff08' }} />}
               <ReferenceLine x={0} stroke={P.lineHover} />
-              <Bar dataKey={o.metric} radius={[0, 5, 5, 0]} maxBarSize={22} isAnimationActive animationDuration={900}>
+              <Bar dataKey={o.metric} radius={[0, 5, 5, 0]} maxBarSize={22} isAnimationActive animationDuration={420}>
                 {rows.map((e) => <Cell key={e.emotion} fill={e[o.metric] >= 0 ? P.ok : P.bad} fillOpacity={0.85} />)}
               </Bar>
             </BarChart>

@@ -10,7 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Check, Cog, GripVertical, Plus, RotateCcw, X,
 } from 'lucide-react';
-import { A, CSS_SPRING, F, P, POP, en, hairline, lightLayer, trackLight } from './theme';
+import { A, CSS_SPRING, F, LAYOUT, P, POP, en, hairline, lightLayer, trackLight } from './theme';
 import { DEFAULT_LAYOUT, WIDGETS, optionsFor } from './widgets';
 import Preview from './Preview';
 
@@ -249,8 +249,8 @@ function SettingsPanel({ id, item, onChange, onClose }) {
 ------------------------------------------------------------------ */
 
 function CardShell({
-  item, stats, edit, hover, lifted, overlay, removing, openSettings, dropTarget,
-  setHover, onRemove, onToggleSettings, onChange,
+  item, stats, edit, hover, lifted, overlay, removing, openSettings,
+  setHover, handleProps, onRemove, onToggleSettings, onChange,
 }) {
   const WIDGETS = useRegistry();
   const spec = WIDGETS[item.id];
@@ -259,7 +259,7 @@ function CardShell({
   const opts = optionsFor(spec, item.o);
   const tone = spec.tone || P.acc;
   const Icon = spec.icon;
-  const state = overlay ? 'overlay' : removing ? 'removing' : lifted ? 'lifted' : dropTarget ? 'drop-target' : edit ? 'edit' : hover ? 'hover' : 'idle';
+  const state = overlay ? 'overlay' : removing ? 'removing' : lifted ? 'lifted' : edit ? 'edit' : hover ? 'hover' : 'idle';
 
   return (
     <div
@@ -273,22 +273,17 @@ function CardShell({
         position: 'relative', height: '100%',
         display: 'flex', flexDirection: 'column',
         background: P.card,
-        border: `1px solid ${overlay || dropTarget || hover ? `${tone}59` : P.line}`,
+        border: `1px solid ${overlay || hover ? `${tone}59` : P.line}`,
         borderRadius: 20,
         padding: 18,
-        opacity: removing ? 0 : lifted ? 0.26 : 1,
+        opacity: removing ? 0 : lifted ? 0.32 : 1,
         /* Ховер більше не піднімає картку. Рух блоку під мишею
            перетворює дошку з шістнадцяти карток на щось, що постійно
            ворушиться; світло за курсором дає ту саму реакцію, нічого
            не зсуваючи. */
         transform: removing ? 'scale(.96)' : overlay ? 'rotate(-1.2deg)' : 'none',
-        /* Ціль, над якою тримають картку, обводиться кільцем зовні —
-           box-shadow, не border: рамка змінила б внутрішній розмір і
-           вміст смикнувся б на піксель. */
-        boxShadow: overlay
-          ? `0 40px 80px -28px #000000e6, 0 0 0 1px ${tone}3d`
-          : dropTarget ? `0 0 0 2px ${tone}66, 0 0 34px -6px ${tone}4d` : 'none',
-        cursor: overlay || lifted ? 'grabbing' : edit ? 'grab' : 'default',
+        boxShadow: overlay ? `0 40px 80px -28px #000000e6, 0 0 0 1px ${tone}3d` : 'none',
+        cursor: overlay ? 'grabbing' : 'default',
         transition: overlay ? 'none' : `opacity ${REMOVE_MS}ms ease, ${CSS_SPRING}`,
       }}
     >
@@ -313,13 +308,12 @@ function CardShell({
               animate={{ opacity: 1, width: 15, marginRight: 0 }}
               exit={{ opacity: 0, width: 0, marginRight: -8 }}
               transition={POP}
-              aria-hidden
-              /* Крапки лишились як позначка «це можна тягнути», але
-                 тягнути тепер можна за всю картку, тож вони не ловлять
-                 подій і не мають власного курсора. */
+              title="Тягни, щоб переставити"
+              {...(handleProps || {})}
               style={{
-                color: hover || overlay ? P.text4 : P.text5, display: 'flex',
-                flexShrink: 0, pointerEvents: 'none', transition: 'color .2s',
+                color: P.text5, display: 'flex', flexShrink: 0,
+                cursor: overlay ? 'grabbing' : 'grab', touchAction: 'none',
+                ...(handleProps?.style || {}),
               }}
             >
               <GripVertical size={14} />
@@ -401,29 +395,22 @@ function CardShell({
 function SortableCard({ item, edit, removing, ...rest }) {
   const [hover, setHover] = useState(false);
   const {
-    attributes, listeners, setNodeRef, transform, transition, isDragging, isOver,
+    attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging,
   } = useSortable({ id: item.id, disabled: !edit });
 
-  /* Тягнеться вся картка, а не ручка.
-
-     Крапки в кутку були єдиною зоною захвату, і це помилка: ціль
-     розміром 15 на 14 пікселів у картці на пів-екрана. Людина бачить,
-     що дошку можна переставляти, хапає віджет за середину — і нічого
-     не відбувається. Тепер слухачі висять на всьому вузлі, а кнопки в
-     шапці й панель налаштувань гасять pointerdown у себе, тож клік по
-     шестерні лишається кліком.
-
-     Тут же був другий шар — motion.div з layout від framer-motion,
-     який згладжував зміну ширини. Він і був причиною того, що після
-     звуження картки вміст довго повзе на місце: layout-анімація
-     масштабує коробку, а все всередині їде разом із нею й вирівнюється
-     лише в кінці пружини. Ширину міняють рідко й свідомо, тому чесний
-     миттєвий перескок виявився кращим за півсекунди повзання. */
   return (
+    /* Два вкладені шари, і це не зайве.
+
+       Зовнішній тримає місце в сітці й трансформ від dnd-kit.
+       Внутрішній має layout від framer-motion і плавно тягнеться, коли
+       ширина колонки міняється з чверті на половину.
+
+       Розділити їх довелось тому, що обидві бібліотеки пишуть в одну
+       властивість — transform. На одному елементі вони затирали одна
+       одну: або перетягування переставало працювати, або зміна ширини
+       відбувалась стрибком. */
     <div
       ref={setNodeRef}
-      {...(edit ? attributes : {})}
-      {...(edit ? listeners : {})}
       style={{
         gridColumn: `span ${item.w}`,
         /* Тільки зсув. Масштаб із трансформу викидаємо: картки різної
@@ -431,22 +418,27 @@ function SortableCard({ item, edit, removing, ...rest }) {
            вузьку під розмір широкої — віджет на мить роздувається. */
         transform: CSS.Translate.toString(transform),
         transition: transition || undefined,
-        touchAction: edit ? 'none' : undefined,
-        outline: 'none',
         zIndex: isDragging ? 0 : rest.openSettings ? 40 : 1,
-        willChange: isDragging ? 'transform' : undefined,
       }}
     >
-      <CardShell
-        item={item}
-        edit={edit}
-        removing={removing}
-        hover={hover && !isDragging}
-        lifted={isDragging}
-        dropTarget={isOver && !isDragging}
-        setHover={setHover}
-        {...rest}
-      />
+      <motion.div
+        /* Поки картку тягнуть, layout вимкнено: інакше framer почне
+           анімувати її до місця, яке щойно порахував dnd-kit. */
+        layout={!isDragging}
+        transition={LAYOUT}
+        style={{ height: '100%' }}
+      >
+        <CardShell
+          item={item}
+          edit={edit}
+          removing={removing}
+          hover={hover && !isDragging}
+          lifted={isDragging}
+          setHover={setHover}
+          handleProps={{ ref: setActivatorNodeRef, ...attributes, ...listeners }}
+          {...rest}
+        />
+      </motion.div>
     </div>
   );
 }
@@ -645,10 +637,7 @@ export default function Board({
   const timer = useRef(0);
 
   const sensors = useSensors(
-    /* Вісім пікселів, а не шість: тягнеться вся картка, і всередині
-       неї є що натиснути. Менший поріг перетворював неточний клік по
-       шестерні на початок перетягування. */
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
   const hidden = useMemo(
@@ -764,7 +753,7 @@ export default function Board({
                 </ToolButton>
 
                 <span style={{ fontFamily: F.sans, fontSize: 12.5, color: P.dim }}>
-                  Тягни картку — віджети поміняються місцями
+                  Тягни за ручку — віджети поміняються місцями
                 </span>
               </motion.div>
             )}

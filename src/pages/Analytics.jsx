@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, ShieldAlert, Sparkles, Loader2, BookOpen, Bot } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { T } from '../lib/theme';
 import { useAuth } from '../context/AuthContext';
@@ -12,8 +12,7 @@ import Performance from '../components/analytics/Performance';
 import Psychology from '../components/analytics/Psychology';
 import Assets from '../components/analytics/Assets';
 import History from '../components/analytics/History';
-import WhatIf from '../components/analytics/WhatIf';
-import Risk from '../components/analytics/Risk';
+import Simulator from '../components/analytics/Simulator';
 import AiLab from '../components/analytics/AiLab';
 import { EMOTION_LABEL } from '../components/analytics/data';
 import ExportStats from '../components/analytics/ExportStats';
@@ -69,8 +68,11 @@ export default function Analytics() {
     { id: 'Performance', label: 'Перформанс', icon: TrendingUp },
     { id: 'Psychology', label: 'Психологія', icon: BrainCircuit, badge: `${r1(s.tiltCost)}R` },
     { id: 'Assets', label: 'Активи', icon: Wallet },
-    { id: 'WhatIf', label: 'Що якби', icon: FlaskConical },
-    { id: 'Risk', label: 'Ризик', icon: ShieldAlert },
+    /* «Що якби» і «Ризик» були двома вкладками поруч, хоча це один
+       ланцюжок: спершу рахуємо, скільки звички коштували на історії,
+       що вже є, потім проганяємо те, що лишилось, уперед. Тепер це
+       один розділ із двома кроками й передачею цифр між ними. */
+    { id: 'Simulator', label: 'Симулятор', icon: FlaskConical },
     { id: 'History', label: 'Історія угод', icon: HistoryIcon },
     /* AI останнім і з власною міткою.
        Межа між арифметикою і думкою моделі має бути видна в самій
@@ -327,11 +329,11 @@ export default function Analytics() {
         {tab === 'Psychology' && <Psychology s={s} onOpenAi={() => setTab('AI')} />}
         {tab === 'Assets' && <Assets s={s} />}
         {/* Симулятор працює з угодами, а не з готовою статистикою:
-            він сам перераховує криву під кожен набір правил. */}
-        {tab === 'WhatIf' && <WhatIf trades={s.trades} />}
-        {/* Ризик рахується з усього журналу, а не з періоду: місяць
-            угод — це не розподіл, з якого можна щось симулювати. */}
-        {tab === 'Risk' && <Risk trades={rows || []} />}
+            перший крок перераховує криву під кожен набір правил,
+            другий рахує тисячу продовжень. Обидва хочуть сирі угоди,
+            причому різні: крок 1 — розмічені емоціями й помилками
+            (s.trades), крок 2 — увесь журнал за період (rows). */}
+        {tab === 'Simulator' && <Simulator trades={s.trades} rows={rows || []} />}
         {tab === 'History' && <History s={s} />}
         </>
         )}

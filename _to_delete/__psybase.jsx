@@ -7,13 +7,6 @@ import { Panel, Delta, ChartTip, axis, Meter } from './ui';
 /* PsychologistPanel більше не імпортується: усе, що працює на моделі,
    живе у вкладці AI (components/analytics/AiLab.jsx). */
 import { EMOTION_COLOR, EMOTION_LABEL, signed, r1, r2, sum } from './data';
-import ComingSoon from './shared/ComingSoon';
-
-/* Поки модель не підключена, усе, що є судженням, а не арифметикою,
-   показує заглушку замість тексту. Один прапорець замість чотирьох
-   закоментованих блоків: коли AI зʼявиться, тут буде true, і місця
-   повернуться самі. */
-const AI_READY = false;
 
 // ==========================================
 // АНІМАЦІЇ
@@ -551,32 +544,19 @@ function NeuroProfile({ s, onOpenTrade }) {
               ))}
             </div>
 
-            {/* Осі вище рахуються з угод і лишаються. Повний звіт —
-                це вже зв'язний текст про те, чому індекс саме такий, а
-                його пише модель, тому поки заглушка. */}
-            {AI_READY ? (
-              <button
-                onClick={() => setOpen(true)}
-                className="mt-1 w-full py-2.5 rounded-xl border text-[12.5px] font-bold transition-colors flex items-center justify-center gap-2"
-                style={{ borderColor: `${neuro.tier.color}33`, background: `${neuro.tier.color}10`, color: neuro.tier.color }}
-              >
-                <Brain size={15} /> Відкрити повний нейро-звіт
-              </button>
-            ) : (
-              <div className="mt-1">
-                <ComingSoon
-                  tone={neuro.tier.color}
-                  title="Повний нейро-звіт"
-                  text="Розбір усіх пʼяти осей одним текстом: що саме тягне індекс вниз, на яких угодах це видно і з чого почати. Зʼявиться разом з AI."
-                />
-              </div>
-            )}
+            <button
+              onClick={() => setOpen(true)}
+              className="mt-1 w-full py-2.5 rounded-xl border text-[12.5px] font-bold transition-colors flex items-center justify-center gap-2"
+              style={{ borderColor: `${neuro.tier.color}33`, background: `${neuro.tier.color}10`, color: neuro.tier.color }}
+            >
+              <Brain size={15} /> Відкрити повний нейро-звіт
+            </button>
           </div>
         </div>
       </Panel>
 
       <AnimatePresence>
-        {AI_READY && open && (
+        {open && (
           <NeuroModal
             neuro={neuro}
             s={s}
@@ -598,6 +578,8 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
   const [isRiskInfoOpen, setIsRiskInfoOpen] = useState(false);
   const [ledgerOpen, setLedgerOpen] = useState(false);
 
+  const calmStat = s.emotionStats.find((e) => e.emotion === 'calm') || { avg: 0, net: 0, trades: 0, list: [] };
+  const tiltStat = s.emotionStats.find((e) => e.emotion === 'tilt') || { avg: 0, net: 0 };
   const worstMistake = s.mistakeLedger[0] || { name: 'Немає помилок', cost: 0 };
   const totalGross = Math.max(1, s.gross || 1);
   const maxRisk = Math.max(...s.emotionStats.map((e) => e.trades ? sum(e.list.map((t) => t.risk)) / e.trades : 0));
@@ -668,6 +650,38 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
   }, [s.trades, s.mistakeLedger, totalTrades, impulsiveNet, extraRiskR]);
 
   const readiness = Math.round(sum(liveRules.map((r) => r.pct)) / Math.max(1, liveRules.length));
+
+  const getRiskVerdict = () => {
+    let maxState = calmStat;
+    let highestRisk = calmStat.trades ? sum(calmStat.list.map(t => t.risk)) / calmStat.trades : 0;
+
+    s.emotionStats.forEach(e => {
+      const avg = e.trades ? sum(e.list.map(t => t.risk)) / e.trades : 0;
+      if (avg > highestRisk && (e.emotion === 'tilt' || e.emotion === 'fomo' || e.emotion === 'anxiety')) {
+        highestRisk = avg;
+        maxState = e;
+      }
+    });
+
+    if (highestRisk > 1.05) {
+      return (
+        <div className="mt-3 p-3 bg-[#f87171]/10 border border-[#f87171]/20 rounded-xl flex items-start gap-3">
+          <AlertTriangle size={16} className="text-[#f87171] mt-0.5 shrink-0" />
+          <p className="text-[12px] text-[#f87171] leading-[1.5] m-0">
+            <b>Попередження:</b> У стані <b>«{EMOTION_LABEL[maxState.emotion]}»</b> твій ризик зростає до {r2(highestRisk)}%. Ти емоційно збільшуєш об'єм, щоб відігратися. Контролюй розмір позиції!
+          </p>
+        </div>
+      );
+    }
+    return (
+      <div className="mt-3 p-3 bg-[#34d399]/10 border border-[#34d399]/20 rounded-xl flex items-start gap-3">
+        <CheckCircle2 size={16} className="text-[#34d399] mt-0.5 shrink-0" />
+        <p className="text-[12px] text-[#34d399] leading-[1.5] m-0">
+          <b>Все чудово:</b> Твій розмір позиції стабільний і не піддається впливу емоцій. Так тримати!
+        </p>
+      </div>
+    );
+  };
 
   const stateData = s.emotionStats.map((e) => ({
     subject: EMOTION_LABEL[e.emotion],
@@ -958,6 +972,12 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                   );
                 })}
               </div>
+
+              <div className="mt-4 p-4 bg-[var(--edge-surface-hi)]/80 border border-[var(--edge-hair)] rounded-[12px]">
+                <p className="text-[12.5px] text-[#FAFAFA] leading-[1.6] m-0">
+                  <span className="text-[#8b7bff] font-bold">💡 Простими словами:</span> Спокійний вхід приносить <b className="text-[#34d399]">{signed(calmStat.avg, 2)}R</b>, вхід у тільті — <b className="text-[#f87171]">{signed(tiltStat.avg, 2)}R</b>. Різниця в <b className="text-[var(--edge-text)]">{r2(Math.abs(calmStat.avg - tiltStat.avg))}R</b> на кожну угоду — це і є ціна одного емоційного рішення.
+                </p>
+              </div>
             </Panel>
           </motion.div>
 
@@ -1176,6 +1196,9 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                   </div>
                   <b className="text-[15px] font-extrabold text-[#8b7bff]">{r1(extraRiskR)}R</b>
                 </div>
+
+                {getRiskVerdict()}
+
               </Panel>
             </motion.div>
           </div>
@@ -1194,8 +1217,8 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
 
               Чат переїхав у власну вкладку. Порожнє місце не лишаємо:
               хто ним користувався, шукатиме його саме тут. */}
-          <motion.div variants={fadeUpVariant}>
-            {AI_READY && onOpenAi ? (
+          {onOpenAi && (
+            <motion.div variants={fadeUpVariant}>
               <button
                 type="button"
                 onClick={onOpenAi}
@@ -1212,14 +1235,8 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                   </span>
                 </p>
               </button>
-            ) : (
-              <ComingSoon
-                tone="#8b7bff"
-                title="AI-психолог"
-                text="Читає твої угоди й відповідає на питання про них. Житиме у власному розділі, щоб було видно, де цифри з журналу, а де думка моделі."
-              />
-            )}
-          </motion.div>
+            </motion.div>
+          )}
 
           {/* ===== ВЕРДИКТ ПО ДИСЦИПЛІНІ (перероблено) ===== */}
           <motion.div variants={fadeUpVariant}>
@@ -1286,6 +1303,10 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                   );
                 })}
               </div>
+
+              <p className="text-[10.5px] text-[#4A4A52] mt-3 m-0 leading-snug">
+                Категорії частково перетинаються — одна угода може бути і в тільті, і з порушенням плану.
+              </p>
             </Panel>
           </motion.div>
 
@@ -1332,6 +1353,13 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                     </div>
                   );
                 })}
+              </div>
+
+              <div className="mt-3 p-3 rounded-xl border border-[#8b7bff]/20 bg-[#8b7bff]/[0.06] flex items-start gap-2.5">
+                <Target size={15} className="text-[#8b7bff] mt-0.5 shrink-0" />
+                <p className="text-[11.5px] text-[#B4B4BD] leading-[1.5] m-0">
+                  Фокус тижня — <b className="text-[var(--edge-text)]">«{liveRules[0]?.txt}»</b>. Це найслабше правило: {liveRules[0]?.pct}% виконання.
+                </p>
               </div>
             </Panel>
           </motion.div>
