@@ -48,11 +48,17 @@ const toApp = (row) => ({
   reasons: Array.isArray(row.reasons) && row.reasons.length
     ? row.reasons
     : reasonsFromFlags(row),
-  followedPlan: !!row.followed_plan,
-  rushed: !!row.rushed,
-  /* null тут значуще — «не відповідав», а не «ні» */
+  /* null значуще в усіх чотирьох: це «про це не питали», а не «ні».
+     Раніше два з них проходили через !!, і кожен запис, де людина
+     просто не позначила причину «торгував поза планом», виглядав
+     як порушення плану — на картці горіла позначка, якої ніхто не
+     ставив. */
+  followedPlan: row.followed_plan ?? null,
+  rushed: row.rushed ?? null,
   bySystem: row.by_system ?? null,
   riskOk: row.risk_ok ?? null,
+  /* Скріни графіка: масив публічних адрес у сховищі. */
+  shots: Array.isArray(row.shots) ? row.shots.filter(Boolean) : [],
   tradeId: row.trade_id || null,
   source: row.source || 'manual',
   resolved: !!row.resolved,
@@ -74,6 +80,7 @@ const toRow = (e, userId) => {
        статистика розділу, а виймати їх з jsonb на кожен підрахунок —
        і повільно, і незручно для майбутніх запитів на боці бази. */
     ...flagsFromReasons(e.reasons),
+    shots: Array.isArray(e.shots) ? e.shots.filter(Boolean) : [],
     error_date: e.date || todayISO(),
     trade_id: e.tradeId || null,
     source: e.source || 'manual',
@@ -90,17 +97,30 @@ const toRow = (e, userId) => {
 };
 
 const SELECT = `id, pair, description, cats, tv_link, reasons, followed_plan, rushed,
-  by_system, risk_ok, error_date, trade_id, source, resolved`;
+  by_system, risk_ok, error_date, trade_id, source, resolved, shots`;
+
+/* Той самий набір без shots. Колонка зʼявилась пізніше за код, і
+   поки її немає в чиїйсь базі, сторінка мусить працювати без
+   скрінів, а не падати цілком. */
+const SELECT_NO_SHOTS = SELECT.replace(', shots', '');
+
+const missingColumn = (e, name) => String(e?.message || '').includes(name) || e?.code === '42703';
 
 /* ---------- читання ---------- */
 
 export async function fetchErrors(userId) {
-  const { data, error } = await supabase
+  const ask = (cols) => supabase
     .from('trade_errors')
-    .select(SELECT)
+    .select(cols)
     .eq('user_id', userId)
     .order('error_date', { ascending: false })
     .order('created_at', { ascending: false });
+
+  let { data, error } = await ask(SELECT);
+
+  if (error && missingColumn(error, 'shots')) {
+    ({ data, error } = await ask(SELECT_NO_SHOTS));
+  }
 
   if (error) throw error;
   return (data || []).map(toApp);
@@ -110,7 +130,18 @@ export async function fetchErrors(userId) {
 
 export async function saveError(userId, entry) {
   const row = toRow(entry, userId);
-  const { error } = await supabase.from('trade_errors').upsert(row, { onConflict: 'id' });
+
+  let { error } = await supabase.from('trade_errors').upsert(row, { onConflict: 'id' });
+
+  /* База без колонки shots — зберігаємо запис без скрінів. Втратити
+     посилання на картинку прикро, втратити весь розбір помилки —
+     значно гірше. */
+  if (error && missingColumn(error, 'shots')) {
+    const rest = { ...row };
+    delete rest.shots;
+    ({ error } = await supabase.from('trade_errors').upsert(rest, { onConflict: 'id' }));
+  }
+
   if (error) throw error;
   return toApp(row);
 }

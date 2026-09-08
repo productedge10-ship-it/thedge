@@ -102,6 +102,7 @@ export default function PlanHeader({
       <div className="flex flex-wrap items-center gap-2 no-print">
         <TextBtn
           icon={Briefcase}
+          data-tour="plan-add-trade"
           onClick={onAddTrade}
           tone={T.ok}
           softBg={`rgba(${T.okRgb},0.08)`}
@@ -139,6 +140,7 @@ export default function PlanHeader({
             з-під курсора; колір нейтральний, бо поруч уже є зелена
             «Add trade» і бурштиновий «Quiz», і фіолетовий з ними бився. */}
         <button
+          data-tour="plan-new"
           onClick={onNewPlan}
           className="group ml-1 inline-flex h-[38px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
           style={{

@@ -100,7 +100,16 @@ export default function ExportStats({ open, onClose, stats, period }) {
        браузер сам віддає вектор, тому цифри лишаються різкими. */
     const w = window.open('', '_blank');
     if (!w) { notify.error('Вікно заблоковано', 'Дозволь спливаючі вікна для цього сайту.'); return; }
-    w.document.write(`<!doctype html><html><head><title>${card.title}</title>
+
+    /* Назва картки — текст, який вводить людина, а тут вона потрапляє
+       просто в розмітку. Без екранування рядок із «</title><img
+       onerror=...>» виконався б у цьому вікні: воно того самого
+       походження, що й сайт. Сам SVG нижче безпечний — його збирає
+       renderCardSvg і екранує кожне поле. */
+    const safeTitle = String(card.title || 'Edge')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    w.document.write(`<!doctype html><html><head><title>${safeTitle}</title>
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Roboto:wght@400;700;800&display=swap">
       <style>

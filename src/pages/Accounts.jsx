@@ -420,6 +420,7 @@ return (
           </button>
 
           <button
+            data-tour="acc-add"
             onClick={guard(openAddModal)}
             className="edge-add-btn ml-1 inline-flex h-[54px] shrink-0 items-center justify-center gap-2 rounded-2xl px-6 text-[14.5px] font-bold"
             style={{ color: '#fff', fontFamily: T.sans }}

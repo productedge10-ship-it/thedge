@@ -1,127 +1,185 @@
 import { motion } from 'framer-motion';
-import { Flame, CalendarDays, Repeat2, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
-import { CATS, getCat } from './utils';
-import { SoftCard } from '../ui/Hovers';
+import { CATS } from './utils';
 
 /* ==================================================================
-   Зведення по помилках.
-   Головне питання: чи стає їх менше. Тому поруч із загальною
-   кількістю завжди видно порівняння з минулим місяцем і те, яка
-   помилка тримає перше місце.
+   Зведення по журналу помилок.
+
+   Одна панель на два питання, і обидва — про повторюваність:
+   скільки записів усього (і чи стало їх більше цього місяця) та
+   що саме повторюється частіше за інше.
+
+   Свідомо без «найчастішої категорії» окремою карткою: та сама
+   інформація вже стоїть першим рядком у розкладі праворуч, а
+   продубльована — лише розмиває погляд.
+
+   Зведення читає чужі записи й не має права падати через жоден із
+   них: один запис без дати чи без категорій клав усю сторінку
+   разом із формою, через яку його тільки й можна виправити.
 ================================================================== */
 
+const A = (a) => `rgba(${T.accRgb}, ${a})`;
+
+const plural = (n) => `${n} ${n === 1 ? 'запис' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'записи' : 'записів'}`;
+
 export default function ErrorStats({ entries }) {
+  const list = Array.isArray(entries) ? entries : [];
+
   const now = new Date();
   const curKey = now.toISOString().slice(0, 7);
   const prev = new Date(now); prev.setMonth(prev.getMonth() - 1);
   const prevKey = prev.toISOString().slice(0, 7);
 
-  const monthCount = entries.filter((e) => e.date.slice(0, 7) === curKey).length;
-  const prevCount = entries.filter((e) => e.date.slice(0, 7) === prevKey).length;
+  const monthOf = (e) => String(e?.date || '').slice(0, 7);
+  const monthCount = list.filter((e) => monthOf(e) === curKey).length;
+  const prevCount = list.filter((e) => monthOf(e) === prevKey).length;
 
-  let deltaText = 'без змін';
-  let deltaColor = T.text4;
-  if (prevCount > 0 && monthCount !== prevCount) {
-    const d = Math.round(((monthCount - prevCount) / prevCount) * 100);
-    deltaText = `${d < 0 ? '↓' : '↑'} ${Math.abs(d)}% до минулого`;
-    deltaColor = d < 0 ? T.ok : T.bad;
-  }
+  /* Менше помилок — це добре, тому стрілка вниз зелена. Це єдине
+     місце в застосунку, де падіння цифри — привід радіти, і колір
+     мусить це казати замість користувача. */
+  const diff = monthCount - prevCount;
+  const trendGood = diff <= 0;
+  const trendLabel = diff === 0 ? 'без змін' : `${diff > 0 ? '+' : ''}${diff}`;
 
   const counts = {};
-  entries.forEach((e) => e.cats.forEach((id) => { counts[id] = (counts[id] || 0) + 1; }));
-  const totalTags = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+  list.forEach((e) => (e?.cats || []).forEach((id) => { counts[id] = (counts[id] || 0) + 1; }));
+  const marks = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
 
-  const distribution = CATS.filter((c) => counts[c.id])
-    .map((c) => ({ ...c, count: counts[c.id], pct: Math.round((counts[c.id] / totalTags) * 100) }))
-    .sort((a, b) => b.count - a.count);
+  const breakdown = CATS.filter((c) => counts[c.id])
+    .map((c) => ({ ...c, count: counts[c.id], pct: Math.round((counts[c.id] / marks) * 100) }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
 
-  const topId = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
-  const topCat = topId ? getCat(topId) : null;
-
-  /* скільки помилок повторюються більше одного разу — саме вони й болять */
-  const repeats = distribution.filter((d) => d.count > 1).length;
-
-  const cards = [
-    { label: 'Всього записів', value: entries.length, icon: TrendingDown, color: T.acc, hint: 'за весь час' },
-    { label: 'Цього місяця', value: monthCount, icon: CalendarDays, color: deltaColor, hint: deltaText },
-    { label: 'Найчастіша', value: topCat ? topCat.label : '—', icon: Flame, color: topCat?.color || T.text3, hint: topId ? `${Math.round((counts[topId] / totalTags) * 100)}% усіх позначок` : '', small: true },
-    { label: 'Повторюваних', value: repeats, icon: Repeat2, color: repeats ? T.warn : T.ok, hint: 'категорій більше ніж раз' },
-  ];
+  const repeated = Object.values(counts).filter((n) => n > 1).length;
 
   return (
-    <div className="mb-5 flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {cards.map((c, i) => {
-          const Icon = c.icon;
-          return (
-            <motion.div
-              key={c.label}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.32, delay: i * 0.04, ease: EASE }}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: EASE }}
+      className="relative mb-5 overflow-hidden rounded-[20px] px-7"
+      style={{
+        background: 'linear-gradient(140deg,#131320,#0d0d13 54%,#0b0b10)',
+        border: '1px solid #1f1f2b',
+        boxShadow: '0 24px 60px -34px #000',
+      }}
+    >
+      <span
+        className="pointer-events-none absolute rounded-full"
+        style={{ left: -60, top: -90, width: 340, height: 230, background: T.acc, filter: 'blur(76px)', opacity: 0.13 }}
+      />
+
+      <div className="relative flex flex-wrap items-stretch">
+        {/* ─── всього записів ─── */}
+        <div className="w-[248px] flex-none py-6 pr-7">
+          <div
+            className="text-[10.5px] font-bold uppercase"
+            style={{ fontFamily: T.mono, letterSpacing: '2px', color: '#8d8b9e' }}
+          >
+            Всього записів
+          </div>
+
+          <div className="mt-3 flex items-baseline gap-2.5">
+            <span
+              style={{ fontFamily: T.display, fontSize: 56, fontWeight: 700, letterSpacing: '-2.4px', lineHeight: 1, color: '#ffffff' }}
             >
-              <SoftCard className="min-w-0 px-4 py-3.5">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="truncate text-[12px] font-semibold uppercase tracking-[0.09em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                    {c.label}
-                  </span>
-                  <Icon size={14} strokeWidth={2.3} className="shrink-0 opacity-60 transition-opacity duration-300 group-hover:opacity-100" style={{ color: c.color }} />
+              {list.length}
+            </span>
+            <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+              {plural(list.length).split(' ')[1]}
+            </span>
+          </div>
+
+          <div className="mt-4 flex items-center gap-2.5">
+            <span
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-[5px] text-[12px] font-bold"
+              style={{
+                fontFamily: T.sans,
+                background: trendGood ? '#2fbf8f1f' : '#ff7b7b1f',
+                border: `1px solid ${trendGood ? '#2fbf8f4d' : '#ff7b7b4d'}`,
+                color: trendGood ? '#6fe0b4' : '#ff9d9d',
+              }}
+            >
+              {trendGood
+                ? <TrendingDown size={12} strokeWidth={2.4} />
+                : <TrendingUp size={12} strokeWidth={2.4} />}
+              {trendLabel}
+            </span>
+            <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+              цього місяця
+            </span>
+          </div>
+        </div>
+
+        <div
+          className="my-5 w-px flex-none"
+          style={{ background: 'linear-gradient(180deg,transparent,#ffffff1c 22%,#ffffff1c 78%,transparent)' }}
+        />
+
+        {/* ─── що повторюється ─── */}
+        <div className="min-w-[320px] flex-1 py-6 pl-7">
+          <div className="flex items-baseline justify-between gap-3">
+            <div
+              className="text-[10.5px] font-bold uppercase"
+              style={{ fontFamily: T.mono, letterSpacing: '2px', color: '#8d8b9e' }}
+            >
+              Що повторюється
+            </div>
+            <div className="text-[12.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+              {repeated
+                ? `${repeated} ${repeated === 1 ? 'категорія повторюється' : 'категорії повторюються'}`
+                : 'поки без повторів'}
+            </div>
+          </div>
+
+          {breakdown.length ? (
+            <div className="mt-4 flex flex-col gap-3">
+              {breakdown.map((b) => (
+                <div key={b.id} className="flex items-center gap-3.5">
+                  <div
+                    className="w-[140px] flex-none truncate text-[13.5px] font-semibold"
+                    style={{ fontFamily: T.sans, color: '#d4d2e0' }}
+                  >
+                    {b.label}
+                  </div>
+
+                  <div
+                    className="h-[7px] min-w-[40px] flex-1 overflow-hidden rounded-full"
+                    style={{ background: '#17171f', boxShadow: 'inset 0 1px 2px #00000099' }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.max(6, b.pct)}%`,
+                        background: `linear-gradient(90deg, ${b.color}5e, ${b.color})`,
+                        boxShadow: `0 0 12px ${b.color}66`,
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    className="w-6 flex-none text-right"
+                    style={{ fontFamily: T.display, fontSize: 16, fontWeight: 700, color: '#ffffff' }}
+                  >
+                    {b.count}
+                  </div>
+                  <div
+                    className="w-10 flex-none text-right text-[12px]"
+                    style={{ fontFamily: T.mono, color: `${b.color}dd` }}
+                  >
+                    {b.pct}%
+                  </div>
                 </div>
-                <div
-                  className={`mt-1.5 truncate font-bold leading-none ${c.small ? 'text-[19px]' : 'text-[26px] tabular-nums'}`}
-                  style={{ fontFamily: T.display, color: c.color }}
-                  title={String(c.value)}
-                >
-                  {c.value}
-                </div>
-                <div className="mt-1.5 truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  {c.hint}
-                </div>
-              </SoftCard>
-            </motion.div>
-          );
-        })}
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-[13.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e', lineHeight: 1.6 }}>
+              Розклад зʼявиться, щойно накопичиться перша пара записів.
+            </p>
+          )}
+        </div>
       </div>
-
-      {/* розподіл категорій */}
-      {distribution.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: 0.16, ease: EASE }}
-          className="rounded-2xl px-5 py-4"
-          style={{ background: T.surface, border: `1px solid ${T.line}` }}
-        >
-          <div className="mb-3 text-[12px] font-semibold uppercase tracking-[0.09em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-            Розподіл категорій
-          </div>
-
-          <div className="flex h-2.5 gap-[3px] overflow-hidden rounded-full">
-            {distribution.map((d, i) => (
-              <motion.div
-                key={d.id}
-                title={`${d.label} — ${d.pct}%`}
-                className="h-full rounded-sm transition-[filter] duration-200 hover:brightness-125"
-                style={{ background: d.color, opacity: 0.85 }}
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.max(d.pct, 3)}%` }}
-                transition={{ duration: 0.6, delay: 0.2 + i * 0.04, ease: EASE }}
-              />
-            ))}
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-            {distribution.map((d) => (
-              <span key={d.id} className="flex items-center gap-2 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                <span className="h-2 w-2 rounded-sm" style={{ background: d.color }} />
-                {d.label}
-                <span className="tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>{d.count}</span>
-              </span>
-            ))}
-          </div>
-        </motion.div>
-      )}
-    </div>
+    </motion.div>
   );
 }

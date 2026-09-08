@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { REASON_GROUPS, REASONS, MAIN_REASONS, reasonLabel, hexA } from './utils';
+import {
+  X, Search, Plus, Check, AlertTriangle, Image as ImageIcon, Loader2,
+} from 'lucide-react';
+import { REASON_GROUPS, REASONS, reasonLabel } from './utils';
+import { T } from '../../lib/theme';
+import { useAuth } from '../../context/AuthContext';
+import { uploadImage } from '../../lib/imageStore';
+import { notify } from '../../utils/notify';
 import AssetPickerModal from '../modals/AssetPickerModal';
+import ImageSlider from '../ui/ImageSlider';
 
 /* ==================================================================
    Композер помилки.
@@ -14,410 +22,429 @@ import AssetPickerModal from '../modals/AssetPickerModal';
    доки жоден предок не має transform, а всі перелічені місця — це
    анімовані модалки, тобто transform там є завжди.
 
-   Типографіка переписана. Було: моноширинний шрифт, uppercase і
-   letter-spacing 2px на всьому — від заголовків до кнопок. Такий
-   набір читається як термінальний лог, і саме тому текст «не
-   виділявся»: коли все набрано однаково дрібно й розріджено, око не
-   має за що зачепитись і не бачить, що тут головне. Тепер підписи
-   лишились дрібними, а те, що людина читає й вибирає, набрано
-   нормальним кеглем і вагою.
+   Дві колонки. Ліворуч — те, що людина пише сама: пара, текст,
+   скріни. Праворуч — те, що вона вибирає: причини, всі одразу на
+   очах. Раніше причини ховались у випадашці, і вибір «чому це
+   сталось» вимагав спершу здогадатись, що список взагалі є.
+
+   Порядок теж має значення: спершу опис, потім причина. Щоб
+   відповісти «чому», треба згадати «що» — коли текст уже написано,
+   формулювання приходить саме.
 ================================================================== */
 
 const Z = 2000;
+const A = (a) => `rgba(${T.accRgb}, ${a})`;
 
-const SANS = "'Roboto', system-ui, -apple-system, sans-serif";
-
-const C = {
-  text:  'var(--edge-text, #FAFAFA)',
-  text2: 'var(--edge-text2, #B4B4BD)',
-  text3: 'var(--edge-text3, #7A7A85)',
-  text4: 'var(--edge-text4, #4A4A52)',
-  line:  'var(--edge-line, #232328)',
-  lineHi:'var(--edge-line-hi, #33333A)',
-  panel: 'var(--edge-panel, #131316)',
-  sunken:'var(--edge-sunken, #0D0D10)',
-  acc:   'var(--edge-acc, #8b7bff)',
-  bad:   '#f87171',
-  ok:    '#34d399',
+/* Колір групи причин: він же колір обраних чіпів усередині неї —
+   так у списку обраних видно, з якої області промах. */
+const GROUP_COLOR = {
+  Main: '#ff7b7b',
+  Entry: '#4da3ff',
+  'Management and exit': '#f0b13c',
+  Risk: '#ff4d6d',
+  Mindset: '#9d8cff',
+  Preparation: '#3ddc97',
 };
 
-/* Підпис над полем. Дрібний і розріджений — але саме він, а не
-   вміст під ним: підпис має підказувати, а не змагатися з даними. */
-function Cap({ children, hint }) {
-  return (
-    <div style={{ marginBottom: 10, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-      <span style={{ fontFamily: SANS, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.4px', textTransform: 'uppercase', color: C.text3 }}>
-        {children}
+const GROUP_TITLE = {
+  Main: 'Головне',
+  Entry: 'Вхід',
+  'Management and exit': 'Ведення і вихід',
+  Risk: 'Ризик',
+  Mindset: 'Стан',
+  Preparation: 'Підготовка',
+};
+
+const PROMPTS = [
+  { name: 'Що я побачив', text: 'Що я побачив: ' },
+  { name: 'Чому зайшов', text: '\nЧому зайшов: ' },
+  { name: 'Правило на майбутнє', text: '\nПравило на майбутнє: ' },
+];
+
+const Cap = ({ children, hint, tone }) => (
+  <div className="flex items-baseline justify-between gap-2.5">
+    <span
+      className="text-[11.5px] font-bold uppercase"
+      style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: '#b4b2c6' }}
+    >
+      {children}
+    </span>
+    {hint && (
+      <span className="text-[13px] font-medium" style={{ fontFamily: T.sans, color: tone || '#9d9bb0' }}>
+        {hint}
       </span>
-      {hint && (
-        <span style={{ fontFamily: SANS, fontSize: 12.5, color: C.text4 }}>{hint}</span>
+    )}
+  </div>
+);
+
+/* ------------------------------------------------------------------
+   Скріни графіка.
+
+   Кілька, а не один: розбір майже завжди складається з двох картинок
+   — як виглядало на вході і чим закінчилось. Перегляд той самий, що
+   в картці угоди: лупа на наведення, стрілки між кадрами, фулскрін
+   по кліку. Свій переглядач тут був би четвертим у застосунку.
+------------------------------------------------------------------ */
+function ShotsField({ shots, setShots, entryId }) {
+  const { user } = useAuth();
+  const [hov, setHov] = useState(false);
+  const [busy, setBusy] = useState(0);
+  const input = useRef(null);
+
+  const add = async (files) => {
+    const list = [...files].filter((f) => f.type.startsWith('image/'));
+    if (!list.length) return;
+
+    if (!user?.id) {
+      notify.error('Спершу увійди', 'Скрін нема куди завантажити без акаунта.');
+      return;
+    }
+
+    setBusy((n) => n + list.length);
+    for (const file of list) {
+      try {
+        /* Послідовно, а не Promise.all: паралельне завантаження
+           чотирьох картинок з телефонної мережі частіше падає
+           цілком, ніж встигає швидше. */
+        const url = await uploadImage(user.id, `err-${entryId || 'new'}`, file);
+        setShots((prev) => [...prev, url]);
+      } catch (e) {
+        notify.error('Скрін не завантажився', e?.message || 'Сховище відмовило.');
+      } finally {
+        setBusy((n) => n - 1);
+      }
+    }
+  };
+
+  /* Ctrl+V працює, поки відкрита модалка: скрін графіка майже
+     завжди щойно зроблений і лежить у буфері, а не у файлах. */
+  useEffect(() => {
+    const onPaste = (e) => {
+      const files = [...(e.clipboardData?.files || [])];
+      if (files.length) { e.preventDefault(); add(files); }
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  });
+
+  return (
+    <div className="mt-4">
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => { add(e.target.files); e.target.value = ''; }}
+      />
+
+      {shots.length > 0 && (
+        /* Видалення живе на самій картинці, поруч із лупою й
+           фулскріном: список «кадр 1 · кадр 2» під слайдером змушував
+           тримати в голові, який із них зараз показано. */
+        <div className="mb-2.5">
+          <ImageSlider
+            images={shots}
+            containerClassName="h-[200px] rounded-[14px]"
+            onDelete={(url) => setShots((prev) => prev.filter((x) => x !== url))}
+          />
+        </div>
       )}
+
+      <div
+        onClick={() => input.current?.click()}
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        onDragOver={(e) => { e.preventDefault(); setHov(true); }}
+        onDragLeave={() => setHov(false)}
+        onDrop={(e) => { e.preventDefault(); setHov(false); add(e.dataTransfer.files); }}
+        className="flex cursor-pointer items-center gap-3 rounded-[14px] p-3"
+        style={{
+          border: `1.5px dashed ${hov ? A(0.55) : '#24242f'}`,
+          background: hov ? A(0.07) : '#ffffff03',
+          transition: 'all .2s',
+        }}
+      >
+        <span
+          className="grid h-[38px] w-[38px] flex-none place-items-center rounded-xl"
+          style={{
+            background: hov ? A(0.17) : '#ffffff0a',
+            border: `1px solid ${hov ? A(0.44) : '#26262f'}`,
+            color: hov ? '#b3a8ff' : '#8b899a',
+            transition: 'all .2s',
+          }}
+        >
+          {busy > 0 ? <Loader2 size={17} className="animate-spin" /> : <ImageIcon size={17} strokeWidth={1.7} />}
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14.5px] font-semibold" style={{ fontFamily: T.sans, color: '#e8e6f0' }}>
+            {busy > 0 ? `Завантажую ${busy}…` : shots.length ? 'Додати ще скрін' : 'Скріни графіка'}
+          </span>
+          <span className="mt-[3px] block text-[12.5px]" style={{ fontFamily: T.sans, color: '#a5a3b8' }}>
+            Перетягни, клікни або встав із буфера
+          </span>
+        </span>
+      </div>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------
-   Вибір причини.
+   Причини.
 
-   Окремим списком, а не чіпами: причин майже тридцять, і плиткою
-   вони перетворили б вікно на стіну. Пошук зверху й групи всередині
-   роблять довгий список швидшим за короткий — потрібне знаходиться
-   набором двох літер.
+   Постійним списком, а не випадашкою: це головне поле вікна, і воно
+   мусить бути видно без жодного кліку. Пошук зверху перетворює
+   тридцять причин на дві літери набору, а свою причину можна додати
+   прямо з рядка пошуку — там же, де шукав готову.
 ------------------------------------------------------------------ */
-function ReasonPicker({ value = [], onChange, invalid }) {
-  const [open, setOpen] = useState(false);
+function ReasonPanel({ value, onChange, invalid }) {
   const [q, setQ] = useState('');
-  const box = useRef(null);
-  const input = useRef(null);
-  const panel = useRef(null);
+  const [focus, setFocus] = useState(false);
 
-  /* ---------- де малювати список ----------
-
-     Панель була absolute всередині модалки, а модалка має власну
-     прокрутку — тож усе, що не влізло в її межі, просто зрізалось
-     по верхньому краю. Збільшення висоти цього не лікує: скільки не
-     додай, обрізатиме на тому самому місці.
-
-     Тому список іде в портал на body і рахує своє місце в
-     координатах вікна. Тепер його межа — екран, а не картка, у якій
-     він лежить. */
-  const [pos, setPos] = useState(null);
-
-  const place = () => {
-    const el = box.current;
-    if (!el) return;
-
-    const r = el.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const gap = 10;
-    const pad = 16;
-
-    /* Над полем чи під ним — де більше місця. Поле причини стоїть
-       унизу форми, тому майже завжди виграє верх. */
-    const above = r.top - gap - pad;
-    const below = vh - r.bottom - gap - pad;
-    const up = above >= below;
-
-    setPos({
-      left: Math.max(pad, r.left),
-      width: Math.min(Math.max(r.width, 560), vw - pad * 2),
-      top: up ? undefined : r.bottom + gap,
-      bottom: up ? vh - r.top + gap : undefined,
-      maxH: Math.max(260, Math.min(760, up ? above : below)),
-      up,
-    });
-  };
-
-  useEffect(() => {
-    if (!open) return undefined;
-    place();
-    const t = setTimeout(() => input.current?.focus(), 40);
-    const away = (e) => {
-      if (box.current?.contains(e.target)) return;
-      if (panel.current?.contains(e.target)) return;
-      setOpen(false);
-    };
-    const esc = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } };
-    document.addEventListener('mousedown', away);
-    document.addEventListener('keydown', esc, true);
-    window.addEventListener('resize', place);
-    window.addEventListener('scroll', place, true);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener('mousedown', away);
-      document.removeEventListener('keydown', esc, true);
-      window.removeEventListener('resize', place);
-      window.removeEventListener('scroll', place, true);
-    };
-  }, [open]);
-
+  /* Через useMemo, а не `value || []`: інакше кожен рендер створює
+     новий масив, і всі меми нижче перераховуються дарма. */
+  const picked = useMemo(() => value || [], [value]);
   const query = q.trim().toLowerCase();
 
-  const groups = useMemo(() => {
-    if (!query) return REASON_GROUPS;
-    return REASON_GROUPS
-      .map((g) => ({ ...g, items: g.items.filter((r) => r.label.toLowerCase().includes(query)) }))
-      .filter((g) => g.items.length);
-  }, [query]);
+  const groups = useMemo(() => REASON_GROUPS.map((g) => {
+    const color = GROUP_COLOR[g.group] || T.acc;
+    const items = g.items.filter((r) => !query || r.label.toLowerCase().includes(query));
+    return { ...g, color, items, taken: g.items.filter((r) => picked.includes(r.id)).length };
+  }).filter((g) => g.items.length), [query, picked]);
 
-  const exact = query && REASONS.some((r) => r.label.toLowerCase() === query);
-  const isMain = (id) => MAIN_REASONS.some((m) => m.id === id);
+  /* Свої причини не мають групи, тому збираємо їх окремо — інакше
+     вони зникали б зі списку одразу після додавання. */
+  const own = picked.filter((id) => !REASONS.some((r) => r.id === id));
+  const ownShown = own.filter((id) => !query || id.toLowerCase().includes(query));
 
-  /* Мультивибір: клік перемикає, вікно лишається відкритим. Причин
-     майже завжди більше однієї — «не було плану» і «відігравав
-     мінус» приходять разом, — і закривати список після кожної
-     означало б відкривати його чотири рази поспіль. */
-  const toggle = (id) => {
-    onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
+  const canAdd = query.length > 1
+    && !REASONS.some((r) => r.label.toLowerCase() === query)
+    && !own.some((id) => id.toLowerCase() === query);
+
+  const toggle = (id) => onChange(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
+
+  const addOwn = () => {
+    const label = q.trim();
+    if (!label) return;
+    onChange([...picked, label]);
     setQ('');
-    input.current?.focus();
+  };
+
+  const colorOf = (id) => {
+    const g = REASON_GROUPS.find((x) => x.items.some((r) => r.id === id));
+    return g ? (GROUP_COLOR[g.group] || T.acc) : '#3ddc97';
   };
 
   return (
-    <div ref={box} style={{ position: 'relative' }}>
-      <div
-        onClick={() => setOpen(true)}
-        style={{
-          minHeight: 54, padding: value.length ? '10px 12px' : '15px 16px', borderRadius: 12,
-          background: C.sunken,
-          border: `1px solid ${invalid ? C.bad : open ? C.acc : (value.length ? hexA('#8b7bff', 0.32) : C.line)}`,
-          boxShadow: invalid ? `0 0 0 3px ${hexA('#f87171', 0.12)}` : 'none',
-          cursor: 'pointer', transition: 'border-color .2s',
-          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-        }}
-      >
-        {value.length === 0 && (
-          <span style={{ fontFamily: SANS, fontSize: 15, color: invalid ? C.bad : C.text4, flex: 1 }}>
-            No reason selected
-          </span>
-        )}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="px-5 pb-3.5 pt-5">
+        <Cap
+          hint={picked.length ? `обрано ${picked.length}` : 'можна кілька'}
+          tone={invalid ? '#ff9d9d' : undefined}
+        >
+          Причина
+        </Cap>
 
-        {value.map((id) => {
-          const main = isMain(id);
-          const col = main ? '#f87171' : '#8b7bff';
-          return (
-            <span
-              key={id}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9,
-                background: hexA(col, 0.12), border: `1px solid ${hexA(col, 0.4)}`, color: col,
-                fontFamily: SANS, fontSize: 13.5, fontWeight: 700,
-              }}
+        <div
+          className="mt-2.5 flex h-10 items-center gap-2.5 rounded-xl pl-3.5 pr-2"
+          style={{
+            background: focus ? '#ffffff12' : '#ffffff08',
+            border: `1px solid ${invalid ? '#ff7b7b8c' : focus ? A(0.5) : '#21212b'}`,
+            boxShadow: focus ? `0 0 0 4px ${A(0.11)}` : 'none',
+            transition: 'all .2s',
+          }}
+        >
+          <Search size={15} strokeWidth={1.8} className="shrink-0" style={{ color: '#a5a3b8' }} />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onFocus={() => setFocus(true)}
+            onBlur={() => setFocus(false)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && canAdd) { e.preventDefault(); addOwn(); } }}
+            placeholder="Знайти або написати свою"
+            className="w-full border-none bg-transparent text-[14.5px] font-medium outline-none"
+            style={{ fontFamily: T.sans, color: '#ffffff' }}
+          />
+          {canAdd && (
+            <button
+              onClick={addOwn}
+              className="flex flex-none items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-bold"
+              style={{ fontFamily: T.sans, background: A(0.24), border: `1px solid ${A(0.5)}`, color: '#c4baff' }}
             >
-              {reasonLabel(id)}
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onChange(value.filter((x) => x !== id)); }}
-                style={{ display: 'flex', background: 'transparent', border: 'none', color: col, cursor: 'pointer', padding: 0, opacity: 0.7 }}
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
-              </button>
-            </span>
+              <Plus size={11} strokeWidth={3} />
+              додати
+            </button>
+          )}
+        </div>
+
+        {picked.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {picked.map((id) => {
+              const c = colorOf(id);
+              return (
+                <button
+                  key={id}
+                  onClick={() => toggle(id)}
+                  className="flex items-center gap-2 rounded-full px-3 py-[6px] text-[13px] font-bold"
+                  style={{ fontFamily: T.sans, background: `${c}26`, border: `1px solid ${c}73`, color: c, transition: 'all .16s' }}
+                >
+                  {reasonLabel(id)}
+                  <X size={10} strokeWidth={3} />
+                </button>
+              );
+            })}
+            <button
+              onClick={() => onChange([])}
+              className="px-1.5 py-1 text-[13px] font-semibold"
+              style={{ fontFamily: T.sans, color: '#9d9bb0' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#a99cff'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#6a6878'; }}
+            >
+              очистити
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Без стелі у 404px: список причин довший за неї, і останні
+          групи обрізались просто посеред чіпів. Висоту тримає саме
+          вікно — обмеження тут було зайвим поверх нього. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+        {groups.map((g) => {
+          const main = !!g.main;
+          return (
+            <div
+              key={g.group}
+              className="mt-4"
+              style={main ? {
+                padding: 14,
+                borderRadius: 16,
+                background: `linear-gradient(165deg, ${g.color}12, #ffffff03)`,
+                border: `1px solid ${g.color}2b`,
+              } : undefined}
+            >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className="h-1.5 w-1.5 flex-none rounded-full"
+                  style={{ background: g.color, boxShadow: `0 0 8px 1px ${g.color}99` }}
+                />
+                <span
+                  className="whitespace-nowrap text-[11.5px] font-bold uppercase"
+                  style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: main ? `${g.color}ee` : '#8d8b9e' }}
+                >
+                  {GROUP_TITLE[g.group] || g.group}
+                </span>
+                <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,#22222c,transparent)' }} />
+                {g.taken > 0 && (
+                  <span
+                    className="flex-none rounded-md px-2 py-[3px] text-[11.5px]"
+                    style={{ fontFamily: T.mono, background: `${g.color}1f`, border: `1px solid ${g.color}42`, color: g.color }}
+                  >
+                    {g.taken}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                {g.items.map((r) => {
+                  const on = picked.includes(r.id);
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => toggle(r.id)}
+                      className="flex items-center gap-1.5 rounded-full px-3.5 py-[8px] text-[13.5px] font-semibold"
+                      style={{
+                        fontFamily: T.sans,
+                        lineHeight: 1.2,
+                        background: on ? `${g.color}2b` : '#ffffff08',
+                        border: `1px solid ${on ? `${g.color}8c` : '#21212b'}`,
+                        color: on ? '#ffffff' : '#c2c0d0',
+                        boxShadow: on ? `0 0 18px -8px ${g.color}cc` : 'none',
+                        transition: 'all .16s',
+                      }}
+                    >
+                      {on && <Check size={11} strokeWidth={3} className="shrink-0" />}
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
 
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-          style={{
-            marginLeft: 'auto', flexShrink: 0, padding: '9px 16px', borderRadius: 9, cursor: 'pointer',
-            background: open ? hexA('#8b7bff', 0.14) : 'transparent',
-            border: `1px solid ${open ? C.acc : C.lineHi}`,
-            color: open ? C.acc : C.text2,
-            fontFamily: SANS, fontSize: 13.5, fontWeight: 700,
-            display: 'flex', alignItems: 'center', gap: 7, transition: 'all .18s',
-          }}
-        >
-          {value.length ? 'More' : 'Choose'}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>
-            <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Широка панель у колонки: усі групи видно одночасно, і вибір
-          стає впізнаванням, а не гортанням. */}
-      {typeof document !== 'undefined' && createPortal(
-      <AnimatePresence>
-        {open && pos && (
-          <motion.div
-            ref={panel}
-            initial={{ opacity: 0, y: pos?.up ? 6 : -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: pos?.up ? 6 : -6 }}
-            transition={{ duration: 0.16 }}
-            style={{
-              position: 'fixed',
-              left: pos?.left, width: pos?.width,
-              top: pos?.top, bottom: pos?.bottom,
-              zIndex: Z + 3,
-              /* Суцільний колір, а не змінна теми: --edge-panel у
-                 темній темі напівпрозора, і крізь панель читався
-                 текст форми під нею — саме через це список виглядав
-                 брудним. */
-              background: '#15151A',
-              border: `1px solid ${C.lineHi}`, borderRadius: 16,
-              boxShadow: '0 -30px 80px -20px rgba(0,0,0,.95), 0 0 0 1px rgba(0,0,0,.4)',
-              overflow: 'hidden',
-              display: 'flex', flexDirection: 'column', /* Висота під увесь список: гортати тридцять причин, щоб
-                 знайти одну, — це та сама вада, від якої мали
-                 позбавити групи. */
-              /* Вище, а не ширше. Ширина тут не допомагала: колонки
-                 ставали вужчими, назви ламались на два рядки, і
-                 виграні пікселі поверталися висотою. Вертикаль
-                 працює прямо — більше пунктів видно одразу. */
-              maxHeight: pos?.maxH,
-            }}
-          >
-            <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
-              <input
-                ref={input}
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key !== 'Enter') return;
-                  e.preventDefault();
-                  const first = groups[0]?.items?.[0];
-                  if (first) toggle(first.id);
-                  else if (q.trim()) toggle(q.trim());
-                }}
-                placeholder="Search or write your own reason…"
-                style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontFamily: SANS, fontSize: 14.5, color: C.text }}
-              />
-            </div>
-
-            <div
-              className="custom-scrollbar"
-              style={{ overflowY: 'auto', padding: 16, flex: 1, minHeight: 0 }}
-            >
-              {groups.map((g) => (
-                <div
-                  key={g.group}
-                  style={g.main ? {
-                    /* Головні відділені рамкою, а не просто заголовком:
-                       вони важать більше за решту, і це має бути видно
-                       до читання. */
-                    marginBottom: 18, padding: '12px 14px 14px', borderRadius: 12,
-                    background: hexA('#f87171', 0.05), border: `1px solid ${hexA('#f87171', 0.2)}`,
-                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 4,
-                  } : { display: 'contents' }}
-                >
-                  {g.main ? (
-                    <>
-                      <div style={{ gridColumn: '1/-1', padding: '2px 4px 6px', fontFamily: SANS, fontSize: 11, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: C.bad }}>
-                        {g.group}
-                      </div>
-                      {g.items.map((r) => {
-                        const on = value.includes(r.id);
-                        return (
-                          <button
-                            key={r.id}
-                            type="button"
-                            onClick={() => toggle(r.id)}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left',
-                              padding: '10px 11px', borderRadius: 9, cursor: 'pointer',
-                              background: on ? hexA('#f87171', 0.14) : 'transparent',
-                              border: `1px solid ${on ? hexA('#f87171', 0.4) : 'transparent'}`,
-                              color: on ? C.bad : C.text2,
-                              fontFamily: SANS, fontSize: 14, fontWeight: on ? 700 : 600, lineHeight: 1.3,
-                              transition: 'all .15s',
-                            }}
-                            onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,.05)'; }}
-                            onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
-                          >
-                            <Box on={on} col="#f87171" />
-                            {r.label}
-                          </button>
-                        );
-                      })}
-                    </>
-                  ) : null}
-                </div>
-              ))}
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '18px 24px', alignContent: 'start' }}>
-                {groups.filter((g) => !g.main).map((g) => (
-                  <div key={g.group}>
-                    <div style={{ padding: '0 8px 8px', marginBottom: 2, fontFamily: SANS, fontSize: 11, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: C.text4, borderBottom: `1px solid ${C.line}` }}>
-                      {g.group}
-                    </div>
-                    {g.items.map((r) => {
-                      const on = value.includes(r.id);
-                      return (
-                        <button
-                          key={r.id}
-                          type="button"
-                          onClick={() => toggle(r.id)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left',
-                            padding: '7px 9px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                            background: on ? hexA('#8b7bff', 0.14) : 'transparent',
-                            color: on ? C.acc : C.text2,
-                            fontFamily: SANS, fontSize: 13.5, fontWeight: on ? 700 : 500,
-                            lineHeight: 1.35, transition: 'background .15s',
-                          }}
-                          onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,.05)'; }}
-                          onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <Box on={on} col="#8b7bff" />
-                          {r.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {q.trim() && !exact && (
-              <button
-                type="button"
-                onClick={() => toggle(q.trim())}
-                style={{
-                  flexShrink: 0, textAlign: 'left', padding: '14px 16px',
-                  borderTop: `1px solid ${C.line}`, background: C.sunken, border: 'none',
-                  cursor: 'pointer', fontFamily: SANS, fontSize: 14, fontWeight: 700, color: C.acc,
-                }}
+        {ownShown.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center gap-2.5">
+              <span className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: '#3ddc97', boxShadow: '0 0 8px 1px #3ddc9799' }} />
+              <span
+                className="whitespace-nowrap text-[11.5px] font-bold uppercase"
+                style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: '#a5a3b8' }}
               >
-                + Своя причина: «{q.trim()}»
-              </button>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>,
-      document.body,
-      )}
-    </div>
-  );
-}
+                Свої
+              </span>
+              <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,#22222c,transparent)' }} />
+            </div>
 
-/* Квадратик відмітки. Без нього мультивибір читається як список
-   посилань: незрозуміло, що пунктів можна взяти кілька. */
-function Box({ on, col }) {
-  return (
-    <span
-      style={{
-        width: 16, height: 16, borderRadius: 5, flexShrink: 0,
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: on ? hexA(col, 0.2) : 'transparent',
-        border: `1px solid ${on ? col : 'rgba(255,255,255,.16)'}`,
-        transition: 'all .15s',
-      }}
-    >
-      {on && (
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="none">
-          <path d="m5 13 4.5 4.5L19 7" stroke={col} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-    </span>
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+              {ownShown.map((id) => (
+                <button
+                  key={id}
+                  onClick={() => toggle(id)}
+                  className="flex items-center gap-1.5 rounded-full px-3.5 py-[8px] text-[13.5px] font-semibold"
+                  style={{
+                    fontFamily: T.sans,
+                    background: '#3ddc972b',
+                    border: '1px solid #3ddc978c',
+                    color: '#ffffff',
+                    boxShadow: '0 0 18px -8px #3ddc97cc',
+                  }}
+                >
+                  <Check size={11} strokeWidth={3} className="shrink-0" />
+                  {id}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!groups.length && !ownShown.length && (
+          <div
+            className="mt-4 rounded-[14px] px-4 py-6 text-center"
+            style={{ border: '1.5px dashed #24242f', background: '#ffffff03' }}
+          >
+            <div className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: '#c9c7d8' }}>
+              Такої причини ще немає
+            </div>
+            <div className="mt-1.5 text-[12px]" style={{ fontFamily: T.sans, color: '#9d9bb0' }}>
+              Натисни «додати», щоб зберегти свою
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
 /* ================================================================== */
 
-export default function ErrorComposerModal({ isOpen, onClose, form, setForm, recentPairs, onSave }) {
-  const [isAssetPickerOpen, setAssetPickerOpen] = useState(false);
-
-  /* Своїх категорій тут більше немає: окреме поле «що це було»
-     прибрано, а свою причину людина вписує прямо в списку причин —
-     там же, де вибирає готові. Одне місце замість двох. */
+export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onSave }) {
+  const [assetOpen, setAssetOpen] = useState(false);
+  const [bodyFocus, setBodyFocus] = useState(false);
+  const [ctaHover, setCtaHover] = useState(false);
 
   /* ---------- що справді обовʼязкове ----------
 
-     Актив і посилання на графік — ні. Помилка «торгував без плану»
-     не належить активу, а скріншот через тиждень уже нічого не
-     додає. Вимагати їх означало б не пускати в журнал саме ті
-     записи, які найважче зробити й найкорисніше мати.
+     Актив і скрін — ні. Помилка «торгував без плану» не належить
+     активу, а скріншот через тиждень уже нічого не додає. Вимагати
+     їх означало б не пускати в журнал саме ті записи, які найважче
+     зробити й найкорисніше мати.
 
-     Причина й опис — так. Без них картка не піддається розбору:
-     через місяць з неї нічого не виводиться, а місце в стрічці вона
-     займає нарівні з рештою.
+     Причина й опис — так. Без них картка не піддається розбору.
 
-     Кнопка при цьому лишається живою. Заблокована кнопка не каже,
-     чого їй бракує — людина клікає в порожнечу й іде. Краще дати
-     натиснути і показати, що саме не заповнено. */
+     Кнопка при цьому лишається живою: заблокована не каже, чого їй
+     бракує — людина клікає в порожнечу й іде. */
   const [touched, setTouched] = useState(false);
 
   /* Скидаємо під час рендера, а не ефектом: інакше вікно встигає
@@ -431,13 +458,20 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
   const missReason = !(form.reasons || []).length;
   const missDesc = form.desc.trim().length < 4;
   const invalid = missReason || missDesc;
+  const bad = (miss) => touched && miss;
+
+  const len = form.desc.trim().length;
+  const shots = form.shots || [];
 
   const submit = () => {
     if (invalid) { setTouched(true); return; }
     onSave();
   };
 
-  const bad = (miss) => touched && miss;
+  const addPrompt = (text) => setForm({
+    ...form,
+    desc: (form.desc ? form.desc.replace(/\s*$/, '') : '') + text,
+  });
 
   const body = (
     <AnimatePresence>
@@ -451,181 +485,231 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
             style={{ position: 'fixed', inset: 0, background: 'rgba(6,6,8,0.86)', backdropFilter: 'blur(8px)', zIndex: Z }}
           />
 
-          <div style={{ position: 'fixed', inset: 0, zIndex: Z + 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none' }}>
+          <div
+            style={{
+              position: 'fixed', inset: 0, zIndex: Z + 1, display: 'flex',
+              alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none',
+            }}
+          >
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.98 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="custom-scrollbar"
+              className="err-modal relative flex w-full flex-col overflow-hidden"
               style={{
-                pointerEvents: 'auto', width: 'min(680px,94vw)', maxHeight: '92vh', overflowY: 'auto',
-                background: C.panel, border: `1px solid ${C.lineHi}`, borderRadius: 20,
-                padding: '32px 36px 28px', boxShadow: '0 50px 120px rgba(0,0,0,.6)',
+                pointerEvents: 'auto',
+                maxWidth: 1040,
+                height: 'min(92vh, 760px)',
+                borderRadius: 24,
+                backgroundColor: '#0b0b10',
+                backgroundImage: 'linear-gradient(170deg,#111117,#0b0b10)',
+                border: '1px solid #23232e',
+                boxShadow: `0 50px 110px -40px #000, 0 0 0 1px ${A(0.08)}`,
               }}
             >
+              <span
+                className="pointer-events-none absolute inset-x-0 top-0 h-px"
+                style={{ background: 'linear-gradient(90deg,transparent,#ff7b7bb3 26%,#8b7cffcc 72%,transparent)' }}
+              />
+
+              {/* Плейсхолдери за замовчуванням майже зливаються з
+                  фоном — на яскравому екрані їх не видно взагалі. */}
+              <style>{`
+                .err-modal input::placeholder,
+                .err-modal textarea::placeholder { color: #7d7b90; opacity: 1; }
+              `}</style>
+
               {/* ---------- шапка ---------- */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 30 }}>
-                <div style={{ width: 42, height: 42, borderRadius: 12, background: hexA('#f87171', 0.09), border: `1px solid ${hexA('#f87171', 0.32)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke={C.bad} strokeWidth="1.9" /><path d="M12 7.5v5" stroke={C.bad} strokeWidth="1.9" strokeLinecap="round" /><circle cx="12" cy="16" r="1" fill={C.bad} /></svg>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: SANS, fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, lineHeight: 1.15 }}>
-                    Mistake Review
-                  </div>
-                  <div style={{ fontFamily: SANS, fontSize: 13.5, color: C.text3, marginTop: 4 }}>
-                    What happened, why, and what to do about it
-                  </div>
-                </div>
-                <button
-                  className="error-btn-action"
-                  onClick={onClose}
-                  style={{ width: 38, height: 38, borderRadius: 10, background: 'transparent', border: `1px solid ${C.line}`, color: C.text3, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .2s', flexShrink: 0 }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>
-                </button>
-              </div>
-
-              {/* ---------- актив ---------- */}
-              <Cap hint="optional">Trading pair</Cap>
               <div
-                className="error-input"
-                onClick={() => setAssetPickerOpen(true)}
-                style={{
-                  width: '100%', padding: '14px 16px', borderRadius: 12, background: C.sunken,
-                  border: `1px solid ${C.line}`, color: form.pair ? C.text : C.text4,
-                  fontFamily: SANS, fontSize: 15, fontWeight: form.pair ? 700 : 400,
-                  letterSpacing: form.pair ? '0.04em' : 0,
-                  cursor: 'pointer', transition: 'border-color .2s', marginBottom: 10,
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                }}
+                className="flex flex-none items-center justify-between gap-5 py-4 pl-[22px] pr-[18px]"
+                style={{ borderBottom: '1px solid #1c1c25' }}
               >
-                <span>{form.pair || 'Choose asset'}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </div>
-
-              {recentPairs.length > 0 && (
-                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 26 }}>
-                  {recentPairs.map((p) => (
-                    <button
-                      key={p}
-                      className="error-chip"
-                      onClick={() => setForm({ ...form, pair: p })}
-                      style={{ padding: '7px 12px', borderRadius: 8, background: 'rgba(255,255,255,.03)', border: `1px solid ${C.line}`, color: C.text2, fontFamily: SANS, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }}
+                <div className="flex items-center gap-3">
+                  <span
+                    className="grid h-[34px] w-[34px] place-items-center rounded-[11px]"
+                    style={{ background: '#ff7b7b1f', border: '1px solid #ff7b7b4d', boxShadow: 'inset 0 1px 0 #ff7b7b55', color: '#ffb3b3' }}
+                  >
+                    <AlertTriangle size={16} strokeWidth={1.9} />
+                  </span>
+                  <div>
+                    <div
+                      className="text-[12px] font-bold uppercase"
+                      style={{ fontFamily: T.mono, letterSpacing: '2.2px', color: '#ff9d9d' }}
                     >
-                      {p}
-                    </button>
-                  ))}
+                      Зафіксувати помилку
+                    </div>
+                    <div className="mt-1 text-[13.5px]" style={{ fontFamily: T.sans, color: '#b4b2c6' }}>
+                      Що сталося, чому, і що робити далі
+                    </div>
+                  </div>
                 </div>
-              )}
 
-              {/* Окремого «що це було» більше немає: воно питало те
-                  саме, що й причина, тільки грубіше — і людина
-                  описувала один промах двічі. Категорія тепер
-                  виводиться з причин, тому колір картки в стрічці й
-                  статистика працюють як раніше, без зайвого поля. */}
-
-              {/* ---------- опис ---------- */}
-              <Cap hint={bad(missDesc) ? '⚠ no description means this entry can\'t be reviewed' : undefined}>
-                What happened and what did you learn
-              </Cap>
-              <textarea
-                className="error-input"
-                value={form.desc}
-                onChange={(e) => setForm({ ...form, desc: e.target.value })}
-                rows="4"
-                placeholder="Describe in your own words: what you did, what went wrong, what you'll do differently next time."
-                style={{
-                  width: '100%', padding: '14px 16px', borderRadius: 12, background: C.sunken,
-                  border: `1px solid ${bad(missDesc) ? C.bad : C.line}`, color: C.text, fontFamily: SANS,
-                  boxShadow: bad(missDesc) ? `0 0 0 3px ${hexA('#f87171', 0.12)}` : 'none',
-                  fontSize: 14.5, lineHeight: 1.65, outline: 'none',
-                  /* none, а не vertical: куточок для розтягування —
-                     єдина світла пляма в темному вікні, і око чіплялось
-                     саме за нього. Висоти в чотири рядки вистачає, а
-                     довгий текст поле прокрутить. */
-                  resize: 'none',
-                  transition: 'border-color .2s', marginBottom: 26, display: 'block',
-                }}
-              />
-
-              {/* ---------- скрін ---------- */}
-              <Cap hint="optional">Chart screenshot</Cap>
-              <input
-                className="error-input-dashed"
-                value={form.tvLink}
-                onChange={(e) => setForm({ ...form, tvLink: e.target.value })}
-                placeholder="Chart link — Ctrl+V"
-                style={{
-                  width: '100%', padding: '15px 16px', borderRadius: 12, background: 'transparent',
-                  border: `1px dashed ${C.lineHi}`, color: C.acc, fontFamily: SANS,
-                  fontSize: 13.5, textAlign: 'center', outline: 'none',
-                  transition: 'border-color .2s', marginBottom: 26,
-                }}
-              />
-
-              {/* ---------- причина ----------
-
-                  Остання, і це навмисно: щоб відповісти «чому», треба
-                  спершу згадати «що». Тут людина вже написала опис —
-                  і формулювання приходить саме.
-
-                  Чотири головні лежать усередині списку, а не окремим
-                  блоком питань згори. Різниця не косметична: блок
-                  питань змушував відповідати на всі чотири щоразу,
-                  навіть коли помилка була в одному. У списку людина
-                  позначає те, що справді сталось, і мовчання про
-                  решту лишається мовчанням. */}
-              <Cap hint={bad(missReason) ? '⚠ pick at least one' : 'multiple allowed · this drives the rule'}>
-                Reason
-              </Cap>
-              <div style={{ marginBottom: 28 }}>
-                <ReasonPicker
-                  value={form.reasons}
-                  invalid={bad(missReason)}
-                  onChange={(v) => setForm({ ...form, reasons: v })}
-                />
+                <button
+                  onClick={onClose}
+                  className="grid h-[34px] w-[34px] place-items-center rounded-[10px]"
+                  style={{ background: '#ffffff08', border: '1px solid #23232e', color: '#b3b1c0', transition: 'all .16s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff16'; e.currentTarget.style.borderColor = '#3d3d4c'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#23232e'; }}
+                >
+                  <X size={15} strokeWidth={2} />
+                </button>
               </div>
 
-              {/* ---------- дії ---------- */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, borderTop: `1px solid ${C.line}`, paddingTop: 22, flexWrap: 'wrap' }}>
-                <AnimatePresence>
-                  {touched && invalid && (
-                    <motion.span
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0 }}
-                      style={{ marginRight: 'auto', fontFamily: SANS, fontSize: 13.5, fontWeight: 600, color: C.bad }}
+              {/* ---------- дві колонки ---------- */}
+              {/* Крутиться кожна колонка окремо, а не вікно цілком.
+                  Спільна прокрутка тягла список причин разом із полем
+                  тексту: щоб дістатись до останньої групи, доводилось
+                  прогортати повз власний опис, а шапка й кнопка
+                  «Зберегти» їхали за край екрана. */}
+              <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1fr_396px]">
+                {/* ліворуч: те, що людина пише сама */}
+                <div
+                  className="min-w-0 overflow-y-auto px-[22px] pb-[18px] pt-5"
+                  style={{ borderRight: '1px solid #1c1c25' }}
+                >
+                  <Cap>Пара</Cap>
+                  <div
+                    onClick={() => setAssetOpen(true)}
+                    className="mt-2.5 flex h-[46px] cursor-pointer items-center justify-between gap-2.5 rounded-[13px] px-4"
+                    style={{ background: '#ffffff08', border: '1px solid #21212b', transition: 'all .16s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#33333f'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#21212b'; }}
+                  >
+                    <span
+                      className="min-w-0 truncate"
+                      style={form.pair
+                        ? { fontFamily: T.mono, fontSize: 15, letterSpacing: '1px', fontWeight: 700, color: '#ffffff' }
+                        : { fontFamily: T.sans, fontSize: 15, fontWeight: 500, color: '#9d9bb0' }}
                     >
-                      {missReason && missDesc
-                        ? 'Fill in the reason and description'
-                        : missReason ? 'Pick a reason' : 'Describe what happened'}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-                <button
-                  className="error-btn-action"
-                  onClick={onClose}
-                  style={{ padding: '13px 20px', borderRadius: 10, background: 'transparent', border: `1px solid ${C.line}`, color: C.text2, fontFamily: SANS, fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: 'all .2s' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="error-btn-save"
-                  onClick={submit}
-                  style={{
-                    padding: '13px 24px', borderRadius: 10,
-                    background: 'linear-gradient(180deg,#ff5563,#d92c3f)',
-                    border: '1px solid rgba(255,120,132,.6)',
-                    color: '#fff',
-                    fontFamily: SANS, fontSize: 14, fontWeight: 700,
-                    cursor: 'pointer', transition: 'all .2s ease',
-                    opacity: touched && invalid ? 0.75 : 1,
-                    boxShadow: '0 6px 24px rgba(217,44,63,.22)',
-                  }}
-                >
-                  Save
-                </button>
+                      {form.pair || 'Вибрати актив'}
+                    </span>
+                    <Search size={15} strokeWidth={1.8} style={{ color: '#8b899a', flex: 'none' }} />
+                  </div>
+
+                  <div className="mt-5">
+                    <Cap
+                      hint={bad(missDesc) ? '⚠ без опису запис не піддається розбору' : len ? `${len} символів` : undefined}
+                      tone={bad(missDesc) ? '#ff9d9d' : len > 40 ? '#6fe0b4' : undefined}
+                    >
+                      Що сталося і що з цього виніс
+                    </Cap>
+
+                    <div
+                      className="mt-2.5 rounded-[14px] px-4 py-3.5"
+                      style={{
+                        height: 186,
+                        background: bodyFocus ? '#ffffff0a' : '#ffffff05',
+                        border: `1px solid ${bad(missDesc) ? '#ff7b7b8c' : bodyFocus ? A(0.45) : '#1e1e27'}`,
+                        boxShadow: bodyFocus ? `0 0 0 4px ${A(0.11)}` : 'none',
+                        transition: 'all .2s',
+                      }}
+                    >
+                      <textarea
+                        value={form.desc}
+                        onChange={(e) => setForm({ ...form, desc: e.target.value })}
+                        onFocus={() => setBodyFocus(true)}
+                        onBlur={() => setBodyFocus(false)}
+                        placeholder="Що зробив, де зламався план, що зробиш інакше наступного разу."
+                        className="h-full w-full resize-none border-none bg-transparent p-0 outline-none"
+                        style={{ fontFamily: T.sans, fontSize: 16, lineHeight: 1.68, color: '#f2f1f8' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Підказки дописують заготовку в кінець тексту:
+                      порожнє поле — головна причина, чому розбір
+                      відкладають «на потім» і не повертаються. */}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span
+                      className="mr-0.5 text-[11.5px] font-bold uppercase"
+                      style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: '#75738a' }}
+                    >
+                      Підказки
+                    </span>
+                    {PROMPTS.map((p) => (
+                      <button
+                        key={p.name}
+                        onClick={() => addPrompt(p.text)}
+                        className="rounded-full px-3.5 py-[7px] text-[13px] font-semibold"
+                        style={{ fontFamily: T.sans, background: '#ffffff08', border: '1px solid #26262f', color: '#c2c0d0', transition: 'all .16s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.5); e.currentTarget.style.color = '#ffffff'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#21212b'; e.currentTarget.style.color = '#a5a3b3'; }}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  <ShotsField
+                    shots={shots}
+                    setShots={(next) => setForm((f) => ({
+                      ...f,
+                      shots: typeof next === 'function' ? next(f.shots || []) : next,
+                    }))}
+                  />
+                </div>
+
+                {/* праворуч: те, що людина вибирає */}
+                <div className="flex min-h-0 min-w-0 flex-col overflow-hidden" style={{ background: '#0c0c11' }}>
+                  <ReasonPanel
+                    value={form.reasons}
+                    onChange={(v) => setForm({ ...form, reasons: v })}
+                    invalid={bad(missReason)}
+                  />
+                </div>
+              </div>
+
+              {/* ---------- підвал ---------- */}
+              <div
+                className="flex flex-none flex-wrap items-center justify-between gap-4 py-3.5 pl-[22px] pr-[18px]"
+                style={{ borderTop: '1px solid #1c1c25', background: '#0a0a0e' }}
+              >
+                <span className="text-[13.5px] font-medium" style={{ fontFamily: T.sans, color: touched && invalid ? '#ff9d9d' : '#b4b2c6' }}>
+                  {touched && invalid
+                    ? (missReason && missDesc ? 'Заповни причину і опис'
+                      : missReason ? 'Обери причину' : 'Опиши, що сталось')
+                    : (form.reasons || []).length
+                      ? `обрано ${(form.reasons || []).length}`
+                      : 'можна кілька'}
+                </span>
+
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={onClose}
+                    className="flex h-[44px] items-center rounded-xl px-5 text-[14px] font-semibold"
+                    style={{ fontFamily: T.sans, background: '#ffffff08', border: '1px solid #26262f', color: '#d4d2e0', transition: 'all .16s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff14'; e.currentTarget.style.borderColor = '#353542'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#23232e'; }}
+                  >
+                    Скасувати
+                  </button>
+
+                  <button
+                    onClick={submit}
+                    onMouseEnter={() => setCtaHover(true)}
+                    onMouseLeave={() => setCtaHover(false)}
+                    className="relative flex h-[44px] items-center gap-2.5 overflow-hidden rounded-xl px-5 text-[14.5px] font-bold"
+                    style={{
+                      fontFamily: T.sans,
+                      color: '#ffffff',
+                      background: `linear-gradient(180deg, ${ctaHover ? '#6355ff, #4a3bf5' : '#5546f8, #3f30e8'})`,
+                      boxShadow: ctaHover
+                        ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 #ffffff4d`
+                        : `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 #ffffff33`,
+                      transform: `translateY(${ctaHover ? '-2px' : '0'})`,
+                      opacity: touched && invalid ? 0.8 : 1,
+                      transition: 'transform .3s cubic-bezier(.22,1.2,.36,1), box-shadow .24s, background .18s',
+                    }}
+                  >
+                    <span
+                      className="pointer-events-none absolute inset-x-0 top-0 h-px"
+                      style={{ background: 'linear-gradient(90deg,transparent,#ffffff99,transparent)' }}
+                    />
+                    <Check size={15} strokeWidth={2.6} />
+                    Зберегти помилку
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -633,8 +717,8 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, rec
           {/* Вибір активу — вище за композер, інакше ховався б під ним */}
           <div style={{ position: 'relative', zIndex: Z + 2 }}>
             <AssetPickerModal
-              isOpen={isAssetPickerOpen}
-              onClose={() => setAssetPickerOpen(false)}
+              isOpen={assetOpen}
+              onClose={() => setAssetOpen(false)}
               selectedAsset={form.pair}
               onSelect={(symbol) => setForm({ ...form, pair: symbol })}
             />

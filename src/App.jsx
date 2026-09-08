@@ -1,8 +1,15 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { demoClient } from './lib/demoDb';
+import { setDemoClient } from './lib/supabase';
+
+/* Демо-клієнт реєструється до першого рендера: AuthContext питає
+   сесію одразу, і на шляху /demo відповісти має вже він. */
+setDemoClient(demoClient);
 import { Toaster } from 'react-hot-toast';
 
 import Layout from './components/core/Layout';
 import Landing from './pages/Landing';
+import DemoShell from './pages/DemoShell';
 import Hub from './pages/Hub';
 import Dashboard from './pages/Dashboard';
 import DailyPlan from './pages/DailyPlan';
@@ -39,6 +46,21 @@ const router = createBrowserRouter([
      перекидає в застосунок. */
   { path: '/', element: <Landing /> },
   { path: '/auth', element: <Auth /> },
+  /* ---- Пісочниця ----
+     Ті самі сторінки й ті самі модалки, що в застосунку: підмінений
+     лише клієнт бази, тому демо не може розійтися з продуктом. */
+  {
+    path: '/demo',
+    element: <DemoShell />,
+    children: [
+      { index: true, element: <DailyPlan /> },
+      { path: 'plan', element: <DailyPlan /> },
+      { path: 'plan/:date/:pair', element: <DailyPlan /> },
+      { path: 'journal', element: <TradingJournal /> },
+      { path: 'calculator', element: <Calculator /> },
+      { path: 'accounts', element: <Accounts /> },
+    ],
+  },
   { path: '/shared/plan/:id', element: <SharedPlan /> },
   { path: '/shared/review/:id', element: <SharedReview /> },
   { path: '/shared/backtest/:id', element: <SharedBacktest /> },
