@@ -98,7 +98,7 @@ export const cardColor = (note, tagColorOf) => {
   const c = cardOf(note);
   if (c.color) return c.color;
   const first = (note.tags || [])[0];
-  return first && tagColorOf ? tagColorOf(first) : '#6b6980';
+  return first && tagColorOf ? tagColorOf(first) : 'var(--edge-text3)';
 };
 
 /* Фон картки в CSS. Колір той самий, що й у корінця, тому картка
@@ -115,15 +115,15 @@ export const cardColor = (note, tagColorOf) => {
    і пропав після наведення».
 ================================================================== */
 export const cardBackground = (bg, c, hovered) => {
-  const base = `linear-gradient(165deg, ${hovered ? '#16151f' : '#111116'}, #0b0b10)`;
+  const base = `linear-gradient(165deg, ${hovered ? 'var(--edge-surface-hi)' : 'var(--edge-surface)'}, var(--edge-sunken))`;
   const plain = { backgroundColor: 'transparent', backgroundImage: base, backgroundSize: 'auto' };
 
   if (bg === 'tint') {
-    return { ...plain, backgroundImage: `linear-gradient(165deg, ${c}2b, #0b0b10 70%)` };
+    return { ...plain, backgroundImage: `linear-gradient(165deg, ${c}2b, var(--edge-sunken) 70%)` };
   }
 
   if (bg === 'gradient') {
-    return { ...plain, backgroundImage: `linear-gradient(135deg, ${c}59, ${c}14 55%, #0b0b10)` };
+    return { ...plain, backgroundImage: `linear-gradient(135deg, ${c}59, ${c}14 55%, var(--edge-sunken))` };
   }
 
   /* Світло з-за верхнього кута — те саме, що вже є на ховері картки,
@@ -137,7 +137,7 @@ export const cardBackground = (bg, c, hovered) => {
 
   if (bg === 'dots') {
     return {
-      backgroundColor: '#0d0d12',
+      backgroundColor: 'var(--edge-sunken)',
       backgroundImage: `radial-gradient(${c}80 1px, transparent 1px), ${base}`,
       backgroundSize: '10px 10px, cover',
     };
@@ -147,7 +147,7 @@ export const cardBackground = (bg, c, hovered) => {
      папір у клітинку, а не як шум. */
   if (bg === 'grid') {
     return {
-      backgroundColor: '#0d0d12',
+      backgroundColor: 'var(--edge-sunken)',
       backgroundImage: `linear-gradient(${c}2b 1px, transparent 1px), linear-gradient(90deg, ${c}2b 1px, transparent 1px), ${base}`,
       backgroundSize: '22px 22px, 22px 22px, cover',
     };
@@ -155,7 +155,7 @@ export const cardBackground = (bg, c, hovered) => {
 
   if (bg === 'lines') {
     return {
-      backgroundColor: '#0d0d12',
+      backgroundColor: 'var(--edge-sunken)',
       backgroundImage: `repeating-linear-gradient(135deg, ${c}24 0 1px, transparent 1px 9px), ${base}`,
       backgroundSize: 'auto, cover',
     };
@@ -166,7 +166,7 @@ export const cardBackground = (bg, c, hovered) => {
      тому й останній у списку. */
   if (bg === 'aurora') {
     return {
-      backgroundColor: '#0b0b10',
+      backgroundColor: 'var(--edge-sunken)',
       backgroundImage: [
         `radial-gradient(90% 70% at 8% 0%, ${c}66, transparent 60%)`,
         `radial-gradient(80% 60% at 100% 20%, ${c}33, transparent 65%)`,

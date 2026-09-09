@@ -220,7 +220,7 @@ function Flag({ ccy, size = 18 }) {
         style={{
           width: size,
           height: size,
-          background: "rgba(255,255,255,0.07)",
+          background: "var(--edge-hair)",
           color: T.text3,
           fontFamily: T.mono,
         }}
@@ -240,7 +240,7 @@ function Flag({ ccy, size = 18 }) {
       style={{
         width: size,
         height: size,
-        boxShadow: "0 0 0 1px rgba(255,255,255,0.10)",
+        boxShadow: "0 0 0 1px var(--edge-hair-strong)",
       }}
     />
   );
@@ -259,8 +259,8 @@ function DropButton({ open, active, color, children, onClick, minWidth }) {
       className="flex h-10 items-center gap-2.5 rounded-xl px-3"
       style={{
         minWidth,
-        background: open || hov ? "#ffffff12" : "#ffffff08",
-        border: `1px solid ${open || active ? `${color}80` : "#21212b"}`,
+        background: open || hov ? "var(--edge-hair-strong)" : "var(--edge-hair)",
+        border: `1px solid ${open || active ? `${color}80` : "var(--edge-line)"}`,
         transition: "all .16s",
       }}
     >
@@ -269,7 +269,7 @@ function DropButton({ open, active, color, children, onClick, minWidth }) {
         size={13}
         strokeWidth={1.9}
         style={{
-          color: "#a3a1b2",
+          color: "var(--edge-text2)",
           flex: "none",
           transform: `rotate(${open ? 180 : 0}deg)`,
           transition: "transform .2s",
@@ -285,9 +285,9 @@ const Panel = ({ width, children }) => (
     style={{
       top: "100%",
       width,
-      background: "#14141b",
-      border: "1px solid #2c2c38",
-      boxShadow: "0 26px 54px -18px #000",
+      background: "var(--edge-surface)",
+      border: "1px solid var(--edge-line-hi)",
+      boxShadow: "0 26px 54px -18px var(--edge-panel-glow, rgba(0,0,0,0.5))",
     }}
   >
     {children}
@@ -310,7 +310,7 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
       <span
         key={i}
         className="h-[5px] w-[5px] rounded-full"
-        style={{ background: "#ff7b7b", boxShadow: "0 0 7px 1px #ff7b7b80" }}
+        style={{ background: "var(--edge-bad)", boxShadow: "0 0 7px 1px rgba(var(--edge-bad-rgb),0.50)" }}
       />,
     );
   }
@@ -319,7 +319,7 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
       <span
         key="more"
         className="h-[5px] w-[5px] rounded-full"
-        style={{ background: "#ff7b7b59" }}
+        style={{ background: "rgba(var(--edge-bad-rgb),0.35)" }}
       />,
     );
   if (!day.high && !empty)
@@ -327,7 +327,7 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
       <span
         key="dash"
         className="h-[3px] w-4 rounded-full"
-        style={{ background: "#2d2d3a" }}
+        style={{ background: "var(--edge-line-hi)" }}
       />,
     );
 
@@ -345,11 +345,11 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
       className="relative overflow-hidden rounded-[15px] px-3.5 pb-3 pt-3.5 text-left"
       style={{
         background: active
-          ? "linear-gradient(165deg,#17162080,#0d0d13)"
+          ? "linear-gradient(165deg, rgba(var(--edge-acc-rgb),0.14), var(--edge-surface))"
           : hov
-            ? "#12121a"
-            : "#0d0d12",
-        border: `1px solid ${solo ? A(1) : active ? A(0.5) : hov ? "#33333f" : "#1c1c25"}`,
+            ? "var(--edge-surface)"
+            : "var(--edge-sunken)",
+        border: `1px solid ${solo ? A(1) : active ? A(0.5) : hov ? "var(--edge-line-hi)" : "var(--edge-line)"}`,
         boxShadow: active ? `0 18px 40px -22px ${A(0.8)}` : "none",
         transform: `translateY(${active ? "-3px" : hov ? "-1px" : "0"})`,
         opacity: empty ? 0.62 : 1,
@@ -378,7 +378,7 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
           style={{
             fontFamily: T.mono,
             letterSpacing: "1.8px",
-            color: active ? "#c4baff" : "#6d6b7d",
+            color: active ? "var(--edge-acc)" : "var(--edge-text3)",
           }}
         >
           {day.dow}
@@ -390,7 +390,7 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
             fontWeight: 700,
             letterSpacing: "-1px",
             lineHeight: 1,
-            color: active ? "#ffffff" : empty ? "#5b5967" : "#c2c0ce",
+            color: active ? "var(--edge-text)" : empty ? "var(--edge-text4)" : "var(--edge-text2)",
           }}
         >
           {day.num}
@@ -403,7 +403,7 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
         className="relative mt-2.5 block text-[11px] font-semibold"
         style={{
           fontFamily: T.sans,
-          color: active ? "#c4baff" : empty ? "#43414d" : "#6d6b7d",
+          color: active ? "var(--edge-acc)" : empty ? "var(--edge-text4)" : "var(--edge-text3)",
           transition: "color .18s",
         }}
       >
@@ -468,9 +468,9 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
         }}
         title={watched ? `Нагадаю ${leadLabel(lead)} — змінити` : "Нагадати"}
         style={{
-          color: watched ? (label ? "#c4baff" : T.acc) : open || hovered ? "#a5a3b3" : "#43414d",
-          background: watched ? A(label ? 0.18 : 0.12) : open ? "#ffffff0f" : label ? "#ffffff0a" : "transparent",
-          border: label ? `1px solid ${watched ? A(0.6) : "#2c2c38"}` : "none",
+          color: watched ? (label ? "var(--edge-acc)" : T.acc) : open || hovered ? "var(--edge-text2)" : "var(--edge-text4)",
+          background: watched ? A(label ? 0.18 : 0.12) : open ? "var(--edge-hair)" : label ? "var(--edge-hair)" : "transparent",
+          border: label ? `1px solid ${watched ? A(0.6) : "var(--edge-line-hi)"}` : "none",
           boxShadow: label && watched ? `0 0 22px -8px ${A(0.8)}` : "none",
           transition: "all .16s",
         }}
@@ -511,9 +511,9 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
           style={{
             top: at.top,
             right: at.right,
-            background: "#14141b",
-            border: "1px solid #2c2c38",
-            boxShadow: "0 26px 54px -18px #000",
+            background: "var(--edge-surface)",
+            border: "1px solid var(--edge-line-hi)",
+            boxShadow: "0 26px 54px -18px var(--edge-panel-glow, rgba(0,0,0,0.5))",
           }}
         >
           <span
@@ -521,7 +521,7 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
             style={{
               fontFamily: T.mono,
               letterSpacing: "1.6px",
-              color: "#6f6d7d",
+              color: "var(--edge-text3)",
             }}
           >
             Нагадати
@@ -540,14 +540,14 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
                 style={{
                   fontFamily: T.sans,
                   background: on ? A(0.17) : "transparent",
-                  color: on ? "#ffffff" : "#9d9bad",
+                  color: on ? "var(--edge-text)" : "var(--edge-text3)",
                   transition: "all .14s",
                 }}
               >
                 <span
                   className="h-[6px] w-[6px] shrink-0 rounded-full"
                   style={{
-                    background: on ? T.acc : "#2f2e3a",
+                    background: on ? T.acc : "var(--edge-line-hi)",
                     boxShadow: on ? `0 0 8px 1px ${A(0.8)}` : "none",
                   }}
                 />
@@ -560,7 +560,7 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
             <>
               <span
                 className="mx-1 my-1 block h-px"
-                style={{ background: "#22222c" }}
+                style={{ background: "var(--edge-line)" }}
               />
               <button
                 onClick={() => {
@@ -568,7 +568,7 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
                   setOpen(false);
                 }}
                 className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2.5 text-[12px] font-semibold"
-                style={{ fontFamily: T.sans, color: "#ff9d9d" }}
+                style={{ fontFamily: T.sans, color: "var(--edge-bad)" }}
               >
                 <X size={12} strokeWidth={2.4} />
                 Прибрати нагадування
@@ -613,11 +613,11 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
 
   const actColor = ev.actual
     ? sur > 0
-      ? "#6fe0b4"
+      ? "var(--edge-ok)"
       : sur < 0
-        ? "#ff9d9d"
-        : "#ffffff"
-    : "#41404b";
+        ? "var(--edge-bad)"
+        : "var(--edge-text)"
+    : "var(--edge-text4)";
 
   const cell = (v, color, weight) => (
     <span
@@ -627,7 +627,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
         fontSize: 15,
         fontWeight: weight,
         letterSpacing: "-0.2px",
-        color: v ? color : "#41404b",
+        color: v ? color : "var(--edge-text4)",
       }}
     >
       {v || "—"}
@@ -682,7 +682,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
               fontSize: 13,
               letterSpacing: "0.6px",
               fontWeight: 700,
-              color: past ? "#4f4d59" : high ? "#e8e6f2" : "#8b899a",
+              color: past ? "var(--edge-text4)" : high ? "var(--edge-text)" : "var(--edge-text3)",
             }}
           >
             {ev.time || "—"}
@@ -695,8 +695,8 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
             style={{
               width: 9,
               height: 9,
-              background: high ? imp.color : "#0d0d13",
-              border: `2px solid ${high ? imp.color : hov || open ? `${imp.color}99` : "#2f2e3a"}`,
+              background: high ? imp.color : "var(--edge-sunken)",
+              border: `2px solid ${high ? imp.color : hov || open ? `${imp.color}99` : "var(--edge-line-hi)"}`,
               boxShadow: high
                 ? `0 0 0 3px ${imp.color}24, 0 0 12px 2px ${imp.color}80`
                 : "none",
@@ -711,15 +711,15 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
             minHeight: high ? 60 : 52,
             borderRadius: open ? "14px 14px 0 0" : 14,
             background: open
-              ? "#15141d"
+              ? "var(--edge-surface)"
               : hov
                 ? high
-                  ? "#171320"
-                  : "#12121a"
+                  ? "var(--edge-surface-hi)"
+                  : "var(--edge-surface)"
                 : high
-                  ? "#100f16"
-                  : "#0c0c11",
-            border: `1px solid ${open ? `${imp.color}5e` : hov ? `${imp.color}4d` : high ? "#27212c" : "#18181f"}`,
+                  ? "var(--edge-sunken)"
+                  : "var(--edge-sunken)",
+            border: `1px solid ${open ? `${imp.color}5e` : hov ? `${imp.color}4d` : high ? "var(--edge-line)" : "var(--edge-line)"}`,
             transform: `translateX(${hov && !open ? "3px" : "0"})`,
             opacity: past && !ev.actual && !hov && !open ? 0.78 : 1,
             transition: "background .18s, border-color .18s, transform .22s",
@@ -756,9 +756,9 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
           <span
             className="relative flex h-[25px] w-[62px] shrink-0 items-center justify-center gap-1.5 rounded-lg"
             style={{
-              background: high ? `${imp.color}1f` : "#ffffff0a",
-              border: `1px solid ${high ? `${imp.color}42` : "#22222c"}`,
-              color: high ? "#ffd9d9" : "#a5a3b3",
+              background: high ? `${imp.color}1f` : "var(--edge-hair)",
+              border: `1px solid ${high ? `${imp.color}42` : "var(--edge-line)"}`,
+              color: high ? "var(--edge-bad)" : "var(--edge-text2)",
             }}
           >
             <Flag ccy={ev.ccy} size={13} />
@@ -782,7 +782,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                 fontSize: high ? 16.5 : 14.5,
                 fontWeight: high ? 600 : 500,
                 letterSpacing: "-0.3px",
-                color: high ? "#ffffff" : hov || open ? "#e6e4ee" : "#bab8c6",
+                color: high ? "var(--edge-text)" : hov || open ? "var(--edge-text)" : "var(--edge-text2)",
                 transition: "color .18s",
               }}
             >
@@ -794,7 +794,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                   <span
                     key={i}
                     className="h-3 w-[3px] rounded-sm"
-                    style={{ background: "#ff7b7b" }}
+                    style={{ background: "var(--edge-bad)" }}
                   />
                 ))}
               </span>
@@ -818,7 +818,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                 style={{
                   fontSize: 9,
                   lineHeight: 1,
-                  color: sur > 0 ? "#6fe0b4" : "#ff9d9d",
+                  color: sur > 0 ? "var(--edge-ok)" : "var(--edge-bad)",
                 }}
               >
                 {sur > 0 ? "▲" : "▼"}
@@ -826,8 +826,8 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
             )}
           </span>
 
-          <span className="relative">{cell(ev.forecast, "#c2c0ce", 600)}</span>
-          <span className="relative">{cell(ev.previous, "#75738a", 500)}</span>
+          <span className="relative">{cell(ev.forecast, "var(--edge-text2)", 600)}</span>
+          <span className="relative">{cell(ev.previous, "var(--edge-text3)", 500)}</span>
 
           <span className="relative flex w-9 shrink-0 items-center justify-end gap-1">
             {!past && canWatch && (
@@ -842,7 +842,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
               size={14}
               strokeWidth={2}
               style={{
-                color: hov || open ? "#a5a3b3" : "#43414d",
+                color: hov || open ? "var(--edge-text2)" : "var(--edge-text4)",
                 transform: open ? "rotate(180deg)" : "none",
                 transition: "transform .22s, color .18s",
               }}
@@ -874,7 +874,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                 border: `1px solid ${imp.color}5e`,
                 borderTopWidth: 0,
                 borderRadius: "0 0 14px 14px",
-                background: "linear-gradient(180deg,#100f17,#0b0b10)",
+                background: "linear-gradient(180deg,var(--edge-sunken),var(--edge-sunken))",
               }}
             >
               <div className="flex flex-wrap items-stretch">
@@ -884,7 +884,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                     style={{
                       fontFamily: T.mono,
                       letterSpacing: "1.8px",
-                      color: "#9a98ab",
+                      color: "var(--edge-text3)",
                     }}
                   >
                     Що це означає
@@ -895,7 +895,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                       className="mt-3 text-[13.5px]"
                       style={{
                         fontFamily: T.sans,
-                        color: "#d9d7e4",
+                        color: "var(--edge-text)",
                         lineHeight: 1.65,
                       }}
                     >
@@ -916,7 +916,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                       className="mt-3 text-[13.5px]"
                       style={{
                         fontFamily: T.sans,
-                        color: "#b9b7ca",
+                        color: "var(--edge-text2)",
                         lineHeight: 1.65,
                       }}
                     >
@@ -927,7 +927,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                   {ext === false && !mine && (
                     <p
                       className="mt-3 text-[13px]"
-                      style={{ fontFamily: T.sans, color: "#7d7b8e" }}
+                      style={{ fontFamily: T.sans, color: "var(--edge-text3)" }}
                     >
                       Опису для цієї події знайти не вдалось.
                     </p>
@@ -942,9 +942,9 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                         onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-2 rounded-[10px] px-3 py-2 text-[12px] font-semibold"
                         style={{
-                          background: "#ffffff0a",
-                          border: "1px solid #23232e",
-                          color: "#a99cff",
+                          background: "var(--edge-hair)",
+                          border: "1px solid var(--edge-line)",
+                          color: "var(--edge-acc)",
                         }}
                       >
                         {ext.title || ext.source}
@@ -960,9 +960,9 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                         }}
                         className="flex items-center gap-2 rounded-[10px] px-3 py-2 text-[12px] font-semibold"
                         style={{
-                          background: watched ? A(0.18) : "#ffffff0a",
-                          border: `1px solid ${watched ? A(0.5) : "#23232e"}`,
-                          color: watched ? "#c4baff" : "#a5a3b3",
+                          background: watched ? A(0.18) : "var(--edge-hair)",
+                          border: `1px solid ${watched ? A(0.5) : "var(--edge-line)"}`,
+                          color: watched ? "var(--edge-acc)" : "var(--edge-text2)",
                           transition: "all .16s",
                         }}
                       >
@@ -979,7 +979,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
 
                 <div
                   className="w-px shrink-0"
-                  style={{ background: "#1c1c25" }}
+                  style={{ background: "var(--edge-line)" }}
                 />
 
                 <div className="w-[280px] shrink-0 px-[22px] py-5">
@@ -989,7 +989,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                       style={{
                         fontFamily: T.mono,
                         letterSpacing: "1.8px",
-                        color: "#9a98ab",
+                        color: "var(--edge-text3)",
                       }}
                     >
                       {gap && !gap.done ? "Очікують" : "Сюрприз"}
@@ -1018,12 +1018,12 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                             letterSpacing: "-1.2px",
                             lineHeight: 1,
                             color: !gap.done
-                              ? "#c2c0ce"
+                              ? "var(--edge-text2)"
                               : gap.d > 0
-                                ? "#6fe0b4"
+                                ? "var(--edge-ok)"
                                 : gap.d < 0
-                                  ? "#ff9d9d"
-                                  : "#ffffff",
+                                  ? "var(--edge-bad)"
+                                  : "var(--edge-text)",
                           }}
                         >
                           {gap.d === 0 ? "0" : fmtDelta(gap.d, gap.unit)}
@@ -1033,10 +1033,10 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                             style={{
                               fontSize: 11,
                               color: !gap.done
-                                ? "#75738a"
+                                ? "var(--edge-text3)"
                                 : gap.d > 0
-                                  ? "#6fe0b4"
-                                  : "#ff9d9d",
+                                  ? "var(--edge-ok)"
+                                  : "var(--edge-bad)",
                             }}
                           >
                             {gap.d > 0 ? "▲" : "▼"}
@@ -1052,7 +1052,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                         className="mt-2 text-[12.5px]"
                         style={{
                           fontFamily: T.sans,
-                          color: "#b9b7ca",
+                          color: "var(--edge-text2)",
                           lineHeight: 1.55,
                         }}
                       >
@@ -1076,7 +1076,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                                 fontWeight: b.label === "факт" ? 700 : 500,
                                 letterSpacing: "-0.2px",
                                 color:
-                                  b.label === "факт" ? "#ffffff" : "#9d9bad",
+                                  b.label === "факт" ? "var(--edge-text)" : "var(--edge-text3)",
                               }}
                             >
                               {b.raw}
@@ -1086,7 +1086,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                               style={{
                                 fontFamily: T.sans,
                                 fontSize: 10,
-                                color: "#57555f",
+                                color: "var(--edge-text4)",
                               }}
                             >
                               {b.label}
@@ -1098,7 +1098,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                   ) : (
                     <p
                       className="mt-4 text-[12.5px]"
-                      style={{ fontFamily: T.sans, color: "#7d7b8e" }}
+                      style={{ fontFamily: T.sans, color: "var(--edge-text3)" }}
                     >
                       {facts.length
                         ? "Порівняти нема з чим — опублікували лише одне значення."
@@ -1148,9 +1148,9 @@ function AlertToasts() {
           key={a.id}
           className="pointer-events-auto relative overflow-hidden rounded-2xl px-4 py-3.5"
           style={{
-            background: "linear-gradient(120deg,#1a1424,#101017 60%,#0c0c12)",
-            border: "1px solid #ff7b7b3d",
-            boxShadow: "0 26px 60px -22px #000, 0 0 40px -26px #ff7b7b",
+            background: "linear-gradient(120deg, var(--edge-surface-hi), var(--edge-surface) 60%, var(--edge-surface))",
+            border: "1px solid rgba(var(--edge-bad-rgb),0.24)",
+            boxShadow: "0 26px 60px -22px var(--edge-panel-glow, rgba(0,0,0,0.5)), 0 0 40px -26px var(--edge-bad)",
             animation: "edgeAlertIn .28s cubic-bezier(.22,1.2,.36,1)",
           }}
         >
@@ -1161,7 +1161,7 @@ function AlertToasts() {
               top: -60,
               width: 220,
               height: 150,
-              background: "#ff7b7b",
+              background: "var(--edge-bad)",
               filter: "blur(60px)",
               opacity: 0.16,
             }}
@@ -1171,9 +1171,9 @@ function AlertToasts() {
             <span
               className="mt-[3px] grid h-8 w-8 shrink-0 place-items-center rounded-xl"
               style={{
-                background: "#ff7b7b1f",
-                border: "1px solid #ff7b7b45",
-                color: "#ffb3b3",
+                background: "rgba(var(--edge-bad-rgb),0.12)",
+                border: "1px solid rgba(var(--edge-bad-rgb),0.27)",
+                color: "var(--edge-bad)",
               }}
             >
               <BellRing size={15} strokeWidth={2.1} />
@@ -1185,7 +1185,7 @@ function AlertToasts() {
                 style={{
                   fontFamily: T.mono,
                   letterSpacing: "1.8px",
-                  color: "#ff9d9d",
+                  color: "var(--edge-bad)",
                 }}
               >
                 {a.minutes <= 0 ? "виходить зараз" : `через ${a.minutes} хв`}
@@ -1198,7 +1198,7 @@ function AlertToasts() {
                   fontSize: 15,
                   fontWeight: 600,
                   letterSpacing: "-0.3px",
-                  color: "#ffffff",
+                  color: "var(--edge-text)",
                 }}
               >
                 {a.title}
@@ -1206,7 +1206,7 @@ function AlertToasts() {
 
               <div
                 className="mt-1.5 flex items-center gap-2 text-[11.5px]"
-                style={{ fontFamily: T.sans, color: "#9d9bad" }}
+                style={{ fontFamily: T.sans, color: "var(--edge-text3)" }}
               >
                 <span className="flex items-center gap-1.5">
                   <Flag ccy={a.ccy} size={13} />
@@ -1216,7 +1216,7 @@ function AlertToasts() {
                   <>
                     <span
                       className="h-[3px] w-[3px] rounded-full"
-                      style={{ background: "#3c3a49" }}
+                      style={{ background: "var(--edge-line-hi)" }}
                     />
                     <span>прогноз {a.forecast}</span>
                   </>
@@ -1227,7 +1227,7 @@ function AlertToasts() {
             <button
               onClick={() => setList((s) => s.filter((x) => x.id !== a.id))}
               className="grid h-6 w-6 shrink-0 place-items-center rounded-lg"
-              style={{ color: "#6f6d7d" }}
+              style={{ color: "var(--edge-text3)" }}
               title="Прибрати"
             >
               <X size={13} strokeWidth={2.4} />
@@ -1556,7 +1556,7 @@ export default function News() {
 
   const LEVELS = [
     { id: MAJOR, label: "Середній і вище", color: T.acc },
-    { id: "all", label: "Усі події", color: "#7A7A85" },
+    { id: "all", label: "Усі події", color: "var(--edge-text3)" },
     ...IMPACTS,
   ];
 
@@ -1595,7 +1595,7 @@ export default function News() {
               <span
                 className="h-[5px] w-[5px] rounded-full"
                 style={{
-                  background: "#8b7cff",
+                  background: "var(--edge-acc)",
                   boxShadow: `0 0 12px 2px ${A(0.67)}`,
                 }}
               />
@@ -1604,7 +1604,7 @@ export default function News() {
                 style={{
                   fontFamily: T.mono,
                   letterSpacing: "2.6px",
-                  color: "#9b8dff",
+                  color: "var(--edge-acc)",
                 }}
               >
                 Економічний календар
@@ -1618,7 +1618,7 @@ export default function News() {
                   fontFamily: T.display,
                   letterSpacing: "-1.8px",
                   lineHeight: 1,
-                  background: "linear-gradient(170deg,#ffffff 32%,#a9a5bd)",
+                  backgroundImage: `linear-gradient(170deg, ${T.text} 34%, ${T.text3})`,
                   WebkitBackgroundClip: "text",
                   backgroundClip: "text",
                   WebkitTextFillColor: "transparent",
@@ -1632,7 +1632,7 @@ export default function News() {
                   style={{
                     fontFamily: T.mono,
                     letterSpacing: "1.6px",
-                    color: "#7d7b8e",
+                    color: "var(--edge-text3)",
                   }}
                 >
                   {rangeLabel}
@@ -1663,7 +1663,7 @@ export default function News() {
                 />
                 <span
                   className="min-w-0 flex-1 whitespace-nowrap text-left text-[12.5px] font-semibold"
-                  style={{ fontFamily: T.sans, color: "#ffffff" }}
+                  style={{ fontFamily: T.sans, color: "var(--edge-text)" }}
                 >
                   {impCur.label}
                 </span>
@@ -1685,7 +1685,7 @@ export default function News() {
                           fontFamily: T.sans,
                           background: on ? `${i.color}24` : "transparent",
                           border: `1px solid ${on ? `${i.color}5e` : "transparent"}`,
-                          color: on ? "#ffffff" : "#9d9bad",
+                          color: on ? "var(--edge-text)" : "var(--edge-text3)",
                           transition: "all .14s",
                         }}
                       >
@@ -1701,7 +1701,7 @@ export default function News() {
                           style={{
                             fontFamily: T.mono,
                             fontSize: 10.5,
-                            color: "#7d7b8e",
+                            color: "var(--edge-text3)",
                           }}
                         >
                           {impCount(i.id)}
@@ -1728,11 +1728,11 @@ export default function News() {
                 <Globe
                   size={14}
                   strokeWidth={1.7}
-                  style={{ color: "#a3a1b2", flex: "none" }}
+                  style={{ color: "var(--edge-text2)", flex: "none" }}
                 />
                 <span
                   className="min-w-0 flex-1 whitespace-nowrap text-left text-[12.5px] font-semibold"
-                  style={{ fontFamily: T.sans, color: "#ffffff" }}
+                  style={{ fontFamily: T.sans, color: "var(--edge-text)" }}
                 >
                   {ccy === "all" ? "Всі валюти" : ccy}
                 </span>
@@ -1749,7 +1749,7 @@ export default function News() {
                     style={{
                       fontFamily: T.sans,
                       background: ccy === "all" ? A(0.17) : "transparent",
-                      color: ccy === "all" ? "#ffffff" : "#9d9bad",
+                      color: ccy === "all" ? "var(--edge-text)" : "var(--edge-text3)",
                     }}
                   >
                     <span className="flex-1 text-left">Всі валюти</span>
@@ -1757,7 +1757,7 @@ export default function News() {
                       style={{
                         fontFamily: T.mono,
                         fontSize: 10.5,
-                        color: "#7d7b8e",
+                        color: "var(--edge-text3)",
                       }}
                     >
                       {rows.length}
@@ -1766,7 +1766,7 @@ export default function News() {
 
                   <div
                     className="mx-0.5 my-1.5 h-px"
-                    style={{ background: "#22222c" }}
+                    style={{ background: "var(--edge-line)" }}
                   />
 
                   <div className="grid grid-cols-3 gap-[5px]">
@@ -1785,9 +1785,9 @@ export default function News() {
                             fontSize: 11.5,
                             letterSpacing: "0.8px",
                             fontWeight: 700,
-                            background: on ? A(0.17) : "#ffffff08",
-                            border: `1px solid ${on ? A(0.5) : "#22222c"}`,
-                            color: on ? "#ffffff" : "#a3a1b2",
+                            background: on ? A(0.17) : "var(--edge-hair)",
+                            border: `1px solid ${on ? A(0.5) : "var(--edge-line)"}`,
+                            color: on ? "var(--edge-text)" : "var(--edge-text2)",
                             transition: "all .14s",
                           }}
                         >
@@ -1806,18 +1806,18 @@ export default function News() {
               title="Оновити"
               className="grid h-10 w-[42px] shrink-0 place-items-center rounded-xl"
               style={{
-                background: "#ffffff08",
-                border: "1px solid #21212b",
-                color: "#a3a1b2",
+                background: "var(--edge-hair)",
+                border: "1px solid var(--edge-line)",
+                color: "var(--edge-text2)",
                 transition: "all .16s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#ffffff16";
-                e.currentTarget.style.color = "#ffffff";
+                e.currentTarget.style.background = "var(--edge-hair-strong)";
+                e.currentTarget.style.color = "var(--edge-text)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#ffffff08";
-                e.currentTarget.style.color = "#a3a1b2";
+                e.currentTarget.style.background = "var(--edge-hair)";
+                e.currentTarget.style.color = "var(--edge-text2)";
               }}
             >
               <RefreshCw
@@ -1846,10 +1846,10 @@ export default function News() {
               className="grid min-w-0 flex-1 place-items-center rounded-[15px] text-[12.5px]"
               style={{
                 minHeight: 92,
-                background: "#0b0b10",
-                border: "1px dashed #1e1e27",
+                background: "var(--edge-sunken)",
+                border: "1px dashed var(--edge-line)",
                 fontFamily: T.sans,
-                color: "#6f6d7d",
+                color: "var(--edge-text3)",
               }}
             >
               {busy ? "вантажу тиждень…" : "на цей тиждень даних немає"}
@@ -1881,9 +1881,9 @@ export default function News() {
           <div
             className="relative mt-3.5 overflow-hidden rounded-2xl px-[18px] py-3.5"
             style={{
-              background: "linear-gradient(120deg,#181220,#0f0f16 52%,#0c0c12)",
-              border: "1px solid #ff7b7b33",
-              boxShadow: "0 16px 40px -26px #ff7b7b59",
+              background: "linear-gradient(120deg, var(--edge-surface-hi), var(--edge-surface) 52%, var(--edge-surface))",
+              border: "1px solid rgba(var(--edge-bad-rgb),0.20)",
+              boxShadow: "0 16px 40px -26px rgba(var(--edge-bad-rgb),0.35)",
             }}
           >
             <span
@@ -1893,7 +1893,7 @@ export default function News() {
                 top: -70,
                 width: 280,
                 height: 190,
-                background: "#ff7b7b",
+                background: "var(--edge-bad)",
                 filter: "blur(70px)",
                 opacity: 0.13,
               }}
@@ -1904,8 +1904,8 @@ export default function News() {
                 <span
                   className="h-1.5 w-1.5 rounded-full"
                   style={{
-                    background: "#ff7b7b",
-                    boxShadow: "0 0 10px 2px #ff7b7bcc",
+                    background: "var(--edge-bad)",
+                    boxShadow: "0 0 10px 2px rgba(var(--edge-bad-rgb),0.80)",
                   }}
                 />
                 <div>
@@ -1914,7 +1914,7 @@ export default function News() {
                     style={{
                       fontFamily: T.mono,
                       letterSpacing: "2.2px",
-                      color: "#ff9d9d",
+                      color: "var(--edge-bad)",
                     }}
                   >
                     Далі — {evWord(upcoming.list.length)} разом
@@ -1924,7 +1924,7 @@ export default function News() {
                     style={{
                       fontFamily: T.display,
                       fontWeight: 700,
-                      color: "#ffffff",
+                      color: "var(--edge-text)",
                       letterSpacing: "-1px",
                       lineHeight: 1,
                     }}
@@ -1932,14 +1932,14 @@ export default function News() {
                     <span className="text-[25px]">{cdH}</span>
                     <span
                       className="text-[12.5px]"
-                      style={{ color: "#8b8998" }}
+                      style={{ color: "var(--edge-text3)" }}
                     >
                       г
                     </span>
                     <span className="ml-1 text-[25px]">{cdM}</span>
                     <span
                       className="text-[12.5px]"
-                      style={{ color: "#8b8998" }}
+                      style={{ color: "var(--edge-text3)" }}
                     >
                       хв
                     </span>
@@ -1951,7 +1951,7 @@ export default function News() {
                 className="h-[38px] w-px shrink-0"
                 style={{
                   background:
-                    "linear-gradient(180deg,transparent,#ffffff2b,transparent)",
+                    "linear-gradient(180deg,transparent,var(--edge-hair-strong),transparent)",
                 }}
               />
 
@@ -1961,15 +1961,15 @@ export default function News() {
                     key={e.id}
                     className="flex items-center gap-2.5 rounded-[11px] py-[7px] pl-2 pr-3"
                     style={{
-                      background: "#ffffff0a",
-                      border: "1px solid #2c2c38",
+                      background: "var(--edge-hair)",
+                      border: "1px solid var(--edge-line-hi)",
                     }}
                   >
                     <span
                       className="flex h-[22px] items-center gap-1.5 rounded-[7px] px-[7px]"
                       style={{
-                        background: "#ff7b7b1f",
-                        border: "1px solid #ff7b7b42",
+                        background: "rgba(var(--edge-bad-rgb),0.12)",
+                        border: "1px solid rgba(var(--edge-bad-rgb),0.26)",
                       }}
                     >
                       <Flag ccy={e.ccy} size={12} />
@@ -1979,7 +1979,7 @@ export default function News() {
                           fontSize: 10,
                           letterSpacing: "0.9px",
                           fontWeight: 700,
-                          color: "#ffd9d9",
+                          color: "var(--edge-bad)",
                         }}
                       >
                         {e.ccy}
@@ -1991,7 +1991,7 @@ export default function News() {
                         fontFamily: T.display,
                         fontSize: 13.5,
                         fontWeight: 600,
-                        color: "#ffffff",
+                        color: "var(--edge-text)",
                         letterSpacing: "-0.2px",
                       }}
                     >
@@ -2003,7 +2003,7 @@ export default function News() {
                         style={{
                           fontFamily: T.mono,
                           fontSize: 11,
-                          color: "#a3a1b2",
+                          color: "var(--edge-text2)",
                         }}
                       >
                         {e.forecast}
@@ -2042,19 +2042,19 @@ export default function News() {
               }}
               className="flex h-[34px] items-center gap-[7px] rounded-[10px] px-3 text-[11.5px] font-semibold"
               style={{
-                background: "#ffffff06",
-                border: "1px dashed #2d2d3a",
-                color: "#a3a1b2",
+                background: "var(--edge-hair)",
+                border: "1px dashed var(--edge-line-hi)",
+                color: "var(--edge-text2)",
                 fontFamily: T.sans,
                 transition: "all .16s",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = A(0.5);
-                e.currentTarget.style.color = "#a99cff";
+                e.currentTarget.style.color = "var(--edge-acc)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#2d2d3a";
-                e.currentTarget.style.color = "#a3a1b2";
+                e.currentTarget.style.borderColor = "var(--edge-line-hi)";
+                e.currentTarget.style.color = "var(--edge-text2)";
               }}
             >
               <X size={11} strokeWidth={2.4} />
@@ -2071,7 +2071,7 @@ export default function News() {
               style={{
                 background: A(0.14),
                 border: `1px solid ${A(0.45)}`,
-                color: "#c4baff",
+                color: "var(--edge-acc)",
                 fontFamily: T.sans,
                 transition: "all .16s",
               }}
@@ -2086,19 +2086,19 @@ export default function News() {
               onClick={foldAll}
               className="flex h-[34px] items-center gap-[7px] rounded-[10px] px-3 text-[11.5px] font-semibold"
               style={{
-                background: "#ffffff06",
-                border: "1px solid #21212b",
-                color: "#a3a1b2",
+                background: "var(--edge-hair)",
+                border: "1px solid var(--edge-line)",
+                color: "var(--edge-text2)",
                 fontFamily: T.sans,
                 transition: "all .16s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#ffffff12";
-                e.currentTarget.style.color = "#ffffff";
+                e.currentTarget.style.background = "var(--edge-hair-strong)";
+                e.currentTarget.style.color = "var(--edge-text)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#ffffff06";
-                e.currentTarget.style.color = "#a3a1b2";
+                e.currentTarget.style.background = "var(--edge-hair)";
+                e.currentTarget.style.color = "var(--edge-text2)";
               }}
             >
               <ChevronDown
@@ -2120,7 +2120,7 @@ export default function News() {
             style={{
               fontFamily: T.mono,
               letterSpacing: "1.2px",
-              color: "#6f6d7d",
+              color: "var(--edge-text3)",
             }}
           >
             {shown.length} з {rows.length} подій
@@ -2133,7 +2133,7 @@ export default function News() {
             className="mt-3 flex items-start gap-3 rounded-2xl p-4"
             style={{
               background: `rgba(${T.badRgb},0.08)`,
-              border: "1px solid #ff8f8f33",
+              border: "1px solid rgba(var(--edge-bad-rgb),0.20)",
             }}
           >
             <AlertTriangle
@@ -2153,7 +2153,7 @@ export default function News() {
                 className="text-[13px]"
                 style={{
                   fontFamily: T.sans,
-                  color: "#b9b7ca",
+                  color: "var(--edge-text2)",
                   lineHeight: 1.6,
                 }}
               >
@@ -2166,7 +2166,7 @@ export default function News() {
         {busy && !rows.length && (
           <div
             className="flex items-center justify-center gap-2 py-20 text-[14px]"
-            style={{ fontFamily: T.sans, color: "#7d7b8e" }}
+            style={{ fontFamily: T.sans, color: "var(--edge-text3)" }}
           >
             <Loader2 size={16} className="animate-spin" />
             вантажу календар…
@@ -2179,7 +2179,7 @@ export default function News() {
         {!busy && !err && !days.length && (
           <p
             className="py-20 text-center text-[14px]"
-            style={{ fontFamily: T.sans, color: "#8b8998", lineHeight: 1.7 }}
+            style={{ fontFamily: T.sans, color: "var(--edge-text3)", lineHeight: 1.7 }}
           >
             {rows.length ? (
               "Під ці фільтри нічого не підпадає."
@@ -2236,8 +2236,8 @@ export default function News() {
                   <div
                     className="w-14 shrink-0 rounded-[13px] py-2 text-center"
                     style={{
-                      background: now ? A(0.12) : "#ffffff06",
-                      border: `1px solid ${now ? A(0.37) : "#1e1e27"}`,
+                      background: now ? A(0.12) : "var(--edge-hair)",
+                      border: `1px solid ${now ? A(0.37) : "var(--edge-line)"}`,
                       boxShadow: now ? `0 0 24px -10px ${A(0.8)}` : "none",
                     }}
                   >
@@ -2246,7 +2246,7 @@ export default function News() {
                       style={{
                         fontFamily: T.mono,
                         letterSpacing: "1.6px",
-                        color: "#9a98ab",
+                        color: "var(--edge-text3)",
                       }}
                     >
                       {d
@@ -2260,7 +2260,7 @@ export default function News() {
                         fontSize: 21,
                         fontWeight: 700,
                         letterSpacing: "-0.8px",
-                        color: "#ffffff",
+                        color: "var(--edge-text)",
                         lineHeight: 1,
                       }}
                     >
@@ -2276,7 +2276,7 @@ export default function News() {
                           fontFamily: T.display,
                           fontSize: 16.5,
                           fontWeight: 600,
-                          color: "#ffffff",
+                          color: "var(--edge-text)",
                           letterSpacing: "-0.3px",
                         }}
                       >
@@ -2293,7 +2293,7 @@ export default function News() {
                           <span
                             className="h-[5px] w-[5px] rounded-full"
                             style={{
-                              background: "#a99cff",
+                              background: "var(--edge-acc)",
                               boxShadow: `0 0 8px 1px ${A(0.8)}`,
                             }}
                           />
@@ -2302,7 +2302,7 @@ export default function News() {
                             style={{
                               fontFamily: T.mono,
                               letterSpacing: "1.4px",
-                              color: "#c4baff",
+                              color: "var(--edge-acc)",
                             }}
                           >
                             Сьогодні
@@ -2313,18 +2313,18 @@ export default function News() {
 
                     <div
                       className="mt-1 flex items-center gap-2.5 text-[11.5px]"
-                      style={{ fontFamily: T.sans, color: "#8b8998" }}
+                      style={{ fontFamily: T.sans, color: "var(--edge-text3)" }}
                     >
                       <span>{evWord(list.length)}</span>
                       {high > 0 && (
                         <>
                           <span
                             className="h-[3px] w-[3px] rounded-full"
-                            style={{ background: "#3c3a49" }}
+                            style={{ background: "var(--edge-line-hi)" }}
                           />
                           <span
                             className="font-semibold"
-                            style={{ color: "#ff9d9d" }}
+                            style={{ color: "var(--edge-bad)" }}
                           >
                             {high}{" "}
                             {plural(high, "важлива", "важливі", "важливих")}
@@ -2337,7 +2337,7 @@ export default function News() {
                   <span
                     className="h-px flex-1"
                     style={{
-                      background: "linear-gradient(90deg,#22222c,transparent)",
+                      background: "linear-gradient(90deg,var(--edge-line),transparent)",
                     }}
                   />
 
@@ -2350,7 +2350,7 @@ export default function News() {
                           style={{
                             fontFamily: T.mono,
                             letterSpacing: "1.8px",
-                            color: "#6f6d7d",
+                            color: "var(--edge-text3)",
                           }}
                         >
                           {h}
@@ -2375,7 +2375,7 @@ export default function News() {
                       top: 14,
                       bottom: 14,
                       background:
-                        "linear-gradient(180deg,transparent,#22222c 6%,#22222c 94%,transparent)",
+                        "linear-gradient(180deg,transparent,var(--edge-line) 6%,var(--edge-line) 94%,transparent)",
                     }}
                   />
 
@@ -2420,9 +2420,9 @@ function FoldPill({ shut, count }) {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
-        background: shut ? (hov ? A(0.2) : A(0.12)) : hov ? "#ffffff14" : "#ffffff08",
-        border: `1px solid ${shut ? A(hov ? 0.7 : 0.45) : hov ? "#3a3947" : "#26262f"}`,
-        color: shut ? "#c4baff" : hov ? "#ffffff" : "#9d9bad",
+        background: shut ? (hov ? A(0.2) : A(0.12)) : hov ? "var(--edge-hair-strong)" : "var(--edge-hair)",
+        border: `1px solid ${shut ? A(hov ? 0.7 : 0.45) : hov ? "var(--edge-line-hi)" : "var(--edge-line)"}`,
+        color: shut ? "var(--edge-acc)" : hov ? "var(--edge-text)" : "var(--edge-text3)",
         transition: "all .16s",
       }}
     >
@@ -2458,9 +2458,9 @@ function NavBtn({ onClick, disabled, side }) {
       title={side === "left" ? "Попередній тиждень" : "Наступний тиждень"}
       className="grid w-[38px] shrink-0 place-items-center rounded-[13px]"
       style={{
-        background: hov && !disabled ? "#ffffff12" : "#ffffff06",
-        border: `1px solid ${hov && !disabled ? "#33333f" : "#1c1c25"}`,
-        color: disabled ? "#3a3945" : hov ? "#ffffff" : "#a3a1b2",
+        background: hov && !disabled ? "var(--edge-hair-strong)" : "var(--edge-hair)",
+        border: `1px solid ${hov && !disabled ? "var(--edge-line-hi)" : "var(--edge-line)"}`,
+        color: disabled ? "var(--edge-text4)" : hov ? "var(--edge-text)" : "var(--edge-text2)",
         opacity: disabled ? 0.45 : 1,
         cursor: disabled ? "not-allowed" : "pointer",
         transition: "all .16s",
@@ -2488,7 +2488,7 @@ function NowLine() {
             fontSize: 11,
             letterSpacing: "0.6px",
             fontWeight: 700,
-            color: "#c4baff",
+            color: "var(--edge-acc)",
           }}
         >
           {now}
@@ -2511,7 +2511,7 @@ function NowLine() {
       />
       <div
         className="shrink-0 pl-3 text-[9px] font-bold uppercase"
-        style={{ fontFamily: T.mono, letterSpacing: "2px", color: "#8b7cff" }}
+        style={{ fontFamily: T.mono, letterSpacing: "2px", color: "var(--edge-acc)" }}
       >
         Зараз
       </div>

@@ -165,7 +165,7 @@ export default function Hero() {
               letterSpacing: '-1.9px', margin: '0 0 24px', color: '#fff', textWrap: 'balance',
             }}
           >
-            Не шукай ідеальну стратегію.
+            Не шукай ідеальну стратегію.{' '}
             <br />
             <span
               style={{
@@ -174,6 +174,19 @@ export default function Hero() {
               }}
             >
               Зрозумій свою.
+            </span>{' '}
+            {/* Описовий рядок у самому <h1>: несе ключі (журнал, угод,
+                MetaTrader, аналітика), яких немає в поетичному заголовку.
+                Дрібніший і приглушений — читається як підзаголовок. */}
+            <span
+              style={{
+                display: 'block', marginTop: 16,
+                fontFamily: F.sans, fontWeight: 600,
+                fontSize: 'clamp(15px,1.15vw,19px)', lineHeight: 1.4,
+                letterSpacing: '-0.2px', color: C.text3, textWrap: 'pretty',
+              }}
+            >
+              Журнал угод з імпортом із MetaTrader 5 і аналітика по сесіях.
             </span>
           </h1>
 

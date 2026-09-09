@@ -365,8 +365,8 @@ export function EdgeMonogram() {
           ? `1px solid rgba(143,163,200,0.45)`
           : `1px solid rgba(${ACCENT},0.45)`,
         boxShadow: sadMode
-          ? `var(--edge-mono-shadow, 0 8px 20px -6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)), 0 0 15px rgba(${ACCENT}, 0.15)`
-          : `var(--edge-mono-shadow, 0 8px 20px -6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)), 0 0 15px rgba(${ACCENT}, 0.25)`,
+          ? `var(--edge-mono-shadow, 0 8px 20px -6px var(--edge-panel-glow, var(--edge-panel-glow, rgba(0,0,0,0.45))), inset 0 1px 0 rgba(255,255,255,0.2)), 0 0 15px rgba(${ACCENT}, 0.15)`
+          : `var(--edge-mono-shadow, 0 8px 20px -6px var(--edge-panel-glow, var(--edge-panel-glow, rgba(0,0,0,0.45))), inset 0 1px 0 rgba(255,255,255,0.2)), 0 0 15px rgba(${ACCENT}, 0.25)`,
         transition: 'background 0.45s, border 0.45s, box-shadow 0.45s',
       }}
       whileTap={{ scale: 0.92 }}
@@ -617,12 +617,12 @@ export function EdgeWordmark({
       {/* «THE» тихіше, «EDGE» кольором: у назві працює саме друге
           слово, і воно ж тримає весь бренд. Вмикається точково —
           у бічній панелі знак має лишатись спокійним. */}
-      THE <span style={accent ? { color: 'var(--edge-acc, #8b7bff)' } : undefined}>EDGE</span>
+      THE <span style={accent ? { color: 'var(--edge-acc, var(--edge-acc))' } : undefined}>EDGE</span>
     </span>
   );
 }
 
-const ACCENT_HEX = 'var(--edge-acc, #8b7bff)';
+const ACCENT_HEX = 'var(--edge-acc, var(--edge-acc))';
 /* Трійка йде всередину rgba(...), тому лишається трійкою: у CSS
    запис rgba(var(--x), 0.2) валідний, якщо у змінній «139,123,255». */
 const ACCENT = 'var(--edge-acc-rgb, 139,123,255)';
@@ -684,13 +684,13 @@ function RailTooltip({ children }) {
       />
       {box && typeof document !== 'undefined' && createPortal(
         <span
-          className="pointer-events-none fixed z-[999] -translate-y-1/2 whitespace-nowrap rounded-[9px] px-3 py-[7px] text-[12px] font-semibold text-[#eef0f5]"
+          className="pointer-events-none fixed z-[999] -translate-y-1/2 whitespace-nowrap rounded-[9px] px-3 py-[7px] text-[12px] font-semibold text-[var(--edge-on-acc)]"
           style={{
             top: box.top,
             left: box.left,
-            background: 'rgba(16,18,25,0.97)',
+            background: 'var(--edge-panel, rgba(16,18,25,0.97))',
             border: `1px solid rgba(${ACCENT},0.35)`,
-            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            boxShadow: '0 12px 30px var(--edge-panel-glow, var(--edge-panel-glow, rgba(0,0,0,0.45)))',
           }}
         >
           {children}
@@ -754,8 +754,8 @@ function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick
         <Icon size={19} style={{ color: isActive ? ACCENT_HEX : 'currentColor' }} className="transition-colors duration-250" />
         {badge && (
           <span className="absolute -top-1 -right-1 w-[7px] h-[7px] pointer-events-none">
-            <span className="absolute inset-0 rounded-full bg-[#f87171] opacity-60 animate-ping" />
-            <span className="absolute inset-[1px] rounded-full bg-[#f87171] shadow-[0_0_8px_rgba(248,113,113,0.8)]" />
+            <span className="absolute inset-0 rounded-full bg-[var(--edge-bad)] opacity-60 animate-ping" />
+            <span className="absolute inset-[1px] rounded-full bg-[var(--edge-bad)] shadow-[0_0_8px_rgba(248,113,113,0.8)]" />
           </span>
         )}
       </div>
@@ -982,14 +982,14 @@ export default function Layout() {
 
   return (
     <div
-      className="flex flex-col md:flex-row h-[100dvh] w-full text-[#e8eaed] overflow-hidden relative"
+      className="flex flex-col md:flex-row h-[100dvh] w-full text-[var(--edge-text)] overflow-hidden relative"
       style={{ fontFamily: "'Manrope', sans-serif", '--edge-accent': ACCENT_HEX, backgroundColor: 'var(--edge-shell, #07080b)', isolation: 'isolate' }}
     >
       {/* ===================== MOBILE HEADER ===================== */}
       <div
         className="md:hidden flex items-center justify-between px-4 h-[60px] border-b border-[var(--edge-hair)] z-[60] shrink-0 w-full relative"
         style={{
-          background: 'rgba(8,9,11,0.85)',
+          background: 'var(--edge-panel, rgba(8,9,11,0.85))',
           backdropFilter: 'blur(16px)',
           paddingTop: 'env(safe-area-inset-top)',
           height: 'calc(60px + env(safe-area-inset-top))',
@@ -1001,7 +1001,7 @@ export default function Layout() {
         </div>
         <button
           onClick={() => setIsMobileMenuOpen((v) => !v)}
-          className="w-10 h-10 rounded-[12px] flex items-center justify-center text-[#e8eaed]/60 hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)] transition-colors"
+          className="w-10 h-10 rounded-[12px] flex items-center justify-center text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)] transition-colors"
         >
           {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
@@ -1076,7 +1076,7 @@ export default function Layout() {
             className="pointer-events-none absolute inset-0 rounded-[20px] opacity-[0.16]"
             style={{
               backgroundImage:
-                'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.9) 1px, transparent 0)',
+                'radial-gradient(circle at 1px 1px, var(--edge-dot, rgba(255,255,255,0.9)) 1px, transparent 0)',
               backgroundSize: '32px 32px',
               maskImage: 'linear-gradient(to bottom, black 0%, transparent 85%)',
               WebkitMaskImage: 'linear-gradient(to bottom, black 0%, transparent 85%)',
@@ -1100,8 +1100,8 @@ export default function Layout() {
           {/* Кнопка згортання / розгортання */}
           <button
             onClick={toggleCollapse}
-            className="absolute top-[37px] -right-[12px] w-6 h-6 rounded-full bg-[#14161e] border border-[var(--edge-hair-strong)] text-[#96a0b3] hover:text-[var(--edge-text)] flex items-center justify-center cursor-pointer z-50 transition-all duration-200"
-            style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}
+            className="absolute top-[37px] -right-[12px] w-6 h-6 rounded-full bg-[var(--edge-surface-hi)] border border-[var(--edge-hair-strong)] text-[var(--edge-text3)] hover:text-[var(--edge-text)] flex items-center justify-center cursor-pointer z-50 transition-all duration-200"
+            style={{ boxShadow: '0 4px 12px var(--edge-panel-glow, rgba(0,0,0,0.45))' }}
             onMouseOver={(e) => (e.currentTarget.style.borderColor = `rgba(${ACCENT},0.35)`)}
             onMouseOut={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)')}
           >

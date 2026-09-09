@@ -270,7 +270,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
                               border: `1px solid ${on ? T.acc : T.lineHi}`,
                             }}
                           >
-                            {on && <Check size={11} strokeWidth={3.6} style={{ color: 'var(--edge-bg, #0A0A0C)' }} />}
+                            {on && <Check size={11} strokeWidth={3.6} style={{ color: 'var(--edge-on-acc, #0A0A0C)' }} />}
                           </span>
                           <span className="min-w-0 flex-1">
                             <span
@@ -355,7 +355,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
                   disabled={busy === 'link'}
                   className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 sm:flex-none"
                   style={{
-                    background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans,
+                    background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans,
                     boxShadow: `0 8px 22px -10px rgba(${T.accRgb},0.7)`,
                     opacity: busy === 'link' ? 0.6 : 1,
                   }}

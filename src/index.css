@@ -219,6 +219,50 @@ body {
 }
 
 /* ==================================================================
+   Перемикання теми — плавність.
+
+   .edge-theming вішається на <html> тільки на час переходу (~360 мс,
+   ставить applyTheme). Поки він активний — на всьому дереві коротка
+   transition на кольорових властивостях, тому підміна CSS-змінних
+   проявляється м'яко, а не одним кадром. Постійно тримати таку
+   transition на `*` не можна: вона гальмувала б hover, активні
+   вкладки й інші швидкі стани.
+
+   Тіні й фон анімуються трохи довше за текст — стрибок яскравості
+   помітніший, ніж зміна кольору літер, тож йому дають більше часу.
+================================================================== */
+.edge-theming,
+.edge-theming *,
+.edge-theming *::before,
+.edge-theming *::after {
+  transition:
+    background-color 0.32s ease,
+    border-color 0.32s ease,
+    color 0.26s ease,
+    fill 0.26s ease,
+    stroke 0.26s ease,
+    box-shadow 0.32s ease,
+    outline-color 0.26s ease !important;
+}
+
+/* Людині, яка попросила тиші, — без плавності теж. */
+.edge-no-motion.edge-theming,
+.edge-no-motion.edge-theming *,
+.edge-no-motion.edge-theming *::before,
+.edge-no-motion.edge-theming *::after {
+  transition-duration: 0.001ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edge-theming,
+  .edge-theming *,
+  .edge-theming *::before,
+  .edge-theming *::after {
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ==================================================================
    Світла тема — доналаштування.
 
    Змінні закривають кольори з токенів, але не все в проєкті через них
@@ -265,6 +309,8 @@ body {
   --edge-text2: #b4b4bd;
   --edge-text3: #7a7a85;
   --edge-text4: #4a4a52;
+  --edge-text-rgb: 250, 250, 250;
+  --edge-hair-rgb: 255, 255, 255;
   --edge-acc: #8b7bff;
   --edge-acc-rgb: 139, 123, 255;
   --edge-acc-soft: rgba(139, 123, 255, 0.1);
@@ -287,6 +333,7 @@ body {
   --edge-panel: rgba(12, 13, 18, 0.95);
   --edge-panel-shadow: 0 40px 100px rgba(0, 0, 0, 0.85),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --edge-panel-glow: rgba(0, 0, 0, 0.5);
   --edge-card-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset,
     0 24px 48px -32px rgba(0, 0, 0, 0.9);
   --edge-dot: rgba(255, 255, 255, 0.9);

@@ -21,7 +21,7 @@ export default function FilterSelect({ value, onChange, options, placeholder }) 
     <div className="relative w-40" ref={dropdownRef}>
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full bg-[#1A1A1A] border border-[#333] px-4 py-2 rounded-xl cursor-pointer hover:border-[#555] transition-colors text-sm font-bold text-[var(--edge-text)] shadow-sm"
+        className="flex items-center justify-between w-full bg-[var(--edge-surface)] border border-[var(--edge-line)] px-4 py-2 rounded-xl cursor-pointer hover:border-[var(--edge-line-hi)] transition-colors text-sm font-bold text-[var(--edge-text)] shadow-sm"
       >
         <span className="truncate">{selectedLabel}</span>
         <ChevronDown size={14} className={`text-textMuted shrink-0 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -31,7 +31,7 @@ export default function FilterSelect({ value, onChange, options, placeholder }) 
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-            className="absolute top-full left-0 mt-2 w-full bg-[#1E1E1E] border border-[#333] rounded-xl shadow-2xl z-50 py-2 overflow-hidden"
+            className="absolute top-full left-0 mt-2 w-full bg-[var(--edge-panel)] border border-[var(--edge-line)] rounded-xl shadow-2xl z-50 py-2 overflow-hidden"
           >
             {options.map(option => (
               <div
@@ -39,8 +39,8 @@ export default function FilterSelect({ value, onChange, options, placeholder }) 
                 onClick={() => { onChange(option.value); setIsOpen(false); }}
                 className={`px-4 py-2 text-sm font-medium cursor-pointer transition-colors ${
                   value === option.value 
-                    ? 'bg-[#3b82f6]/10 text-[#3b82f6]' // Підсвітка вибраного синім
-                    : 'text-[#EAEAEA] hover:bg-[#2A2A2A]'
+                    ? 'bg-[rgba(var(--edge-info-rgb),0.12)] text-[var(--edge-info)]' // Підсвітка вибраного синім
+                    : 'text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'
                 }`}
               >
                 {option.label}

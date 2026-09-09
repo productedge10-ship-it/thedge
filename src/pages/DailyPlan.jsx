@@ -28,7 +28,7 @@ import SavingOverlay from '../components/modals/SavingOverlay';
 import AssetSearchModal from '../components/modals/AssetSearchModal';
 import PlanTabs, { SECTIONS, useScrollSpy, BackToTop } from '../components/trading/PlanTabs';
 import AssetSwitcher, { pushRecentAsset } from '../components/trading/AssetSwitcher';
-import { Card, SectionHead, SectionAnchor, WriteBlock } from '../components/trading/PlanPrimitives';
+import { Section, SectionAnchor, WriteBlock } from '../components/trading/PlanPrimitives';
 import { T, EASE, useEdgeFonts } from '../components/trading/planTheme';
 import useTerminalSkin from '../hooks/useTerminalSkin';
 
@@ -607,7 +607,6 @@ export default function DailyPlan() {
           pair={planData.pair}
           onNewPlan={handleNewPlan}
           onShare={handleShare}
-          onDownload={() => window.print()}
           onOpenQuiz={() => setIsQuizModalOpen(true)}
           isQuizFullyCompleted={quizDone}
           quizCompletedCount={quizCount}
@@ -623,7 +622,6 @@ export default function DailyPlan() {
           isLoadingAssets={isLoadingAssets}
           narrative={planData.narrative}
           onNarrativeChange={(v) => setPlan((p) => ({ ...p, narrative: v }))}
-          onSwitchAsset={(a) => handleRouteChange(planData.date, a)}
         />
 
         <div className="mt-6">
@@ -659,31 +657,31 @@ export default function DailyPlan() {
           />
 
           <div className="flex flex-col gap-5">
-            <Card>
-              <SectionHead
-                icon={Layers}
-                title="Top-down аналіз"
-                hint="Структура від старших ТФ до молодших"
-                done={planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length >= 2}
-                right={
-                  <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
-                        style={{ fontFamily: T.sans, color: T.text4 }}>
-                    {planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length}/4
-                  </span>
-                }
-              />
+            <Section
+              icon={Layers}
+              storageKey="tda"
+              title="Top-down аналіз"
+              hint="Структура від старших ТФ до молодших"
+              done={planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length >= 2}
+              right={
+                <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
+                      style={{ fontFamily: T.sans, color: T.text4 }}>
+                  {planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length}/4
+                </span>
+              }
+            >
               <div className="p-5 sm:p-6">
                 <TdaGrid blocks={planData.tdaBlocks} onSave={saveTda} />
               </div>
-            </Card>
+            </Section>
 
-            <Card>
-              <SectionHead
-                icon={Crosshair}
-                title="Стратегія та точки входу"
-                hint="Тригери, стоп, інвалідація"
-                done={!!planData.planText?.trim()}
-              />
+            <Section
+              icon={Crosshair}
+              storageKey="strategy"
+              title="Стратегія та точки входу"
+              hint="Тригери, стоп, інвалідація"
+              done={!!planData.planText?.trim()}
+            >
               <WriteBlock
                 value={planData.planText}
                 onChange={(v) => setPlan((p) => ({ ...p, planText: v }))}
@@ -691,7 +689,7 @@ export default function DailyPlan() {
                 hint="Опиши логіку так, щоб завтра зрозумів себе"
                 minRows={8}
               />
-            </Card>
+            </Section>
           </div>
 
           {/* ═══════════════ LIVE ═══════════════ */}
@@ -702,13 +700,13 @@ export default function DailyPlan() {
             progress={progress.live}
           />
 
-          <Card>
-            <SectionHead
-              icon={Radio}
-              title="Апдейти по ходу сесії"
-              hint="Що змінилось відносно плану"
-              done={progress.live >= 1 && planData.updates.length > 0}
-            />
+          <Section
+            icon={Radio}
+            storageKey="updates"
+            title="Апдейти по ходу сесії"
+            hint="Що змінилось відносно плану"
+            done={progress.live >= 1 && planData.updates.length > 0}
+          >
             <div className="p-5 sm:p-6">
               <UpdatesList
                 updates={planData.updates}
@@ -725,7 +723,7 @@ export default function DailyPlan() {
                 onSave={saveUpdate}
               />
             </div>
-          </Card>
+          </Section>
 
           {/* ═══════════════ REVIEW ═══════════════ */}
           <SectionAnchor
@@ -736,49 +734,49 @@ export default function DailyPlan() {
           />
 
           <div className="flex flex-col gap-5">
-            <Card>
-              <SectionHead
-                icon={LineChart}
-                title="Розбір після сесії"
-                hint="Як усе виглядало по факту"
-                done={planData.reviewBlocks.some((b) => b.image || b.text?.trim())}
-                right={
-                  <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
-                        style={{ fontFamily: T.sans, color: T.text4 }}>
-                    {planData.reviewBlocks.filter((b) => b.image || b.text?.trim()).length}/2
-                  </span>
-                }
-              />
+            <Section
+              icon={LineChart}
+              storageKey="review"
+              title="Розбір після сесії"
+              hint="Як усе виглядало по факту"
+              done={planData.reviewBlocks.some((b) => b.image || b.text?.trim())}
+              right={
+                <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
+                      style={{ fontFamily: T.sans, color: T.text4 }}>
+                  {planData.reviewBlocks.filter((b) => b.image || b.text?.trim()).length}/2
+                </span>
+              }
+            >
               <div className="p-5 sm:p-6">
                 <TdaGrid blocks={planData.reviewBlocks} onSave={saveReview} />
               </div>
-            </Card>
+            </Section>
 
-            <Card>
-              <SectionHead
-                icon={Stethoscope}
-                title="Діагностика"
-                hint="Три перевірки перед висновками"
-                done={
-                  !!planData.actualNarrative &&
-                  planData.sessionRating > 0 &&
-                  planData.analysisMistake !== null
-                }
-              />
+            <Section
+              icon={Stethoscope}
+              storageKey="diagnostics"
+              title="Діагностика"
+              hint="Три перевірки перед висновками"
+              done={
+                !!planData.actualNarrative &&
+                planData.sessionRating > 0 &&
+                planData.analysisMistake !== null
+              }
+            >
               <PostSessionDiagnostics
                 planData={planData}
                 planId={planId}
                 updatePlanData={(u) => setPlan((p) => ({ ...p, ...u }))}
               />
-            </Card>
+            </Section>
 
-            <Card>
-              <SectionHead
-                icon={NotebookPen}
-                title="Висновки"
-                hint="Головний урок дня"
-                done={!!planData.conclusionsText?.trim()}
-              />
+            <Section
+              icon={NotebookPen}
+              storageKey="conclusions"
+              title="Висновки"
+              hint="Головний урок дня"
+              done={!!planData.conclusionsText?.trim()}
+            >
               <WriteBlock
                 value={planData.conclusionsText}
                 onChange={(v) => setPlan((p) => ({ ...p, conclusionsText: v }))}
@@ -786,7 +784,7 @@ export default function DailyPlan() {
                 hint="Один чіткий висновок вартий десяти розмитих"
                 minRows={8}
               />
-            </Card>
+            </Section>
           </div>
         </motion.div>
       </div>

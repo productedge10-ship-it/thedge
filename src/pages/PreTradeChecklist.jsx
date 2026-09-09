@@ -119,7 +119,7 @@ function Item({
           ? 'transparent'
           : focused && !editMode
             ? `rgba(${T.accRgb},0.13)`
-            : 'rgba(255,255,255,0.022)',
+            : 'var(--edge-hair)',
         transition: 'background 200ms',
       }}
     >
@@ -216,15 +216,15 @@ function Btn({ icon: I, children, onClick, disabled, tone = 'plain', title }) {
       title={title}
       className="flex h-9 items-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-[13.5px] font-semibold transition-all duration-200 active:scale-[0.98]"
       style={{
-        background: hot ? `rgba(${T.accRgb},0.12)` : 'rgba(255,255,255,0.04)',
+        background: hot ? `rgba(${T.accRgb},0.12)` : 'var(--edge-hair)',
         border: `1px solid ${hot ? T.lineAcc : 'transparent'}`,
         color: hot ? T.acc : T.text2,
         fontFamily: T.sans,
         opacity: disabled ? 0.35 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
       }}
-      onMouseEnter={(e) => { if (!disabled && !hot) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = T.text; } }}
-      onMouseLeave={(e) => { if (!hot) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = T.text2; } }}
+      onMouseEnter={(e) => { if (!disabled && !hot) { e.currentTarget.style.background = 'var(--edge-hair-strong)'; e.currentTarget.style.color = T.text; } }}
+      onMouseLeave={(e) => { if (!hot) { e.currentTarget.style.background = 'var(--edge-hair)'; e.currentTarget.style.color = T.text2; } }}
     >
       <I size={14} strokeWidth={2.2} />
       {children}
@@ -517,9 +517,9 @@ export default function PreTradeChecklist() {
           <div
             className="relative flex items-center gap-4 overflow-hidden rounded-2xl px-4 py-3.5 sm:px-5"
             style={{
-              background: 'rgba(20,20,24,0.94)',
+              background: 'var(--edge-panel, rgba(20,20,24,0.94))',
               backdropFilter: 'blur(16px)',
-              boxShadow: '0 18px 40px -30px rgba(0,0,0,0.9)',
+              boxShadow: '0 18px 40px -30px var(--edge-panel-glow, rgba(0,0,0,0.5))',
             }}
           >
             <motion.span
@@ -556,7 +556,7 @@ export default function PreTradeChecklist() {
               </div>
 
               <div className="hidden w-[150px] shrink-0 sm:block">
-                <div className="h-1.5 overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <div className="h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--edge-hair)' }}>
                   <motion.div
                     className="h-full rounded-full"
                     initial={false}
@@ -612,7 +612,7 @@ export default function PreTradeChecklist() {
                       className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-lg text-[12.5px] font-bold tabular-nums"
                       initial={false}
                       animate={{
-                        backgroundColor: allDone ? `rgba(${T.okRgb},0.14)` : 'rgba(255,255,255,0.05)',
+                        backgroundColor: allDone ? `rgba(${T.okRgb},0.14)` : 'var(--edge-hair)',
                         color: allDone ? T.ok : T.text3,
                       }}
                       transition={{ duration: 0.35, ease: EASE }}
@@ -856,7 +856,7 @@ export default function PreTradeChecklist() {
               transition={{ duration: 0.24, ease: EASE }}
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-[420px] rounded-2xl p-7 text-center"
-              style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 40px 90px -30px rgba(0,0,0,0.95)' }}
+              style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 40px 90px -30px var(--edge-panel-glow, rgba(0,0,0,0.5))' }}
             >
               <div
                 className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl"
@@ -886,7 +886,7 @@ export default function PreTradeChecklist() {
                 <button
                   onClick={runConfirm}
                   className="h-11 flex-1 rounded-xl text-[14px] font-bold transition-transform duration-200 active:scale-[0.98]"
-                  style={{ background: T.bad, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+                  style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
                   {confirm.cta || 'Видалити'}
                 </button>

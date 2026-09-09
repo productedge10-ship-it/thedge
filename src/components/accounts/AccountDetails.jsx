@@ -715,7 +715,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                         <span className="block h-1.5 overflow-hidden rounded-full" style={{ background: T.sunken }}>
                           <motion.span
                             className="block h-full rounded-full"
-                            style={{ background: 'linear-gradient(90deg, #5a4fd6 0%, #a99bff 100%)' }}
+                            style={{ background: 'linear-gradient(90deg, #5a4fd6 0%, var(--edge-acc) 100%)' }}
                             initial={false}
                             animate={{ width: `${hasAmount && !overLimit && openProfit > 0 ? Math.min(rawAmount / openProfit, 1) * 100 : 0}%` }}
                             transition={{ duration: 0.25, ease: EASE }}

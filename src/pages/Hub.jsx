@@ -1259,7 +1259,7 @@ export default function Hub() {
                 fontFamily: T.sans,
                 background: edit ? T.acc : T.surface,
                 border: `1px solid ${edit ? 'transparent' : T.line}`,
-                color: edit ? 'var(--edge-bg, #0A0A0C)' : T.text2,
+                color: edit ? 'var(--edge-on-acc, #0A0A0C)' : T.text2,
               }}
               onMouseEnter={(e) => { if (!edit) e.currentTarget.style.borderColor = T.lineHi; }}
               onMouseLeave={(e) => { if (!edit) e.currentTarget.style.borderColor = T.line; }}
@@ -1402,7 +1402,7 @@ export default function Hub() {
             <button
               onClick={() => setEdit(true)}
               className="mt-1 flex h-11 items-center gap-2 rounded-xl px-4 text-[13.5px] font-bold"
-              style={{ fontFamily: T.sans, background: T.acc, color: 'var(--edge-bg, #0A0A0C)' }}
+              style={{ fontFamily: T.sans, background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)' }}
             >
               <Eye size={14} strokeWidth={2.6} /> Повернути
             </button>

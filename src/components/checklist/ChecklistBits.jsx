@@ -29,7 +29,7 @@ export function Counter({ value, className, style }) {
 }
 
 /* ---------- галочка, яка малюється ---------- */
-export function DrawnCheck({ size = 14, color = 'var(--edge-bg, #0A0A0C)', stroke = 3.6 }) {
+export function DrawnCheck({ size = 14, color = 'var(--edge-on-acc, #0A0A0C)', stroke = 3.6 }) {
   const reduce = useReducedMotion();
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">

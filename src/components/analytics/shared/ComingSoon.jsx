@@ -35,14 +35,14 @@ const LINE = 'M6 74 L38 66 L70 71 L102 52 L134 57 L166 38 L198 43 L230 22 L254 1
 const AREA = LINE + ' L254 88 L6 88 Z';
 const BARS = [26, 34, 22, 46, 38, 58, 50, 72, 64, 84];
 
-/* tone може прийти як CSS-змінна (`var(--edge-acc, #8b7bff)`), а до
+/* tone може прийти як CSS-змінна (`var(--edge-acc, var(--edge-acc))`), а до
    змінної не дописати альфу рядком — вийде невалідний колір, і
    браузер мовчки викине всю властивість. Тому напівпрозорі відтінки
    робимо тільки з чесного hex, інакше беремо колір як є. */
 const soft = (c, hex) => (typeof c === 'string' && c.startsWith('#') ? c + hex : c);
 
 export default function ComingSoon({
-  tone = 'var(--edge-acc, #8b7bff)',
+  tone = 'var(--edge-acc, var(--edge-acc))',
   eyebrow = 'Скоро',
   title,
   text,
@@ -60,7 +60,7 @@ export default function ComingSoon({
         position: 'relative',
         overflow: 'hidden',
         borderRadius: 14,
-        border: '1px solid var(--edge-hair, #232328)',
+        border: '1px solid var(--edge-hair, var(--edge-line))',
         background: 'linear-gradient(165deg, rgba(255,255,255,.028), rgba(255,255,255,.008))',
         padding: compact ? '14px 16px 12px' : '18px 18px 14px',
       }}
@@ -178,13 +178,13 @@ export default function ComingSoon({
           </span>
 
           {title && (
-            <b style={{ display: 'block', marginTop: 6, fontSize: compact ? 13.5 : 15, fontWeight: 800, color: 'var(--edge-text, #FAFAFA)', letterSpacing: '-0.1px' }}>
+            <b style={{ display: 'block', marginTop: 6, fontSize: compact ? 13.5 : 15, fontWeight: 800, color: 'var(--edge-text, var(--edge-text))', letterSpacing: '-0.1px' }}>
               {title}
             </b>
           )}
 
           {text && (
-            <p style={{ margin: '5px 0 0', fontSize: 11.5, lineHeight: 1.55, color: 'var(--edge-text3, #7A7A85)' }}>
+            <p style={{ margin: '5px 0 0', fontSize: 11.5, lineHeight: 1.55, color: 'var(--edge-text3, var(--edge-text3))' }}>
               {text}
             </p>
           )}

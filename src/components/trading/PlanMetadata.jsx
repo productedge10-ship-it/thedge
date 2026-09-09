@@ -1,16 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Link as LinkIcon, Book, Search as SearchIcon, Loader2, Layers, Check } from 'lucide-react';
+import { Calendar, Link as LinkIcon, Book, Search as SearchIcon, Loader2 } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import { format, subDays } from 'date-fns';
 import { uk } from 'date-fns/locale';
 import 'react-day-picker/dist/style.css';
 
 import NarrativeSelect from '../ui/NarrativeSelect';
-import { T, EASE, SPRING } from './planTheme';
+import { T, EASE } from './planTheme';
 import { FieldLabel } from './PlanPrimitives';
-
-const QUICK_ASSETS = ['EURUSD', 'GBPUSD', 'XAUUSD', 'BTCUSDT', 'NQ100', 'GER40', 'DXY', 'S&P500'];
 
 const CONTROL = 'flex h-[42px] w-full items-center justify-between rounded-xl px-3.5 text-[15px] font-semibold transition-all duration-200';
 
@@ -97,10 +95,7 @@ export default function PlanMetadata({
   date, onDateChange,
   pair, onOpenAssetModal, isLoadingAssets,
   narrative, onNarrativeChange,
-  onSwitchAsset,
 }) {
-  const [showQuick, setShowQuick] = useState(false);
-
   return (
     <div
       className="rounded-2xl p-4 sm:p-5"
@@ -155,60 +150,7 @@ export default function PlanMetadata({
           <FieldLabel icon={Book} required filled={!!narrative}>Плановий bias</FieldLabel>
           <NarrativeSelect value={narrative} onChange={onNarrativeChange} />
         </div>
-
-        {/* Швидкі активи */}
-        <button
-          onClick={() => setShowQuick(!showQuick)}
-          className="flex h-[42px] items-center gap-2 rounded-xl px-3.5 text-[14px] font-semibold transition-all duration-200"
-          style={{
-            background: showQuick ? T.surfaceHi : T.sunken,
-            border: `1px solid ${showQuick ? T.lineHi : T.line}`,
-            color: showQuick ? T.text : T.text3,
-            fontFamily: T.sans,
-          }}
-        >
-          <Layers size={14} strokeWidth={2.2} style={{ color: showQuick ? T.acc : T.text4 }} />
-          Швидкий вибір
-        </button>
       </div>
-
-      <AnimatePresence initial={false}>
-        {showQuick && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: EASE }}
-            className="overflow-hidden"
-          >
-            <div className="mt-4 flex flex-wrap gap-2 pt-4" style={{ borderTop: `1px solid ${T.line}` }}>
-              {QUICK_ASSETS.map((a) => {
-                const active = pair?.replace('/', '').toUpperCase() === a.replace('/', '').toUpperCase();
-                return (
-                  <motion.button
-                    key={a}
-                    whileTap={{ scale: 0.95 }}
-                    transition={SPRING}
-                    onClick={() => { onSwitchAsset?.(a); setShowQuick(false); }}
-                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-all duration-200"
-                    style={{
-                      background: active ? `rgba(${T.accRgb},0.10)` : T.sunken,
-                      border: `1px solid ${active ? T.lineAcc : T.line}`,
-                      color: active ? T.acc : T.text2,
-                      fontFamily: T.sans,
-                    }}
-                    onMouseEnter={(e) => !active && (e.currentTarget.style.borderColor = T.lineHi)}
-                    onMouseLeave={(e) => !active && (e.currentTarget.style.borderColor = T.line)}
-                  >
-                    {active && <Check size={11} strokeWidth={3} />}
-                    {a}
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

@@ -57,7 +57,7 @@ export default function TaskComposer({ onAdd, defaultDue = null }) {
           <button
             onClick={submit}
             className="h-9 shrink-0 whitespace-nowrap rounded-lg px-4 text-[13.5px] font-bold transition-transform duration-200 active:scale-[0.97]"
-            style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+            style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
           >
             Додати
           </button>

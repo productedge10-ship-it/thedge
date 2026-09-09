@@ -197,7 +197,7 @@ export default function Todo() {
               onClick={() => openPomodoro(null)}
               className="group inline-flex h-[42px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
               style={{
-                background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans,
+                background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans,
                 boxShadow: `0 6px 18px -8px rgba(${T.accRgb},0.6)`,
               }}
               onMouseEnter={(e) => (e.currentTarget.style.boxShadow = `0 10px 26px -8px rgba(${T.accRgb},0.75)`)}

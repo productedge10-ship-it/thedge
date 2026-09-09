@@ -93,7 +93,7 @@ function Row({ label, sub, value, color = P.acc, barColor, share = 0, index }) {
           </span>
         )}
         <span style={{ minWidth: 0, flex: 1 }}>
-          <span style={{ display: 'block', fontFamily: F.sans, fontSize: 12.5, color: hover ? '#fff' : P.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color .2s' }}>
+          <span style={{ display: 'block', fontFamily: F.sans, fontSize: 12.5, color: hover ? 'var(--edge-text)' : P.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color .2s' }}>
             {label}
           </span>
           {sub && <span style={{ display: 'block', fontFamily: F.sans, fontSize: 10.5, color: hover ? P.text4 : P.text5, marginTop: 2, transition: 'color .2s' }}>{sub}</span>}
@@ -123,7 +123,7 @@ function StreakRow({ label, value, color, sub }) {
       }}
     >
       <span style={{ minWidth: 0 }}>
-        <span style={{ display: 'block', fontFamily: F.sans, fontSize: 12, color: hover ? '#fff' : P.text3, transition: 'color .18s' }}>{label}</span>
+        <span style={{ display: 'block', fontFamily: F.sans, fontSize: 12, color: hover ? 'var(--edge-text)' : P.text3, transition: 'color .18s' }}>{label}</span>
         <span style={{ display: 'block', fontFamily: F.sans, fontSize: 10.5, color: hover ? P.text4 : P.text5, transition: 'color .18s' }}>{sub}</span>
       </span>
       <Num color={color} size={22}>{value}</Num>
@@ -171,7 +171,7 @@ const Empty = ({ children }) => (
 
 const tip = {
   contentStyle: {
-    background: '#0a0a0f', border: `1px solid ${P.line}`, borderRadius: 10,
+    background: 'var(--edge-sunken)', border: `1px solid ${P.line}`, borderRadius: 10,
     fontFamily: F.sans, fontSize: 12, padding: '8px 11px',
   },
   labelStyle: { color: P.text5, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' },
@@ -222,7 +222,7 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
             />}
             <Line
               type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={false}
-              activeDot={{ r: 4, fill: color, stroke: '#0c0c11', strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: color, stroke: 'var(--edge-sunken)', strokeWidth: 2 }}
               isAnimationActive animationDuration={420}
             />
           </LineChart>
@@ -243,7 +243,7 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
             />}
             <Area
               type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={`url(#${gid})`}
-              activeDot={{ r: 4, fill: color, stroke: '#0c0c11', strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: color, stroke: 'var(--edge-sunken)', strokeWidth: 2 }}
               isAnimationActive animationDuration={520}
             />
           </AreaChart>
@@ -331,14 +331,14 @@ function Fact({ label, value, color = P.text2 }) {
       style={{
         display: 'flex', alignItems: 'baseline', gap: 8,
         padding: '4px 7px', marginInline: -7, borderRadius: 7,
-        background: hover ? '#ffffff0a' : 'transparent',
+        background: hover ? 'rgba(var(--edge-hair-rgb),0.04)' : 'transparent',
         transition: 'background .18s',
       }}
     >
       <span style={{ fontFamily: F.sans, fontSize: 11, color: hover ? P.text3 : P.text5, whiteSpace: 'nowrap', transition: 'color .18s' }}>
         {label}
       </span>
-      <span style={{ flex: 1, height: 1, background: hover ? '#ffffff1a' : '#ffffff0d', transition: 'background .18s' }} />
+      <span style={{ flex: 1, height: 1, background: hover ? 'rgba(var(--edge-hair-rgb),0.10)' : 'rgba(var(--edge-hair-rgb),0.05)', transition: 'background .18s' }} />
       <b style={{ fontFamily: F.mono, fontSize: 12.5, fontWeight: 700, color, whiteSpace: 'nowrap' }}>
         {value}
       </b>
@@ -378,7 +378,7 @@ export const WIDGETS = {
     hint: 'Підсумок за період і крива під ним',
     icon: TrendingUp,
     group: 'Числа',
-    tone: '#2fbf8f',
+    tone: 'var(--edge-ok)',
     shape: 'spark',
     defaultW: 1,
     options: {
@@ -410,7 +410,7 @@ export const WIDGETS = {
     hint: 'Частка виграшних угод',
     icon: Target,
     group: 'Числа',
-    tone: '#8b7cff',
+    tone: 'var(--edge-acc)',
     shape: 'ring',
     defaultW: 1,
     options: {
@@ -442,7 +442,7 @@ export const WIDGETS = {
     hint: 'Скільки зароблено на кожну втрачену одиницю',
     icon: Activity,
     group: 'Числа',
-    tone: '#a78bfa',
+    tone: 'var(--edge-acc)',
     shape: 'spark',
     defaultW: 1,
     options: {
@@ -457,11 +457,11 @@ export const WIDGETS = {
     render: ({ s, o, id, w, hover }) => (
       <KpiBody
         value={r2(s.pf)}
-        color="#a78bfa"
+        color="var(--edge-acc)"
         sub={o.sub === 'off' ? null
           : o.sub === 'dd' ? `Макс. просадка ${r1(s.maxDD)}R`
             : `+${r1(s.gross)} / −${r1(s.grossLoss)}`}
-        spark={<Spark id={id} data={s.byMonth} dataKey="net" labelKey="key" name="Чистий R" color="#a78bfa" view={o.spark} hover={hover} tip={o.tip !== 'off'} />}
+        spark={<Spark id={id} data={s.byMonth} dataKey="net" labelKey="key" name="Чистий R" color="var(--edge-acc)" view={o.spark} hover={hover} tip={o.tip !== 'off'} />}
         w={w}
         hover={hover}
         facts={[['Прибуток', `+${r1(s.gross)}R`, P.ok], ['Збитки', `−${r1(s.grossLoss)}R`, P.bad], ['Відновлення', `×${r2(s.recovery)}`], ['Просадка', `${r1(s.maxDD)}R`, P.bad]]}
@@ -474,7 +474,7 @@ export const WIDGETS = {
     hint: 'Скільки коштували угоди на емоціях і з порушеннями',
     icon: Flame,
     group: 'Числа',
-    tone: '#ff7b7b',
+    tone: 'var(--edge-bad)',
     shape: 'dip',
     defaultW: 1,
     options: {
@@ -506,7 +506,7 @@ export const WIDGETS = {
     hint: 'Скільки в середньому приносить одна угода',
     icon: Zap,
     group: 'Числа',
-    tone: '#f5a33b',
+    tone: 'var(--edge-warn)',
     shape: 'number',
     defaultW: 1,
     options: {
@@ -536,7 +536,7 @@ export const WIDGETS = {
     hint: 'Найдовші смуги виграшів, програшів і чистих угод',
     icon: Layers,
     group: 'Числа',
-    tone: '#5bc8ff',
+    tone: 'var(--edge-info)',
     shape: 'streak',
     defaultW: 1,
     options: {},
@@ -560,7 +560,7 @@ export const WIDGETS = {
     hint: 'Накопичений результат у R за весь період',
     icon: TrendingUp,
     group: 'Графіки',
-    tone: '#8b7cff',
+    tone: 'var(--edge-acc)',
     shape: 'curve',
     defaultW: 3,
     options: {
@@ -608,7 +608,7 @@ export const WIDGETS = {
     hint: 'Скільки платить кожна торгова сесія',
     icon: Clock,
     group: 'Графіки',
-    tone: '#4ecdc4',
+    tone: 'var(--edge-ok)',
     shape: 'bars',
     defaultW: 1,
     options: {
@@ -666,7 +666,7 @@ export const WIDGETS = {
     hint: 'У які дні торгівля приносить найбільше',
     icon: CalendarDays,
     group: 'Графіки',
-    tone: '#b3a8ff',
+    tone: 'var(--edge-acc)',
     shape: 'bars',
     defaultW: 1,
     options: {
@@ -703,7 +703,7 @@ export const WIDGETS = {
     hint: 'Дві криві: угоди за планом і повз нього',
     icon: ShieldCheck,
     group: 'Графіки',
-    tone: '#2fbf8f',
+    tone: 'var(--edge-ok)',
     shape: 'split',
     defaultW: 1,
     options: {
@@ -769,7 +769,7 @@ export const WIDGETS = {
     hint: 'Найприбутковіші й найзбитковіші джерела разом',
     icon: Layers,
     group: 'Списки',
-    tone: '#7dd3fc',
+    tone: 'var(--edge-info)',
     shape: 'rows',
     defaultW: 1,
     options: {
@@ -820,7 +820,7 @@ export const WIDGETS = {
     hint: 'Скільки приносить кожен емоційний стан',
     icon: BrainCircuit,
     group: 'Списки',
-    tone: '#c084fc',
+    tone: 'var(--edge-acc)',
     shape: 'rows',
     defaultW: 1,
     options: {
@@ -875,7 +875,7 @@ export const WIDGETS = {
     hint: 'Порушення, відсортовані за ціною',
     icon: AlertOctagon,
     group: 'Списки',
-    tone: '#ff7b7b',
+    tone: 'var(--edge-bad)',
     shape: 'rows',
     defaultW: 1,
     options: {
@@ -912,7 +912,7 @@ export const WIDGETS = {
     hint: 'Що приносить, а що забирає',
     icon: Wallet,
     group: 'Списки',
-    tone: '#34d399',
+    tone: 'var(--edge-ok)',
     shape: 'rows',
     defaultW: 1,
     options: {
@@ -950,7 +950,7 @@ export const WIDGETS = {
     hint: 'Які схеми входу справді платять',
     icon: Crosshair,
     group: 'Списки',
-    tone: '#fbbf24',
+    tone: 'var(--edge-warn)',
     shape: 'rows',
     defaultW: 1,
     options: {
@@ -988,7 +988,7 @@ export const WIDGETS = {
     hint: 'Частка угод за планом і що буде без витоків',
     icon: ShieldCheck,
     group: 'Числа',
-    tone: '#2fbf8f',
+    tone: 'var(--edge-ok)',
     shape: 'gauge',
     defaultW: 1,
     options: {},

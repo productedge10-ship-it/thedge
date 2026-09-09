@@ -41,12 +41,12 @@ export default function AssetSearchModal({
         onAnimationComplete={() => searchInputRef.current?.focus()}
         className="bg-[var(--edge-surface)] border border-blue-500/20 w-full max-w-2xl rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(59,130,246,0.18)] flex flex-col h-[85vh] md:h-[80vh]"
       >
-        <div className="p-6 border-b border-[var(--edge-hair)] relative bg-[#0E1017]">
+        <div className="p-6 border-b border-[var(--edge-hair)] relative bg-[var(--edge-surface)]">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-[1px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent"></div>
           
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-[var(--edge-text)] uppercase tracking-wider flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_var(--edge-info)]"></span>
               Select Trading Instrument
             </h3>
             <button onClick={onClose} className="text-zinc-500 hover:text-[var(--edge-text)] transition-colors p-1 bg-[var(--edge-hair)] rounded-lg border border-[var(--edge-hair)]">

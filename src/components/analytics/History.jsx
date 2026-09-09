@@ -87,8 +87,8 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
       title={<><CalendarIcon size={14} /> Календар активності</>} 
       right={
         <div className="flex bg-[var(--edge-bg)]/50 border border-[var(--edge-hair-strong)] rounded-lg p-1">
-          <button onClick={() => setViewMode('month')} className={`px-4 py-1.5 rounded-md transition-all text-[11px] font-bold tracking-wide uppercase ${viewMode === 'month' ? 'bg-[#8b7bff] text-[var(--edge-text)] shadow-[0_0_15px_rgba(139,123,255,0.3)]' : 'text-[#7A7A85] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}>Місяць</button>
-          <button onClick={() => setViewMode('week')} className={`px-4 py-1.5 rounded-md transition-all text-[11px] font-bold tracking-wide uppercase ${viewMode === 'week' ? 'bg-[#8b7bff] text-[var(--edge-text)] shadow-[0_0_15px_rgba(139,123,255,0.3)]' : 'text-[#7A7A85] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}>Тиждень</button>
+          <button onClick={() => setViewMode('month')} className={`px-4 py-1.5 rounded-md transition-all text-[11px] font-bold tracking-wide uppercase ${viewMode === 'month' ? 'bg-[var(--edge-acc)] text-[var(--edge-text)] shadow-[0_0_15px_rgba(139,123,255,0.3)]' : 'text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}>Місяць</button>
+          <button onClick={() => setViewMode('week')} className={`px-4 py-1.5 rounded-md transition-all text-[11px] font-bold tracking-wide uppercase ${viewMode === 'week' ? 'bg-[var(--edge-acc)] text-[var(--edge-text)] shadow-[0_0_15px_rgba(139,123,255,0.3)]' : 'text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}>Тиждень</button>
         </div>
       }
       className="w-full relative z-20"
@@ -96,14 +96,14 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
       {/* Шапка календаря */}
       <div className="flex items-center justify-between mt-2 mb-6 px-2">
         <div className="flex items-center gap-4">
-          <button onClick={handlePrev} className="p-2 bg-[var(--edge-surface-hi)] border border-[var(--edge-hair)] hover:border-white/20 hover:bg-[var(--edge-hair)] rounded-xl text-[#7A7A85] hover:text-[var(--edge-text)] transition-all"><ChevronLeft size={18} /></button>
+          <button onClick={handlePrev} className="p-2 bg-[var(--edge-surface-hi)] border border-[var(--edge-hair)] hover:border-white/20 hover:bg-[var(--edge-hair)] rounded-xl text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-all"><ChevronLeft size={18} /></button>
           <div className="flex flex-col">
-            <span className="text-[22px] font-black tracking-tight text-[#FAFAFA] font-['Instrument_Serif',serif] leading-none">
+            <span className="text-[22px] font-black tracking-tight text-[var(--edge-text)] font-['Instrument_Serif',serif] leading-none">
               {UKR_MONTHS[navDate.getMonth()]} {navDate.getFullYear()}
             </span>
-            {viewMode === 'week' && <span className="text-[11px] text-[#8b7bff] font-bold uppercase tracking-wider mt-1">Тижневий зріз</span>}
+            {viewMode === 'week' && <span className="text-[11px] text-[var(--edge-acc)] font-bold uppercase tracking-wider mt-1">Тижневий зріз</span>}
           </div>
-          <button onClick={handleNext} className="p-2 bg-[var(--edge-surface-hi)] border border-[var(--edge-hair)] hover:border-white/20 hover:bg-[var(--edge-hair)] rounded-xl text-[#7A7A85] hover:text-[var(--edge-text)] transition-all"><ChevronRight size={18} /></button>
+          <button onClick={handleNext} className="p-2 bg-[var(--edge-surface-hi)] border border-[var(--edge-hair)] hover:border-white/20 hover:bg-[var(--edge-hair)] rounded-xl text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-all"><ChevronRight size={18} /></button>
         </div>
 
         {selectedDate && (
@@ -115,7 +115,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
 
       {/* Дні тижня (Заголовки) */}
       <div className="grid grid-cols-7 gap-2 mb-2 px-1">
-        {UKR_DAYS_SHORT.map(d => <div key={d} className="text-right pr-2 text-[10px] font-black tracking-widest uppercase text-[#7A7A85] pb-2 border-b border-[var(--edge-hair)]">{d}</div>)}
+        {UKR_DAYS_SHORT.map(d => <div key={d} className="text-right pr-2 text-[10px] font-black tracking-widest uppercase text-[var(--edge-text3)] pb-2 border-b border-[var(--edge-hair)]">{d}</div>)}
       </div>
 
       {/* Сітка */}
@@ -153,14 +153,14 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
                     
                     {/* Топ: Число і День */}
                     <div className="flex justify-between items-start z-10">
-                      <span className={`text-[18px] font-black leading-none ${isTodayDate ? 'text-[#8b7bff] drop-shadow-[0_0_8px_rgba(139,123,255,0.8)]' : 'text-[#FAFAFA]'}`}>{format(day, 'd')}</span>
-                      <span className="text-[9px] uppercase font-bold text-[#7A7A85] tracking-wider">{UKR_MONTHS[day.getMonth()].slice(0,3)}</span>
+                      <span className={`text-[18px] font-black leading-none ${isTodayDate ? 'text-[var(--edge-acc)] drop-shadow-[0_0_8px_rgba(139,123,255,0.8)]' : 'text-[var(--edge-text)]'}`}>{format(day, 'd')}</span>
+                      <span className="text-[9px] uppercase font-bold text-[var(--edge-text3)] tracking-wider">{UKR_MONTHS[day.getMonth()].slice(0,3)}</span>
                     </div>
 
                     {/* Центр: R Значення */}
                     {tList.length > 0 && viewMode === 'month' && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <b className={`text-[24px] font-black tracking-tighter ${isProfit ? 'text-[#34d399] drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]' : isLoss ? 'text-[#f87171] drop-shadow-[0_0_15px_rgba(248,113,113,0.5)]' : 'text-[#B4B4BD]'}`}>
+                        <b className={`text-[24px] font-black tracking-tighter ${isProfit ? 'text-[#34d399] drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]' : isLoss ? 'text-[#f87171] drop-shadow-[0_0_15px_rgba(248,113,113,0.5)]' : 'text-[var(--edge-text2)]'}`}>
                           {signed(rValue, 1)}
                         </b>
                       </div>
@@ -182,15 +182,15 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
                     <div className="relative z-10 mt-auto flex justify-between items-end">
                       {tList.length > 0 ? (
                         <>
-                          <span className="text-[10px] font-bold text-[#B4B4BD] bg-[var(--edge-bg)]/80 px-1.5 py-0.5 rounded backdrop-blur-sm border border-[var(--edge-hair)]">
+                          <span className="text-[10px] font-bold text-[var(--edge-text2)] bg-[var(--edge-bg)]/80 px-1.5 py-0.5 rounded backdrop-blur-sm border border-[var(--edge-hair)]">
                             {tList.length} уг.
                           </span>
                           {viewMode === 'week' && (
-                            <b className={`text-[14px] font-black ${isProfit ? 'text-[#34d399]' : isLoss ? 'text-[#f87171]' : 'text-[#B4B4BD]'}`}>{signed(rValue, 1)}R</b>
+                            <b className={`text-[14px] font-black ${isProfit ? 'text-[#34d399]' : isLoss ? 'text-[#f87171]' : 'text-[var(--edge-text2)]'}`}>{signed(rValue, 1)}R</b>
                           )}
                         </>
                       ) : (
-                        <span className="text-[9px] uppercase tracking-widest text-[#4A4A52] font-bold opacity-0 group-hover/cell:opacity-100 transition-opacity">Немає угод</span>
+                        <span className="text-[9px] uppercase tracking-widest text-[var(--edge-text4)] font-bold opacity-0 group-hover/cell:opacity-100 transition-opacity">Немає угод</span>
                       )}
                     </div>
                   </div>
@@ -206,24 +206,24 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
                     
                     <div className="flex justify-between items-start border-b border-[var(--edge-hair)] pb-3 mb-3">
                       <div>
-                        <span className="text-[10px] text-[#7A7A85] font-black uppercase tracking-widest">{UKR_DAYS_FULL[getUkrDayIndex(day)]}</span>
+                        <span className="text-[10px] text-[var(--edge-text3)] font-black uppercase tracking-widest">{UKR_DAYS_FULL[getUkrDayIndex(day)]}</span>
                         <h4 className="text-[var(--edge-text)] text-[15px] font-bold m-0 leading-tight">{format(day, 'd')} {UKR_MONTHS[day.getMonth()]} {day.getFullYear()}</h4>
                       </div>
-                      <b className={`text-[18px] font-black ${isProfit ? 'text-[#34d399]' : isLoss ? 'text-[#f87171]' : 'text-[#B4B4BD]'}`}>{signed(rValue, 2)}R</b>
+                      <b className={`text-[18px] font-black ${isProfit ? 'text-[#34d399]' : isLoss ? 'text-[#f87171]' : 'text-[var(--edge-text2)]'}`}>{signed(rValue, 2)}R</b>
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
                       <div className="bg-[var(--edge-hair)] rounded-lg p-2">
-                        <span className="block text-[9px] text-[#7A7A85] uppercase font-bold mb-1">Угод</span>
+                        <span className="block text-[9px] text-[var(--edge-text3)] uppercase font-bold mb-1">Угод</span>
                         <b className="text-[var(--edge-text)] text-[14px]">{tList.length}</b>
                       </div>
                       <div className="bg-[var(--edge-hair)] rounded-lg p-2">
-                        <span className="block text-[9px] text-[#7A7A85] uppercase font-bold mb-1">Вінрейт</span>
+                        <span className="block text-[9px] text-[var(--edge-text3)] uppercase font-bold mb-1">Вінрейт</span>
                         <b className="text-[var(--edge-text)] text-[14px]">{wr}%</b>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1.5 text-[11.5px] text-[#B4B4BD]">
+                    <div className="flex flex-col gap-1.5 text-[11.5px] text-[var(--edge-text2)]">
                       <div className="flex justify-between"><span>Напрямки:</span> <b className="text-[var(--edge-text)]"><span className="text-[#34d399]">{longs} L</span> / <span className="text-[#f87171]">{tList.length - longs} S</span></b></div>
                       <div className="flex justify-between"><span>Активи:</span> <b className="text-[var(--edge-text)] truncate max-w-[120px] text-right">{uniqueAssets}</b></div>
                       {mistakes > 0 && <div className="flex justify-between items-center mt-1 pt-1 border-t border-[var(--edge-hair)]"><span className="text-[#f87171] flex items-center gap-1"><AlertCircle size={12}/> Помилок:</span> <b className="text-[#f87171]">{mistakes}</b></div>}
@@ -301,7 +301,7 @@ export default function History({ s }) {
     <div className="flex flex-col gap-6 w-full">
       <div className="flex items-baseline gap-4 mb-2">
         <h2 className="font-['Instrument_Serif',serif] text-[30px] font-normal m-0 tracking-[0.2px] text-[var(--edge-text)]">Історія угод</h2>
-        <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-bold">
+        <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">
           Всього {s.trades.length} записів
         </span>
       </div>
@@ -312,29 +312,29 @@ export default function History({ s }) {
       {/* ФІЛЬТРИ ТА ПОШУК ДЛЯ СПИСКУ */}
       <div ref={listRef} className="bg-[var(--edge-surface-hi)]/80 backdrop-blur-xl border border-[var(--edge-hair)] rounded-[16px] p-3 flex flex-wrap lg:flex-nowrap items-center justify-between gap-4 sticky top-4 z-30 shadow-2xl mt-4 scroll-mt-[20px]">
         
-        <div className="flex items-center gap-[10px] w-full lg:w-[320px] bg-[var(--edge-bg)]/50 border border-[#232328] rounded-[12px] px-3 py-2.5 transition-colors focus-within:border-[#8b7bff]/50 focus-within:bg-[var(--edge-bg)] shrink-0">
-          <Search size={16} className="text-[#7A7A85]" />
+        <div className="flex items-center gap-[10px] w-full lg:w-[320px] bg-[var(--edge-bg)]/50 border border-[var(--edge-line)] rounded-[12px] px-3 py-2.5 transition-colors focus-within:border-[var(--edge-acc)]/50 focus-within:bg-[var(--edge-bg)] shrink-0">
+          <Search size={16} className="text-[var(--edge-text3)]" />
           <input 
             value={query} onChange={(e) => setQuery(e.target.value)} 
             placeholder="Пошук по активу, сетапу, емоції..." 
-            className="bg-transparent border-none outline-none text-[#FAFAFA] text-[13px] w-full placeholder:text-[#4A4A52]" 
+            className="bg-transparent border-none outline-none text-[var(--edge-text)] text-[13px] w-full placeholder:text-[var(--edge-text4)]" 
           />
         </div>
 
         <div className="flex items-center justify-between w-full lg:w-auto gap-4">
           <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar flex-1 pb-1 lg:pb-0">
-            <Filter size={14} className="text-[#7A7A85] mr-2 shrink-0 hidden sm:block" />
+            <Filter size={14} className="text-[var(--edge-text3)] mr-2 shrink-0 hidden sm:block" />
             {[{ k: 'all', l: 'Усі' }, { k: 'win', l: 'Плюс' }, { k: 'loss', l: 'Мінус' }, { k: 'mistake', l: 'З помилкою' }, { k: 'clean', l: 'Чисті' }].map(({ k, l }) => (
               <button 
                 key={k} onClick={() => setFilter(k)}
                 className={`shrink-0 text-[11.5px] px-3.5 py-2 rounded-[10px] font-bold transition-all duration-200 border 
-                  ${filter === k ? 'bg-white/10 text-[var(--edge-text)] border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]' : 'bg-transparent text-[#7A7A85] border-transparent hover:bg-[var(--edge-hair)] hover:text-[#FAFAFA]'}`}
+                  ${filter === k ? 'bg-white/10 text-[var(--edge-text)] border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]' : 'bg-transparent text-[var(--edge-text3)] border-transparent hover:bg-[var(--edge-hair)] hover:text-[var(--edge-text)]'}`}
               >{l}</button>
             ))}
           </div>
 
           {selectedDate && (
-             <div className="shrink-0 flex items-center gap-2 bg-[#8b7bff]/10 border border-[#8b7bff]/20 px-3 py-1.5 rounded-[10px] text-[11px] font-bold text-[#8b7bff]">
+             <div className="shrink-0 flex items-center gap-2 bg-[var(--edge-acc)]/10 border border-[var(--edge-acc)]/20 px-3 py-1.5 rounded-[10px] text-[11px] font-bold text-[var(--edge-acc)]">
                <CalendarIcon size={13}/>
                {format(selectedDate, 'dd.MM.yyyy')}
              </div>
@@ -367,7 +367,7 @@ export default function History({ s }) {
 
                           <div className="w-px h-8 bg-[var(--edge-hair)] hidden lg:block" />
 
-                          <div className="flex flex-col gap-1 text-[#7A7A85]">
+                          <div className="flex flex-col gap-1 text-[var(--edge-text3)]">
                             <span className="flex items-center gap-1.5 text-[11.5px] font-medium"><CalendarIcon size={12}/> {t.date}</span>
                             <span className="flex items-center gap-1.5 text-[11.5px] font-medium"><Clock size={12}/> {String(t.hour).padStart(2, '0')}:00 · {t.session}</span>
                           </div>
@@ -376,9 +376,9 @@ export default function History({ s }) {
                         {/* СЕРЕДНЯ ЧАСТИНА: Сетап, Емоція, Помилки */}
                         <div className="flex-1 flex flex-wrap items-center gap-4 lg:gap-8 w-full xl:w-auto">
                           <div className="flex flex-col gap-1 min-w-[140px]">
-                            <span className="text-[9px] uppercase tracking-widest text-[#7A7A85] font-black">Сетап / Акаунт</span>
-                            <span className="text-[12.5px] text-[#FAFAFA] font-bold">{t.setup}</span>
-                            <span className="text-[11px] text-[#7A7A85]">{t.account}</span>
+                            <span className="text-[9px] uppercase tracking-widest text-[var(--edge-text3)] font-black">Сетап / Акаунт</span>
+                            <span className="text-[12.5px] text-[var(--edge-text)] font-bold">{t.setup}</span>
+                            <span className="text-[11px] text-[var(--edge-text3)]">{t.account}</span>
                           </div>
 
                           <div className="flex items-center gap-2 flex-wrap">
@@ -401,10 +401,10 @@ export default function History({ s }) {
                         {/* ПРАВА ЧАСТИНА: R */}
                         <div className="flex items-center justify-end w-full xl:w-auto mt-2 xl:mt-0 shrink-0">
                           <div className="flex flex-col items-end min-w-[80px]">
-                            <span className="text-[9px] uppercase tracking-widest text-[#7A7A85] font-black mb-0.5">Результат</span>
+                            <span className="text-[9px] uppercase tracking-widest text-[var(--edge-text3)] font-black mb-0.5">Результат</span>
                             <b 
                               className="text-[24px] font-black tracking-tighter leading-none transition-all duration-300"
-                              style={{ color: isProfit ? '#34d399' : isLoss ? '#f87171' : 'var(--edge-text2, #B4B4BD)', textShadow: isProfit ? '0 0 15px rgba(52,211,153,0.4)' : isLoss ? '0 0 15px rgba(248,113,113,0.4)' : 'none' }}
+                              style={{ color: isProfit ? '#34d399' : isLoss ? '#f87171' : 'var(--edge-text2, var(--edge-text2))', textShadow: isProfit ? '0 0 15px rgba(52,211,153,0.4)' : isLoss ? '0 0 15px rgba(248,113,113,0.4)' : 'none' }}
                             >
                               {signed(t.rr, 2)}R
                             </b>
@@ -419,11 +419,11 @@ export default function History({ s }) {
             </motion.div>
           ) : (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-24 px-4 text-center border border-dashed border-[var(--edge-hair-strong)] rounded-[16px] bg-[var(--edge-surface-hi)]/30">
-              <Layers size={32} className="text-[#4A4A52] mb-3" />
-              <h3 className="text-[16px] text-[#FAFAFA] font-bold mb-1">Немає угод</h3>
-              <p className="text-[12.5px] text-[#7A7A85]">За вибраними фільтрами або датою нічого не знайдено.</p>
+              <Layers size={32} className="text-[var(--edge-text4)] mb-3" />
+              <h3 className="text-[16px] text-[var(--edge-text)] font-bold mb-1">Немає угод</h3>
+              <p className="text-[12.5px] text-[var(--edge-text3)]">За вибраними фільтрами або датою нічого не знайдено.</p>
               {(query || filter !== 'all' || selectedDate) && (
-                <button onClick={() => { setQuery(''); setFilter('all'); setSelectedDate(null); }} className="mt-4 px-4 py-2 bg-[var(--edge-hair)] hover:bg-white/10 text-[#FAFAFA] text-[12px] font-bold rounded-[8px] transition-colors">
+                <button onClick={() => { setQuery(''); setFilter('all'); setSelectedDate(null); }} className="mt-4 px-4 py-2 bg-[var(--edge-hair)] hover:bg-white/10 text-[var(--edge-text)] text-[12px] font-bold rounded-[8px] transition-colors">
                   Скинути фільтри
                 </button>
               )}
@@ -435,11 +435,11 @@ export default function History({ s }) {
       {/* ПАГІНАЦІЯ */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-4 pb-8">
-          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-[10px] bg-[var(--edge-surface-hi)] border border-[var(--edge-hair)] text-[#7A7A85] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)] transition-colors disabled:opacity-50 disabled:pointer-events-none"><ChevronLeft size={16} /></button>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-[10px] bg-[var(--edge-surface-hi)] border border-[var(--edge-hair)] text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)] transition-colors disabled:opacity-50 disabled:pointer-events-none"><ChevronLeft size={16} /></button>
           {paginationButtons.map(p => (
-            <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-[10px] text-[12px] font-bold transition-all duration-200 border ${currentPage === p ? 'bg-[#8b7bff] text-[var(--edge-text)] border-[#8b7bff] shadow-[0_0_15px_rgba(139,123,255,0.3)]' : 'bg-[var(--edge-surface-hi)] text-[#7A7A85] border-[var(--edge-hair)] hover:border-white/20 hover:text-[#FAFAFA]'}`}>{p}</button>
+            <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-[10px] text-[12px] font-bold transition-all duration-200 border ${currentPage === p ? 'bg-[var(--edge-acc)] text-[var(--edge-text)] border-[var(--edge-acc)] shadow-[0_0_15px_rgba(139,123,255,0.3)]' : 'bg-[var(--edge-surface-hi)] text-[var(--edge-text3)] border-[var(--edge-hair)] hover:border-white/20 hover:text-[var(--edge-text)]'}`}>{p}</button>
           ))}
-          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-[10px] bg-[var(--edge-surface-hi)] border border-[var(--edge-hair)] text-[#7A7A85] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)] transition-colors disabled:opacity-50 disabled:pointer-events-none"><ChevronRight size={16} /></button>
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-[10px] bg-[var(--edge-surface-hi)] border border-[var(--edge-hair)] text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)] transition-colors disabled:opacity-50 disabled:pointer-events-none"><ChevronRight size={16} /></button>
         </div>
       )}
     </div>

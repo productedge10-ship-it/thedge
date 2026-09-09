@@ -29,12 +29,12 @@ const Z = 2100;
 const A = (a) => `rgba(${T.accRgb}, ${a})`;
 
 const GROUP_COLOR = {
-  Main: '#ff7b7b',
-  Entry: '#4da3ff',
-  'Management and exit': '#f0b13c',
-  Risk: '#ff4d6d',
-  Mindset: '#9d8cff',
-  Preparation: '#3ddc97',
+  Main: 'var(--edge-bad)',
+  Entry: 'var(--edge-info)',
+  'Management and exit': 'var(--edge-warn)',
+  Risk: 'var(--edge-bad)',
+  Mindset: 'var(--edge-acc)',
+  Preparation: 'var(--edge-ok)',
 };
 
 const MON = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
@@ -43,11 +43,11 @@ const Cap = ({ children, hint }) => (
   <div className="flex items-baseline justify-between gap-2.5">
     <span
       className="text-[11.5px] font-bold uppercase"
-      style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: '#b4b2c6' }}
+      style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: 'var(--edge-text2)' }}
     >
       {children}
     </span>
-    {hint && <span className="text-[13px]" style={{ fontFamily: T.sans, color: '#9d9bb0' }}>{hint}</span>}
+    {hint && <span className="text-[13px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>{hint}</span>}
   </div>
 );
 
@@ -56,16 +56,16 @@ const IconBtn = ({ icon: Icon, title, danger, onClick }) => (
     onClick={onClick}
     title={title}
     className="grid h-9 w-9 place-items-center rounded-[11px]"
-    style={{ background: '#ffffff08', border: '1px solid #23232e', color: '#b3b1c0', transition: 'all .16s' }}
+    style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', transition: 'all .16s' }}
     onMouseEnter={(e) => {
-      e.currentTarget.style.background = danger ? '#ff8f8f24' : '#ffffff16';
-      e.currentTarget.style.borderColor = danger ? '#ff8f8f66' : '#3d3d4c';
-      e.currentTarget.style.color = danger ? '#ff9d9d' : '#ffffff';
+      e.currentTarget.style.background = danger ? 'rgba(var(--edge-bad-rgb),0.14)' : 'rgba(var(--edge-hair-rgb),0.09)';
+      e.currentTarget.style.borderColor = danger ? 'rgba(var(--edge-bad-rgb),0.40)' : 'var(--edge-line-hi)';
+      e.currentTarget.style.color = danger ? 'var(--edge-bad)' : 'var(--edge-text)';
     }}
     onMouseLeave={(e) => {
-      e.currentTarget.style.background = '#ffffff08';
-      e.currentTarget.style.borderColor = '#23232e';
-      e.currentTarget.style.color = '#b3b1c0';
+      e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.03)';
+      e.currentTarget.style.borderColor = 'var(--edge-line)';
+      e.currentTarget.style.color = 'var(--edge-text2)';
     }}
   >
     <Icon size={15} strokeWidth={1.9} />
@@ -79,9 +79,9 @@ const IconBtn = ({ icon: Icon, title, danger, onClick }) => (
 const ROW_CSS = `
 .err-act{
   --ac: var(--edge-acc-rgb, 139,123,255);
-  background:#ffffff06;
-  border:1px solid #1e1e27;
-  color:#c9c7d8;
+  background:rgba(var(--edge-hair-rgb),0.02);
+  border:1px solid var(--edge-line);
+  color:var(--edge-text2);
   transition:background .16s, border-color .16s, color .16s;
 }
 .err-act:hover{
@@ -89,8 +89,8 @@ const ROW_CSS = `
   border-color:rgba(var(--ac),.45);
   color:#ffffff;
 }
-.err-act .err-act-ico{color:#a5a3b8;transition:color .16s}
-.err-act:hover .err-act-ico{color:#b3a8ff}
+.err-act .err-act-ico{color:var(--edge-text2);transition:color .16s}
+.err-act:hover .err-act-ico{color:var(--edge-acc)}
 `;
 
 function ActionRow({ icon: Icon, label, hint, onClick }) {
@@ -166,7 +166,7 @@ export default function ErrorDetailDrawer({
 
   const reasonColor = (id) => {
     const g = REASON_GROUPS.find((x) => x.items.some((r) => r.id === id));
-    return g ? (GROUP_COLOR[g.group] || T.acc) : '#3ddc97';
+    return g ? (GROUP_COLOR[g.group] || T.acc) : 'var(--edge-ok)';
   };
 
   const facts = [
@@ -235,9 +235,9 @@ export default function ErrorDetailDrawer({
                    напівпрозорим — крізь шапку просвічувала сторінка.
                    Тепер акцентний відтінок лежить ПОВЕРХ непрозорої
                    підкладки. */
-                backgroundColor: '#0f0f15',
-                backgroundImage: `linear-gradient(170deg, ${color}26, transparent 34%), linear-gradient(170deg, #16161f, #0f0f15)`,
-                border: '1px solid #23232e',
+                backgroundColor: 'var(--edge-sunken)',
+                backgroundImage: `linear-gradient(170deg, ${color}26, transparent 34%), linear-gradient(170deg, var(--edge-surface-hi), var(--edge-sunken))`,
+                border: '1px solid var(--edge-line)',
                 boxShadow: `0 50px 110px -40px #000, 0 0 0 1px ${color}14`,
               }}
             >
@@ -245,18 +245,18 @@ export default function ErrorDetailDrawer({
 
               <span
                 className="pointer-events-none absolute inset-x-0 top-0 h-px"
-                style={{ background: `linear-gradient(90deg,transparent,${color}cc 28%,#8b7cffcc 72%,transparent)` }}
+                style={{ background: `linear-gradient(90deg,transparent,${color}cc 28%,rgba(var(--edge-acc-rgb),0.80) 72%,transparent)` }}
               />
 
               {/* ---------- шапка ---------- */}
               <div
                 className="flex flex-none items-center justify-between gap-5 py-4 pl-[22px] pr-[18px]"
-                style={{ borderBottom: '1px solid #22222c' }}
+                style={{ borderBottom: '1px solid var(--edge-line)' }}
               >
                 <div className="flex min-w-0 items-center gap-3.5">
                   <span
                     className="grid h-[38px] w-[38px] flex-none place-items-center rounded-xl"
-                    style={{ background: `${color}20`, border: `1px solid ${color}5e`, boxShadow: `inset 0 1px 0 ${color}4d`, color: '#b3a8ff' }}
+                    style={{ background: `${color}20`, border: `1px solid ${color}5e`, boxShadow: `inset 0 1px 0 ${color}4d`, color: 'var(--edge-acc)' }}
                   >
                     <AlertTriangle size={17} strokeWidth={1.9} />
                   </span>
@@ -274,7 +274,7 @@ export default function ErrorDetailDrawer({
                       )}
                       <span
                         className="text-[12px] uppercase"
-                        style={{ fontFamily: T.mono, letterSpacing: '1.2px', color: '#8f8da0' }}
+                        style={{ fontFamily: T.mono, letterSpacing: '1.2px', color: 'var(--edge-text3)' }}
                       >
                         {stamp}
                       </span>
@@ -285,39 +285,39 @@ export default function ErrorDetailDrawer({
                 <div className="flex flex-none items-center gap-2">
                   {onEdit && <IconBtn icon={Pencil} title="Редагувати" onClick={() => onEdit(selected)} />}
                   <IconBtn icon={Trash2} title="Видалити" danger onClick={() => onDelete(selected.id)} />
-                  <span className="mx-0.5 h-6 w-px" style={{ background: '#22222c' }} />
+                  <span className="mx-0.5 h-6 w-px" style={{ background: 'var(--edge-line)' }} />
                   <IconBtn icon={X} title="Закрити" onClick={onClose} />
                 </div>
               </div>
 
               {/* ---------- дві колонки ---------- */}
               <div className="grid min-h-0 flex-1 overflow-auto lg:grid-cols-[1fr_292px]">
-                <div className="min-w-0 px-7 pb-6 pt-6" style={{ borderRight: '1px solid #22222c' }}>
+                <div className="min-w-0 px-7 pb-6 pt-6" style={{ borderRight: '1px solid var(--edge-line)' }}>
                   <div className="flex flex-wrap items-center gap-3.5">
-                    <span style={{ fontFamily: T.display, fontSize: 40, fontWeight: 700, letterSpacing: '-1.6px', lineHeight: 1, color: '#ffffff' }}>
+                    <span style={{ fontFamily: T.display, fontSize: 40, fontWeight: 700, letterSpacing: '-1.6px', lineHeight: 1, color: 'var(--edge-text)' }}>
                       {selected.pair || 'Без пари'}
                     </span>
                     <span
                       className="flex items-center gap-2 rounded-full px-4 py-[8px] text-[13.5px] font-bold"
                       style={{
                         fontFamily: T.sans,
-                        background: selected.resolved ? '#2fbf8f17' : A(0.16),
-                        border: `1px solid ${selected.resolved ? '#2fbf8f42' : A(0.5)}`,
-                        color: selected.resolved ? '#6fe0b4' : '#c4baff',
+                        background: selected.resolved ? 'rgba(var(--edge-ok-rgb),0.09)' : A(0.16),
+                        border: `1px solid ${selected.resolved ? 'rgba(var(--edge-ok-rgb),0.26)' : A(0.5)}`,
+                        color: selected.resolved ? 'var(--edge-ok)' : 'var(--edge-acc)',
                       }}
                     >
                       <span
                         className="h-1.5 w-1.5 rounded-full"
                         style={{
-                          background: selected.resolved ? '#6fe0b4' : '#a99cff',
-                          boxShadow: `0 0 9px 1px ${selected.resolved ? '#2fbf8fcc' : A(0.8)}`,
+                          background: selected.resolved ? 'var(--edge-ok)' : 'var(--edge-acc)',
+                          boxShadow: `0 0 9px 1px ${selected.resolved ? 'rgba(var(--edge-ok-rgb),0.80)' : A(0.8)}`,
                         }}
                       />
                       {selected.resolved ? 'Розібрано' : 'Не розібрано'}
                     </span>
                   </div>
 
-                  <div className="my-6 h-px" style={{ background: `linear-gradient(90deg, ${color}66, #1a1a2300 72%)` }} />
+                  <div className="my-6 h-px" style={{ background: `linear-gradient(90deg, ${color}66, transparent 72%)` }} />
 
                   {reasons.length > 0 && (
                     <>
@@ -364,7 +364,7 @@ export default function ErrorDetailDrawer({
                         ”
                       </span>
 
-                      <p className="relative text-[16px]" style={{ fontFamily: T.sans, lineHeight: 1.68, color: '#eceaf4' }}>
+                      <p className="relative text-[16px]" style={{ fontFamily: T.sans, lineHeight: 1.68, color: 'var(--edge-text)' }}>
                         {selected.desc}
                       </p>
 
@@ -372,7 +372,7 @@ export default function ErrorDetailDrawer({
                         <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${color}3d, transparent)` }} />
                         <span
                           className="whitespace-nowrap text-[11.5px] uppercase"
-                          style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: '#8f8da0' }}
+                          style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}
                         >
                           мій висновок · {short}
                         </span>
@@ -390,19 +390,19 @@ export default function ErrorDetailDrawer({
                     ) : (
                       <div
                         className="mt-3 flex items-center gap-3.5 rounded-2xl px-4 py-3.5"
-                        style={{ border: '1.5px dashed #24242f', background: '#ffffff03' }}
+                        style={{ border: '1.5px dashed var(--edge-line)', background: 'rgba(var(--edge-hair-rgb),0.015)' }}
                       >
                         <span
                           className="grid h-10 w-10 flex-none place-items-center rounded-xl"
-                          style={{ background: '#ffffff0a', border: '1px solid #26262f', color: '#a5a3b8' }}
+                          style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)' }}
                         >
                           <ImageIcon size={18} strokeWidth={1.7} />
                         </span>
                         <span className="min-w-0">
-                          <span className="block text-[14.5px] font-semibold" style={{ fontFamily: T.sans, color: '#dedbe9' }}>
+                          <span className="block text-[14.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
                             Скріна ще немає
                           </span>
-                          <span className="mt-[3px] block text-[13px]" style={{ fontFamily: T.sans, color: '#9d9bb0' }}>
+                          <span className="mt-[3px] block text-[13px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                             Додати можна через редагування запису
                           </span>
                         </span>
@@ -412,22 +412,22 @@ export default function ErrorDetailDrawer({
                 </div>
 
                 {/* ---------- рейка ---------- */}
-                <div className="flex min-w-0 flex-col gap-5 px-5 pb-5 pt-6" style={{ background: '#ffffff04' }}>
+                <div className="flex min-w-0 flex-col gap-5 px-5 pb-5 pt-6" style={{ background: 'rgba(var(--edge-hair-rgb),0.02)' }}>
                   <button
                     onClick={() => onResolve(selected)}
                     onMouseEnter={() => setCtaHover(true)}
                     onMouseLeave={() => setCtaHover(false)}
                     className="flex h-12 items-center justify-center gap-2.5 rounded-[13px] text-[14.5px] font-bold"
                     style={selected.resolved
-                      ? { fontFamily: T.sans, background: '#2fbf8f17', border: '1px solid #2fbf8f4d', color: '#6fe0b4', transition: 'all .2s' }
+                      ? { fontFamily: T.sans, background: 'rgba(var(--edge-ok-rgb),0.09)', border: '1px solid rgba(var(--edge-ok-rgb),0.30)', color: 'var(--edge-ok)', transition: 'all .2s' }
                       : {
                         fontFamily: T.sans,
-                        background: `linear-gradient(180deg, ${ctaHover ? '#3ad39c, #25a97a' : '#33c690, #1f9c70'})`,
+                        background: `linear-gradient(180deg, ${ctaHover ? 'var(--edge-ok), var(--edge-ok)' : 'var(--edge-ok), var(--edge-ok)'})`,
                         border: '1px solid transparent',
-                        color: '#04140e',
+                        color: 'var(--edge-sunken)',
                         boxShadow: ctaHover
-                          ? '0 16px 36px -14px #2fbf8fcc, inset 0 1px 0 #ffffff59'
-                          : '0 10px 26px -14px #2fbf8f99, inset 0 1px 0 #ffffff3d',
+                          ? '0 16px 36px -14px rgba(var(--edge-ok-rgb),0.80), inset 0 1px 0 rgba(var(--edge-hair-rgb),0.35)'
+                          : '0 10px 26px -14px rgba(var(--edge-ok-rgb),0.60), inset 0 1px 0 rgba(var(--edge-hair-rgb),0.24)',
                         transform: `translateY(${ctaHover ? '-2px' : '0'})`,
                         transition: 'all .2s',
                       }}
@@ -443,10 +443,10 @@ export default function ErrorDetailDrawer({
                         <div
                           key={k}
                           className="flex items-center justify-between gap-2.5 rounded-[9px] px-2.5 py-2"
-                          style={{ background: i % 2 ? 'transparent' : '#ffffff05' }}
+                          style={{ background: i % 2 ? 'transparent' : 'rgba(var(--edge-hair-rgb),0.02)' }}
                         >
-                          <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: '#9d9bb0' }}>{k}</span>
-                          <span className="flex-none text-[13px]" style={{ fontFamily: T.mono, color: '#e4e2ee' }}>{v}</span>
+                          <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>{k}</span>
+                          <span className="flex-none text-[13px]" style={{ fontFamily: T.mono, color: 'var(--edge-text)' }}>{v}</span>
                         </div>
                       ))}
                     </div>
@@ -457,7 +457,7 @@ export default function ErrorDetailDrawer({
                       <Cap>Ця категорія</Cap>
                       <div
                         className="relative mt-2.5 overflow-hidden rounded-[15px] px-4 py-4"
-                        style={{ background: `linear-gradient(165deg, ${catColor}14, #0c0c11)`, border: `1px solid ${catColor}3d` }}
+                        style={{ background: `linear-gradient(165deg, ${catColor}14, var(--edge-sunken))`, border: `1px solid ${catColor}3d` }}
                       >
                         <span
                           className="pointer-events-none absolute rounded-full"
@@ -468,12 +468,12 @@ export default function ErrorDetailDrawer({
                           <span style={{ fontFamily: T.display, fontSize: 34, fontWeight: 700, letterSpacing: '-1.4px', lineHeight: 1, color: catColor }}>
                             {stats.count}
                           </span>
-                          <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: '#a8a6ba' }}>
+                          <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
                             {stats.count === 1 ? 'запис' : stats.count < 5 ? 'записи' : 'записів'}
                           </span>
                         </div>
 
-                        <div className="relative mt-3 h-1 overflow-hidden rounded-full" style={{ background: '#17171f' }}>
+                        <div className="relative mt-3 h-1 overflow-hidden rounded-full" style={{ background: 'var(--edge-line)' }}>
                           <div
                             className="h-full rounded-full"
                             style={{
@@ -484,7 +484,7 @@ export default function ErrorDetailDrawer({
                           />
                         </div>
 
-                        <p className="relative mt-2.5 text-[13.5px]" style={{ fontFamily: T.sans, lineHeight: 1.5, color: '#b4b2c6' }}>
+                        <p className="relative mt-2.5 text-[13.5px]" style={{ fontFamily: T.sans, lineHeight: 1.5, color: 'var(--edge-text2)' }}>
                           {stats.pct}% усіх твоїх записів у журналі.
                           {stats.count > 2 ? ' Це вже система, а не випадковість.' : ''}
                         </p>
@@ -523,9 +523,9 @@ export default function ErrorDetailDrawer({
               {/* ---------- підвал ---------- */}
               <div
                 className="flex flex-none flex-wrap items-center justify-between gap-4 py-3 pl-[22px] pr-[18px]"
-                style={{ borderTop: '1px solid #22222c', background: '#0c0c12' }}
+                style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)' }}
               >
-                <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: '#9d9bb0' }}>
+                <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                   {selected.resolved ? 'Розбір закритий — запис більше не в черзі' : 'Запис у черзі на розбір'}
                 </span>
 
@@ -537,8 +537,8 @@ export default function ErrorDetailDrawer({
                       title="Попередня помилка"
                       className="flex h-9 items-center gap-2 rounded-[10px] px-3.5 text-[13px] font-semibold"
                       style={{
-                        fontFamily: T.sans, background: '#ffffff08', border: '1px solid #23232e',
-                        color: onPrev ? '#d4d2e0' : '#5a5866', opacity: onPrev ? 1 : 0.5, transition: 'all .16s',
+                        fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)',
+                        color: onPrev ? 'var(--edge-text)' : 'var(--edge-text4)', opacity: onPrev ? 1 : 0.5, transition: 'all .16s',
                       }}
                     >
                       <ChevronLeft size={13} strokeWidth={2} />
@@ -550,8 +550,8 @@ export default function ErrorDetailDrawer({
                       title="Наступна помилка"
                       className="flex h-9 items-center gap-2 rounded-[10px] px-3.5 text-[13px] font-semibold"
                       style={{
-                        fontFamily: T.sans, background: '#ffffff08', border: '1px solid #23232e',
-                        color: onNext ? '#d4d2e0' : '#5a5866', opacity: onNext ? 1 : 0.5, transition: 'all .16s',
+                        fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)',
+                        color: onNext ? 'var(--edge-text)' : 'var(--edge-text4)', opacity: onNext ? 1 : 0.5, transition: 'all .16s',
                       }}
                     >
                       Далі

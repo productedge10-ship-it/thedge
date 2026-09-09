@@ -108,7 +108,7 @@ export default function ReviewComposer({
                       border: `1.5px solid ${kept === true ? T.ok : T.lineHi}`,
                     }}
                   >
-                    {kept === true && <Check size={12} strokeWidth={3.4} style={{ color: 'var(--edge-bg, #0A0A0C)' }} />}
+                    {kept === true && <Check size={12} strokeWidth={3.4} style={{ color: 'var(--edge-on-acc, #0A0A0C)' }} />}
                   </span>
                   <span className="text-[13.5px] font-medium" style={{ fontFamily: T.sans, color: kept === true ? T.text : T.text2 }}>
                     {p.text}
@@ -229,7 +229,7 @@ export default function ReviewComposer({
           disabled={!ready || saving}
           className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[14.5px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.99]"
           style={{
-            background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans,
+            background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans,
             opacity: ready && !saving ? 1 : 0.4,
             cursor: ready ? 'pointer' : 'not-allowed',
             boxShadow: ready ? `0 6px 18px -8px rgba(${T.accRgb},0.6)` : 'none',

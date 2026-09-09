@@ -66,7 +66,7 @@ export default function Preview({ shape, tone, id, compact }) {
     const step = W / bars.length;
     return (
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={box}>
-        <line x1="0" y1={mid} x2={W} y2={mid} stroke="#ffffff14" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+        <line x1="0" y1={mid} x2={W} y2={mid} stroke="rgba(var(--edge-hair-rgb),0.08)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
         {bars.map((v, i) => (
           <rect
             key={i}
@@ -90,7 +90,7 @@ export default function Preview({ shape, tone, id, compact }) {
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={box}>
         {widths.map((w, i) => (
           <g key={i}>
-            <rect x="0" y={i * 10.5} width={W} height="7.5" rx="2.5" fill="#ffffff08" />
+            <rect x="0" y={i * 10.5} width={W} height="7.5" rx="2.5" fill="rgba(var(--edge-hair-rgb),0.03)" />
             <rect x="0" y={i * 10.5} width={W * w} height="7.5" rx="2.5" fill={tone} opacity={0.42 - i * 0.07} />
           </g>
         ))}
@@ -107,9 +107,9 @@ export default function Preview({ shape, tone, id, compact }) {
         <rect x="52" y="6" width="44" height="28" rx="5" fill="#ff7b7b" opacity="0.16" />
         <rect x="52" y="6" width="44" height="28" rx="5" fill="none" stroke="#ff7b7b" strokeOpacity="0.4" vectorEffect="non-scaling-stroke" />
         <rect x="8" y="14" width="20" height="4" rx="2" fill={tone} opacity="0.75" />
-        <rect x="8" y="22" width="12" height="3" rx="1.5" fill="#ffffff2b" />
+        <rect x="8" y="22" width="12" height="3" rx="1.5" fill="rgba(var(--edge-hair-rgb),0.17)" />
         <rect x="60" y="14" width="16" height="4" rx="2" fill="#ff7b7b" opacity="0.7" />
-        <rect x="60" y="22" width="12" height="3" rx="1.5" fill="#ffffff2b" />
+        <rect x="60" y="22" width="12" height="3" rx="1.5" fill="rgba(var(--edge-hair-rgb),0.17)" />
       </svg>
     );
   }
@@ -121,7 +121,7 @@ export default function Preview({ shape, tone, id, compact }) {
     return (
       <svg viewBox={`0 0 ${W} ${H}`} style={box}>
         <g transform={`translate(${W / 2} ${H / 2})`}>
-          <circle r={r} fill="none" stroke="#ffffff12" strokeWidth="5" />
+          <circle r={r} fill="none" stroke="rgba(var(--edge-hair-rgb),0.07)" strokeWidth="5" />
           <circle
             r={r} fill="none" stroke={tone} strokeWidth="5" strokeLinecap="round"
             strokeDasharray={c} strokeDashoffset={c * 0.29} transform="rotate(-90)"
@@ -135,9 +135,9 @@ export default function Preview({ shape, tone, id, compact }) {
   if (shape === 'gauge') {
     return (
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={box}>
-        <rect x="0" y="9" width={W} height="7" rx="3.5" fill="#ffffff0d" />
+        <rect x="0" y="9" width={W} height="7" rx="3.5" fill="rgba(var(--edge-hair-rgb),0.05)" />
         <rect x="0" y="9" width={W * 0.72} height="7" rx="3.5" fill={tone} opacity="0.85" />
-        <rect x="0" y="26" width="34" height="5" rx="2.5" fill="#ffffff14" />
+        <rect x="0" y="26" width="34" height="5" rx="2.5" fill="rgba(var(--edge-hair-rgb),0.08)" />
         <rect x="62" y="26" width="34" height="5" rx="2.5" fill={tone} opacity="0.35" />
       </svg>
     );
@@ -164,7 +164,7 @@ export default function Preview({ shape, tone, id, compact }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={box}>
       <rect x="0" y="4" width="52" height="15" rx="4" fill={tone} opacity="0.28" />
-      <rect x="0" y="25" width="34" height="6" rx="3" fill="#ffffff14" />
+      <rect x="0" y="25" width="34" height="6" rx="3" fill="rgba(var(--edge-hair-rgb),0.08)" />
     </svg>
   );
 }

@@ -1182,7 +1182,7 @@ export default function TradingJournal() {
                   className="flex-1 rounded-xl py-3 text-[14px] font-bold transition-all"
                   style={{
                     background: T.bad,
-                    color: "var(--edge-bg, #0A0A0C)",
+                    color: "var(--edge-on-acc, #0A0A0C)",
                     fontFamily: T.sans,
                   }}
                   onMouseEnter={(e) =>

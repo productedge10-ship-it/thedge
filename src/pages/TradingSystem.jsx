@@ -312,7 +312,7 @@ function NewSection({ open, onClose, onCreate }) {
               <button
                 onClick={create}
                 className="h-11 w-full rounded-xl text-[14px] font-bold transition-transform duration-200 active:scale-[0.99]"
-                style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+                style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
               >
                 Створити розділ
               </button>
@@ -904,7 +904,7 @@ export default function TradingSystem() {
                 <button
                   onClick={() => { if (confirm.reset) { setDoc(resetDoc()); setConfirm(null); } else deletePage(confirm); }}
                   className="h-11 flex-1 rounded-xl text-[14px] font-bold"
-                  style={{ background: T.bad, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+                  style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
                   {confirm.reset ? 'Повернути' : 'Видалити'}
                 </button>

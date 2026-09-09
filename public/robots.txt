@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Приватні / службові шляхи в індекс не потрібні
+Disallow: /app
+Disallow: /auth
+Disallow: /demo
+Disallow: /shared/
+
+Sitemap: https://theedge.space/sitemap.xml

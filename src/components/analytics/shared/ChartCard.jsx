@@ -146,14 +146,14 @@ export default function ChartCard({
               background: 'rgba(14,14,19,.92)',
               backdropFilter: 'blur(28px) saturate(140%)',
               WebkitBackdropFilter: 'blur(28px) saturate(140%)',
-              border: '1px solid #ffffff14', borderRadius: 16,
+              border: '1px solid rgba(var(--edge-hair-rgb),0.08)', borderRadius: 16,
               padding: '15px 16px 17px', display: 'flex', flexDirection: 'column', gap: 16,
               boxShadow: '0 24px 60px -18px rgba(0,0,0,.85)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 5, height: 5, borderRadius: 99, background: tone }} />
-              <span style={{ flex: 1, fontFamily: F.sans, fontSize: 12.5, fontWeight: 600, color: '#fff' }}>
+              <span style={{ flex: 1, fontFamily: F.sans, fontSize: 12.5, fontWeight: 600, color: 'var(--edge-text)' }}>
                 {en(title)}
               </span>
               <button
@@ -209,7 +209,7 @@ function Choice({ label, value, choices, tone, onPick, index }) {
               style={{
                 position: 'relative', padding: '1px 0 5px', border: 0, background: 'transparent',
                 cursor: 'pointer', fontFamily: F.sans, fontSize: 13, fontWeight: on ? 600 : 500,
-                color: on ? '#fff' : P.text5, transition: 'color .18s',
+                color: on ? 'var(--edge-text)' : P.text5, transition: 'color .18s',
               }}
               onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = P.text2; }}
               onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = P.text5; }}

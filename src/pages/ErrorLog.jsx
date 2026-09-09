@@ -271,11 +271,11 @@ export default function ErrorLog() {
             <div className="flex items-center gap-[9px]">
               <span
                 className="h-[5px] w-[5px] rounded-full"
-                style={{ background: '#8b7cff', boxShadow: `0 0 12px 2px rgba(${T.accRgb},0.67)` }}
+                style={{ background: 'var(--edge-acc)', boxShadow: `0 0 12px 2px rgba(${T.accRgb},0.67)` }}
               />
               <span
                 className="text-[11px] font-bold uppercase"
-                style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: '#9b8dff' }}
+                style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-acc)' }}
               >
                 Дисципліна
               </span>
@@ -287,7 +287,7 @@ export default function ErrorLog() {
                 fontFamily: T.display,
                 letterSpacing: '-1.9px',
                 lineHeight: 1,
-                background: 'linear-gradient(170deg,#ffffff 32%,#a9a5bd)',
+                backgroundImage: `linear-gradient(170deg, ${T.text} 34%, ${T.text3})`,
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
@@ -296,7 +296,7 @@ export default function ErrorLog() {
               Журнал помилок
             </h1>
 
-            <p className="mt-3.5 text-[15.5px]" style={{ fontFamily: T.sans, color: '#8f8da0', lineHeight: 1.55 }}>
+            <p className="mt-3.5 text-[15.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.55 }}>
               Помилка, яку записано й розібрано, — єдина, що не повторюється.
             </p>
 
@@ -309,17 +309,17 @@ export default function ErrorLog() {
                 className="mt-4 inline-flex h-9 items-center gap-2.5 rounded-xl px-3.5 text-[13.5px] font-semibold"
                 style={{
                   fontFamily: T.sans,
-                  color: '#f5c07b',
-                  background: 'linear-gradient(90deg,#f5a33b1a,#ffffff05)',
-                  border: '1px solid #f5a33b45',
+                  color: 'var(--edge-warn)',
+                  background: 'linear-gradient(90deg,rgba(var(--edge-warn-rgb),0.10),rgba(var(--edge-hair-rgb),0.02))',
+                  border: '1px solid rgba(var(--edge-warn-rgb),0.27)',
                   transition: 'all .16s',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#f5a33b8c'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#f5a33b45'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--edge-warn-rgb),0.55)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(var(--edge-warn-rgb),0.27)'; }}
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full"
-                  style={{ background: '#f5c07b', boxShadow: '0 0 10px 2px #f5a33bcc' }}
+                  style={{ background: 'var(--edge-warn)', boxShadow: '0 0 10px 2px rgba(var(--edge-warn-rgb),0.80)' }}
                 />
                 {openCount} {openCount === 1 ? 'запис чекає' : 'записів чекають'} на розбір
               </button>
@@ -335,18 +335,18 @@ export default function ErrorLog() {
             className="group relative inline-flex h-[46px] shrink-0 items-center gap-2.5 overflow-hidden whitespace-nowrap rounded-[13px] px-[22px] text-[14.5px] font-bold"
             style={{
               fontFamily: T.sans,
-              color: '#ffffff',
-              background: `linear-gradient(180deg, ${ctaHover ? '#6355ff, #4a3bf5' : '#5546f8, #3f30e8'})`,
+              color: 'var(--edge-text)',
+              background: `linear-gradient(180deg, ${ctaHover ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
               boxShadow: ctaHover
-                ? `0 18px 40px -12px rgba(${T.accRgb},0.85), inset 0 1px 0 #ffffff4d`
-                : `0 12px 30px -12px rgba(${T.accRgb},0.7), inset 0 1px 0 #ffffff33`,
+                ? `0 18px 40px -12px rgba(${T.accRgb},0.85), inset 0 1px 0 rgba(var(--edge-text-rgb),0.3)`
+                : `0 12px 30px -12px rgba(${T.accRgb},0.7), inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
               transform: `translateY(${ctaHover ? '-2px' : '0'})`,
               transition: 'transform .3s cubic-bezier(.22,1.2,.36,1), box-shadow .24s, background .18s',
             }}
           >
             <span
               className="pointer-events-none absolute inset-x-0 top-0 h-px"
-              style={{ background: 'linear-gradient(90deg,transparent,#ffffff99,transparent)' }}
+              style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-text-rgb),0.6),transparent)' }}
             />
             <Plus size={17} strokeWidth={2.8} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
             Зафіксувати помилку
@@ -380,7 +380,7 @@ export default function ErrorLog() {
             transition={{ duration: 0.3, ease: EASE }}
             className="relative flex flex-col items-center overflow-hidden rounded-[20px] px-6 py-16 text-center"
             style={{
-              background: `linear-gradient(160deg, rgba(${T.accRgb},0.14), #0d0d13 52%, #0a0a0f)`,
+              background: `linear-gradient(160deg, rgba(${T.accRgb},0.14), var(--edge-sunken) 52%, var(--edge-sunken))`,
               border: `1px solid rgba(${T.accRgb},0.32)`,
               boxShadow: `0 28px 60px -34px rgba(${T.accRgb},0.6)`,
             }}
@@ -399,16 +399,16 @@ export default function ErrorLog() {
               style={{
                 background: `rgba(${T.accRgb},0.16)`,
                 border: `1px solid rgba(${T.accRgb},0.4)`,
-                color: '#c4baff',
+                color: 'var(--edge-acc)',
               }}
             >
               <Plus size={24} strokeWidth={2.4} />
             </span>
 
-            <div className="relative mt-5 text-[23px] font-bold" style={{ fontFamily: T.display, color: '#ffffff', letterSpacing: '-0.6px' }}>
+            <div className="relative mt-5 text-[23px] font-bold" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.6px' }}>
               Тут поки порожньо
             </div>
-            <p className="relative mt-3 max-w-[430px] text-[15px]" style={{ fontFamily: T.sans, color: '#b9b7ca', lineHeight: 1.65 }}>
+            <p className="relative mt-3 max-w-[430px] text-[15px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)', lineHeight: 1.65 }}>
               Перший запис завжди найважчий — і саме він найцінніший.
               Зафіксуй помилку, поки памʼятаєш, що саме відчував.
             </p>
@@ -420,18 +420,18 @@ export default function ErrorLog() {
               className="relative mt-6 inline-flex h-[46px] items-center gap-2.5 overflow-hidden rounded-[13px] px-[22px] text-[14.5px] font-bold"
               style={{
                 fontFamily: T.sans,
-                color: '#ffffff',
-                background: `linear-gradient(180deg, ${emptyHover ? '#6355ff, #4a3bf5' : '#5546f8, #3f30e8'})`,
+                color: 'var(--edge-text)',
+                background: `linear-gradient(180deg, ${emptyHover ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
                 boxShadow: emptyHover
-                  ? `0 18px 40px -12px rgba(${T.accRgb},0.85), inset 0 1px 0 #ffffff4d`
-                  : `0 12px 30px -12px rgba(${T.accRgb},0.7), inset 0 1px 0 #ffffff33`,
+                  ? `0 18px 40px -12px rgba(${T.accRgb},0.85), inset 0 1px 0 rgba(var(--edge-text-rgb),0.3)`
+                  : `0 12px 30px -12px rgba(${T.accRgb},0.7), inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
                 transform: `translateY(${emptyHover ? '-2px' : '0'})`,
                 transition: 'transform .3s cubic-bezier(.22,1.2,.36,1), box-shadow .24s, background .18s',
               }}
             >
               <span
                 className="pointer-events-none absolute inset-x-0 top-0 h-px"
-                style={{ background: 'linear-gradient(90deg,transparent,#ffffff99,transparent)' }}
+                style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-text-rgb),0.6),transparent)' }}
               />
               Зафіксувати першу
             </button>
@@ -442,26 +442,26 @@ export default function ErrorLog() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: EASE }}
             className="flex flex-col items-center justify-center rounded-[20px] px-6 py-14 text-center"
-            style={{ border: '1.5px dashed #24242f', background: '#ffffff03' }}
+            style={{ border: '1.5px dashed var(--edge-line)', background: 'rgba(var(--edge-hair-rgb),0.015)' }}
           >
             <span
               className="grid h-12 w-12 place-items-center rounded-[15px]"
-              style={{ background: '#ffffff0a', border: '1px solid #26262f', color: '#8b899a' }}
+              style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)', color: 'var(--edge-text3)' }}
             >
               <Search size={20} strokeWidth={1.8} />
             </span>
-            <div className="mt-3.5 text-[16px] font-semibold" style={{ fontFamily: T.display, color: '#a8a6b8' }}>
+            <div className="mt-3.5 text-[16px] font-semibold" style={{ fontFamily: T.display, color: 'var(--edge-text2)' }}>
               Нічого не знайшлось
             </div>
-            <p className="mt-1.5 text-[13.5px]" style={{ fontFamily: T.sans, color: '#75738a' }}>
+            <p className="mt-1.5 text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
               Спробуй інший запит або скинь фільтри
             </p>
             <button
               onClick={() => { setQuery(''); setCatFilter(null); setAssetFilter('all'); }}
               className="mt-5 h-10 rounded-xl px-4 text-[13.5px] font-semibold"
-              style={{ background: '#ffffff0a', border: '1px solid #26262f', color: '#c2c0ce', fontFamily: T.sans, transition: 'all .16s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.5)`; e.currentTarget.style.color = '#ffffff'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#26262f'; e.currentTarget.style.color = '#c2c0ce'; }}
+              style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', fontFamily: T.sans, transition: 'all .16s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.5)`; e.currentTarget.style.color = 'var(--edge-text)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line)'; e.currentTarget.style.color = 'var(--edge-text2)'; }}
             >
               Скинути фільтри
             </button>

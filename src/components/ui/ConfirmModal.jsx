@@ -144,7 +144,7 @@ export default function ConfirmModal({
             className="flex items-center justify-center"
             style={{
               fontFamily: T.sans, gap: 9, height: 48, padding: '0 26px', borderRadius: 13,
-              background: tone, color: 'var(--edge-bg, #0A0A0C)',
+              background: tone, color: 'var(--edge-on-acc, #0A0A0C)',
               fontSize: 15, fontWeight: 600, transition: 'all .18s',
               opacity: busy ? 0.6 : 1,
               cursor: busy ? 'default' : 'pointer',

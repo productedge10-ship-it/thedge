@@ -152,14 +152,14 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
   return (
     <div
       className="fixed top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center xl:flex no-print"
-      style={{ left, filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))', transition: 'left 0.42s cubic-bezier(0.22,1,0.36,1)' }}
+      style={{ left, filter: 'drop-shadow(0 20px 40px var(--edge-panel-glow, rgba(0,0,0,0.3)))', transition: 'left 0.42s cubic-bezier(0.22,1,0.36,1)' }}
     >
       {/* Перемикач активів — окремою капсулою над навігацією */}
       {assetSwitcher && (
         <div
           className="mb-2.5 rounded-2xl p-2"
           style={{
-            background: 'rgba(13,13,16,0.90)',
+            background: 'var(--edge-panel, rgba(13,13,16,0.90))',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             border: `1px solid ${T.line}`,
@@ -172,7 +172,7 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
       <div
         className="flex flex-col items-center gap-1 rounded-2xl p-2.5"
         style={{
-          background: 'rgba(13,13,16,0.90)',
+          background: 'var(--edge-panel, rgba(13,13,16,0.90))',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: `1px solid ${T.line}`,
@@ -217,7 +217,7 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
                     transform: 'translateY(-50%) translateX(-4px)',
                     background: T.surface,
                     border: `1px solid ${T.lineHi}`,
-                    boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+                    boxShadow: '0 12px 30px var(--edge-panel-glow, rgba(0,0,0,0.6))',
                   }}
                 >
                   <span className="flex items-center gap-2">
@@ -250,7 +250,7 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
       {/* загальний прогрес — вертикальна смуга під кільцями */}
       <div
         className="mt-2.5 flex flex-col items-center gap-2 rounded-xl px-2 py-2.5"
-        style={{ background: 'rgba(13,13,16,0.90)', backdropFilter: 'blur(20px)', border: `1px solid ${T.line}` }}
+        style={{ background: 'var(--edge-panel, rgba(13,13,16,0.90))', backdropFilter: 'blur(20px)', border: `1px solid ${T.line}` }}
       >
         <div className="h-14 w-1 overflow-hidden rounded-full" style={{ background: T.line }}>
           <motion.div
@@ -282,10 +282,10 @@ function MobileDock({ active, onNavigate, progress, overall }) {
       <div
         className="pointer-events-auto flex items-center gap-1 rounded-2xl p-1.5"
         style={{
-          background: 'rgba(13,13,16,0.90)',
+          background: 'var(--edge-panel, rgba(13,13,16,0.90))',
           backdropFilter: 'blur(20px)',
           border: `1px solid ${T.line}`,
-          boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+          boxShadow: '0 16px 40px var(--edge-panel-glow, rgba(0,0,0,0.6))',
         }}
       >
         {SECTIONS.map((s) => {
@@ -358,7 +358,7 @@ export function BackToTop({ visible, onClick }) {
             background: 'rgba(19,19,22,0.92)',
             backdropFilter: 'blur(16px)',
             border: `1px solid ${T.line}`,
-            boxShadow: '0 12px 32px -12px rgba(0,0,0,0.9)',
+            boxShadow: '0 12px 32px -12px var(--edge-panel-glow, rgba(0,0,0,0.35))',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
           onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}

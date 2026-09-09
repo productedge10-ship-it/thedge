@@ -51,8 +51,8 @@ const Panel = ({ width, children }) => (
     style={{
       top: '100%',
       width,
-      background: '#14141b',
-      border: '1px solid #2c2c38',
+      background: 'var(--edge-surface)',
+      border: '1px solid var(--edge-line-hi)',
       boxShadow: '0 26px 54px -18px #000',
     }}
   >
@@ -87,7 +87,7 @@ export default function ErrorFilters({
     fontFamily: T.sans,
     background: on ? `${color}24` : 'transparent',
     border: `1px solid ${on ? `${color}5e` : 'transparent'}`,
-    color: on ? '#ffffff' : '#a5a3b3',
+    color: on ? 'var(--edge-text)' : 'var(--edge-text2)',
     height,
     transition: 'all .14s',
   });
@@ -98,13 +98,13 @@ export default function ErrorFilters({
       <div
         className="flex h-11 min-w-[240px] flex-1 items-center gap-2.5 rounded-[13px] px-4"
         style={{
-          background: focus ? '#ffffff12' : '#ffffff0a',
-          border: `1px solid ${focus ? A(0.55) : '#21212b'}`,
-          boxShadow: focus ? `0 0 0 4px ${A(0.13)}, inset 0 1px 0 #ffffff14` : 'inset 0 1px 0 #ffffff0d',
+          background: focus ? 'rgba(var(--edge-hair-rgb),0.07)' : 'rgba(var(--edge-hair-rgb),0.04)',
+          border: `1px solid ${focus ? A(0.55) : 'var(--edge-line)'}`,
+          boxShadow: focus ? `0 0 0 4px ${A(0.13)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.08)` : 'inset 0 1px 0 rgba(var(--edge-hair-rgb),0.05)',
           transition: 'all .2s',
         }}
       >
-        <Search size={16} strokeWidth={1.9} className="shrink-0" style={{ color: '#9a98ab' }} />
+        <Search size={16} strokeWidth={1.9} className="shrink-0" style={{ color: 'var(--edge-text3)' }} />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -112,7 +112,7 @@ export default function ErrorFilters({
           onBlur={() => setFocus(false)}
           placeholder="Пошук за парою або описом"
           className="w-full border-none bg-transparent text-[14px] font-medium outline-none"
-          style={{ fontFamily: T.sans, color: '#ffffff' }}
+          style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
         />
       </div>
 
@@ -122,8 +122,8 @@ export default function ErrorFilters({
           onClick={() => { setCatOpen((v) => !v); setAssetOpen(false); }}
           className="flex h-11 min-w-[196px] items-center gap-2.5 rounded-[13px] px-3.5"
           style={{
-            background: catOpen ? '#ffffff12' : '#ffffff0a',
-            border: `1px solid ${catOpen || catFilter ? `${catColor}80` : '#21212b'}`,
+            background: catOpen ? 'rgba(var(--edge-hair-rgb),0.07)' : 'rgba(var(--edge-hair-rgb),0.04)',
+            border: `1px solid ${catOpen || catFilter ? `${catColor}80` : 'var(--edge-line)'}`,
             transition: 'all .16s',
           }}
         >
@@ -133,14 +133,14 @@ export default function ErrorFilters({
           />
           <span
             className="min-w-0 flex-1 whitespace-nowrap text-left text-[13.5px] font-semibold"
-            style={{ fontFamily: T.sans, color: '#ffffff' }}
+            style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
           >
             {curCat ? curCat.label : 'Усі категорії'}
           </span>
           <ChevronDown
             size={14}
             strokeWidth={1.9}
-            style={{ color: '#9a98ab', flex: 'none', transform: `rotate(${catOpen ? 180 : 0}deg)`, transition: 'transform .2s' }}
+            style={{ color: 'var(--edge-text3)', flex: 'none', transform: `rotate(${catOpen ? 180 : 0}deg)`, transition: 'transform .2s' }}
           />
         </button>
 
@@ -154,14 +154,14 @@ export default function ErrorFilters({
                   key={c.id || 'all'}
                   onClick={() => { setCatFilter(on ? null : c.id); setCatOpen(false); }}
                   className="flex w-full items-center gap-2.5 rounded-[10px] px-3 text-[13.5px] font-semibold"
-                  style={{ ...row(on, c.color, 38), color: on ? '#ffffff' : zero ? '#6a6878' : '#a5a3b3' }}
+                  style={{ ...row(on, c.color, 38), color: on ? 'var(--edge-text)' : zero ? 'var(--edge-text3)' : 'var(--edge-text2)' }}
                 >
                   <span
                     className="h-[7px] w-[7px] flex-none rounded-full"
                     style={{ background: c.color, opacity: zero ? 0.35 : 1, boxShadow: on ? `0 0 9px 1px ${c.color}cc` : 'none' }}
                   />
                   <span className="min-w-0 flex-1 truncate text-left">{c.label}</span>
-                  <span className="flex-none text-[11px]" style={{ fontFamily: T.mono, color: zero ? '#4d4b58' : '#75738a' }}>
+                  <span className="flex-none text-[11px]" style={{ fontFamily: T.mono, color: zero ? 'var(--edge-text4)' : 'var(--edge-text3)' }}>
                     {c.count}
                   </span>
                 </button>
@@ -177,21 +177,21 @@ export default function ErrorFilters({
           onClick={() => { setAssetOpen((v) => !v); setCatOpen(false); }}
           className="flex h-11 min-w-[158px] items-center gap-2.5 rounded-[13px] px-3.5"
           style={{
-            background: assetOpen ? '#ffffff12' : '#ffffff0a',
-            border: `1px solid ${assetOpen || (assetFilter && assetFilter !== 'all') ? A(0.5) : '#21212b'}`,
+            background: assetOpen ? 'rgba(var(--edge-hair-rgb),0.07)' : 'rgba(var(--edge-hair-rgb),0.04)',
+            border: `1px solid ${assetOpen || (assetFilter && assetFilter !== 'all') ? A(0.5) : 'var(--edge-line)'}`,
             transition: 'all .16s',
           }}
         >
           <span
             className="min-w-0 flex-1 whitespace-nowrap text-left text-[13.5px] font-semibold"
-            style={{ fontFamily: T.sans, color: '#ffffff' }}
+            style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
           >
             {assetFilter && assetFilter !== 'all' ? assetFilter : 'Усі активи'}
           </span>
           <ChevronDown
             size={14}
             strokeWidth={1.9}
-            style={{ color: '#9a98ab', flex: 'none', transform: `rotate(${assetOpen ? 180 : 0}deg)`, transition: 'transform .2s' }}
+            style={{ color: 'var(--edge-text3)', flex: 'none', transform: `rotate(${assetOpen ? 180 : 0}deg)`, transition: 'transform .2s' }}
           />
         </button>
 
@@ -208,7 +208,7 @@ export default function ErrorFilters({
                   style={row(on, T.acc, 36)}
                 >
                   <span className="min-w-0 flex-1 truncate text-left">{a.name}</span>
-                  <span className="flex-none text-[11px]" style={{ fontFamily: T.mono, color: '#75738a' }}>
+                  <span className="flex-none text-[11px]" style={{ fontFamily: T.mono, color: 'var(--edge-text3)' }}>
                     {a.count}
                   </span>
                 </button>
@@ -222,12 +222,12 @@ export default function ErrorFilters({
       <button
         onClick={() => setSort(SORTS[(sortIdx + 1) % SORTS.length].id)}
         className="flex h-11 items-center gap-2.5 rounded-[13px] px-4"
-        style={{ background: '#ffffff0a', border: '1px solid #21212b', transition: 'all .16s' }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff14'; e.currentTarget.style.borderColor = '#33333f'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff0a'; e.currentTarget.style.borderColor = '#21212b'; }}
+        style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)', transition: 'all .16s' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.08)'; e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.04)'; e.currentTarget.style.borderColor = 'var(--edge-line)'; }}
       >
-        <ArrowDownUp size={15} strokeWidth={1.9} style={{ color: '#9a98ab' }} />
-        <span className="whitespace-nowrap text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: '#d4d2e0' }}>
+        <ArrowDownUp size={15} strokeWidth={1.9} style={{ color: 'var(--edge-text3)' }} />
+        <span className="whitespace-nowrap text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
           {SORTS[sortIdx].label}
         </span>
       </button>
@@ -236,9 +236,9 @@ export default function ErrorFilters({
         <button
           onClick={() => { setCatFilter(null); setAsset('all'); setQuery(''); }}
           className="flex h-11 items-center gap-2 rounded-[13px] px-3.5 text-[13px] font-semibold"
-          style={{ background: '#ffffff06', border: '1px dashed #2d2d3a', color: '#9a98ab', fontFamily: T.sans, transition: 'all .16s' }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.5); e.currentTarget.style.color = '#a99cff'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#2d2d3a'; e.currentTarget.style.color = '#9a98ab'; }}
+          style={{ background: 'rgba(var(--edge-hair-rgb),0.02)', border: '1px dashed var(--edge-line-hi)', color: 'var(--edge-text3)', fontFamily: T.sans, transition: 'all .16s' }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.5); e.currentTarget.style.color = 'var(--edge-acc)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; e.currentTarget.style.color = 'var(--edge-text3)'; }}
         >
           <X size={12} strokeWidth={2.6} />
           Скинути

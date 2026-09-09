@@ -75,11 +75,11 @@ const TiltTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-[var(--edge-sunken)] border border-[#232328] p-3 rounded-[12px] shadow-xl max-w-[200px]">
-        <p className="text-[11px] text-[#7A7A85] uppercase font-bold tracking-wider mb-2 border-b border-[var(--edge-hair)] pb-2">
+      <div className="bg-[var(--edge-sunken)] border border-[var(--edge-line)] p-3 rounded-[12px] shadow-xl max-w-[200px]">
+        <p className="text-[11px] text-[var(--edge-text3)] uppercase font-bold tracking-wider mb-2 border-b border-[var(--edge-hair)] pb-2">
           {label === '0' ? 'Свіжа голова (Без збитків)' : `Серія: ${label} збитків поспіль`}
         </p>
-        <div className="text-[12.5px] leading-relaxed text-[#FAFAFA]">
+        <div className="text-[12.5px] leading-relaxed text-[var(--edge-text)]">
           Наступна угода після такої серії в середньому приносить: 
           <b className={`block text-[16px] mt-1 ${data.avg > 0 ? 'text-[#34d399]' : 'text-[#f87171]'}`}>
             {signed(data.avg, 2)}R
@@ -94,14 +94,14 @@ const TiltTooltip = ({ active, payload, label }) => {
 const PlanTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[var(--edge-sunken)] border border-[#232328] p-3 rounded-[12px] shadow-xl">
-        <p className="text-[10px] text-[#7A7A85] uppercase font-bold tracking-wider mb-2 border-b border-[var(--edge-hair)] pb-2">
+      <div className="bg-[var(--edge-sunken)] border border-[var(--edge-line)] p-3 rounded-[12px] shadow-xl">
+        <p className="text-[10px] text-[var(--edge-text3)] uppercase font-bold tracking-wider mb-2 border-b border-[var(--edge-hair)] pb-2">
           Угода №{label}
         </p>
         <div className="flex flex-col gap-2">
           {payload.map((entry, i) => (
             <div key={i} className="flex justify-between items-center gap-6 text-[12.5px]">
-              <span className="text-[#FAFAFA] flex items-center gap-2">
+              <span className="text-[var(--edge-text)] flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
                 {entry.name}
               </span>
@@ -133,8 +133,8 @@ function buildNeuro(s) {
   const mistakeCost = Math.abs(sum(s.mistakeLedger.map((m) => m.cost)));
 
   const axes = [
-    { key: 'focus', label: 'Фокус', full: 'Холодний фокус', value: clamp100((calm.trades / total) * 100), color: 'var(--edge-acc, #8b7bff)', icon: Brain, desc: 'Частка входів у спокійному стані від усіх угод.', formula: `${calm.trades} спокійних входів із ${trades.length}`, hint: 'Норма — вище 60%. Це база, на якій стоїть уся статистика.' },
-    { key: 'impulse', label: 'Контроль', full: 'Контроль імпульсу', value: clamp100(100 - (impulsive / total) * 100), color: 'var(--edge-acc, #8b7bff)', icon: Zap, desc: 'Наскільки рідко ти входиш у тільті або на FOMO.', formula: `${impulsive} імпульсивних входів із ${trades.length}`, hint: 'Кожен імпульсивний вхід коштує тобі частини місячного профіту.' },
+    { key: 'focus', label: 'Фокус', full: 'Холодний фокус', value: clamp100((calm.trades / total) * 100), color: 'var(--edge-acc, var(--edge-acc))', icon: Brain, desc: 'Частка входів у спокійному стані від усіх угод.', formula: `${calm.trades} спокійних входів із ${trades.length}`, hint: 'Норма — вище 60%. Це база, на якій стоїть уся статистика.' },
+    { key: 'impulse', label: 'Контроль', full: 'Контроль імпульсу', value: clamp100(100 - (impulsive / total) * 100), color: 'var(--edge-acc, var(--edge-acc))', icon: Zap, desc: 'Наскільки рідко ти входиш у тільті або на FOMO.', formula: `${impulsive} імпульсивних входів із ${trades.length}`, hint: 'Кожен імпульсивний вхід коштує тобі частини місячного профіту.' },
     { key: 'recovery', label: 'Відновлення', full: 'Відновлення після збитку', value: clamp100(55 + s.avgAfterLoss * 45), color: '#34d399', icon: Activity, desc: 'Що відбувається з очікуванням одразу після мінуса.', formula: `Сер. R після збитку: ${signed(s.avgAfterLoss, 2)}R проти ${signed(s.avgAfterWin, 2)}R після плюса`, hint: 'Просідання тут = класичний ланцюг тільта. Лікується паузою.' },
     { key: 'discipline', label: 'Дисципліна', full: 'Дотримання плану', value: clamp100(s.adherence), color: '#fbbf24', icon: ShieldCheck, desc: 'Скільки угод відкрито строго за твоїм чек-листом.', formula: `${s.followed.length} за планом · ${s.broken.length} з порушенням`, hint: 'Дисципліна — єдина метрика, яку ти контролюєш на 100%.' },
     { key: 'risk', label: 'Ризик', full: 'Стабільність ризику', value: clamp100(100 - Math.max(0, maxRisk - 1) * 90), color: '#f87171', icon: Gauge, desc: 'Наскільки розмір позиції не залежить від настрою.', formula: `Пік середнього ризику: ${r2(maxRisk)}% на угоду`, hint: 'Плаваючий об’єм ламає математику навіть прибуткової системи.' }
@@ -145,7 +145,7 @@ function buildNeuro(s) {
 
   const tier =
     index >= 80 ? { name: 'Снайпер', color: '#34d399', text: 'Психіка стабільна. Твій головний ризик зараз — не емоції, а нудьга.' }
-    : index >= 60 ? { name: 'Оператор', color: 'var(--edge-acc, #8b7bff)', text: 'База міцна, але є вузьке місце, яке з’їдає частину результату.' }
+    : index >= 60 ? { name: 'Оператор', color: 'var(--edge-acc, var(--edge-acc))', text: 'База міцна, але є вузьке місце, яке з’їдає частину результату.' }
     : index >= 40 ? { name: 'Нестабільний', color: '#fbbf24', text: 'Система працює, психіка — ні. Половина профіту губиться на емоціях.' }
     : { name: 'Реактивний', color: '#f87171', text: 'Ринок керує тобою, а не навпаки. Спочатку режим, потім вхід.' };
 
@@ -199,9 +199,9 @@ function NeuroScanner({ neuro, active, setActive }) {
               <stop offset="100%" stopColor={neuro.tier.color} stopOpacity="0.65" />
             </linearGradient>
             <linearGradient id="npScan" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="var(--edge-acc, #8b7bff)" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--edge-acc, var(--edge-acc))" stopOpacity="0" />
               <stop offset="50%" stopColor="#a78bfa" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="var(--edge-acc, #8b7bff)" stopOpacity="0" />
+              <stop offset="100%" stopColor="var(--edge-acc, var(--edge-acc))" stopOpacity="0" />
             </linearGradient>
             <clipPath id="npClip">
               <path d="M176 244 L176 200 C176 190 184 186 194 181 C208 174 213 160 212 141 C212 133 220 130 222 122 C224 115 215 111 211 105 C207 98 209 90 205 76 C194 42 161 24 127 28 C86 33 60 66 60 106 C60 141 76 167 98 183 C112 193 118 201 118 216 L118 244 Z" />
@@ -211,7 +211,7 @@ function NeuroScanner({ neuro, active, setActive }) {
           <circle cx="130" cy="130" r="122" fill="url(#npAura)" />
 
           <motion.circle
-            cx="130" cy="130" r="112" fill="none" stroke="var(--edge-line-hi, #33333A)" strokeWidth="1"
+            cx="130" cy="130" r="112" fill="none" stroke="var(--edge-line-hi, var(--edge-line-hi))" strokeWidth="1"
             strokeDasharray="3 9"
             animate={{ rotate: 360 }}
             transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
@@ -225,7 +225,7 @@ function NeuroScanner({ neuro, active, setActive }) {
             style={{ transformOrigin: '130px 130px' }}
           />
           {[0, 90, 180, 270].map((a) => (
-            <rect key={a} x="129" y="14" width="2" height="10" fill="var(--edge-line-hi, #33333A)"
+            <rect key={a} x="129" y="14" width="2" height="10" fill="var(--edge-line-hi, var(--edge-line-hi))"
               transform={`rotate(${a} 130 130)`} />
           ))}
 
@@ -239,13 +239,13 @@ function NeuroScanner({ neuro, active, setActive }) {
           />
 
           <g clipPath="url(#npClip)" opacity="0.5">
-            <path d="M78 96 C104 74 138 76 158 96 C176 114 172 142 150 154 C126 167 96 158 84 136" fill="none" stroke="var(--edge-acc, #8b7bff)" strokeOpacity="0.35" strokeWidth="1" />
-            <path d="M92 122 C112 106 140 108 154 124" fill="none" stroke="var(--edge-acc, #8b7bff)" strokeOpacity="0.25" strokeWidth="1" />
+            <path d="M78 96 C104 74 138 76 158 96 C176 114 172 142 150 154 C126 167 96 158 84 136" fill="none" stroke="var(--edge-acc, var(--edge-acc))" strokeOpacity="0.35" strokeWidth="1" />
+            <path d="M92 122 C112 106 140 108 154 124" fill="none" stroke="var(--edge-acc, var(--edge-acc))" strokeOpacity="0.25" strokeWidth="1" />
             <path d="M100 150 C122 140 146 142 160 156" fill="none" stroke="#34d399" strokeOpacity="0.22" strokeWidth="1" />
             <path d="M118 62 L118 178" stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />
             <path d="M64 118 L214 118" stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />
             {Object.entries(NODES).map(([k, p]) => (
-              <line key={k} x1="118" y1="118" x2={p.x} y2={p.y} stroke="var(--edge-acc, #8b7bff)" strokeOpacity="0.18" strokeWidth="1" />
+              <line key={k} x1="118" y1="118" x2={p.x} y2={p.y} stroke="var(--edge-acc, var(--edge-acc))" strokeOpacity="0.18" strokeWidth="1" />
             ))}
           </g>
 
@@ -276,10 +276,10 @@ function NeuroScanner({ neuro, active, setActive }) {
         </svg>
 
         <div className="absolute inset-0 flex flex-col items-center justify-end pb-1 pointer-events-none">
-          <span className="text-[9px] tracking-[0.24em] uppercase text-[#7A7A85] font-black">Нейро-індекс</span>
+          <span className="text-[9px] tracking-[0.24em] uppercase text-[var(--edge-text3)] font-black">Нейро-індекс</span>
           <div className="flex items-baseline gap-1">
             <span className="font-['Instrument_Serif',serif] text-[40px] leading-none text-[var(--edge-text)]">{neuro.index}</span>
-            <span className="text-[13px] text-[#7A7A85] font-bold">/100</span>
+            <span className="text-[13px] text-[var(--edge-text3)] font-bold">/100</span>
           </div>
           <span className="mt-1 text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: neuro.tier.color }}>
             {neuro.tier.name}
@@ -334,7 +334,7 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
           <div className="absolute inset-0 opacity-[0.18] pointer-events-none"
             style={{ background: `radial-gradient(700px circle at 12% 0%, ${neuro.tier.color}, transparent 62%)` }} />
 
-          <button onClick={onClose} className="absolute top-5 right-5 z-20 text-[#7A7A85] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]">
+          <button onClick={onClose} className="absolute top-5 right-5 z-20 text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]">
             <X size={18} />
           </button>
 
@@ -347,7 +347,7 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
               <h3 className="text-[var(--edge-text)] text-[24px] leading-none font-normal m-0 font-['Instrument_Serif',serif] tracking-wide">
                 Нейропрофіль трейдера
               </h3>
-              <p className="text-[12.5px] text-[#7A7A85] mt-2 m-0">
+              <p className="text-[12.5px] text-[var(--edge-text3)] mt-2 m-0">
                 Індекс <b className="text-[var(--edge-text)]">{neuro.index}/100</b> · тип <b style={{ color: neuro.tier.color }}>{neuro.tier.name}</b> · вибірка {neuro.total} угод
               </p>
             </div>
@@ -357,20 +357,20 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
         {/* ТІЛО */}
         <div className="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-8 py-6 flex flex-col gap-7">
 
-          <p className="text-[13.5px] text-[#B4B4BD] leading-[1.65] m-0">
+          <p className="text-[13.5px] text-[var(--edge-text2)] leading-[1.65] m-0">
             {neuro.tier.text} Найсильніша сторона — <b className="text-[var(--edge-text)]">{neuro.strongest.full.toLowerCase()}</b> ({neuro.strongest.value}/100).
             Вузьке місце — <b style={{ color: neuro.weakest.color }}>{neuro.weakest.full.toLowerCase()}</b> ({neuro.weakest.value}/100), саме воно тягне індекс вниз.
           </p>
 
           <div>
-            <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] mb-3">Як рахується індекс</h4>
+            <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-3">Як рахується індекс</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {neuro.axes.map((a) => {
                 const Icon = a.icon;
                 return (
                   <div key={a.key} className="p-4 bg-[var(--edge-hair)] border border-[var(--edge-hair)] rounded-[16px] hover:border-[var(--edge-hair-strong)] transition-colors">
                     <div className="flex items-center justify-between mb-2.5">
-                      <div className="flex items-center gap-2.5 text-[13.5px] font-bold text-[#FAFAFA]">
+                      <div className="flex items-center gap-2.5 text-[13.5px] font-bold text-[var(--edge-text)]">
                         <Icon size={16} style={{ color: a.color }} />
                         {a.full}
                       </div>
@@ -380,8 +380,8 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
                       <motion.div className="h-full rounded-full" style={{ background: a.color }}
                         initial={{ width: 0 }} animate={{ width: `${a.value}%` }} transition={{ duration: 0.9, ease: premiumEasing }} />
                     </div>
-                    <p className="text-[12.5px] text-[#B4B4BD] leading-[1.5] m-0">{a.desc}</p>
-                    <p className="text-[11.5px] text-[#7A7A85] mt-1.5 m-0 font-medium">{a.formula}</p>
+                    <p className="text-[12.5px] text-[var(--edge-text2)] leading-[1.5] m-0">{a.desc}</p>
+                    <p className="text-[11.5px] text-[var(--edge-text3)] mt-1.5 m-0 font-medium">{a.formula}</p>
                   </div>
                 );
               })}
@@ -389,17 +389,17 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
           </div>
 
           <div>
-            <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] mb-3">Що збиває профіль</h4>
+            <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-3">Що збиває профіль</h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {[
                 { t: 'Серія збитків', v: `${signed(s.avgAfterLoss, 2)}R`, d: 'середній результат наступного входу після мінуса', c: '#f87171' },
                 { t: 'Стан «Тільт»', v: `${signed(neuro.tilt.net)}R`, d: `${neuro.tilt.trades} угод, вінрейт ${neuro.tilt.wr}%`, c: '#fbbf24' },
-                { t: 'Помилки виконання', v: `${r1(-neuro.mistakeCost)}R`, d: `${s.mistakeLedger.length} типів порушень плану`, c: 'var(--edge-acc, #8b7bff)' }
+                { t: 'Помилки виконання', v: `${r1(-neuro.mistakeCost)}R`, d: `${s.mistakeLedger.length} типів порушень плану`, c: 'var(--edge-acc, var(--edge-acc))' }
               ].map((x, i) => (
                 <div key={i} className="p-4 rounded-[16px] border bg-[var(--edge-hair)]" style={{ borderColor: `${x.c}22` }}>
-                  <span className="text-[10.5px] uppercase tracking-[0.14em] font-black text-[#7A7A85]">{x.t}</span>
+                  <span className="text-[10.5px] uppercase tracking-[0.14em] font-black text-[var(--edge-text3)]">{x.t}</span>
                   <b className="block text-[24px] font-extrabold mt-1.5 mb-1" style={{ color: x.c }}>{x.v}</b>
-                  <small className="text-[12px] text-[#7A7A85] leading-snug block">{x.d}</small>
+                  <small className="text-[12px] text-[var(--edge-text3)] leading-snug block">{x.d}</small>
                 </div>
               ))}
             </div>
@@ -407,8 +407,8 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
 
           <div>
             <div className="flex items-baseline justify-between mb-3">
-              <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] m-0">Угоди, що сформували профіль</h4>
-              <span className="text-[11px] text-[#7A7A85]">натисни, щоб відкрити угоду</span>
+              <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] m-0">Угоди, що сформували профіль</h4>
+              <span className="text-[11px] text-[var(--edge-text3)]">натисни, щоб відкрити угоду</span>
             </div>
             <div className="flex flex-col gap-2">
               {impactTrades.map((t, i) => (
@@ -419,34 +419,34 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
                 >
                   <div className="flex items-center justify-between gap-3 mb-1.5">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: EMOTION_COLOR[t.emotion] || 'var(--edge-text3, #7A7A85)' }} />
-                      <b className="text-[13.5px] text-[#FAFAFA] truncate">{t.symbol}</b>
-                      <span className="text-[11.5px] text-[#7A7A85] shrink-0">{t.date}</span>
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: EMOTION_COLOR[t.emotion] || 'var(--edge-text3, var(--edge-text3))' }} />
+                      <b className="text-[13.5px] text-[var(--edge-text)] truncate">{t.symbol}</b>
+                      <span className="text-[11.5px] text-[var(--edge-text3)] shrink-0">{t.date}</span>
                       <span className="text-[10.5px] px-2 py-0.5 rounded-full border shrink-0 hidden sm:inline"
-                        style={{ color: EMOTION_COLOR[t.emotion] || 'var(--edge-text3, #7A7A85)', borderColor: `${EMOTION_COLOR[t.emotion] || 'var(--edge-text3, #7A7A85)'}33`, background: `${EMOTION_COLOR[t.emotion] || 'var(--edge-text3, #7A7A85)'}10` }}>
+                        style={{ color: EMOTION_COLOR[t.emotion] || 'var(--edge-text3, var(--edge-text3))', borderColor: `${EMOTION_COLOR[t.emotion] || 'var(--edge-text3, var(--edge-text3))'}33`, background: `${EMOTION_COLOR[t.emotion] || 'var(--edge-text3, var(--edge-text3))'}10` }}>
                         {EMOTION_LABEL[t.emotion] || 'без мітки'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <b className={`text-[13.5px] ${t.rr >= 0 ? 'text-[#34d399]' : 'text-[#f87171]'}`}>{signed(t.rr, 2)}R</b>
-                      <ArrowUpRight size={16} className="text-[#7A7A85] group-hover:text-[var(--edge-text)] transition-colors" />
+                      <ArrowUpRight size={16} className="text-[var(--edge-text3)] group-hover:text-[var(--edge-text)] transition-colors" />
                     </div>
                   </div>
-                  <p className="text-[12.5px] text-[#B4B4BD] leading-[1.5] m-0 line-clamp-2">{t.note}</p>
+                  <p className="text-[12.5px] text-[var(--edge-text2)] leading-[1.5] m-0 line-clamp-2">{t.note}</p>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="p-4 rounded-[16px] border border-[#8b7bff]/20 bg-[#8b7bff]/[0.07]">
+          <div className="p-4 rounded-[16px] border border-[var(--edge-acc)]/20 bg-[var(--edge-acc)]/[0.07]">
             <div className="flex items-center gap-2.5 mb-2.5">
-              <Sparkles size={16} className="text-[#8b7bff]" />
+              <Sparkles size={16} className="text-[var(--edge-acc)]" />
               <b className="text-[13.5px] text-[var(--edge-text)]">Що зробити цього тижня</b>
             </div>
-            <ul className="flex flex-col gap-2 m-0 p-0 text-[13px] text-[#B4B4BD]">
-              <li className="flex gap-3 items-start"><span className="text-[#8b7bff] font-black">01</span><span className="leading-snug">Після двох мінусів поспіль — стоп на день. Саме там очікування падає до {signed(s.avgAfterLoss, 2)}R.</span></li>
-              <li className="flex gap-3 items-start"><span className="text-[#8b7bff] font-black">02</span><span className="leading-snug">Фіксуй ризик {r2(TARGET_RISK)}% у калькуляторі до входу, а не «на око» — пік зараз {r2(neuro.maxRisk)}%.</span></li>
-              <li className="flex gap-3 items-start"><span className="text-[#8b7bff] font-black">03</span><span className="leading-snug">Прибери одну помилку — «{s.mistakeLedger[0]?.name || '—'}». Це {r1(Math.abs(s.mistakeLedger[0]?.cost || 0))}R назад у депозит.</span></li>
+            <ul className="flex flex-col gap-2 m-0 p-0 text-[13px] text-[var(--edge-text2)]">
+              <li className="flex gap-3 items-start"><span className="text-[var(--edge-acc)] font-black">01</span><span className="leading-snug">Після двох мінусів поспіль — стоп на день. Саме там очікування падає до {signed(s.avgAfterLoss, 2)}R.</span></li>
+              <li className="flex gap-3 items-start"><span className="text-[var(--edge-acc)] font-black">02</span><span className="leading-snug">Фіксуй ризик {r2(TARGET_RISK)}% у калькуляторі до входу, а не «на око» — пік зараз {r2(neuro.maxRisk)}%.</span></li>
+              <li className="flex gap-3 items-start"><span className="text-[var(--edge-acc)] font-black">03</span><span className="leading-snug">Прибери одну помилку — «{s.mistakeLedger[0]?.name || '—'}». Це {r1(Math.abs(s.mistakeLedger[0]?.cost || 0))}R назад у депозит.</span></li>
             </ul>
           </div>
 
@@ -454,7 +454,7 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
 
         {/* ФУТЕР */}
         <div className="shrink-0 px-6 md:px-8 py-4 border-t border-[var(--edge-hair)] bg-[var(--edge-hair)] flex items-center justify-between gap-4">
-          <span className="text-[11.5px] text-[#7A7A85]">Профіль перераховується після кожної нової угоди</span>
+          <span className="text-[11.5px] text-[var(--edge-text3)]">Профіль перераховується після кожної нової угоди</span>
           <button onClick={onClose} className="px-5 py-2 bg-[var(--edge-hair)] hover:bg-white/10 text-[var(--edge-text)] text-[13px] font-bold rounded-xl transition-colors border border-[var(--edge-hair-strong)]">
             Закрити
           </button>
@@ -501,7 +501,7 @@ function NeuroProfile({ s, onOpenTrade }) {
           <NeuroScanner neuro={neuro} active={active} setActive={setActive} />
 
           <div className="flex flex-col gap-3 min-w-0">
-            <p className="text-[12.5px] text-[#B4B4BD] leading-[1.6] m-0">
+            <p className="text-[12.5px] text-[var(--edge-text2)] leading-[1.6] m-0">
               {activeAxis ? (
                 <><b className="text-[var(--edge-text)]">{activeAxis.full}:</b> {activeAxis.desc} {activeAxis.hint}</>
               ) : (
@@ -521,8 +521,8 @@ function NeuroProfile({ s, onOpenTrade }) {
                     className={`flex items-center gap-3 px-3 py-2 rounded-[10px] border transition-colors cursor-default ${on ? 'bg-[var(--edge-surface-hi)] border-white/15' : 'bg-[var(--edge-surface-hi)]/40 border-[var(--edge-hair)]'}`}
                   >
                     <Icon size={14} style={{ color: a.color }} className="shrink-0" />
-                    <span className="text-[12px] font-semibold text-[#FAFAFA] w-[92px] shrink-0">{a.label}</span>
-                    <div className="flex-1 bg-[#232328] h-[5px] rounded-full overflow-hidden">
+                    <span className="text-[12px] font-semibold text-[var(--edge-text)] w-[92px] shrink-0">{a.label}</span>
+                    <div className="flex-1 bg-[var(--edge-line)] h-[5px] rounded-full overflow-hidden">
                       <motion.div
                         className="h-full rounded-full"
                         style={{ background: a.color, boxShadow: on ? `0 0 10px ${a.color}80` : 'none' }}
@@ -539,13 +539,13 @@ function NeuroProfile({ s, onOpenTrade }) {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { l: 'Спокійних', v: `${Math.round((neuro.calm.trades / Math.max(1, neuro.total)) * 100)}%`, c: 'var(--edge-acc, #8b7bff)' },
+                { l: 'Спокійних', v: `${Math.round((neuro.calm.trades / Math.max(1, neuro.total)) * 100)}%`, c: 'var(--edge-acc, var(--edge-acc))' },
                 { l: 'Чистих угод', v: `${neuro.cleanTrades}/${neuro.total}`, c: '#34d399' },
                 { l: 'Імпульсивних', v: `${neuro.impulsive}`, c: '#f87171' },
                 { l: 'Пік ризику', v: `${r2(neuro.maxRisk)}%`, c: '#fbbf24' }
               ].map((x, i) => (
                 <div key={i} className="px-3 py-2.5 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[10px]">
-                  <span className="block text-[9.5px] uppercase tracking-[0.12em] text-[#7A7A85] font-black">{x.l}</span>
+                  <span className="block text-[9.5px] uppercase tracking-[0.12em] text-[var(--edge-text3)] font-black">{x.l}</span>
                   <b className="block text-[15px] font-extrabold mt-0.5" style={{ color: x.c }}>{x.v}</b>
                 </div>
               ))}
@@ -636,8 +636,8 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
     const list = [
       { name: 'Помилки виконання', cost: Math.abs(Math.min(0, ledgerTotal)), color: '#f87171', fix: `Найдорожча — «${worstMistake.name}»`, icon: XCircle },
       { name: 'Імпульсивні стани', cost: Math.abs(Math.min(0, impulsiveNet)), color: '#fbbf24', fix: `${impulsiveTrades} входів у тільті / FOMO`, icon: Flame },
-      { name: 'Надлишковий ризик', cost: Math.abs(extraRiskR), color: 'var(--edge-acc, #8b7bff)', fix: `Пік ${r2(maxRisk)}% замість ${r2(TARGET_RISK)}%`, icon: Gauge },
-      { name: 'Вхід одразу після збитку', cost: Math.abs(Math.min(0, s.avgAfterLoss - s.avgAfterWin)) * Math.max(1, Math.round(totalTrades * 0.15)), color: 'var(--edge-acc, #8b7bff)', fix: `Очікування падає до ${signed(s.avgAfterLoss, 2)}R`, icon: TrendingDown }
+      { name: 'Надлишковий ризик', cost: Math.abs(extraRiskR), color: 'var(--edge-acc, var(--edge-acc))', fix: `Пік ${r2(maxRisk)}% замість ${r2(TARGET_RISK)}%`, icon: Gauge },
+      { name: 'Вхід одразу після збитку', cost: Math.abs(Math.min(0, s.avgAfterLoss - s.avgAfterWin)) * Math.max(1, Math.round(totalTrades * 0.15)), color: 'var(--edge-acc, var(--edge-acc))', fix: `Очікування падає до ${signed(s.avgAfterLoss, 2)}R`, icon: TrendingDown }
     ].filter((l) => l.cost > 0.01);
     return list.sort((a, b) => b.cost - a.cost);
   }, [ledgerTotal, impulsiveNet, extraRiskR, s.avgAfterLoss, s.avgAfterWin, totalTrades, maxRisk, worstMistake.name, impulsiveTrades]);
@@ -711,17 +711,17 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
           initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }}
           className="relative z-10 w-full max-w-sm max-h-full overflow-y-auto custom-scrollbar bg-[var(--edge-sunken)]/90 backdrop-blur-2xl border border-[var(--edge-hair-strong)] rounded-[20px] shadow-[0_30px_90px_rgba(0,0,0,0.7)] p-6"
         >
-          <button onClick={() => setIsRiskInfoOpen(false)} className="absolute top-4 right-4 text-[#7A7A85] hover:text-[var(--edge-text)] transition-colors">
+          <button onClick={() => setIsRiskInfoOpen(false)} className="absolute top-4 right-4 text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors">
             <X size={18} />
           </button>
-          <div className="w-10 h-10 rounded-full bg-[#8b7bff]/10 flex items-center justify-center mb-4 border border-[#8b7bff]/20">
-            <Info size={20} className="text-[#8b7bff]" />
+          <div className="w-10 h-10 rounded-full bg-[var(--edge-acc)]/10 flex items-center justify-center mb-4 border border-[var(--edge-acc)]/20">
+            <Info size={20} className="text-[var(--edge-acc)]" />
           </div>
           <h3 className="text-[var(--edge-text)] text-lg font-bold mb-2 font-['Instrument_Serif',serif] tracking-wide">Як працює цей блок?</h3>
-          <p className="text-[13px] text-[#B4B4BD] leading-[1.6] mb-4">
+          <p className="text-[13px] text-[var(--edge-text2)] leading-[1.6] mb-4">
             Шкала показує <b>відхилення від цілі {r2(TARGET_RISK)}%</b>. Центр смуги — ціль, вліво — недобір об'єму, вправо — перебір.
           </p>
-          <ul className="flex flex-col gap-3 text-[12.5px] text-[#7A7A85]">
+          <ul className="flex flex-col gap-3 text-[12.5px] text-[var(--edge-text3)]">
             <li className="flex gap-2.5 items-start">
               <CheckCircle2 size={16} className="text-[#34d399] shrink-0 mt-0.5" /> 
               <span className="leading-snug">Зелена зона — ризик у коридорі ±0.1% від цілі. Так має бути в кожному стані.</span>
@@ -761,7 +761,7 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
 
       <motion.div variants={fadeUpVariant} className="flex items-baseline gap-4 relative z-10 mb-2">
         <h2 className="font-['Instrument_Serif',serif] text-[30px] font-normal m-0 tracking-[0.2px] text-[var(--edge-text)]">Психологія</h2>
-        <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-bold">
+        <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">
           {s.trades.length} угод розмічено емоціями · {s.trades.filter((t) => t.mistakes.length).length} з помилками
         </span>
       </motion.div>
@@ -787,17 +787,17 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--edge-surface-hi, #18181C)" />
-                      <XAxis dataKey="depth" {...axis} tick={{ fontSize: 10, fill: 'var(--edge-text3, #7A7A85)' }} tickFormatter={(val) => val === '0' ? 'Старт' : `${val} L`} />
+                      <XAxis dataKey="depth" {...axis} tick={{ fontSize: 10, fill: 'var(--edge-text3, var(--edge-text3))' }} tickFormatter={(val) => val === '0' ? 'Старт' : `${val} L`} />
                       <YAxis {...axis} />
-                      <RTooltip content={<TiltTooltip />} cursor={{ stroke: 'var(--edge-text4, #4A4A52)', strokeWidth: 1, strokeDasharray: '3 3' }} />
-                      <ReferenceLine y={0} stroke="var(--edge-line-hi, #33333A)" strokeWidth={2} />
+                      <RTooltip content={<TiltTooltip />} cursor={{ stroke: 'var(--edge-text4, var(--edge-text4))', strokeWidth: 1, strokeDasharray: '3 3' }} />
+                      <ReferenceLine y={0} stroke="var(--edge-line-hi, var(--edge-line-hi))" strokeWidth={2} />
                       <Area type="monotone" dataKey="avg" name="Сер. R" stroke="url(#tiltGrad)" strokeWidth={3} fill="url(#tiltGrad)" fillOpacity={0.2} activeDot={{ r: 6, fill: '#fff', stroke: '#f87171', strokeWidth: 2 }} isAnimationActive={true} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="mt-4 p-3 bg-[var(--edge-hair)] border border-[var(--edge-hair)] rounded-xl flex items-start gap-3">
-                  <Info size={16} className="text-[#8b7bff] mt-0.5 shrink-0" />
-                  <p className="text-[12px] text-[#B4B4BD] leading-[1.5] m-0">
+                  <Info size={16} className="text-[var(--edge-acc)] mt-0.5 shrink-0" />
+                  <p className="text-[12px] text-[var(--edge-text2)] leading-[1.5] m-0">
                     Після плюса твоя наступна угода дає <b><Delta v={s.avgAfterWin} d={2} /></b>. 
                     Але щойно ти ловиш мінус, наступний вхід у середньому падає до <b><Delta v={s.avgAfterLoss} d={2} /></b>.
                   </p>
@@ -810,17 +810,17 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                 title="Емоційний розподіл" 
                 right={
                   <div className="flex bg-[var(--edge-surface-hi)] border border-[var(--edge-hair-strong)] rounded-lg p-0.5">
-                    <button onClick={() => setProfileView('pie')} className={`p-1.5 rounded-md transition-all ${profileView === 'pie' ? 'bg-[#33333A] text-[var(--edge-text)]' : 'text-[#7A7A85] hover:text-[var(--edge-text)]'}`} title="Частка станів (%)">
+                    <button onClick={() => setProfileView('pie')} className={`p-1.5 rounded-md transition-all ${profileView === 'pie' ? 'bg-[var(--edge-line-hi)] text-[var(--edge-text)]' : 'text-[var(--edge-text3)] hover:text-[var(--edge-text)]'}`} title="Частка станів (%)">
                       <PieChartIcon size={14} />
                     </button>
-                    <button onClick={() => setProfileView('radar')} className={`p-1.5 rounded-md transition-all ${profileView === 'radar' ? 'bg-[#33333A] text-[var(--edge-text)]' : 'text-[#7A7A85] hover:text-[var(--edge-text)]'}`} title="Ефективність станів">
+                    <button onClick={() => setProfileView('radar')} className={`p-1.5 rounded-md transition-all ${profileView === 'radar' ? 'bg-[var(--edge-line-hi)] text-[var(--edge-text)]' : 'text-[var(--edge-text3)] hover:text-[var(--edge-text)]'}`} title="Ефективність станів">
                       <RadarIcon size={14} />
                     </button>
                   </div>
                 } 
                 className="h-full flex flex-col"
               >
-                <p className="text-[11.5px] text-[#7A7A85] leading-[1.5] mt-1 mb-2">
+                <p className="text-[11.5px] text-[var(--edge-text3)] leading-[1.5] mt-1 mb-2">
                   {profileView === 'pie' ? 'Які емоції найчастіше супроводжують твої входи в ринок (у % від загальної кількості угод).' : 'Як різні емоційні стани впливають на твій Вінрейт та Дисципліну (чисті угоди без помилок).'}
                 </p>
                 
@@ -846,7 +846,7 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                             ))}
                           </Pie>
                           <RTooltip 
-                            contentStyle={{ backgroundColor: 'var(--edge-sunken, #0D0D10)', borderColor: 'var(--edge-line, #232328)', borderRadius: '12px', fontSize: '12px', padding: '10px 14px' }}
+                            contentStyle={{ backgroundColor: 'var(--edge-sunken, #0D0D10)', borderColor: 'var(--edge-line, var(--edge-line))', borderRadius: '12px', fontSize: '12px', padding: '10px 14px' }}
                             itemStyle={{ color: '#fff', fontWeight: 'bold' }}
                             formatter={(value, name) => [`${value} угод`, name]}
                           />
@@ -855,9 +855,9 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                       
                       <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-2.5">
                         {stateData.map((e, i) => (
-                          <div key={i} className="flex items-center gap-2 text-[11.5px] font-medium text-[#FAFAFA]">
+                          <div key={i} className="flex items-center gap-2 text-[11.5px] font-medium text-[var(--edge-text)]">
                             <div className="w-2.5 h-2.5 rounded-full" style={{ background: e.color }} />
-                            <span>{e.subject} <span className="text-[#7A7A85] ml-1">({Math.round((e.trades / s.trades.length) * 100)}%)</span></span>
+                            <span>{e.subject} <span className="text-[var(--edge-text3)] ml-1">({Math.round((e.trades / s.trades.length) * 100)}%)</span></span>
                           </div>
                         ))}
                       </div>
@@ -865,9 +865,9 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart data={stateData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <PolarGrid stroke="var(--edge-line, #232328)" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: 'var(--edge-text3, #7A7A85)' }} />
-                        <Radar name="Вінрейт" dataKey="wr" stroke="var(--edge-acc, #8b7bff)" fill="var(--edge-acc, #8b7bff)" fillOpacity={0.25} isAnimationActive={true} animationDuration={800} />
+                        <PolarGrid stroke="var(--edge-line, var(--edge-line))" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: 'var(--edge-text3, var(--edge-text3))' }} />
+                        <Radar name="Вінрейт" dataKey="wr" stroke="var(--edge-acc, var(--edge-acc))" fill="var(--edge-acc, var(--edge-acc))" fillOpacity={0.25} isAnimationActive={true} animationDuration={800} />
                         <Radar name="Чистих угод" dataKey="clean" stroke="#34d399" fill="#34d399" fillOpacity={0.18} isAnimationActive={true} animationDuration={800} />
                         <RTooltip content={<ChartTip unit="%" />} />
                       </RadarChart>
@@ -884,23 +884,23 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
                 <div className="p-3.5 rounded-[12px] border border-[#34d399]/15 bg-[#34d399]/[0.05]">
-                  <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Найкращий стан</span>
+                  <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Найкращий стан</span>
                   <b className="block text-[15px] font-extrabold mt-1 text-[#34d399]">{EMOTION_LABEL[bestState.emotion]}</b>
-                  <small className="text-[11px] text-[#7A7A85]">{signed(bestState.avg, 2)}R на угоду</small>
+                  <small className="text-[11px] text-[var(--edge-text3)]">{signed(bestState.avg, 2)}R на угоду</small>
                 </div>
                 <div className="p-3.5 rounded-[12px] border border-[#f87171]/15 bg-[#f87171]/[0.05]">
-                  <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Найгірший стан</span>
+                  <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Найгірший стан</span>
                   <b className="block text-[15px] font-extrabold mt-1 text-[#f87171]">{EMOTION_LABEL[worstState.emotion]}</b>
-                  <small className="text-[11px] text-[#7A7A85]">{signed(worstState.avg, 2)}R на угоду</small>
+                  <small className="text-[11px] text-[var(--edge-text3)]">{signed(worstState.avg, 2)}R на угоду</small>
                 </div>
                 <div className="p-3.5 rounded-[12px] border border-[var(--edge-hair-strong)] bg-[var(--edge-hair)]">
-                  <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Без імпульсивних входів</span>
+                  <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Без імпульсивних входів</span>
                   <div className="flex items-center gap-2 mt-1">
-                    <b className="text-[15px] font-extrabold text-[#7A7A85] line-through decoration-[#f87171]/60">{signed(netTotal)}R</b>
-                    <ArrowRight size={13} className="text-[#7A7A85]" />
+                    <b className="text-[15px] font-extrabold text-[var(--edge-text3)] line-through decoration-[#f87171]/60">{signed(netTotal)}R</b>
+                    <ArrowRight size={13} className="text-[var(--edge-text3)]" />
                     <b className="text-[15px] font-extrabold text-[#34d399]">{signed(netWithoutImpulse)}R</b>
                   </div>
-                  <small className="text-[11px] text-[#7A7A85]">мінус {impulsiveTrades} угод у тільті / FOMO</small>
+                  <small className="text-[11px] text-[var(--edge-text3)]">мінус {impulsiveTrades} угод у тільті / FOMO</small>
                 </div>
               </div>
 
@@ -914,8 +914,8 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                       <div className="px-4 py-3 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[12px] transition-colors group-hover:border-[var(--edge-hair-strong)]">
 
                         <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-[10px] font-black text-[#7A7A85] w-[16px] shrink-0">{i + 1}</span>
-                          <span className="flex items-center gap-2 text-[13px] font-bold text-[#FAFAFA] w-[104px] shrink-0">
+                          <span className="text-[10px] font-black text-[var(--edge-text3)] w-[16px] shrink-0">{i + 1}</span>
+                          <span className="flex items-center gap-2 text-[13px] font-bold text-[var(--edge-text)] w-[104px] shrink-0">
                             <i className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 8px ${color}80` }} />
                             {EMOTION_LABEL[e.emotion]}
                           </span>
@@ -938,17 +938,17 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                           </b>
                         </div>
 
-                        <div className="flex items-center gap-4 flex-wrap mt-2 pl-[19px] text-[11px] text-[#7A7A85]">
-                          <span>{e.trades} угод <span className="text-[#4A4A52]">({share}%)</span></span>
+                        <div className="flex items-center gap-4 flex-wrap mt-2 pl-[19px] text-[11px] text-[var(--edge-text3)]">
+                          <span>{e.trades} угод <span className="text-[var(--edge-text4)]">({share}%)</span></span>
                           <span className="flex items-center gap-1.5">
                             WR
-                            <span className="inline-block w-[42px] h-[3px] rounded-full bg-[#232328] overflow-hidden align-middle">
+                            <span className="inline-block w-[42px] h-[3px] rounded-full bg-[var(--edge-line)] overflow-hidden align-middle">
                               <span className="block h-full" style={{ width: `${e.wr}%`, background: color }} />
                             </span>
-                            <b className="text-[#FAFAFA]">{e.wr}%</b>
+                            <b className="text-[var(--edge-text)]">{e.wr}%</b>
                           </span>
                           <span>Сер. <b style={{ color: e.avg >= 0 ? '#34d399' : '#f87171' }}>{signed(e.avg, 2)}R</b></span>
-                          <span className={e.mistakes ? 'text-[#f87171]' : 'text-[#7A7A85]'}>
+                          <span className={e.mistakes ? 'text-[#f87171]' : 'text-[var(--edge-text3)]'}>
                             {e.mistakes} помилок
                           </span>
                         </div>
@@ -967,7 +967,7 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
               right={
                 <button
                   onClick={() => setLedgerOpen((v) => !v)}
-                  className="flex items-center gap-1.5 text-[10px] tracking-[0.14em] uppercase font-bold text-[#7A7A85] hover:text-[var(--edge-text)] transition-colors"
+                  className="flex items-center gap-1.5 text-[10px] tracking-[0.14em] uppercase font-bold text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors"
                 >
                   {ledgerOpen ? 'Згорнути' : 'Деталі'}
                   <motion.span animate={{ rotate: ledgerOpen ? 180 : 0 }} transition={{ duration: 0.25 }} className="flex">
@@ -979,18 +979,18 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
               <div className="mt-2 p-3.5 bg-[var(--edge-surface-hi)]/70 border border-[#f87171]/10 rounded-[12px]">
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="shrink-0">
-                    <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Втрачено на помилках</span>
+                    <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Втрачено на помилках</span>
                     <b className="block text-[24px] font-extrabold text-[#f87171] leading-tight">{r1(ledgerTotal)}R</b>
                   </div>
                   <div className="h-9 w-px bg-[var(--edge-hair)] hidden sm:block" />
                   <div className="flex gap-5 text-[11.5px] flex-wrap">
-                    <span className="text-[#7A7A85]">Типів: <b className="text-[var(--edge-text)]">{s.mistakeLedger.length}</b></span>
-                    <span className="text-[#7A7A85]">Разів: <b className="text-[var(--edge-text)]">{ledgerCount}</b></span>
-                    <span className="text-[#7A7A85]">Найдорожча: <b className="text-[#FAFAFA]">{worstMistake.name}</b> <b className="text-[#f87171]">{signed(worstMistake.cost)}R</b></span>
+                    <span className="text-[var(--edge-text3)]">Типів: <b className="text-[var(--edge-text)]">{s.mistakeLedger.length}</b></span>
+                    <span className="text-[var(--edge-text3)]">Разів: <b className="text-[var(--edge-text)]">{ledgerCount}</b></span>
+                    <span className="text-[var(--edge-text3)]">Найдорожча: <b className="text-[var(--edge-text)]">{worstMistake.name}</b> <b className="text-[#f87171]">{signed(worstMistake.cost)}R</b></span>
                   </div>
                 </div>
 
-                <div className="mt-3 w-full h-[6px] rounded-full overflow-hidden flex bg-[#232328]">
+                <div className="mt-3 w-full h-[6px] rounded-full overflow-hidden flex bg-[var(--edge-line)]">
                   {s.mistakeLedger.map((m, i) => (
                     <div
                       key={m.name}
@@ -1007,7 +1007,7 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                 </div>
 
                 {!ledgerOpen && (
-                  <p className="text-[11.5px] text-[#7A7A85] leading-[1.5] mt-2.5 m-0">
+                  <p className="text-[11.5px] text-[var(--edge-text3)] leading-[1.5] mt-2.5 m-0">
                     Без цих порушень твій результат був би на <b className="text-[#34d399]">{r1(Math.abs(ledgerTotal))}R</b> вищим.
                   </p>
                 )}
@@ -1030,15 +1030,15 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                           <SpotlightCard key={m.name} glowColor="rgba(248,113,113, 0.15)" className="rounded-[12px]">
                             <div className="p-[14px_16px] bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[12px] flex flex-col gap-[10px] transition-colors hover:border-[var(--edge-hair-strong)]">
                               <div className="flex justify-between items-end">
-                                <b className="text-[#FAFAFA] text-[13px]">{m.name}</b>
+                                <b className="text-[var(--edge-text)] text-[13px]">{m.name}</b>
                               </div>
                               <div className="flex items-center gap-3">
-                                <div className="flex-1 bg-[#232328] h-[4px] rounded-full overflow-hidden">
+                                <div className="flex-1 bg-[var(--edge-line)] h-[4px] rounded-full overflow-hidden">
                                   <div className="h-full bg-[#f87171]" style={{ width: `${share}%` }}></div>
                                 </div>
                                 <b className="text-[#f87171] text-[13px] w-[50px] text-right font-black">{signed(m.cost)}R</b>
                               </div>
-                              <div className="text-[11px] text-[#7A7A85]">
+                              <div className="text-[11px] text-[var(--edge-text3)]">
                                 {m.count} разів · {Math.round(share)}% усіх втрат від помилок
                               </div>
                             </div>
@@ -1059,22 +1059,22 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
                   <SpotlightCard glowColor="rgba(52, 211, 153, 0.25)" className="rounded-[14px]">
                     <div className="p-5 bg-[var(--edge-surface-hi)]/80 border border-[#34d399]/10 shadow-[0_0_15px_rgba(52,211,153,0.02)] rounded-[14px] relative overflow-hidden transition-colors hover:border-[#34d399]/30">
-                      <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-bold">По плану</span>
+                      <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">По плану</span>
                       <b className="block text-[28px] font-extrabold mt-2 mb-1 text-[#34d399]">{signed(sum(s.followed.map((t) => t.rr)))}R</b>
-                      <small className="text-[11.5px] font-medium text-[#7A7A85]">{s.followed.length} угод · WR {Math.round((s.followed.filter((t) => t.result === 'WIN').length / Math.max(1, s.followed.filter((t) => t.result !== 'BE').length)) * 100)}%</small>
+                      <small className="text-[11.5px] font-medium text-[var(--edge-text3)]">{s.followed.length} угод · WR {Math.round((s.followed.filter((t) => t.result === 'WIN').length / Math.max(1, s.followed.filter((t) => t.result !== 'BE').length)) * 100)}%</small>
                     </div>
                   </SpotlightCard>
                   <SpotlightCard glowColor="rgba(248,113,113, 0.25)" className="rounded-[14px]">
                     <div className="p-5 bg-[var(--edge-surface-hi)]/80 border border-[#f87171]/10 shadow-[0_0_15px_rgba(248,113,113,0.02)] rounded-[14px] relative overflow-hidden transition-colors hover:border-[#f87171]/30">
-                      <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-bold">З порушенням</span>
+                      <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">З порушенням</span>
                       <b className="block text-[28px] font-extrabold mt-2 mb-1 text-[#f87171]">{signed(sum(s.broken.map((t) => t.rr)))}R</b>
-                      <small className="text-[11.5px] font-medium text-[#7A7A85]">{s.broken.length} угод · WR {Math.round((s.broken.filter((t) => t.result === 'WIN').length / Math.max(1, s.broken.filter((t) => t.result !== 'BE').length)) * 100)}%</small>
+                      <small className="text-[11.5px] font-medium text-[var(--edge-text3)]">{s.broken.length} угод · WR {Math.round((s.broken.filter((t) => t.result === 'WIN').length / Math.max(1, s.broken.filter((t) => t.result !== 'BE').length)) * 100)}%</small>
                     </div>
                   </SpotlightCard>
                 </div>
                 
                 <div className="mt-5 w-full bg-[var(--edge-surface-hi)]/40 border border-[var(--edge-hair)] rounded-[12px] p-4">
-                  <h4 className="text-[11px] text-[#7A7A85] font-bold uppercase tracking-widest mb-3 text-center">Накопичений PnL (Крива капіталу)</h4>
+                  <h4 className="text-[11px] text-[var(--edge-text3)] font-bold uppercase tracking-widest mb-3 text-center">Накопичений PnL (Крива капіталу)</h4>
                   <div className="w-full h-[140px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={planChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
@@ -1089,10 +1089,10 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--edge-surface-hi, #18181C)" />
-                        <XAxis dataKey="step" {...axis} tick={{ fontSize: 10, fill: 'var(--edge-text3, #7A7A85)' }} />
+                        <XAxis dataKey="step" {...axis} tick={{ fontSize: 10, fill: 'var(--edge-text3, var(--edge-text3))' }} />
                         <YAxis {...axis} />
-                        <RTooltip content={<PlanTooltip />} cursor={{ stroke: 'var(--edge-text4, #4A4A52)', strokeWidth: 1, strokeDasharray: '3 3' }} />
-                        <ReferenceLine y={0} stroke="var(--edge-line-hi, #33333A)" strokeWidth={2} />
+                        <RTooltip content={<PlanTooltip />} cursor={{ stroke: 'var(--edge-text4, var(--edge-text4))', strokeWidth: 1, strokeDasharray: '3 3' }} />
+                        <ReferenceLine y={0} stroke="var(--edge-line-hi, var(--edge-line-hi))" strokeWidth={2} />
                         <Area type="monotone" dataKey="fAcc" name="По плану" stroke="#34d399" strokeWidth={2.5} fill="url(#gradF)" isAnimationActive={true} />
                         <Area type="monotone" dataKey="bAcc" name="З порушенням" stroke="#f87171" strokeWidth={2.5} fill="url(#gradB)" isAnimationActive={true} />
                       </AreaChart>
@@ -1108,7 +1108,7 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                 title={
                   <div className="flex items-center gap-2">
                     Ризик і стан
-                    <button onClick={() => setIsRiskInfoOpen(true)} className="text-[#7A7A85] hover:text-[#8b7bff] transition-colors" title="Як це працює?">
+                    <button onClick={() => setIsRiskInfoOpen(true)} className="text-[var(--edge-text3)] hover:text-[var(--edge-acc)] transition-colors" title="Як це працює?">
                       <HelpCircle size={14} />
                     </button>
                   </div>
@@ -1116,9 +1116,9 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                 right={<span className="inline-flex items-center gap-1.5"><Target size={12} /> ціль {r2(TARGET_RISK)}%</span>}
                 className="h-full"
               >
-                <div className="flex items-center justify-between text-[9.5px] uppercase tracking-[0.14em] font-black text-[#7A7A85] mt-2 mb-1.5 px-[100px]">
+                <div className="flex items-center justify-between text-[9.5px] uppercase tracking-[0.14em] font-black text-[var(--edge-text3)] mt-2 mb-1.5 px-[100px]">
                   <span>недобір</span>
-                  <span className="text-[#7A7A85]">ціль</span>
+                  <span className="text-[var(--edge-text3)]">ціль</span>
                   <span>перебір</span>
                 </div>
 
@@ -1130,7 +1130,7 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                       <SpotlightCard key={e.emotion} glowColor={`${zoneColor}22`} className="rounded-[12px]">
                         <div className="px-3 py-2.5 bg-[var(--edge-surface-hi)]/40 border border-[var(--edge-hair)] rounded-[12px] transition-colors hover:border-[var(--edge-hair-strong)] flex items-center gap-3">
 
-                          <span className="flex items-center gap-2 text-[12.5px] font-medium text-[#FAFAFA] w-[96px] shrink-0">
+                          <span className="flex items-center gap-2 text-[12.5px] font-medium text-[var(--edge-text)] w-[96px] shrink-0">
                             <i className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: EMOTION_COLOR[e.emotion] }} />
                             {EMOTION_LABEL[e.emotion]}
                           </span>
@@ -1159,7 +1159,7 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
 
                           <div className="w-[84px] text-right shrink-0">
                             <b className="block text-[13px] font-bold" style={{ color: zoneColor }}>{r2(e.avgRisk)}%</b>
-                            <span className="block text-[10px] text-[#7A7A85]">
+                            <span className="block text-[10px] text-[var(--edge-text3)]">
                               {e.dev >= 0 ? '+' : ''}{r2(e.dev)}% · {e.trades} уг.
                             </span>
                           </div>
@@ -1171,10 +1171,10 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
 
                 <div className="mt-3 p-3 rounded-xl border border-[var(--edge-hair)] bg-[var(--edge-surface-hi)]/60 flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-2.5">
-                    <Crosshair size={15} className="text-[#8b7bff] shrink-0" />
-                    <span className="text-[12px] text-[#B4B4BD] leading-snug">Зайвого ризику взято понад ціль</span>
+                    <Crosshair size={15} className="text-[var(--edge-acc)] shrink-0" />
+                    <span className="text-[12px] text-[var(--edge-text2)] leading-snug">Зайвого ризику взято понад ціль</span>
                   </div>
-                  <b className="text-[15px] font-extrabold text-[#8b7bff]">{r1(extraRiskR)}R</b>
+                  <b className="text-[15px] font-extrabold text-[var(--edge-acc)]">{r1(extraRiskR)}R</b>
                 </div>
               </Panel>
             </motion.div>
@@ -1199,22 +1199,22 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
               <button
                 type="button"
                 onClick={onOpenAi}
-                className="group w-full rounded-[14px] border border-[#232328] bg-[var(--edge-surface)] p-4 text-left transition-colors hover:border-[#8b7bff]/35"
+                className="group w-full rounded-[14px] border border-[var(--edge-line)] bg-[var(--edge-surface)] p-4 text-left transition-colors hover:border-[var(--edge-acc)]/35"
               >
-                <span className="mb-2 inline-flex items-center gap-[6px] text-[10px] font-bold uppercase tracking-[0.14em] text-[#7A7A85]">
-                  <Sparkles size={13} className="text-[#8b7bff]" /> AI-психолог
+                <span className="mb-2 inline-flex items-center gap-[6px] text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--edge-text3)]">
+                  <Sparkles size={13} className="text-[var(--edge-acc)]" /> AI-психолог
                 </span>
-                <p className="m-0 text-[12.5px] leading-[1.6] text-[#B4B4BD]">
+                <p className="m-0 text-[12.5px] leading-[1.6] text-[var(--edge-text2)]">
                   Переїхав у власний розділ — щоб було видно, де цифри з журналу,
                   а де думка моделі.{' '}
-                  <span className="font-semibold text-[#8b7bff] group-hover:underline">
+                  <span className="font-semibold text-[var(--edge-acc)] group-hover:underline">
                     Відкрити AI →
                   </span>
                 </p>
               </button>
             ) : (
               <ComingSoon
-                tone="#8b7bff"
+                tone="var(--edge-acc)"
                 title="AI-психолог"
                 text="Читає твої угоди й відповідає на питання про них. Житиме у власному розділі, щоб було видно, де цифри з журналу, а де думка моделі."
               />
@@ -1230,31 +1230,31 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                   style={{ background: 'radial-gradient(300px circle at 100% 0%, #34d399, transparent 70%)' }} />
                 <div className="relative z-10 flex items-end justify-between gap-3">
                   <div>
-                    <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Зараз</span>
+                    <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Зараз</span>
                     <b className="block text-[22px] font-extrabold text-[var(--edge-text)] leading-tight mt-1">{signed(netTotal)}R</b>
                   </div>
-                  <ArrowRight size={16} className="text-[#4A4A52] mb-2 shrink-0" />
+                  <ArrowRight size={16} className="text-[var(--edge-text4)] mb-2 shrink-0" />
                   <div className="text-right">
                     <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#34d399] font-black">Потенціал без витоків</span>
                     <b className="block text-[22px] font-extrabold text-[#34d399] leading-tight mt-1">{signed(potential)}R</b>
                   </div>
                 </div>
 
-                <div className="relative z-10 mt-3 w-full h-2 bg-[#232328] rounded-full overflow-hidden flex">
+                <div className="relative z-10 mt-3 w-full h-2 bg-[var(--edge-line)] rounded-full overflow-hidden flex">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.max(0, Math.min(100, (netTotal / Math.max(1, potential)) * 100))}%` }}
                     transition={{ duration: 1.1, ease: premiumEasing }}
-                    className="h-full bg-gradient-to-r from-[#8b7bff] to-[#34d399]"
+                    className="h-full bg-gradient-to-r from-[var(--edge-acc)] to-[#34d399]"
                   />
                   <div className="flex-1 h-full bg-[#f87171]/25" />
                 </div>
-                <p className="relative z-10 text-[11.5px] text-[#7A7A85] leading-[1.5] mt-2.5 m-0">
+                <p className="relative z-10 text-[11.5px] text-[var(--edge-text3)] leading-[1.5] mt-2.5 m-0">
                   Дисципліна коштує тобі <b className="text-[#f87171]">{r1(leakTotal)}R</b> — це різниця між тим, що є, і тим, що вже могло бути.
                 </p>
               </div>
 
-              <h4 className="text-[9.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] mt-4 mb-2 flex items-center gap-2">
+              <h4 className="text-[9.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mt-4 mb-2 flex items-center gap-2">
                 <Droplet size={12} /> Куди течуть гроші
               </h4>
 
@@ -1266,21 +1266,21 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                     <SpotlightCard key={l.name} glowColor={`${l.color}22`} className="rounded-[12px]">
                       <div className="p-3 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[12px] transition-colors hover:border-[var(--edge-hair-strong)]">
                         <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2.5 text-[12.5px] font-medium text-[#FAFAFA] min-w-0">
+                          <div className="flex items-center gap-2.5 text-[12.5px] font-medium text-[var(--edge-text)] min-w-0">
                             <Icon size={14} style={{ color: l.color }} className="shrink-0" />
                             <span className="truncate">{l.name}</span>
                           </div>
                           <b className="text-[13px] shrink-0" style={{ color: l.color }}>−{r1(l.cost)}R</b>
                         </div>
                         <div className="flex items-center gap-2.5">
-                          <div className="flex-1 bg-[#232328] h-[4px] rounded-full overflow-hidden">
+                          <div className="flex-1 bg-[var(--edge-line)] h-[4px] rounded-full overflow-hidden">
                             <motion.div className="h-full rounded-full" style={{ background: l.color }}
                               initial={{ width: 0 }} animate={{ width: `${(l.cost / maxLeak) * 100}%` }}
                               transition={{ duration: 0.9, ease: premiumEasing }} />
                           </div>
-                          <span className="text-[10px] font-black text-[#7A7A85] w-[30px] text-right">{Math.round(share)}%</span>
+                          <span className="text-[10px] font-black text-[var(--edge-text3)] w-[30px] text-right">{Math.round(share)}%</span>
                         </div>
-                        <p className="text-[11px] text-[#7A7A85] mt-1.5 m-0 leading-snug">{l.fix}</p>
+                        <p className="text-[11px] text-[var(--edge-text3)] mt-1.5 m-0 leading-snug">{l.fix}</p>
                       </div>
                     </SpotlightCard>
                   );
@@ -1299,7 +1299,7 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                 </span>
               }
             >
-              <p className="text-[11.5px] text-[#7A7A85] leading-[1.5] mt-1 mb-3 m-0">
+              <p className="text-[11.5px] text-[var(--edge-text3)] leading-[1.5] mt-1 mb-3 m-0">
                 Не галочки, а факт: як часто ти реально дотримувався кожного правила за {totalTrades} угод.
               </p>
 
@@ -1314,18 +1314,18 @@ export default function Psychology({ s, onOpenTrade = (t) => console.log('open t
                           {r.pct >= 90
                             ? <CheckCircle2 size={15} className="text-[#34d399] shrink-0 mt-[1px]" />
                             : <XCircle size={15} style={{ color }} className="shrink-0 mt-[1px]" />}
-                          <span className="text-[12.5px] font-medium text-[#FAFAFA] leading-snug">{r.txt}</span>
+                          <span className="text-[12.5px] font-medium text-[var(--edge-text)] leading-snug">{r.txt}</span>
                         </div>
                         <b className="text-[13px] shrink-0" style={{ color }}>{r.pct}%</b>
                       </div>
 
-                      <div className="w-full bg-[#232328] h-[4px] rounded-full overflow-hidden">
+                      <div className="w-full bg-[var(--edge-line)] h-[4px] rounded-full overflow-hidden">
                         <motion.div className="h-full rounded-full" style={{ background: color }}
                           initial={{ width: 0 }} animate={{ width: `${r.pct}%` }}
                           transition={{ duration: 0.9, ease: premiumEasing }} />
                       </div>
 
-                      <div className="flex justify-between text-[10.5px] text-[#7A7A85] mt-1.5">
+                      <div className="flex justify-between text-[10.5px] text-[var(--edge-text3)] mt-1.5">
                         <span>{broken > 0 ? `${broken} порушень` : 'без порушень'}</span>
                         {r.cost > 0.01 && <span>ціна: <b className="text-[#f87171]">−{r1(r.cost)}R</b></span>}
                       </div>

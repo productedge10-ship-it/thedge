@@ -69,7 +69,7 @@ function Column({ items, value, onPick, label }) {
               className="h-7 shrink-0 rounded-md text-[13.5px] font-bold tabular-nums transition-colors duration-150"
               style={{
                 fontFamily: T.mono,
-                color: on ? 'var(--edge-bg, #0A0A0C)' : T.text2,
+                color: on ? 'var(--edge-on-acc, #0A0A0C)' : T.text2,
                 background: on ? T.acc : 'transparent',
               }}
               onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
@@ -237,7 +237,7 @@ export default function WhenPop({ due, dueTime, onChange, align = 'left' }) {
                     className="h-7 flex-1 rounded-md text-[12px] font-bold tabular-nums transition-colors duration-150"
                     style={{
                       fontFamily: T.mono,
-                      color: on ? 'var(--edge-bg, #0A0A0C)' : T.text2,
+                      color: on ? 'var(--edge-on-acc, #0A0A0C)' : T.text2,
                       background: on ? T.acc : 'rgba(255,255,255,0.05)',
                     }}
                     onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.10)'; }}
@@ -272,7 +272,7 @@ export default function WhenPop({ due, dueTime, onChange, align = 'left' }) {
             <button
               onClick={close}
               className="h-9 flex-1 rounded-lg text-[13px] font-bold transition-transform duration-200 active:scale-[0.98]"
-              style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+              style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
             >
               Готово
             </button>

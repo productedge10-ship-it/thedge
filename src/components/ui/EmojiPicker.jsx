@@ -50,7 +50,7 @@ export default function EmojiPicker({ value, onPick, onClear, color = T.acc, onC
       <div className="p-2.5 pb-0">
         <div
           className="flex h-9 items-center gap-2 rounded-[10px] px-2.5"
-          style={{ background: '#ffffff08', border: '1px solid #22222c' }}
+          style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid #22222c' }}
         >
           <Search size={13} strokeWidth={1.9} style={{ color: '#8b8998', flex: 'none' }} />
           <input
@@ -112,7 +112,7 @@ export default function EmojiPicker({ value, onPick, onClear, color = T.acc, onC
                     border: `1px solid ${on ? `${color}73` : 'transparent'}`,
                     transition: 'all .12s',
                   }}
-                  onMouseEnter={(ev) => { if (!on) ev.currentTarget.style.background = '#ffffff0f'; }}
+                  onMouseEnter={(ev) => { if (!on) ev.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.06)'; }}
                   onMouseLeave={(ev) => { if (!on) ev.currentTarget.style.background = 'transparent'; }}
                 >
                   {e}

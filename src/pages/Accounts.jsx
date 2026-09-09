@@ -279,7 +279,7 @@ return (
       .acc-liquid-svg { overflow: visible; }
       .acc-liquid-main {
         fill: none;
-        stroke: #8b7bff;
+        stroke: var(--edge-acc);
         stroke-width: 1.2;
         stroke-linecap: round;
         stroke-linejoin: round;
@@ -318,7 +318,7 @@ return (
       }
       .acc-archive-btn:hover {
         border-color: rgba(139,123,255,0.4) !important;
-        color: var(--edge-text2, #B4B4BD) !important;
+        color: var(--edge-text2, var(--edge-text2)) !important;
       }
       .acc-archive-icon {
         display: grid;
@@ -363,7 +363,7 @@ return (
           transition: { staggerChildren: 0.05, delayChildren: 0.02 }
         }
       }}
-      className="w-full max-w-[1600px] mx-auto pb-24 pt-5 sm:pb-32 sm:pt-8 relative z-[10] font-sans text-[#B4B4BD] px-4 sm:px-6 md:px-10"
+      className="w-full max-w-[1600px] mx-auto pb-24 pt-5 sm:pb-32 sm:pt-8 relative z-[10] font-sans text-[var(--edge-text2)] px-4 sm:px-6 md:px-10"
     >
       
       {/* ХЕДЕР ТА КНОПКА */}
@@ -377,17 +377,17 @@ return (
         <div className="min-w-0">
           <div
             className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]"
-            style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-acc, #8b7bff)' }}
+            style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-acc, var(--edge-acc))' }}
           >
             Capital
           </div>
           <h1
             className="text-[34px] font-bold leading-none sm:text-[42px]"
-            style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-text, #FAFAFA)', letterSpacing: '-0.03em' }}
+            style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-text, var(--edge-text))', letterSpacing: '-0.03em' }}
           >
             Accounts
           </h1>
-          <p className="mt-2.5 text-[14px]" style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-text3, #7A7A85)' }}>
+          <p className="mt-2.5 text-[14px]" style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-text3, var(--edge-text3))' }}>
             How much capital is at work and how it's behaving
           </p>
         </div>
@@ -400,19 +400,19 @@ return (
               background: showArchive
                 ? 'linear-gradient(145deg, rgba(139,123,255,0.16), rgba(139,123,255,0.05))'
                 : 'linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01))',
-              border: `1px solid ${showArchive ? 'rgba(139,123,255,0.45)' : 'var(--edge-line, #232328)'}`,
-              color: showArchive ? 'var(--edge-acc, #8b7bff)' : 'var(--edge-text3, #7A7A85)',
+              border: `1px solid ${showArchive ? 'rgba(139,123,255,0.45)' : 'var(--edge-line, var(--edge-line))'}`,
+              color: showArchive ? 'var(--edge-acc, var(--edge-acc))' : 'var(--edge-text3, var(--edge-text3))',
               fontFamily: T.sans,
             }}
           >
             <span className="acc-archive-icon">
-              <Archive size={13.5} strokeWidth={2.4} style={{ color: 'var(--edge-acc, #8b7bff)' }} />
+              <Archive size={13.5} strokeWidth={2.4} style={{ color: 'var(--edge-acc, var(--edge-acc))' }} />
             </span>
             {showArchive ? 'Back to accounts' : 'Archive'}
             {!showArchive && closedAccounts.length > 0 && (
               <span
                 className="grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold"
-                style={{ background: 'rgba(139,123,255,0.18)', color: 'var(--edge-acc, #8b7bff)' }}
+                style={{ background: 'rgba(139,123,255,0.18)', color: 'var(--edge-acc, var(--edge-acc))' }}
               >
                 {closedAccounts.length}
               </span>
@@ -425,7 +425,7 @@ return (
             className="edge-add-btn ml-1 inline-flex h-[54px] shrink-0 items-center justify-center gap-2 rounded-2xl px-6 text-[14.5px] font-bold"
             style={{ color: '#fff', fontFamily: T.sans }}
           >
-            <Plus size={16} strokeWidth={3} className="shrink-0" style={{ color: '#8b7bff' }} />
+            <Plus size={16} strokeWidth={3} className="shrink-0" style={{ color: 'var(--edge-acc)' }} />
             <span className="whitespace-nowrap">Add Account</span>
           </button>
         </div>
@@ -483,14 +483,14 @@ return (
         }}
       >
         {loading ? (
-          <div className="flex justify-center py-32"><Loader2 className="animate-spin text-[#4A4A52]" size={40} /></div>
+          <div className="flex justify-center py-32"><Loader2 className="animate-spin text-[var(--edge-text4)]" size={40} /></div>
         ) : shownAccounts.length === 0 ? (
           <motion.div
             variants={{ hidden: { opacity: 0, scale: 0.96 }, visible: { opacity: 1, scale: 1 } }}
-            className="flex flex-col items-center justify-center py-32 bg-[var(--edge-surface)]/60 backdrop-blur-sm border border-dashed border-[#33333A] rounded-[2rem]"
+            className="flex flex-col items-center justify-center py-32 bg-[var(--edge-surface)]/60 backdrop-blur-sm border border-dashed border-[var(--edge-line-hi)] rounded-[2rem]"
           >
-            <Building2 className="text-[#4A4A52] mb-4 opacity-50" size={48} />
-            <p className="text-[#7A7A85] font-black text-xs uppercase tracking-widest">
+            <Building2 className="text-[var(--edge-text4)] mb-4 opacity-50" size={48} />
+            <p className="text-[var(--edge-text3)] font-black text-xs uppercase tracking-widest">
               {showArchive ? 'No closed accounts' : 'No accounts yet'}
             </p>
           </motion.div>
@@ -679,17 +679,17 @@ return (
             exit={{ opacity: 0, scale: 0.96, y: 15, filter: "blur(4px)" }} 
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[var(--edge-surface)] border border-[#232328] w-full max-w-xl rounded-2xl shadow-2xl relative overflow-hidden"
+            className="bg-[var(--edge-surface)] border border-[var(--edge-line)] w-full max-w-xl rounded-2xl shadow-2xl relative overflow-hidden"
           >
             {/* Хедер модалки */}
-            <div className="flex justify-between items-center px-6 py-5 border-b border-[#232328] bg-[var(--edge-sunken)]">
+            <div className="flex justify-between items-center px-6 py-5 border-b border-[var(--edge-line)] bg-[var(--edge-sunken)]">
               <h2 className="text-sm font-bold text-[var(--edge-text)] uppercase tracking-wider flex items-center gap-2.5">
-                <span className="w-2 h-2 rounded-full bg-[#8b7bff] shadow-[0_0_10px_rgba(139,123,255,0.6)]"></span>
+                <span className="w-2 h-2 rounded-full bg-[var(--edge-acc)] shadow-[0_0_10px_rgba(139,123,255,0.6)]"></span>
                 {editingId ? 'Edit account' : 'New account'}
               </h2>
               <button 
                 onClick={closeModal} 
-                className="text-[#7A7A85] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-sunken)] hover:bg-[var(--edge-surface-hi)] p-2.5 rounded-xl border border-[#232328]"
+                className="text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-sunken)] hover:bg-[var(--edge-surface-hi)] p-2.5 rounded-xl border border-[var(--edge-line)]"
               >
                 <X size={16} />
               </button>
@@ -700,7 +700,7 @@ return (
               
               {/* Секція: Вибір Фірми */}
               <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black tracking-widest text-[#7A7A85] uppercase">
+                <label className="text-[10px] font-black tracking-widest text-[var(--edge-text3)] uppercase">
                   Choose a firm
                 </label>
                 
@@ -721,11 +721,11 @@ return (
                         onClick={() => setNewFirm(firm)}
                         className={`flex items-center gap-3 p-3.5 rounded-xl border transition-colors duration-300 group text-left ${
                           isSelected 
-                            ? 'bg-[#8b7bff]/10 border-[#8b7bff]/40 shadow-[0_0_20px_rgba(139,123,255,0.05)]' 
-                            : 'bg-[#111218] border-[#232328] hover:border-white/15'
+                            ? 'bg-[var(--edge-acc)]/10 border-[var(--edge-acc)]/40 shadow-[0_0_20px_rgba(139,123,255,0.05)]' 
+                            : 'bg-[#111218] border-[var(--edge-line)] hover:border-white/15'
                         }`}
                       >
-                        <div className="w-6 h-6 rounded-full overflow-hidden bg-white flex items-center justify-center shrink-0 border border-[#232328] relative">
+                        <div className="w-6 h-6 rounded-full overflow-hidden bg-white flex items-center justify-center shrink-0 border border-[var(--edge-line)] relative">
                           {domain ? (
                             <img 
                               src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`} 
@@ -737,9 +737,9 @@ return (
                               }}
                             />
                           ) : null}
-                          <Building2 size={12} className="text-[#7A7A85]" style={{ display: domain ? 'none' : 'flex' }} />
+                          <Building2 size={12} className="text-[var(--edge-text3)]" style={{ display: domain ? 'none' : 'flex' }} />
                         </div>
-                        <span className={`text-xs font-black tracking-wide leading-tight transition-colors ${isSelected ? 'text-[#a99bff]' : 'text-[#B4B4BD] group-hover:text-[var(--edge-text)]'}`}>
+                        <span className={`text-xs font-black tracking-wide leading-tight transition-colors ${isSelected ? 'text-[var(--edge-acc)]' : 'text-[var(--edge-text2)] group-hover:text-[var(--edge-text)]'}`}>
                           {firm}
                         </span>
                       </motion.button>
@@ -779,7 +779,7 @@ return (
                           transition={{ duration: 0.15, ease: "easeOut" }}
                           className="w-full h-full flex items-center justify-center absolute"
                         >
-                          <Building2 size={16} className="text-[#7A7A85] group-focus-within:text-[#a99bff] transition-colors duration-300" />
+                          <Building2 size={16} className="text-[var(--edge-text3)] group-focus-within:text-[var(--edge-acc)] transition-colors duration-300" />
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -791,7 +791,7 @@ return (
                     placeholder="Or type custom firm name..." 
                     value={newFirm} 
                     onChange={(e) => setNewFirm(e.target.value)} 
-                    className="w-full bg-[#111218] border border-[#232328] focus:border-[#8b7bff]/40 pl-11 pr-4 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-medium transition-all duration-300 placeholder:text-[#4A4A52] focus:bg-[#14151C]" 
+                    className="w-full bg-[#111218] border border-[var(--edge-line)] focus:border-[var(--edge-acc)]/40 pl-11 pr-4 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-medium transition-all duration-300 placeholder:text-[var(--edge-text4)] focus:bg-[#14151C]" 
                   />
                 </div>
               </div>
@@ -799,7 +799,7 @@ return (
               {/* Секція: Баланс */}
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black tracking-widest text-[#7A7A85] uppercase">
+                  <label className="text-[10px] font-black tracking-widest text-[var(--edge-text3)] uppercase">
                     Account Size
                   </label>
                 </div>
@@ -821,7 +821,7 @@ return (
                         className={`py-2.5 rounded-lg text-[11px] font-bold tracking-wider transition-colors duration-300 border ${
                           isSelected
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
-                            : 'bg-[#111218] text-[#7A7A85] border-[#232328] hover:border-white/15 hover:text-[#B4B4BD]'
+                            : 'bg-[#111218] text-[var(--edge-text3)] border-[var(--edge-line)] hover:border-white/15 hover:text-[var(--edge-text2)]'
                         }`}
                       >
                         ${amount >= 1000 ? `${amount / 1000}k` : amount}
@@ -842,7 +842,7 @@ return (
                     placeholder="100000" 
                     value={newBalance} 
                     onChange={(e) => setNewBalance(e.target.value)} 
-                    className={`w-full bg-[#0D0E13] border border-[#232328] group-focus-within:border-emerald-500/40 pl-9 pr-4 py-4 rounded-xl text-xl text-emerald-400 outline-none font-mono font-bold transition-all duration-300 placeholder:text-[#4A4A52] shadow-inner shadow-black/50 ${noSpinnerClass}`}
+                    className={`w-full bg-[#0D0E13] border border-[var(--edge-line)] group-focus-within:border-emerald-500/40 pl-9 pr-4 py-4 rounded-xl text-xl text-emerald-400 outline-none font-mono font-bold transition-all duration-300 placeholder:text-[var(--edge-text4)] shadow-inner shadow-black/50 ${noSpinnerClass}`}
                   />
                 </div>
               </div>
@@ -851,8 +851,8 @@ return (
                   кабінеті брокера (FTMO і подібні: 5% денний, 10%
                   загальний). Поки що ніде не рахується автоматично. */}
               <div className="flex flex-col gap-4">
-                <label className="text-[10px] font-black tracking-widest text-[#7A7A85] uppercase">
-                  Risk limits <span className="normal-case font-medium tracking-normal text-[#4A4A52]">(optional, from your prop's rules)</span>
+                <label className="text-[10px] font-black tracking-widest text-[var(--edge-text3)] uppercase">
+                  Risk limits <span className="normal-case font-medium tracking-normal text-[var(--edge-text4)]">(optional, from your prop's rules)</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="relative group">
@@ -863,9 +863,9 @@ return (
                       placeholder="5"
                       value={newDailyLoss}
                       onChange={(e) => setNewDailyLoss(e.target.value)}
-                      className={`w-full bg-[#111218] border border-[#232328] focus:border-[#8b7bff]/40 pl-4 pr-9 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-mono font-bold transition-all duration-300 placeholder:text-[#4A4A52] placeholder:font-normal ${noSpinnerClass}`}
+                      className={`w-full bg-[#111218] border border-[var(--edge-line)] focus:border-[var(--edge-acc)]/40 pl-4 pr-9 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-mono font-bold transition-all duration-300 placeholder:text-[var(--edge-text4)] placeholder:font-normal ${noSpinnerClass}`}
                     />
-                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4A4A52]">% / day</span>
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--edge-text4)]">% / day</span>
                   </div>
                   <div className="relative group">
                     <input
@@ -875,9 +875,9 @@ return (
                       placeholder="10"
                       value={newTotalLoss}
                       onChange={(e) => setNewTotalLoss(e.target.value)}
-                      className={`w-full bg-[#111218] border border-[#232328] focus:border-[#8b7bff]/40 pl-4 pr-9 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-mono font-bold transition-all duration-300 placeholder:text-[#4A4A52] placeholder:font-normal ${noSpinnerClass}`}
+                      className={`w-full bg-[#111218] border border-[var(--edge-line)] focus:border-[var(--edge-acc)]/40 pl-4 pr-9 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-mono font-bold transition-all duration-300 placeholder:text-[var(--edge-text4)] placeholder:font-normal ${noSpinnerClass}`}
                     />
-                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4A4A52]">% total</span>
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--edge-text4)]">% total</span>
                   </div>
                 </div>
               </div>
@@ -889,7 +889,7 @@ return (
                 whileTap={{ scale: 0.98 }}
                 type="submit" 
                 disabled={isSubmitting} 
-                className="relative overflow-hidden w-full mt-2 h-[52px] bg-[#111218] border border-[#232328] rounded-xl transition-all duration-300 shadow-[0_4px_25px_rgba(0,0,0,0.7)] flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none group"
+                className="relative overflow-hidden w-full mt-2 h-[52px] bg-[#111218] border border-[var(--edge-line)] rounded-xl transition-all duration-300 shadow-[0_4px_25px_rgba(0,0,0,0.7)] flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none group"
               >
                 <div 
                   className="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"
@@ -900,9 +900,9 @@ return (
                 
                 <div className="relative z-10 flex items-center justify-center h-full w-full pointer-events-none">
                   {isSubmitting ? (
-                    <Loader2 size={18} className="animate-spin text-[#8b7bff]" />
+                    <Loader2 size={18} className="animate-spin text-[var(--edge-acc)]" />
                   ) : (
-                    <span className="text-[#7A7A85] font-sans font-medium uppercase tracking-[0.25em] text-[10.5px] leading-none group-hover:text-[var(--edge-text)] transition-colors duration-300 drop-shadow-[0_0_12px_rgba(139,123,255,0.15)]">
+                    <span className="text-[var(--edge-text3)] font-sans font-medium uppercase tracking-[0.25em] text-[10.5px] leading-none group-hover:text-[var(--edge-text)] transition-colors duration-300 drop-shadow-[0_0_12px_rgba(139,123,255,0.15)]">
                       {editingId ? 'Save Configuration' : 'Create Prop Account'}
                     </span>
                   )}

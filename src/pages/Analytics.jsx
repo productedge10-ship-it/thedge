@@ -103,7 +103,7 @@ export default function Analytics() {
       <div
         className="sticky top-0 z-30"
         style={{
-          background: 'rgba(10,10,12,0.82)',
+          background: 'var(--edge-panel, rgba(10,10,12,0.82))',
           backdropFilter: 'blur(18px)',
           borderBottom: `1px solid ${T.line}`,
         }}

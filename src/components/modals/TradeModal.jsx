@@ -43,13 +43,18 @@ const PURPLE = '#7C6CF6';
 const BAD = '#FF5C6E';
 const BAD_RGB = '255,92,110';
 const AMBER = '#F5B54A';
-const CARD_BG = '#101214';
-const FOOTER_BG = '#0c0e10';
-const FIELD_BG = '#15181b';
+/* Поверхні модалки — через токени теми, тому вона світлішає разом із
+   рештою застосунку. Раніше було намертво темне (#101214 і т.п.), і у
+   світлій темі вся форма лишалась чорною плямою. */
+const CARD_BG = 'var(--edge-surface, #101214)';
+const FOOTER_BG = 'var(--edge-sunken, #0c0e10)';
+const FIELD_BG = 'var(--edge-sunken, #15181b)';
 const MONO = "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace";
 
-const txt = (a) => `rgba(242,244,243,${a})`;
-const line = (a) => `rgba(255,255,255,${a})`;
+/* txt()/line() крутять прозорість, тому їм потрібен саме триплет, а не
+   готовий rgba-токен. */
+const txt = (a) => `rgba(var(--edge-text-rgb, 242,244,243), ${a})`;
+const line = (a) => `rgba(var(--edge-hair-rgb, 255,255,255), ${a})`;
 
 const DEFAULT_SESSIONS = ['Asia', 'London', 'New York'];
 /* Той самий колірний код сесій, що й у деталях угоди: Азія —
@@ -71,7 +76,7 @@ const RESULT_COLORS = {
   Lose: { c: BAD, rgb: BAD_RGB },
   BE: { c: AMBER, rgb: '245,181,74' },
   'In Progress': { c: '#60a5fa', rgb: '96,165,250' },
-  Missed: { c: '#9a9aa3', rgb: '154,154,163' },
+  Missed: { c: 'var(--edge-text3)', rgb: '154,154,163' },
 };
 const DEFAULT_PAIRS = ['GER40', 'EURUSD', 'NQ100', 'S&P500', 'GOLD', 'NZD/USD', 'BTC', 'ETH', 'SOL'];
 
@@ -207,7 +212,7 @@ function AssetPicker({ value, onChange }) {
             fontFamily: T.sans,
             background: value ? `rgba(${ACCENT_RGB},0.07)` : FIELD_BG,
             border: `1px solid ${value ? `rgba(${ACCENT_RGB},0.3)` : (o ? line(0.16) : 'transparent')}`,
-            color: '#f2f4f3',
+            color: 'var(--edge-text)',
           }}
         >
           {value ? (
@@ -226,7 +231,7 @@ function AssetPicker({ value, onChange }) {
       )}
     >
       {({ close }) => (
-        <div className="w-[320px] overflow-hidden rounded-2xl" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}>
+        <div className="w-[320px] overflow-hidden rounded-2xl" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px var(--edge-panel-glow, rgba(0,0,0,0.5))' }}>
           <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: `1px solid ${line(0.08)}` }}>
             <Search size={12} style={{ color: txt(0.5) }} />
             <input
@@ -235,7 +240,7 @@ function AssetPicker({ value, onChange }) {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search or new asset…"
               className="w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:opacity-50"
-              style={{ fontFamily: T.sans, color: '#f2f4f3' }}
+              style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
             />
           </div>
           <div className="max-h-[220px] overflow-y-auto p-1.5">
@@ -357,7 +362,7 @@ function SessionPicker({ value, onChange }) {
       )}
     >
       {({ close }) => (
-        <div className="w-[250px] overflow-hidden rounded-2xl p-2" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}>
+        <div className="w-[250px] overflow-hidden rounded-2xl p-2" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px var(--edge-panel-glow, rgba(0,0,0,0.5))' }}>
           <div className="flex flex-col gap-0.5">
             {all.map((s) => {
               const on = s.name === value;
@@ -374,7 +379,7 @@ function SessionPicker({ value, onChange }) {
                         onChange={(e) => setEditName(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') renameSession(s.id); if (e.key === 'Escape') setEditingId(null); }}
                         className="h-8 w-full min-w-0 bg-transparent text-[13.5px] outline-none"
-                        style={{ fontFamily: T.sans, color: '#f2f4f3' }}
+                        style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
                       />
                       <button
                         type="button"
@@ -426,7 +431,7 @@ function SessionPicker({ value, onChange }) {
                   onKeyDown={(e) => { if (e.key === 'Enter') addSession(); if (e.key === 'Escape') { setAdding(false); setNewName(''); } }}
                   placeholder="Session name…"
                   className="h-8 w-full min-w-0 bg-transparent text-[13.5px] outline-none placeholder:opacity-45"
-                  style={{ fontFamily: T.sans, color: '#f2f4f3' }}
+                  style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
                 />
                 <button
                   type="button"
@@ -498,7 +503,7 @@ function StatusPicker({ value, onChange }) {
       )}
     >
       {({ close }) => (
-        <div className="w-[280px] overflow-hidden rounded-2xl p-2" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}>
+        <div className="w-[280px] overflow-hidden rounded-2xl p-2" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px var(--edge-panel-glow, rgba(0,0,0,0.5))' }}>
           {RESULT_CHIPS.map((o) => {
             const on = o === value;
             const c = RESULT_COLORS[o];
@@ -591,7 +596,7 @@ function TradeDate({ value, onChange }) {
       {({ close }) => (
         <div
           className="rounded-2xl p-2"
-          style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}
+          style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px var(--edge-panel-glow, rgba(0,0,0,0.5))' }}
         >
           <DayPicker
             mode="single"
@@ -608,20 +613,20 @@ function TradeDate({ value, onChange }) {
               font-family: ${T.sans}; color: ${txt(0.8)}; }
             .edge-daypicker .rdp-months { margin: 0; }
             .edge-daypicker .rdp-caption_label { font-size: 14px; font-weight: 700;
-              color: #f2f4f3; text-transform: capitalize; letter-spacing: -0.01em; }
+              color: var(--edge-text); text-transform: capitalize; letter-spacing: -0.01em; }
             .edge-daypicker .rdp-nav_button { color: ${txt(0.6)}; border-radius: 10px;
               width: 32px; height: 32px; transition: background .2s, color .2s; }
-            .edge-daypicker .rdp-nav_button:hover { background: ${line(0.06)} !important; color: #f2f4f3; }
+            .edge-daypicker .rdp-nav_button:hover { background: ${line(0.06)} !important; color: var(--edge-text); }
             .edge-daypicker .rdp-head_cell { font-size: 11.5px; font-weight: 700;
               text-transform: uppercase; letter-spacing: .08em; color: ${txt(0.4)}; }
             .edge-daypicker .rdp-day { border-radius: 10px; font-size: 13.5px; font-weight: 600;
               color: ${txt(0.8)}; border: 1px solid transparent;
               transition: background .18s, color .18s, border-color .18s; }
             .edge-daypicker .rdp-day:hover:not(.rdp-day_selected) {
-              background: ${line(0.06)} !important; color: #f2f4f3; border-color: ${line(0.08)}; }
+              background: ${line(0.06)} !important; color: var(--edge-text); border-color: ${line(0.08)}; }
             .edge-daypicker .rdp-day_today:not(.rdp-day_selected) { color: ${ACCENT}; border-color: rgba(${ACCENT_RGB},0.35); }
             .edge-daypicker .rdp-day_selected, .edge-daypicker .rdp-day_selected:hover {
-              background: ${ACCENT} !important; color: #05201a !important; font-weight: 800; }
+              background: ${ACCENT} !important; color: var(--edge-on-acc) !important; font-weight: 800; }
             .edge-daypicker .rdp-day_outside { color: ${txt(0.4)}; opacity: .55; }
           `}</style>
         </div>
@@ -641,7 +646,7 @@ function AccountPicker({ value, options, onChange }) {
           type="button"
           onClick={toggle}
           className="flex h-[52px] w-full items-center justify-between gap-2 rounded-xl px-4 text-[15px] font-semibold"
-          style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${open ? line(0.16) : line(0.08)}`, color: value ? '#f2f4f3' : txt(0.5) }}
+          style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${open ? line(0.16) : line(0.08)}`, color: value ? 'var(--edge-text)' : txt(0.5) }}
         >
           <span className="flex min-w-0 items-center gap-2">
             <Wallet size={14} strokeWidth={2.2} style={{ color: txt(0.5) }} />
@@ -654,7 +659,7 @@ function AccountPicker({ value, options, onChange }) {
       {({ close }) => (
         <div
           className="w-[240px] overflow-hidden rounded-2xl p-1.5"
-          style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}
+          style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px var(--edge-panel-glow, rgba(0,0,0,0.5))' }}
         >
           {options.length === 0 && (
             <div className="px-3 py-5 text-center text-[13px]" style={{ fontFamily: T.sans, color: txt(0.5) }}>
@@ -698,7 +703,7 @@ function ShotZone({ image, onPaste, onClear, label, tone, compact }) {
               type="button"
               onClick={onClear}
               className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-xl opacity-0 transition-all duration-200 group-hover:opacity-100"
-              style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${line(0.14)}`, color: txt(0.85), backdropFilter: 'blur(8px)' }}
+              style={{ background: 'var(--edge-panel, rgba(10,10,12,0.82))', border: `1px solid ${line(0.14)}`, color: txt(0.85), backdropFilter: 'blur(8px)' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = BAD; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.85); }}
             >
@@ -730,7 +735,7 @@ function ShotZone({ image, onPaste, onClear, label, tone, compact }) {
             type="button"
             onClick={onClear}
             className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-xl opacity-0 transition-all duration-200 group-hover:opacity-100"
-            style={{ background: 'rgba(10,10,12,0.8)', border: `1px solid ${line(0.14)}`, color: txt(0.8), backdropFilter: 'blur(8px)' }}
+            style={{ background: 'var(--edge-panel, rgba(10,10,12,0.82))', border: `1px solid ${line(0.14)}`, color: txt(0.8), backdropFilter: 'blur(8px)' }}
           >
             <X size={15} strokeWidth={2.6} />
           </button>
@@ -1165,7 +1170,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
             exit={{ opacity: 0, y: 18, scale: 0.985 }}
             transition={SPRING}
             className="my-auto w-full max-w-[760px] overflow-hidden rounded-[22px]"
-            style={{ background: CARD_BG, border: `1px solid ${line(0.08)}`, boxShadow: '0 40px 100px -14px rgba(0,0,0,0.65)' }}
+            style={{ background: CARD_BG, border: `1px solid ${line(0.08)}`, boxShadow: '0 40px 100px -14px var(--edge-panel-glow, rgba(0,0,0,0.4))' }}
           >
             {/* ─────────── Шапка ─────────── */}
             <div className="flex flex-col gap-6 px-6 pb-6 pt-8 sm:px-10 sm:pt-[34px]" style={{ borderBottom: `1px solid ${line(0.06)}` }}>
@@ -1176,7 +1181,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       ? `Journal entry · ${tradeDate || todayLocal()}`
                       : `Journal entry · ${selectedPair || '—'} · ${tradeType} · ${rr ? `${rr}R` : '—'}`}
                   </span>
-                  <h2 className="text-[27px] font-bold leading-none sm:text-[34px]" style={{ fontFamily: T.display, color: '#f2f4f3', letterSpacing: '-0.025em' }}>
+                  <h2 className="text-[27px] font-bold leading-none sm:text-[34px]" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.025em' }}>
                     {step === 0
                       ? (existingTrade ? 'Edit Trade' : 'Log Trade')
                       : 'Execution Review'}
@@ -1187,7 +1192,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                   onClick={onClose}
                   className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[15px] transition-colors duration-200 sm:h-9 sm:w-9"
                   style={{ border: `1px solid ${line(0.09)}`, color: txt(0.6) }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#f2f4f3'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-text)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.6); }}
                 >
                   <X size={15} strokeWidth={2.2} />
@@ -1210,7 +1215,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         <span className="text-[13px] font-semibold" style={{ fontFamily: MONO, color: on ? ACCENT : done ? ACCENT : txt(0.45) }}>
                           {done ? '✓' : `0${i + 1}`}
                         </span>
-                        <span className="text-[14px]" style={{ fontFamily: T.sans, fontWeight: on ? 600 : 500, color: on ? '#f2f4f3' : txt(0.5) }}>
+                        <span className="text-[14px]" style={{ fontFamily: T.sans, fontWeight: on ? 600 : 500, color: on ? 'var(--edge-text)' : txt(0.5) }}>
                           {s}
                         </span>
                       </span>
@@ -1263,7 +1268,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                               value={risk}
                               onChange={(e) => setRisk(e.target.value)}
                               className="w-full min-w-0 bg-transparent text-[16px] font-bold outline-none"
-                              style={{ fontFamily: MONO, color: '#f2f4f3' }}
+                              style={{ fontFamily: MONO, color: 'var(--edge-text)' }}
                             />
                             <span className="shrink-0 text-[13px] font-medium" style={{ fontFamily: MONO, color: txt(0.55) }}>%</span>
                           </div>
@@ -1274,7 +1279,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                               inputMode="decimal"
                               placeholder="2.5"
                               className="w-full min-w-0 bg-transparent text-[16px] font-bold outline-none placeholder:opacity-40"
-                              style={{ fontFamily: MONO, color: rr ? ACCENT : '#f2f4f3' }}
+                              style={{ fontFamily: MONO, color: rr ? ACCENT : 'var(--edge-text)' }}
                             />
                             <span className="shrink-0 text-[13px] font-medium" style={{ fontFamily: MONO, color: txt(0.55) }}>R</span>
                           </div>
@@ -1302,7 +1307,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                 onChange={(e) => setSetupName(e.target.value)}
                                 placeholder="e.g. Sweep + BOS"
                                 className="flex h-11 w-full items-center border-0 border-b bg-transparent px-0 text-[15.5px] font-semibold outline-none transition-colors placeholder:font-normal placeholder:opacity-45"
-                                style={{ borderColor: line(0.08), color: '#f2f4f3', fontFamily: T.sans }}
+                                style={{ borderColor: line(0.08), color: 'var(--edge-text)', fontFamily: T.sans }}
                                 onFocus={(e) => { e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.4)`; }}
                                 onBlur={(e) => { e.currentTarget.style.borderColor = line(0.08); }}
                               />
@@ -1357,7 +1362,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                           type="button"
                                           onClick={() => removeTradeImage(i)}
                                           className="absolute inset-0 hidden items-center justify-center transition-colors group-hover:flex"
-                                          style={{ background: 'rgba(10,10,12,0.68)', color: '#fff' }}
+                                          style={{ background: 'rgba(10,10,12,0.68)', color: 'var(--edge-text)' }}
                                         >
                                           <X size={12} strokeWidth={2.8} />
                                         </button>
@@ -1438,9 +1443,9 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                             <div
                               key={qq.key}
                               className="flex flex-col justify-between gap-3 rounded-[13px] p-3.5 transition-colors duration-200"
-                              style={{ background: on ? '#15181a' : '#131517', border: `1px solid ${on ? `${tone}3d` : line(0.06)}` }}
+                              style={{ background: on ? 'var(--edge-surface-hi)' : 'var(--edge-sunken)', border: `1px solid ${on ? `${tone}3d` : line(0.06)}` }}
                             >
-                              <span className="min-h-[38px] text-[14px] leading-[1.35] font-medium" style={{ fontFamily: T.sans, color: '#f2f4f3' }}>
+                              <span className="min-h-[38px] text-[14px] leading-[1.35] font-medium" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
                                 {qq.q}
                               </span>
                               <div className="flex gap-1.5">
@@ -1543,7 +1548,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                         type="button"
                                         onClick={() => removeMistakeImage(i)}
                                         className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-lg opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                                        style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${line(0.14)}`, color: BAD }}
+                                        style={{ background: 'var(--edge-panel, rgba(10,10,12,0.82))', border: `1px solid ${line(0.14)}`, color: BAD }}
                                       >
                                         <X size={13} strokeWidth={2.8} />
                                       </button>
@@ -1610,7 +1615,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         type="button"
                         onClick={goNext}
                         className="rounded-xl px-[26px] py-3.5 text-[15px] font-semibold transition-transform duration-150 active:scale-[0.98]"
-                        style={{ fontFamily: T.sans, background: ACCENT, color: '#05201a' }}
+                        style={{ fontFamily: T.sans, background: ACCENT, color: 'var(--edge-on-acc)' }}
                       >
                         Next →
                       </button>
@@ -1638,7 +1643,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                           fontFamily: T.sans,
                           cursor: submitReady ? 'pointer' : 'not-allowed',
                           background: submitReady ? ACCENT : line(0.06),
-                          color: submitReady ? '#05201a' : txt(0.4),
+                          color: submitReady ? 'var(--edge-on-acc)' : txt(0.4),
                           border: `1px solid ${submitReady ? ACCENT : line(0.08)}`,
                           boxShadow: submitReady ? `0 0 40px rgba(${ACCENT_RGB},0.28)` : 'none',
                           opacity: loading ? 0.7 : 1,

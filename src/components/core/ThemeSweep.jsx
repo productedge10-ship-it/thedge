@@ -44,7 +44,10 @@ export default function ThemeSweep() {
       if (noMotion) { applyTheme(id); return; }
 
       setRun(id);
-      const swap = setTimeout(() => applyTheme(id), DUR * SWAP);
+      /* animate: кольори міняються не миттєво, а з короткою
+         transition — під смугою це виглядає як плавне проявлення
+         іншої теми, без стрибка яскравості. */
+      const swap = setTimeout(() => applyTheme(id, { animate: true }), DUR * SWAP);
       const done = setTimeout(() => setRun(null), DUR);
 
       return () => { clearTimeout(swap); clearTimeout(done); };
@@ -72,14 +75,17 @@ export default function ThemeSweep() {
           <motion.div
             className="absolute left-1/2 top-1/2"
             style={{
-              width: '320vmax',
-              height: '320vmax',
-              marginLeft: '-160vmax',
-              marginTop: '-160vmax',
+              width: '240vmax',
+              height: '240vmax',
+              marginLeft: '-120vmax',
+              marginTop: '-120vmax',
               rotate: '45deg',
               transformOrigin: 'center',
-              backdropFilter: 'blur(18px)',
-              WebkitBackdropFilter: 'blur(18px)',
+              /* Менший blur і менше полотно: 18px на 320vmax змушували
+                 браузер щокадру розмивати площу в кілька екранів —
+                 звідси просідання кадрів під час переходу. */
+              backdropFilter: 'blur(9px)',
+              WebkitBackdropFilter: 'blur(9px)',
               /* Мʼякий край: різка межа виглядала б як шторка, а не як
                  перегорнута сторінка. */
               background: `linear-gradient(

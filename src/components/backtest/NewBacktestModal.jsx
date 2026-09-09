@@ -100,7 +100,7 @@ function FloatField({ label, value, onChange, onKeyDown, placeholder, autoFocus,
           left: 16,
           top: 11,
           ...mono(9.5, { letterSpacing: '1.8px', fontWeight: 600 }),
-          color: focus ? '#9b8dff' : T.text3,
+          color: focus ? 'var(--edge-acc)' : T.text3,
           opacity: up ? 1 : 0,
           transform: `translateY(${up ? 0 : 9}px)`,
           transition: `opacity ${FLOAT_MS}ms ${FLOAT_EASE}, transform ${FLOAT_MS}ms ${FLOAT_EASE}, color .2s ease`,
@@ -322,7 +322,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
                   style={{
                     ...mono(10.5, { letterSpacing: '1.1px', fontWeight: 700 }),
                     padding: '5px 9px', borderRadius: 7,
-                    color: '#c2b8ff',
+                    color: 'var(--edge-acc)',
                     background: `rgba(${ACT.rgb},0.18)`,
                     border: `1px solid rgba(${ACT.rgb},0.40)`,
                   }}
@@ -380,7 +380,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
               {rows.map((r) => (
                 <div key={r.k} className="flex items-center justify-between" style={{ gap: 10 }}>
                   <span style={{ fontFamily: T.sans, fontSize: 13, color: T.text2 }}>{r.k}</span>
-                  <span style={mono(14, { fontWeight: 600, color: r.acc ? '#c2b8ff' : T.text })}>{r.v}</span>
+                  <span style={mono(14, { fontWeight: 600, color: r.acc ? 'var(--edge-acc)' : T.text })}>{r.v}</span>
                 </div>
               ))}
             </div>

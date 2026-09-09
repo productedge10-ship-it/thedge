@@ -96,7 +96,7 @@ function Choice({ label, value, choices, tone, onPick, index }) {
               style={{
                 position: 'relative', padding: '1px 0 5px', border: 0, background: 'transparent',
                 cursor: 'pointer', fontFamily: F.sans, fontSize: 13, fontWeight: on ? 600 : 500,
-                letterSpacing: '-0.1px', color: on ? '#fff' : P.text5,
+                letterSpacing: '-0.1px', color: on ? 'var(--edge-text)' : P.text5,
                 transition: 'color .18s',
               }}
               onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = P.text2; }}
@@ -149,7 +149,7 @@ function WidthPicker({ value, tone, onPick }) {
               onClick={() => onPick(n)}
               style={{
                 flex: 1, height: 24, borderRadius: 7, cursor: 'pointer',
-                background: on ? `${tone}2e` : '#ffffff08',
+                background: on ? `${tone}2e` : 'rgba(var(--edge-hair-rgb),0.03)',
                 border: `1px solid ${n === value ? `${tone}8c` : on ? `${tone}3d` : 'transparent'}`,
                 transition: 'all .18s',
               }}
@@ -197,7 +197,7 @@ function SettingsPanel({ id, item, onChange, onClose }) {
         background: 'rgba(14,14,19,.92)',
         backdropFilter: 'blur(28px) saturate(140%)',
         WebkitBackdropFilter: 'blur(28px) saturate(140%)',
-        border: '1px solid #ffffff14', borderRadius: 16,
+        border: '1px solid rgba(var(--edge-hair-rgb),0.08)', borderRadius: 16,
         padding: '15px 16px 17px', display: 'flex', flexDirection: 'column', gap: 17,
         boxShadow: '0 24px 60px -18px rgba(0,0,0,.85)',
         cursor: 'default',
@@ -205,7 +205,7 @@ function SettingsPanel({ id, item, onChange, onClose }) {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ width: 5, height: 5, borderRadius: 99, background: tone, flexShrink: 0 }} />
-        <span style={{ flex: 1, fontFamily: F.sans, fontSize: 12.5, fontWeight: 600, color: '#fff', letterSpacing: '-0.1px' }}>
+        <span style={{ flex: 1, fontFamily: F.sans, fontSize: 12.5, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.1px' }}>
           {en(spec.title)}
         </span>
         <button
@@ -213,7 +213,7 @@ function SettingsPanel({ id, item, onChange, onClose }) {
           onClick={onClose}
           aria-label="Close"
           style={{ display: 'grid', placeItems: 'center', width: 20, height: 20, borderRadius: 6, border: 0, background: 'transparent', cursor: 'pointer', color: P.dim }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-text)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = P.dim; }}
         >
           <X size={13} />
@@ -286,7 +286,7 @@ function CardShell({
            box-shadow, не border: рамка змінила б внутрішній розмір і
            вміст смикнувся б на піксель. */
         boxShadow: overlay
-          ? `0 40px 80px -28px #000000e6, 0 0 0 1px ${tone}3d`
+          ? `0 40px 80px -28px var(--edge-panel, rgba(0,0,0,0.9)), 0 0 0 1px ${tone}3d`
           : dropTarget ? `0 0 0 2px ${tone}66, 0 0 34px -6px ${tone}4d` : 'none',
         cursor: overlay || lifted ? 'grabbing' : edit ? 'grab' : 'default',
         transition: overlay ? 'none' : `opacity ${REMOVE_MS}ms ease, ${CSS_SPRING}`,
@@ -453,7 +453,7 @@ function SortableCard({ item, edit, removing, ...rest }) {
 
 function IconBtn({ children, onClick, title, danger, active, tone = P.acc }) {
   const [hover, setHover] = useState(false);
-  const color = danger && hover ? P.bad : active ? tone : hover ? '#fff' : P.text5;
+  const color = danger && hover ? P.bad : active ? tone : hover ? 'var(--edge-text)' : P.text5;
 
   return (
     <button
@@ -468,7 +468,7 @@ function IconBtn({ children, onClick, title, danger, active, tone = P.acc }) {
       style={{
         display: 'grid', placeItems: 'center', width: 27, height: 27, borderRadius: 9,
         cursor: 'pointer', color, border: `1px solid ${active ? `${tone}4d` : 'transparent'}`,
-        background: active ? `${tone}24` : hover ? (danger ? '#ff7b7b1f' : '#ffffff14') : 'transparent',
+        background: active ? `${tone}24` : hover ? (danger ? 'rgba(var(--edge-bad-rgb),0.12)' : 'rgba(var(--edge-hair-rgb),0.08)') : 'transparent',
         transition: 'all .16s',
       }}
     >
@@ -504,13 +504,13 @@ function AddPanel({ hidden, onAdd, onClose }) {
         <span style={hairline()} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '0 18px', marginBottom: 14 }}>
-          <span style={{ fontFamily: F.sans, fontSize: 13, fontWeight: 600, color: '#fff', letterSpacing: '-0.2px' }}>
+          <span style={{ fontFamily: F.sans, fontSize: 13, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.2px' }}>
             Бібліотека
           </span>
           <span style={{ fontFamily: F.sans, fontSize: 12, color: P.dim }}>
             клікни, щоб додати в кінець, або перетягни на потрібне місце
           </span>
-          <span style={{ height: 1, flex: 1, background: 'linear-gradient(90deg,#26262f,transparent)' }} />
+          <span style={{ height: 1, flex: 1, background: 'linear-gradient(90deg,var(--edge-line),transparent)' }} />
           <IconBtn title="Згорнути" onClick={onClose}><X size={14} /></IconBtn>
         </div>
 
@@ -563,7 +563,7 @@ function LibCard({ id, onAdd }) {
         position: 'relative', overflow: 'hidden', textAlign: 'left', cursor: 'grab',
         display: 'flex', flexDirection: 'column', gap: 11, padding: 13,
         width: 214, flexShrink: 0, borderRadius: 16, touchAction: 'none',
-        background: hover ? P.cardHi : '#ffffff05',
+        background: hover ? P.cardHi : 'rgba(var(--edge-hair-rgb),0.02)',
         border: `1px solid ${hover ? `${tone}59` : P.lineSoft}`,
         /* Без підйому: у горизонтальному ряду картка, що вилазить
            угору, читається як збій прокрутки. */
@@ -576,7 +576,7 @@ function LibCard({ id, onAdd }) {
       <span
         style={{
           position: 'relative', display: 'block', padding: '11px 12px', borderRadius: 11,
-          background: '#00000047', border: `1px solid ${hover ? `${tone}2e` : '#ffffff0a'}`,
+          background: 'var(--edge-panel-glow, rgba(0,0,0,0.28))', border: `1px solid ${hover ? `${tone}2e` : 'rgba(var(--edge-hair-rgb),0.04)'}`,
           transition: 'border-color .2s',
         }}
       >
@@ -585,7 +585,7 @@ function LibCard({ id, onAdd }) {
 
       <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
         <w.icon size={13} color={tone} style={{ flexShrink: 0 }} />
-        <span style={{ flex: 1, minWidth: 0, fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ flex: 1, minWidth: 0, fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: 'var(--edge-text)', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {w.title}
         </span>
         <Plus
@@ -614,16 +614,16 @@ function LibGhost({ id }) {
         width: 214, padding: 13, borderRadius: 16, cursor: 'grabbing',
         display: 'flex', flexDirection: 'column', gap: 11,
         background: P.cardHi, border: `1px solid ${tone}8c`,
-        boxShadow: `0 30px 60px -24px #000, 0 0 0 1px ${tone}3d`,
+        boxShadow: `0 30px 60px -24px var(--edge-panel-glow, rgba(0,0,0,0.5)), 0 0 0 1px ${tone}3d`,
         transform: 'rotate(-1.4deg)',
       }}
     >
-      <span style={{ display: 'block', padding: '11px 12px', borderRadius: 11, background: '#00000047', border: `1px solid ${tone}2e` }}>
+      <span style={{ display: 'block', padding: '11px 12px', borderRadius: 11, background: 'var(--edge-panel-glow, rgba(0,0,0,0.28))', border: `1px solid ${tone}2e` }}>
         <Preview shape={w.shape} tone={tone} id={`${id}-ghost`} />
       </span>
       <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <w.icon size={13} color={tone} />
-        <span style={{ fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: '#fff' }}>{w.title}</span>
+        <span style={{ fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: 'var(--edge-text)' }}>{w.title}</span>
       </span>
     </div>
   );
@@ -726,8 +726,8 @@ export default function Board({
 
         .ov-lib::-webkit-scrollbar{ height: 6px }
         .ov-lib::-webkit-scrollbar-track{ background: transparent }
-        .ov-lib::-webkit-scrollbar-thumb{ background: #23232e; border-radius: 99px }
-        .ov-lib:hover::-webkit-scrollbar-thumb{ background: #33333f }
+        .ov-lib::-webkit-scrollbar-thumb{ background: var(--edge-line); border-radius: 99px }
+        .ov-lib:hover::-webkit-scrollbar-thumb{ background: var(--edge-line-hi) }
       `}</style>
 
       <DndContext
@@ -885,18 +885,18 @@ function ToolButton({ icon: Icon, children, onClick, active, primary, iconOnly, 
           height: 42, width: iconOnly ? 42 : undefined,
           padding: iconOnly ? 0 : '0 20px', borderRadius: 13, border: 0, cursor: 'pointer',
           overflow: 'hidden', whiteSpace: 'nowrap',
-          background: `linear-gradient(180deg, ${hover ? '#6355ff, #4a3bf5' : '#5546f8, #3f30e8'})`,
+          background: `linear-gradient(180deg, ${hover ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
           boxShadow: hover
-            ? `0 18px 40px -14px ${A(0.85)}, inset 0 1px 0 #ffffff4d`
-            : `0 12px 30px -14px ${A(0.7)}, inset 0 1px 0 #ffffff33`,
+            ? `0 18px 40px -14px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-text-rgb),0.3)`
+            : `0 12px 30px -14px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
           transform: `translateY(${hover ? '-2px' : '0'})`,
           transition: CSS_SPRING,
         }}
       >
-        <span style={{ position: 'absolute', insetInline: 0, top: 0, height: 1, background: 'linear-gradient(90deg,transparent,#ffffff99,transparent)' }} />
-        <Icon size={iconOnly ? 16 : 14} strokeWidth={2.4} color="#fff" />
+        <span style={{ position: 'absolute', insetInline: 0, top: 0, height: 1, background: 'linear-gradient(90deg,transparent,rgba(var(--edge-text-rgb),0.6),transparent)' }} />
+        <Icon size={iconOnly ? 16 : 14} strokeWidth={2.4} color="var(--edge-text)" />
         {!iconOnly && (
-          <span style={{ fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: '#fff', letterSpacing: '-0.1px' }}>
+          <span style={{ fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: 'var(--edge-text)', letterSpacing: '-0.1px' }}>
             {children}
           </span>
         )}
@@ -919,9 +919,9 @@ function ToolButton({ icon: Icon, children, onClick, active, primary, iconOnly, 
         height: 42, width: iconOnly ? 42 : undefined,
         padding: iconOnly ? 0 : '0 15px', borderRadius: 13, whiteSpace: 'nowrap',
         fontFamily: F.sans, fontSize: 13, fontWeight: 600,
-        color: active || hover ? '#fff' : P.text3,
-        background: active ? A(0.17) : hover ? '#ffffff14' : '#ffffff0a',
-        border: `1px solid ${active ? A(0.5) : hover ? P.lineHover : '#21212b'}`,
+        color: active || hover ? 'var(--edge-text)' : P.text3,
+        background: active ? A(0.17) : hover ? 'rgba(var(--edge-hair-rgb),0.08)' : 'rgba(var(--edge-hair-rgb),0.04)',
+        border: `1px solid ${active ? A(0.5) : hover ? P.lineHover : 'var(--edge-line)'}`,
         transition: 'all .16s',
       }}
     >

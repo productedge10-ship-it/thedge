@@ -144,7 +144,7 @@ export default function Difference() {
       </div>
 
       <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 28px', color: '#fff' }}>
-        Ти програєш не ринку.
+        Ти програєш не ринку.{' '}
         <br />
         Ти програєш тим самим трьом звичкам.
       </h2>

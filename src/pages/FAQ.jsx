@@ -14,7 +14,7 @@ import { openTour } from '../lib/tour';
 /* ------------------------------------------------------------------ */
 /*  THE EDGE — theme tokens (same as Auth page)                        */
 /* ------------------------------------------------------------------ */
-const ACCENT_HEX = 'var(--edge-acc, #8b7bff)';
+const ACCENT_HEX = 'var(--edge-acc, var(--edge-acc))';
 const ACCENT = '139,123,255';
 
 function useEdgeFonts() {
@@ -153,7 +153,7 @@ export default function FAQ() {
   const analyticsTabs = [
     {
       icon: Gauge,
-      color: 'var(--edge-acc, #8b7bff)', rgb: '139,123,255',
+      color: 'var(--edge-acc, var(--edge-acc))', rgb: '139,123,255',
       title: 'Огляд',
       desc: 'Перший екран, який відповідає на головне питання: «Як у мене справи?» — одним реченням і чотирма цифрами.',
       points: [
@@ -323,7 +323,7 @@ export default function FAQ() {
         {
           title: 'Analytics',
           icon: <BarChart2 size={22} />,
-          color: 'var(--edge-acc, #8b7bff)', rgb: '139,123,255',
+          color: 'var(--edge-acc, var(--edge-acc))', rgb: '139,123,255',
           desc: 'Математика вашої торгової системи. Детальні дашборди для пошуку вашої торгової переваги (Edge). Повний гайд — у секції вище.',
           features: [
             { title: 'Cost of Tilt', desc: "Найважливіша метрика. Показує, скільки 'R' (прибутку) ви втратили через порушення правил та емоції." },
@@ -550,7 +550,7 @@ export default function FAQ() {
               <GlassCard glow className="p-7">
                 <div
                   className="w-11 h-11 rounded-[13px] flex items-center justify-center mb-5"
-                  style={{ background: 'rgba(139,123,255,0.12)', border: '1px solid rgba(139,123,255,0.3)', color: 'var(--edge-acc, #8b7bff)' }}
+                  style={{ background: 'rgba(139,123,255,0.12)', border: '1px solid rgba(139,123,255,0.3)', color: 'var(--edge-acc, var(--edge-acc))' }}
                 >
                   <Layers size={22} strokeWidth={1.8} />
                 </div>

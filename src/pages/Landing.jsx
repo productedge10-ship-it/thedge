@@ -34,6 +34,13 @@ const FOOTER_COLS = [
   { title: 'ПРОДУКТ', links: [['#product', 'Що всередині'], ['#autoimport', 'Автоімпорт'], ['#coach', 'AI-коуч']] },
   { title: 'ТАРИФИ', links: [['#pricing', 'Ціни'], ['#pricing', 'Free'], ['#pricing', 'Pro']] },
   { title: 'ДОВІДКА', links: [['#faq', 'Питання'], ['#autoimport', 'Твої дані'], ['#faq', 'Підключення MT5']] },
+  {
+    title: 'КОНТАКТИ',
+    links: [
+      ['https://www.instagram.com/theedge.space/', 'Instagram'],
+      ['mailto:edge95944@gmail.com', 'edge95944@gmail.com'],
+    ],
+  },
 ];
 
 function Header() {
@@ -156,17 +163,21 @@ function Footer() {
           <div key={col.title} style={{ flex: '0 1 150px' }}>
             <div style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 700, letterSpacing: '1.6px', color: C.dim, marginBottom: 14 }}>{col.title}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {col.links.map(([href, label]) => (
-                <a
-                  key={label}
-                  href={href}
-                  style={{ fontFamily: F.sans, fontSize: 13.5, color: '#8a8a9c', transition: 'color .16s' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = C.accSoft; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = '#8a8a9c'; }}
-                >
-                  {label}
-                </a>
-              ))}
+              {col.links.map(([href, label]) => {
+                const external = href.startsWith('http');
+                return (
+                  <a
+                    key={label}
+                    href={href}
+                    {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    style={{ fontFamily: F.sans, fontSize: 13.5, color: '#8a8a9c', transition: 'color .16s', wordBreak: 'break-word' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = C.accSoft; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#8a8a9c'; }}
+                  >
+                    {label}
+                  </a>
+                );
+              })}
             </div>
           </div>
         ))}

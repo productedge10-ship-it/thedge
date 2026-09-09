@@ -525,7 +525,7 @@ export default function TradeDetailsModal({
                 whileTap={{ scale: 0.95 }}
                 transition={SPRING_TAP}
                 className="flex h-[34px] items-center gap-2 rounded-lg px-4 text-[14.5px] font-bold"
-                style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+                style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} strokeWidth={2.6} />}
                 Save
@@ -941,7 +941,7 @@ export default function TradeDetailsModal({
                   whileTap={{ scale: 0.96 }}
                   transition={SPRING_TAP}
                   className="flex-1 rounded-xl py-3 text-[16.5px] font-bold"
-                  style={{ background: T.bad, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+                  style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
                   Delete
                 </motion.button>

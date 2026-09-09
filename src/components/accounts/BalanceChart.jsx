@@ -32,7 +32,7 @@ const fmtDay = (iso) => {
 /* Проміжні точки — світло-фіолетові, остання (найсвіжіша) — зелена,
    як і сама лінія на своєму кінці. Один узгоджений градієнт на все:
    фіолетовий → лавандовий → зелений, зліва направо. */
-const NODE = '#a99bff';
+const NODE = 'var(--edge-acc)';
 
 export default function BalanceChart({ events, initial }) {
   const uid = useRef(Math.random().toString(36).slice(2, 8)).current;

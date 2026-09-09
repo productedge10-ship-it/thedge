@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Plus, Share2, Printer, ClipboardCheck, Briefcase, Send, Check } from 'lucide-react';
+import { Plus, Share2, ClipboardCheck, Briefcase, Send, Check } from 'lucide-react';
 import { T, SPRING } from './planTheme';
 
 /* ==================================================================
@@ -55,7 +55,6 @@ export default function PlanHeader({
   pair,
   onNewPlan,
   onShare,
-  onDownload,
   onOpenQuiz,
   isQuizFullyCompleted,
   quizCompletedCount,
@@ -134,7 +133,6 @@ export default function PlanHeader({
 
         <IconBtn icon={Send}    label="Telegram alert" onClick={onOpenTgAlert} tone={T.info} />
         <IconBtn icon={Share2}  label="Копіювати лінк"  onClick={onShare} />
-        <IconBtn icon={Printer} label="Друк / PDF"      onClick={onDownload} />
 
         {/* Головна дія хедера. Магнітний ефект прибрано — кнопка їхала
             з-під курсора; колір нейтральний, бо поруч уже є зелена
@@ -147,10 +145,10 @@ export default function PlanHeader({
             background: T.text,
             color: 'var(--edge-bg, #0A0A0C)',
             fontFamily: T.sans,
-            boxShadow: '0 6px 18px -8px rgba(250,250,250,0.35)',
+            boxShadow: '0 8px 22px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 10px 24px -8px rgba(250,250,250,0.5)')}
-          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 6px 18px -8px rgba(250,250,250,0.35)')}
+          onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 12px 28px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))')}
+          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 8px 22px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))')}
         >
           <Plus size={15} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
           New plan

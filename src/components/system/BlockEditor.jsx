@@ -158,7 +158,7 @@ function Block({
                 border: `1.5px solid ${block.checked ? T.ok : T.lineHi}`,
               }}
             >
-              {block.checked && <Check size={11} strokeWidth={3.6} style={{ color: 'var(--edge-bg, #0A0A0C)' }} />}
+              {block.checked && <Check size={11} strokeWidth={3.6} style={{ color: 'var(--edge-on-acc, #0A0A0C)' }} />}
             </button>
             {field({
               color: block.checked ? T.text4 : T.text,
