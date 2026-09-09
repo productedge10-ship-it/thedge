@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { demoClient } from './lib/demoDb';
 import { setDemoClient } from './lib/supabase';
 
@@ -37,7 +37,24 @@ import SharedStats from './pages/SharedStats';
 import PreTradeChecklist from './pages/PreTradeChecklist';
 import Calculator from './pages/Calculator';
 import News from './pages/News';
+import BlogList from './pages/BlogList';
+import BlogPost from './pages/BlogPost';
 import NotFound from './pages/Error404';
+
+/* ------------------------------------------------------------------
+   /blog без мови.
+
+   Мова блогу стоїть в адресі, бо кожна версія індексується окремо.
+   Але руками набирають саме /blog, і в такому разі краще здогадатись
+   за мовою браузера, ніж показати 404.
+------------------------------------------------------------------ */
+const BLOG_LANGS = ['uk', 'ru', 'en'];
+
+function BlogRedirect() {
+  const nav = (navigator.language || 'uk').slice(0, 2).toLowerCase();
+  const lang = BLOG_LANGS.includes(nav) ? nav : 'uk';
+  return <Navigate to={`/${lang}/blog`} replace />;
+}
 
 const router = createBrowserRouter([
   /* --- Публічні маршрути (без Layout і без захисту) ---
@@ -61,6 +78,17 @@ const router = createBrowserRouter([
       { path: 'accounts', element: <Accounts /> },
     ],
   },
+  /* ---- Блог ----
+     Публічна частина без входу: сюди приходять із пошуку, а не з
+     застосунку. Мова живе в адресі (/uk/blog/slug), бо кожна мовна
+     версія має індексуватись окремо; лендінг лишається на корені й
+     перемикає мову сам. */
+  { path: '/blog', element: <BlogRedirect /> },
+  { path: '/:lang/blog', element: <BlogList /> },
+  { path: '/:lang/blog/category/:cat', element: <BlogList /> },
+  { path: '/:lang/blog/tag/:tag', element: <BlogList /> },
+  { path: '/:lang/blog/:slug', element: <BlogPost /> },
+
   { path: '/shared/plan/:id', element: <SharedPlan /> },
   { path: '/shared/review/:id', element: <SharedReview /> },
   { path: '/shared/backtest/:id', element: <SharedBacktest /> },

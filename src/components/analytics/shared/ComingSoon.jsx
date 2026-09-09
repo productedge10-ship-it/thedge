@@ -35,11 +35,16 @@ const LINE = 'M6 74 L38 66 L70 71 L102 52 L134 57 L166 38 L198 43 L230 22 L254 1
 const AREA = LINE + ' L254 88 L6 88 Z';
 const BARS = [26, 34, 22, 46, 38, 58, 50, 72, 64, 84];
 
-/* tone може прийти як CSS-змінна (`var(--edge-acc, #8b7bff)`), а до
-   змінної не дописати альфу рядком — вийде невалідний колір, і
-   браузер мовчки викине всю властивість. Тому напівпрозорі відтінки
-   робимо тільки з чесного hex, інакше беремо колір як є. */
-const soft = (c, hex) => (typeof c === 'string' && c.startsWith('#') ? c + hex : c);
+/* tone може прийти і чесним hex, і CSS-змінною (`var(--edge-acc,
+   #8b7bff)`). До змінної не дописати альфу рядком: `var(...)1f` це
+   невалідний колір, браузер мовчки викидає всю властивість і
+   підсвітка йде на повну яскравість замість дванадцяти відсотків.
+   Саме через це заглушка нейро-звіту світилась суцільним фіолетовим
+   і з'їдала текст.
+
+   color-mix розводить будь-який колір прозорістю, не розбираючи
+   його на складові, тому працює однаково для обох випадків. */
+const soft = (c, pct) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 
 export default function ComingSoon({
   tone = 'var(--edge-acc, #8b7bff)',
@@ -112,7 +117,7 @@ export default function ComingSoon({
         aria-hidden
         style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: `radial-gradient(420px circle at 22% 118%, ${soft(tone, '1f')}, transparent 70%)`,
+          background: `radial-gradient(420px circle at 22% 118%, ${soft(tone, 12)}, transparent 70%)`,
         }}
       />
 
@@ -173,7 +178,7 @@ export default function ComingSoon({
               color: tone,
             }}
           >
-            <i style={{ width: 5, height: 5, borderRadius: 99, background: tone, boxShadow: `0 0 8px ${soft(tone, 'b3')}`, display: 'block' }} />
+            <i style={{ width: 5, height: 5, borderRadius: 99, background: tone, boxShadow: `0 0 8px ${soft(tone, 70)}`, display: 'block' }} />
             {eyebrow}
           </span>
 

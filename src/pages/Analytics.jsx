@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { T } from '../lib/theme';
@@ -110,121 +111,161 @@ export default function Analytics() {
       >
         <div className="mx-auto w-full max-w-[1800px] px-4 pt-4 lg:px-8">
 
-          {/* назва · акаунти · період · експорт */}
-          <div className="mb-3 flex flex-wrap items-center gap-3">
+          {/* ---------- рядок 1: хто я і одна дія ----------
+
+              Раніше тут стояло все одразу: назва, акаунти, чотири
+              кнопки періоду й експорт. Виходив рівний за вагою рядок,
+              у якому нічого не головне. Тепер верхній рядок відповідає
+              на «де я і чий це рахунок», а нижній — на «що саме
+              дивлюсь». Два питання, два рядки. */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
             <h1
-              className="text-[24px] font-bold leading-none lg:text-[27px]"
+              className="shrink-0 text-[24px] font-bold leading-none lg:text-[26px]"
               style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.035em' }}
             >
               Аналітика
             </h1>
 
-            {/* акаунти */}
-            <div className="hide-scrollbar flex items-center gap-2 overflow-x-auto">
-              {s.byAccount.map((a) => (
-                <div
-                  key={a.key}
-                  className="flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold"
-                  style={{ background: T.surface, border: `1px solid ${T.line}` }}
-                >
-                  <span style={{ color: T.text3 }}>{a.key}</span>
-                  <Delta v={a.net} />
-                </div>
-              ))}
-            </div>
+            <button
+              onClick={() => setExportOpen(true)}
+              className="group ml-auto flex shrink-0 items-center justify-center gap-2 rounded-[11px] px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200"
+              style={{
+                background: `rgba(${T.accRgb},0.10)`,
+                border: `1px solid ${T.lineAcc}`,
+                color: T.acc,
+                fontFamily: T.sans,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = `rgba(${T.accRgb},0.16)`;
+                e.currentTarget.style.boxShadow = `0 8px 24px -12px rgba(${T.accRgb},0.9)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = `rgba(${T.accRgb},0.10)`;
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <Sparkles size={14} strokeWidth={2.3} className="transition-transform duration-300 group-hover:scale-110" />
+              Поділитись статистикою
+            </button>
+          </div>
 
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              {/* період */}
-              <div
-                className="flex items-center gap-1 rounded-[10px] p-1"
-                style={{ background: T.sunken, border: `1px solid ${T.line}` }}
-              >
-                {PERIODS.map((p) => {
-                  const on = period === p;
-                  return (
-                    <button
-                      key={p}
-                      onClick={() => setPeriod(p)}
-                      className="whitespace-nowrap rounded-lg px-3 py-1.5 text-[12.5px] transition-colors duration-150"
-                      style={{
-                        background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
-                        border: `1px solid ${on ? T.lineAcc : 'transparent'}`,
-                        color: on ? T.text : T.text3,
-                        fontWeight: on ? 600 : 400,
-                      }}
-                      onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text; }}
-                      onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
-                    >
-                      {p}
-                    </button>
-                  );
-                })}
-              </div>
+          {/* ---------- рядок 2: що дивлюсь ----------
 
-              {/* Експорт — не «вивантажити CSV», а зібрати постер,
-                  яким не соромно поділитись */}
-              <button
-                onClick={() => setExportOpen(true)}
-                className="group flex shrink-0 items-center justify-center gap-2 rounded-[10px] px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200"
-                style={{
-                  background: `rgba(${T.accRgb},0.10)`,
-                  border: `1px solid ${T.lineAcc}`,
-                  color: T.acc,
-                  fontFamily: T.sans,
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = `rgba(${T.accRgb},0.16)`)}
-                onMouseLeave={(e) => (e.currentTarget.style.background = `rgba(${T.accRgb},0.10)`)}
-              >
-                <Sparkles size={14} strokeWidth={2.3} className="transition-transform duration-300 group-hover:scale-110" />
-                Поділитись статистикою
-              </button>
+              Розділ і період стоять поруч, бо це одне рішення з двох
+              половин: який зріз журналу зараз на екрані. Обидва перемикачі
+              з ковзним індикатором на layoutId: підкреслення й пігулка
+              переїжджають, а не перемальовуються, і рух показує, що це
+              один набір, а не окремі кнопки. */}
+          <div className="mt-3.5 flex items-end justify-between gap-6">
+            <nav className="hide-scrollbar -mb-px flex items-center gap-0.5 overflow-x-auto">
+              {NAV.map(({ id, label, icon: Icon, badge, soon }) => {
+                const on = tab === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setTab(id)}
+                    className="relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-[10px] px-3.5 pb-3 pt-2 text-[13.5px] transition-colors duration-150"
+                    style={{ color: on ? T.text : T.text3, fontWeight: on ? 600 : 450 }}
+                    onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
+                    onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
+                  >
+                    <Icon size={15} strokeWidth={2} style={{ color: on ? T.acc : 'currentColor' }} />
+                    {label}
+
+                    {/* Ціна тільта поруч із «Психологією». Була червона
+                        пігулка з підкладкою — на спокійній шапці вона
+                        кричала гучніше за все інше. Лишилось саме
+                        число, моноширинним. */}
+                    {badge && (
+                      <em
+                        className="not-italic text-[11px] font-bold tabular-nums"
+                        style={{ fontFamily: T.mono, color: T.bad, opacity: on ? 1 : 0.65 }}
+                      >
+                        {badge}
+                      </em>
+                    )}
+
+                    {soon && (
+                      <em
+                        className="not-italic rounded-[20px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.12em]"
+                        style={{ background: `rgba(${T.accRgb},0.12)`, color: T.acc }}
+                      >
+                        скоро
+                      </em>
+                    )}
+
+                    {on && (
+                      <motion.span
+                        layoutId="an-tab"
+                        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                        className="absolute inset-x-2 bottom-0 h-[2px] rounded-full"
+                        style={{ background: T.acc, boxShadow: `0 0 12px rgba(${T.accRgb},0.7)` }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Період. Рамки навколо групи більше немає, лишилась
+                заглиблена підкладка: коробка в коробці читалась як два
+                різні елементи керування. */}
+            <div
+              className="mb-2.5 hidden shrink-0 items-center rounded-[11px] p-1 lg:flex"
+              style={{ background: T.sunken }}
+            >
+              {PERIODS.map((p) => {
+                const on = period === p;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className="relative whitespace-nowrap rounded-[8px] px-3 py-1.5 text-[12.5px] transition-colors duration-150"
+                    style={{ color: on ? T.text : T.text3, fontWeight: on ? 600 : 450 }}
+                    onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
+                    onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
+                  >
+                    {on && (
+                      <motion.span
+                        layoutId="an-period"
+                        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                        className="absolute inset-0 rounded-[8px]"
+                        style={{
+                          background: T.surfaceHi,
+                          border: `1px solid ${T.lineAcc}`,
+                          boxShadow: `0 4px 14px -8px rgba(${T.accRgb},0.9)`,
+                        }}
+                      />
+                    )}
+                    <span className="relative">{p}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* розділи */}
-          <nav className="hide-scrollbar -mb-px flex items-center gap-1 overflow-x-auto">
-            {NAV.map(({ id, label, icon: Icon, badge, soon }) => {
-              const on = tab === id;
+          {/* Період на вузькому екрані: окремим рядком під вкладками,
+              бо поруч із ними він там не поміщається. */}
+          <div className="hide-scrollbar -mt-px flex items-center gap-1 overflow-x-auto pb-2.5 lg:hidden">
+            {PERIODS.map((p) => {
+              const on = period === p;
               return (
                 <button
-                  key={id}
-                  onClick={() => setTab(id)}
-                  className="relative flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 pb-3 pt-1 text-[13.5px] transition-colors duration-150"
-                  style={{ color: on ? T.text : T.text3 }}
-                  onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
-                  onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className="shrink-0 whitespace-nowrap rounded-[9px] px-3 py-1.5 text-[12.5px] transition-colors duration-150"
+                  style={{
+                    background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
+                    border: `1px solid ${on ? T.lineAcc : 'transparent'}`,
+                    color: on ? T.text : T.text3,
+                    fontWeight: on ? 600 : 450,
+                  }}
                 >
-                  <Icon size={15} strokeWidth={2} style={{ color: on ? T.acc : 'currentColor' }} /> {label}
-                  {badge && (
-                    <em
-                      className="not-italic rounded-[20px] px-[7px] py-[2px] text-[10px] font-bold"
-                      style={{ background: `rgba(${T.badRgb},0.12)`, color: T.bad }}
-                    >
-                      {badge}
-                    </em>
-                  )}
-                  {/* «Скоро» акцентним, а не червоним: це не
-                      попередження й не помилка, а обіцянка. */}
-                  {soon && (
-                    <em
-                      className="not-italic rounded-[20px] px-[7px] py-[2px] text-[9.5px] font-bold uppercase tracking-[0.1em]"
-                      style={{ background: `rgba(${T.accRgb},0.12)`, color: T.acc }}
-                    >
-                      скоро
-                    </em>
-                  )}
-                  {/* активний розділ підкреслений — рядок читається як вкладки */}
-                  <span
-                    className="absolute inset-x-2 bottom-0 h-[2px] rounded-full transition-all duration-200"
-                    style={{
-                      background: on ? T.acc : 'transparent',
-                      boxShadow: on ? `0 0 12px rgba(${T.accRgb},0.6)` : 'none',
-                    }}
-                  />
+                  {p}
                 </button>
               );
             })}
-          </nav>
+          </div>
         </div>
       </div>
 
@@ -291,7 +332,6 @@ export default function Analytics() {
               {last
                 ? new Date(last.date).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })
                 : 'За обраний період угод немає'}
-              <span style={{ color: T.text4 }}>· усі акаунти · {period}</span>
             </div>
             <p
               className="mt-2.5 max-w-[62ch] text-[19px] font-medium leading-[1.45] lg:text-[22px]"
@@ -326,7 +366,7 @@ export default function Analytics() {
             обрізаної статистики, а з повного журналу. */}
         {tab === 'Overview' && <Overview s={s} rows={rows || []} />}
         {tab === 'Performance' && <Performance s={s} rows={rows || []} />}
-        {tab === 'Psychology' && <Psychology s={s} onOpenAi={() => setTab('AI')} />}
+        {tab === 'Psychology' && <Psychology s={s} rows={rows || []} />}
         {tab === 'Assets' && <Assets s={s} />}
         {/* Симулятор працює з угодами, а не з готовою статистикою:
             перший крок перераховує криву під кожен набір правил,
