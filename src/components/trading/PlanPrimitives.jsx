@@ -174,7 +174,7 @@ export function SectionHead({
    перезавантаження сторінки не скидає те, що людина вже склала. */
 export function Section({
   icon, title, hint, accent, right, done,
-  storageKey, defaultOpen = true, children,
+  storageKey, defaultOpen = true, group, children,
 }) {
   const key = storageKey ? `edge.plan.section.${storageKey}` : null;
   const [open, setOpen] = useState(() => {
@@ -185,11 +185,25 @@ export function Section({
     } catch { return defaultOpen; }
   });
 
-  const toggle = () => setOpen((o) => {
-    const next = !o;
+  const setOpenPersist = (next) => {
     try { if (key) localStorage.setItem(key, next ? '1' : '0'); } catch { /* приватний режим — просто не памʼятаємо */ }
-    return next;
-  });
+    setOpen(next);
+  };
+
+  const toggle = () => setOpenPersist(!open);
+
+  /* Клік по іконці фази в лівій рейці не тільки прокручує до якоря —
+     він ще й розгортає згорнуті секції цієї фази, інакше людина
+     потрапляє на порожню шапку. */
+  useEffect(() => {
+    if (!group) return undefined;
+    const onJump = (e) => {
+      if (e.detail?.group === group) setOpenPersist(true);
+    };
+    window.addEventListener('edge:plan-jump', onJump);
+    return () => window.removeEventListener('edge:plan-jump', onJump);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group, key]);
 
   return (
     <Card>

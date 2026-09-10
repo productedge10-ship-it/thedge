@@ -67,7 +67,10 @@ export const ChartTip = ({ active, payload, label, unit = 'R' }) => {
       <p className="text-[var(--edge-text3)] text-[10px] tracking-[0.1em] uppercase mb-[5px]">{label}</p>
       {payload.map((p, i) => (
         <p key={i} className="my-[2px]" style={{ color: p.color || p.fill }}>
-          {p.name}: <b>{typeof p.value === 'number' ? signed(p.value, 2) : p.value}{unit}</b>
+          {/* Відсоток не буває «зі знаком плюс» і не потребує двох
+              знаків після коми: 85% читається, +85.00% — ні. Знак і
+              точність лишаються там, де вони щось означають, тобто в R. */}
+          {p.name}: <b>{typeof p.value !== 'number' ? p.value : unit === '%' ? Math.round(p.value) : signed(p.value, 2)}{unit}</b>
         </p>
       ))}
     </div>

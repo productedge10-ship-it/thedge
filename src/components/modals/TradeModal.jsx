@@ -7,8 +7,7 @@ import { uk } from 'date-fns/locale';
 import 'react-day-picker/dist/style.css';
 import {
   X, ImagePlus, Loader2, AlertCircle, AlertTriangle,
-  CalendarDays, ChevronDown, Search, Check, Plus, Pencil,
-  Wallet,
+  CalendarDays, ChevronDown, Search, Check, Plus,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
@@ -33,23 +32,31 @@ import useCachedList, { listCache } from '../../hooks/useCachedList';
    чотири обовʼязкові питання.
 ================================================================== */
 
-/* Літеральна гама макета, а не токени застосунку: момент запису
-   угоди — дія, а не навігація, тож він свідомо виглядає інакше за
-   решту UI. Кольори фіксовані (не CSS var(...)), тому alpha-суфікс
-   на кшталт `${ACCENT}22` — валідний 8-значний hex і безпечний. */
-const ACCENT = '#2FE3A8';
-const ACCENT_RGB = '47,227,168';
-const PURPLE = '#7C6CF6';
+/* Гама «Log Trade Modal» (макет .dc): первинний акцент — фіолетовий,
+   як у решті застосунку, тому беремо токен теми. Семантичні кольори —
+   напрямок, статус, сесії — лишаються своїми.
+
+   Альфа до токена рядком не дописується (`var(...)1f` невалідний),
+   тому напівпрозорі відтінки первинного кольору робимо через
+   rgba(var(--edge-acc-rgb), a). */
+const ACCENT = 'var(--edge-acc)';
+const ACCENT_RGB = 'var(--edge-acc-rgb)';
+const PURPLE = 'var(--edge-acc)';
+/* Семантичний зелений — тільки Long / Take. Фіксований hex, бо тут
+   потрібні 8-значні alpha-суфікси. */
+const GREEN = '#2FE3A8';
+const GREEN_RGB = '47,227,168';
 const BAD = '#FF5C6E';
 const BAD_RGB = '255,92,110';
 const AMBER = '#F5B54A';
-/* Поверхні модалки — через токени теми, тому вона світлішає разом із
-   рештою застосунку. Раніше було намертво темне (#101214 і т.п.), і у
-   світлій темі вся форма лишалась чорною плямою. */
+/* Поверхні за макетом: картка трохи піднята, ПОЛЯ майже такі ж темні
+   (у макеті #121218 на #0d0d11) — відділяє їх бордер, не сіра
+   заливка. color-mix працює в обидві теми. */
 const CARD_BG = 'var(--edge-surface, #101214)';
-const FOOTER_BG = 'var(--edge-sunken, #0c0e10)';
-const FIELD_BG = 'var(--edge-sunken, #15181b)';
-const MONO = "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace";
+const FOOTER_BG = 'color-mix(in srgb, var(--edge-surface) 90%, var(--edge-bg))';
+const FIELD_BG = 'color-mix(in srgb, var(--edge-surface) 96%, var(--edge-text) 4%)';
+/* Моноширинний — шрифт користувача (тема), не з макета. */
+const MONO = T.mono;
 
 /* txt()/line() крутять прозорість, тому їм потрібен саме триплет, а не
    готовий rgba-токен. */
@@ -72,7 +79,7 @@ const DIRECTIONS = ['Long', 'Short'];
 const RESULT_CHIPS = ['Win', 'Lose', 'BE', 'In Progress', 'Missed'];
 const RESULT_LABEL = { Win: 'Take', Lose: 'Stop', BE: 'BE', 'In Progress': 'In Progress', Missed: 'Missed' };
 const RESULT_COLORS = {
-  Win: { c: ACCENT, rgb: ACCENT_RGB },
+  Win: { c: GREEN, rgb: GREEN_RGB },
   Lose: { c: BAD, rgb: BAD_RGB },
   BE: { c: AMBER, rgb: '245,181,74' },
   'In Progress': { c: '#60a5fa', rgb: '96,165,250' },
@@ -106,19 +113,28 @@ const todayLocal = () => {
    збоку. Той самий блок будує всю форму: підпис коротко називає,
    що заповнюється нижче, і список таких блоків іде вертикально з
    розділювачами. */
-function Row({ label, hint, children, noBorder }) {
+function Row({ num, label, hint, children }) {
   return (
-    <div
-      className="flex flex-col gap-3"
-      style={{
-        padding: '22px 0',
-        borderBottom: noBorder ? 'none' : `1px solid ${line(0.05)}`,
-      }}
-    >
-      <div className="flex items-baseline gap-2">
-        <div className="text-[14px] font-bold uppercase tracking-[0.06em]" style={{ fontFamily: T.sans, color: txt(0.55) }}>{label}</div>
+    <div className="flex flex-col gap-3" style={{ padding: '15px 0' }}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          {num && (
+            <span
+              className="text-[10.5px] font-semibold"
+              style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.38) }}
+            >
+              {num}
+            </span>
+          )}
+          <div
+            className="text-[10.5px] font-semibold uppercase"
+            style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.55) }}
+          >
+            {label}
+          </div>
+        </div>
         {hint && (
-          <div className="text-[11.5px]" style={{ fontFamily: MONO, color: txt(0.4) }}>{hint}</div>
+          <div className="text-[12px]" style={{ fontFamily: T.sans, color: txt(0.38) }}>{hint}</div>
         )}
       </div>
       <div className="min-w-0">{children}</div>
@@ -126,35 +142,65 @@ function Row({ label, hint, children, noBorder }) {
   );
 }
 
+/* Chip() — пігулка з макета: активна = колір+заливка+бордер того ж
+   тону; неактивна — тьмяна на ледь помітному тлі. */
+function Chip({ active, color, rgb, onClick, children, onRemove }) {
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex items-center gap-2 rounded-full px-[15px] py-[10px] text-[13px] font-semibold transition-all duration-150"
+        style={{
+          fontFamily: T.sans,
+          background: active ? `rgba(${rgb},0.16)` : line(0.03),
+          border: `1px solid ${active ? `rgba(${rgb},0.5)` : line(0.08)}`,
+          color: active ? color : txt(0.52),
+        }}
+      >
+        {children}
+      </button>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="absolute -right-1.5 -top-1.5 grid h-[15px] w-[15px] place-items-center rounded-full opacity-0 transition-opacity duration-150 group-hover/sess:opacity-100"
+          style={{ background: `rgba(${BAD_RGB},0.9)`, color: '#fff' }}
+        >
+          <X size={9} strokeWidth={3} />
+        </button>
+      )}
+    </span>
+  );
+}
 
-/* Long/Short — сегментований перемикач на всю ширину під активом:
-   заливка ковзає (layoutId) до активної сторони, а не два незалежних
-   боксери. Ні рамки, ні крапок — лише прозорий трек і кольорова
-   пігулка, яка сама каже, де зараз стоїш. */
+
+/* Long / Short — дві окремі кнопки з макета v7: стрілка ↑/↓ й підпис,
+   активна заливається своїм тоном. */
 function DirectionToggle({ value, onChange }) {
   return (
-    <div className="relative flex h-14 w-full gap-1 rounded-2xl p-1" style={{ background: FIELD_BG }}>
+    <div className="grid grid-cols-2 gap-3">
       {DIRECTIONS.map((d) => {
         const on = value === d;
-        const c = d === 'Long' ? ACCENT : BAD;
-        const rgb = d === 'Long' ? ACCENT_RGB : BAD_RGB;
+        const c = d === 'Long' ? GREEN : BAD;
+        const rgb = d === 'Long' ? GREEN_RGB : BAD_RGB;
         return (
           <button
             key={d}
             type="button"
             onClick={() => onChange(d)}
-            className="relative flex-1 text-[15px] transition-colors duration-150"
-            style={{ fontFamily: T.sans, fontWeight: on ? 700 : 500, color: on ? c : txt(0.45) }}
+            className="flex h-[52px] flex-col items-start justify-center gap-1 rounded-[14px] px-[18px] transition-all duration-150"
+            style={{
+              background: on ? `rgba(${rgb},0.11)` : FIELD_BG,
+              border: `1px solid ${on ? `rgba(${rgb},0.42)` : line(0.08)}`,
+              boxShadow: on ? `0 0 0 4px rgba(${rgb},0.10)` : 'none',
+              color: on ? c : txt(0.42),
+            }}
           >
-            {on && (
-              <motion.span
-                layoutId="dir-thumb"
-                transition={{ type: 'spring', stiffness: 520, damping: 38 }}
-                className="absolute inset-0 -z-10 rounded-xl"
-                style={{ background: `rgba(${rgb},0.14)` }}
-              />
-            )}
-            {d}
+            <span className="flex items-center gap-2">
+              <span className="text-[16px] font-bold leading-none" style={{ fontFamily: MONO }}>{d === 'Long' ? '↑' : '↓'}</span>
+              <span className="text-[14px] font-bold" style={{ fontFamily: T.sans, letterSpacing: '-0.01em' }}>{d}</span>
+            </span>
           </button>
         );
       })}
@@ -207,26 +253,26 @@ function AssetPicker({ value, onChange }) {
           onClick={toggle}
           whileTap={{ scale: 0.99 }}
           transition={SPRING}
-          className="flex h-14 w-full items-center justify-between rounded-2xl px-[18px] text-[18px] font-bold"
+          className="flex h-[52px] w-full items-center justify-between rounded-[14px] px-4 text-[14px] font-semibold"
           style={{
             fontFamily: T.sans,
-            background: value ? `rgba(${ACCENT_RGB},0.07)` : FIELD_BG,
-            border: `1px solid ${value ? `rgba(${ACCENT_RGB},0.3)` : (o ? line(0.16) : 'transparent')}`,
+            background: FIELD_BG,
+            border: `1px solid ${value ? `rgba(${ACCENT_RGB},0.35)` : (o ? line(0.18) : line(0.08))}`,
             color: 'var(--edge-text)',
           }}
         >
           {value ? (
-            <span className="flex items-center gap-2.5">
+            <span className="flex items-center gap-2.5" style={{ fontFamily: T.mono, letterSpacing: '0.03em' }}>
               <AssetIcon symbol={value} />
               {value}
             </span>
           ) : (
-            <span className="flex items-center gap-2.5 text-[15.5px] font-semibold" style={{ color: txt(0.45) }}>
-              <Search size={15} strokeWidth={2.4} />
+            <span className="flex items-center gap-2.5 text-[14px]" style={{ color: txt(0.45) }}>
+              <Search size={14} strokeWidth={2.4} />
               Select asset
             </span>
           )}
-          <ChevronDown size={16} strokeWidth={2.4} style={{ color: value ? ACCENT : txt(0.4), transform: o ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+          <ChevronDown size={15} strokeWidth={2.4} style={{ color: value ? ACCENT : txt(0.4), transform: o ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
         </motion.button>
       )}
     >
@@ -298,173 +344,28 @@ function AssetPicker({ value, onChange }) {
 
 /* ---------- вибір сесії ---------- */
 
-/* Той самий випадний список, що й раніше стояв трьома пігулками —
-   лише тепер це реальний список: Азія/Лондон/Нью-Йорк завжди в
-   ньому, а свої сесії живуть у user_sessions і додаються/
-   перейменовуються/видаляються прямо тут, без кешу на клієнті. */
+/* Фіксовані три сесії з гео-палітрою. Додавання власних прибрано —
+   Азія / Лондон / Нью-Йорк покривають усе, а зайва кнопка «+» лише
+   засмічувала рядок. */
 function SessionPicker({ value, onChange }) {
-  const [customSessions, setCustomSessions] = useCachedList('sessions', 'user_sessions', 'id,name', 'created_at');
-  const [adding, setAdding] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [editingId, setEditingId] = useState(null);
-  const [editName, setEditName] = useState('');
-
-  const all = [...DEFAULT_SESSIONS.map((name) => ({ id: null, name })), ...customSessions];
   const colorOf = (name) => SESSION_COLORS[name] || { c: ACCENT, rgb: ACCENT_RGB };
-  const current = colorOf(value);
-
-  const addSession = async () => {
-    const name = newName.trim();
-    if (!name) return;
-    const { data, error } = await supabase.from('user_sessions').insert([{ name }]).select('id,name').single();
-    if (!error && data) {
-      setCustomSessions([...customSessions, data]);
-      onChange(data.name);
-    }
-    setNewName('');
-    setAdding(false);
-  };
-
-  const renameSession = async (id) => {
-    const name = editName.trim();
-    if (!name) return setEditingId(null);
-    const prevName = customSessions.find((s) => s.id === id)?.name;
-    const { error } = await supabase.from('user_sessions').update({ name }).eq('id', id);
-    if (!error) {
-      setCustomSessions(customSessions.map((s) => (s.id === id ? { ...s, name } : s)));
-      if (value === prevName) onChange(name);
-    }
-    setEditingId(null);
-  };
-
-  const removeSession = async (id) => {
-    const sess = customSessions.find((s) => s.id === id);
-    const { error } = await supabase.from('user_sessions').delete().eq('id', id);
-    if (!error) {
-      setCustomSessions(customSessions.filter((s) => s.id !== id));
-      if (value === sess?.name) onChange(DEFAULT_SESSIONS[0]);
-    }
-  };
-
   return (
-    <Popover
-      z={600}
-      renderTrigger={({ toggle, open: o }) => (
-        <button
-          type="button"
-          onClick={toggle}
-          className="flex h-12 items-center gap-3 rounded-xl px-4 text-[16px] font-bold transition-colors duration-150"
-          style={{ fontFamily: T.sans, background: `rgba(${current.rgb},0.07)`, border: `1px solid rgba(${current.rgb},0.35)`, color: current.c }}
-        >
-          {value}
-          <ChevronDown size={14} strokeWidth={2.6} style={{ color: current.c, opacity: 0.6, transform: o ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
-        </button>
-      )}
-    >
-      {({ close }) => (
-        <div className="w-[250px] overflow-hidden rounded-2xl p-2" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px var(--edge-panel-glow, rgba(0,0,0,0.5))' }}>
-          <div className="flex flex-col gap-0.5">
-            {all.map((s) => {
-              const on = s.name === value;
-              const sc = colorOf(s.name);
-              const isCustom = s.id !== null;
-              const editing = editingId === s.id && isCustom;
-              return (
-                <div key={s.id ?? s.name} className="group flex items-center gap-1 rounded-xl">
-                  {editing ? (
-                    <div className="flex flex-1 items-center gap-2 py-1 pl-3 pr-1.5">
-                      <input
-                        autoFocus
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') renameSession(s.id); if (e.key === 'Escape') setEditingId(null); }}
-                        className="h-8 w-full min-w-0 bg-transparent text-[13.5px] outline-none"
-                        style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => renameSession(s.id)}
-                        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors"
-                        style={{ background: `rgba(${ACCENT_RGB},0.14)`, color: ACCENT }}
-                      >
-                        <Check size={13} strokeWidth={3} />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => { onChange(s.name); close(); }}
-                        className="flex flex-1 items-center px-2 py-1.5 text-left"
-                      >
-                        <span
-                          className="rounded-lg px-3 py-1.5 text-[13px] font-bold transition-all duration-150"
-                          style={{ fontFamily: T.sans, color: sc.c, background: `rgba(${sc.rgb},${on ? 0.18 : 0.09})` }}
-                        >
-                          {s.name}
-                        </span>
-                      </button>
-                      {isCustom && (
-                        <span className="hidden shrink-0 items-center gap-1 pr-1.5 group-hover:flex">
-                          <button type="button" onClick={() => { setEditingId(s.id); setEditName(s.name); }} className="grid h-7 w-7 place-items-center rounded-lg transition-colors" style={{ color: txt(0.45) }} onMouseEnter={(e) => { e.currentTarget.style.background = line(0.06); e.currentTarget.style.color = txt(0.85); }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = txt(0.45); }}>
-                            <Pencil size={12} strokeWidth={2.4} />
-                          </button>
-                          <button type="button" onClick={() => removeSession(s.id)} className="grid h-7 w-7 place-items-center rounded-lg transition-colors" style={{ color: txt(0.45) }} onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${BAD_RGB},0.12)`; e.currentTarget.style.color = BAD; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = txt(0.45); }}>
-                            <X size={13} strokeWidth={2.6} />
-                          </button>
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-1.5 pt-1.5" style={{ borderTop: `1px solid ${line(0.07)}` }}>
-            {adding ? (
-              <div className="flex items-center gap-2 py-1 pl-3 pr-1.5">
-                <input
-                  autoFocus
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') addSession(); if (e.key === 'Escape') { setAdding(false); setNewName(''); } }}
-                  placeholder="Session name…"
-                  className="h-8 w-full min-w-0 bg-transparent text-[13.5px] outline-none placeholder:opacity-45"
-                  style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
-                />
-                <button
-                  type="button"
-                  onClick={addSession}
-                  disabled={!newName.trim()}
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors"
-                  style={{
-                    background: newName.trim() ? `rgba(${ACCENT_RGB},0.14)` : 'transparent',
-                    color: newName.trim() ? ACCENT : txt(0.3),
-                  }}
-                >
-                  <Check size={13} strokeWidth={3} />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAdding(true)}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-colors"
-                style={{ fontFamily: T.sans, color: txt(0.6) }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = line(0.05); }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-              >
-                <span className="grid h-[18px] w-[18px] place-items-center rounded-md" style={{ background: line(0.07) }}>
-                  <Plus size={11} strokeWidth={2.8} />
-                </span>
-                Add session
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </Popover>
+    <div className="flex flex-wrap items-center gap-2">
+      {DEFAULT_SESSIONS.map((name) => {
+        const sc = colorOf(name);
+        return (
+          <Chip
+            key={name}
+            active={value === name}
+            color={sc.c}
+            rgb={sc.rgb}
+            onClick={() => onChange(name)}
+          >
+            {name}
+          </Chip>
+        );
+      })}
+    </div>
   );
 }
 
@@ -474,54 +375,19 @@ function SessionPicker({ value, onChange }) {
    тексту, що видає стан. Без додавання/видалення — статуси
    фіксовані. */
 function StatusPicker({ value, onChange }) {
-  const tone = RESULT_COLORS[value] || { c: txt(0.4), rgb: '242,244,243' };
-  const placeholder = value === 'Not Selected' || !value;
-
   return (
-    <Popover
-      z={600}
-      renderTrigger={({ toggle, open: o }) => (
-        <motion.button
-          type="button"
-          onClick={toggle}
-          whileTap={{ scale: 0.99 }}
-          transition={SPRING}
-          className="flex h-14 w-[250px] max-w-full items-center justify-between rounded-2xl px-5 text-[17px] font-bold transition-colors duration-150"
-          style={{
-            fontFamily: T.sans,
-            background: placeholder ? FIELD_BG : `rgba(${tone.rgb},0.1)`,
-            border: `1px solid ${placeholder ? (o ? line(0.16) : line(0.08)) : `rgba(${tone.rgb},0.4)`}`,
-            color: placeholder ? txt(0.45) : tone.c,
-          }}
-        >
-          <span className="flex items-center gap-2.5">
-            {!placeholder && <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: tone.c }} />}
-            {placeholder ? 'Select status' : RESULT_LABEL[value]}
-          </span>
-          <ChevronDown size={15} strokeWidth={2.6} style={{ color: placeholder ? txt(0.4) : tone.c, opacity: 0.7, transform: o ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
-        </motion.button>
-      )}
-    >
-      {({ close }) => (
-        <div className="w-[280px] overflow-hidden rounded-2xl p-2" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px var(--edge-panel-glow, rgba(0,0,0,0.5))' }}>
-          {RESULT_CHIPS.map((o) => {
-            const on = o === value;
-            const c = RESULT_COLORS[o];
-            return (
-              <button
-                key={o}
-                type="button"
-                onClick={() => { onChange(o); close(); }}
-                className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-[13.5px] font-bold"
-                style={{ fontFamily: T.sans, color: c.c, opacity: on ? 1 : 0.62 }}
-              >
-                {RESULT_LABEL[o]}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </Popover>
+    <div className="flex flex-wrap items-center gap-2">
+      {RESULT_CHIPS.map((o) => {
+        const on = o === value;
+        const c = RESULT_COLORS[o];
+        return (
+          <Chip key={o} active={on} color={c.c} rgb={c.rgb} onClick={() => onChange(on ? 'Not Selected' : o)}>
+            <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: 'currentColor', opacity: 0.9 }} />
+            {RESULT_LABEL[o]}
+          </Chip>
+        );
+      })}
+    </div>
   );
 }
 
@@ -645,11 +511,11 @@ function AccountPicker({ value, options, onChange }) {
         <button
           type="button"
           onClick={toggle}
-          className="flex h-[52px] w-full items-center justify-between gap-2 rounded-xl px-4 text-[15px] font-semibold"
-          style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${open ? line(0.16) : line(0.08)}`, color: value ? 'var(--edge-text)' : txt(0.5) }}
+          className="flex h-[52px] w-full items-center justify-between gap-2 rounded-[14px] px-4 text-[14px] font-semibold"
+          style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${open ? line(0.18) : line(0.08)}`, color: value ? 'var(--edge-text)' : txt(0.5) }}
         >
-          <span className="flex min-w-0 items-center gap-2">
-            <Wallet size={14} strokeWidth={2.2} style={{ color: txt(0.5) }} />
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: ACCENT }} />
             <span className="truncate">{value || 'No accounts'}</span>
           </span>
           <ChevronDown size={14} strokeWidth={2.4} style={{ color: txt(0.5), transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
@@ -686,6 +552,135 @@ function AccountPicker({ value, options, onChange }) {
         </div>
       )}
     </Popover>
+  );
+}
+
+/* ---------- картка ризику (макет v7) ----------
+   Фіолетова картка: «1R у грошах» рахується з балансу обраного
+   рахунку × ризик %, поруч — результат у R. Нижче пресети й два
+   поля (ризик % та R). */
+function RiskCard({ risk, setRisk, rr, setRr, balance }) {
+  const pct = parseFloat(String(risk).replace('%', '').replace(',', '.')) || 0;
+  const oneR = balance ? Math.round(balance * pct / 100) : null;
+  const rNum = parseFloat(String(rr).replace(',', '.'));
+  const hasR = !Number.isNaN(rNum);
+  const rColor = !hasR ? txt(0.4) : rNum > 0 ? GREEN : rNum < 0 ? BAD : 'var(--edge-text)';
+  const setPct = (v) => setRisk(`${v}%`);
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-[20px] p-5"
+      style={{ border: `1px solid ${line(0.07)}`, background: `linear-gradient(160deg, rgba(${ACCENT_RGB},0.13), ${FIELD_BG} 58%)` }}
+    >
+      <div className="flex items-end justify-between gap-3.5">
+        <div>
+          <div className="text-[10px]" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.5) }}>1R IN MONEY</div>
+          <div className="mt-2.5 flex items-baseline gap-[7px]">
+            <span className="text-[21px] font-bold" style={{ fontFamily: MONO, color: GREEN }}>$</span>
+            <span className="text-[34px] font-bold leading-none" style={{ fontFamily: MONO, letterSpacing: '-0.04em', color: 'var(--edge-text)' }}>
+              {oneR != null ? oneR.toLocaleString('en-US') : '—'}
+            </span>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px]" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.5) }}>RESULT</div>
+          <div className="mt-2.5 text-[25px] font-bold leading-none" style={{ fontFamily: MONO, letterSpacing: '-0.035em', color: rColor }}>
+            {hasR ? `${rNum > 0 ? '+' : ''}${rNum.toFixed(2)}R` : '0.00R'}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-[18px] flex flex-wrap gap-[7px]">
+        {['0.25', '0.5', '1', '2'].map((v) => {
+          const on = pct === parseFloat(v);
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setPct(v)}
+              className="rounded-[11px] px-[13px] py-[8px] text-[12.5px] font-semibold transition-all duration-150"
+              style={{
+                fontFamily: MONO,
+                background: on ? `rgba(${ACCENT_RGB},0.16)` : line(0.03),
+                border: `1px solid ${on ? `rgba(${ACCENT_RGB},0.5)` : line(0.08)}`,
+                color: on ? ACCENT : txt(0.52),
+              }}
+            >
+              {v}%
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+        <div className="flex items-center gap-1.5 rounded-[14px] px-[15px]" style={{ background: line(0.03), border: `1px solid ${line(0.07)}` }}>
+          <input
+            value={risk}
+            onChange={(e) => setRisk(e.target.value)}
+            className="w-full min-w-0 bg-transparent py-[13px] text-[15px] font-semibold outline-none"
+            style={{ fontFamily: MONO, color: 'var(--edge-text)' }}
+          />
+          <span className="shrink-0 text-[11px]" style={{ fontFamily: MONO, color: txt(0.42) }}>% / trade</span>
+        </div>
+        <div
+          className="flex items-center gap-1.5 rounded-[14px] px-[15px] transition-colors duration-150"
+          style={{
+            background: hasR ? `rgba(${hasR && rNum > 0 ? GREEN_RGB : hasR && rNum < 0 ? BAD_RGB : ACCENT_RGB},0.10)` : line(0.03),
+            border: `1px solid ${hasR ? `rgba(${rNum > 0 ? GREEN_RGB : rNum < 0 ? BAD_RGB : ACCENT_RGB},0.4)` : line(0.07)}`,
+          }}
+        >
+          <input
+            value={rr}
+            onChange={(e) => setRr(e.target.value.replace(',', '.'))}
+            inputMode="decimal"
+            placeholder="2.5"
+            className="w-full min-w-0 bg-transparent py-[13px] text-[15px] font-bold outline-none placeholder:opacity-40"
+            style={{ fontFamily: MONO, color: rColor }}
+          />
+          <span className="shrink-0 text-[11px]" style={{ fontFamily: MONO, color: txt(0.42) }}>R</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- картка сетапу (макет v7) ---------- */
+function SetupCard({ value, onChange, options }) {
+  const HINTS = options && options.length ? options : ['Silver Bullet', 'OB retest', 'Sweep + FVG', 'Breaker'];
+  return (
+    <div className="rounded-[20px] p-5" style={{ border: `1px solid ${line(0.07)}`, background: line(0.022) }}>
+      <div className="text-[10px]" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.5) }}>SETUP</div>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Silver Bullet"
+        className="mt-3 w-full rounded-[15px] px-[17px] py-[15px] text-[15px] font-semibold outline-none transition-colors placeholder:opacity-45"
+        style={{ fontFamily: T.sans, background: line(0.03), border: `1px solid ${line(0.07)}`, color: 'var(--edge-text)' }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.6)`; e.currentTarget.style.background = `rgba(${ACCENT_RGB},0.08)`; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = line(0.07); e.currentTarget.style.background = line(0.03); }}
+      />
+      <div className="mt-3 flex flex-wrap gap-[7px]">
+        {HINTS.slice(0, 6).map((h) => {
+          const on = h === value;
+          return (
+            <button
+              key={h}
+              type="button"
+              onClick={() => onChange(on ? '' : h)}
+              className="rounded-[11px] px-[13px] py-[8px] text-[12px] font-semibold transition-all duration-150"
+              style={{
+                fontFamily: T.sans,
+                background: on ? `rgba(${ACCENT_RGB},0.14)` : line(0.03),
+                border: `1px solid ${on ? `rgba(${ACCENT_RGB},0.5)` : line(0.08)}`,
+                color: on ? ACCENT : txt(0.52),
+              }}
+            >
+              {h}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -814,11 +809,6 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const [setupOptions, setSetupOptions] = useState([]);
   const [entryTime, setEntryTime] = useState('');
   const [exitTime, setExitTime] = useState('');
-  /* Розкриті пункти сетапу — автоматично відкриті, якщо там уже щось
-     є (редагування угоди), інакше згорнуті. */
-  const [setupNameOpen, setSetupNameOpen] = useState(false);
-  const [setupShotOpen, setSetupShotOpen] = useState(false);
-  const [setupDescOpen, setSetupDescOpen] = useState(false);
 
   const [followedPlan, setFollowedPlan] = useState(null);
   const [rushed, setRushed] = useState(null);
@@ -874,16 +864,13 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       setResult(existingTrade.result || 'Not Selected');
       setSession(existingTrade.session || 'London');
       setTradeDescription(existingTrade.trade_description || '');
-      setSetupDescOpen(Boolean(existingTrade.trade_description));
       {
         let tImgs = [];
         if (Array.isArray(existingTrade.trade_images) && existingTrade.trade_images.length > 0) tImgs = existingTrade.trade_images;
         else if (existingTrade.trade_image) tImgs = [existingTrade.trade_image];
         setTradeImages(tImgs);
-        setSetupShotOpen(tImgs.length > 0);
       }
       setSetupName(existingTrade.setup || '');
-      setSetupNameOpen(Boolean(existingTrade.setup));
       /* База віддає час як HH:MM:SS, полю input потрібні HH:MM */
       setEntryTime((existingTrade.entry_time || '').slice(0, 5));
       setExitTime((existingTrade.exit_time || '').slice(0, 5));
@@ -920,7 +907,6 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       setRisk('1%'); setRr(''); setTradeType('Long'); setResult('Not Selected'); setSession('London');
       setTradeDescription(''); setTradeImages([]);
       setSetupName(''); setEntryTime(''); setExitTime('');
-      setSetupNameOpen(false); setSetupShotOpen(false); setSetupDescOpen(false);
       setFollowedPlan(null); setRushed(null); setHasMistake(null);
       setMistakeText(''); setMistakeImages([]);
       setPsyConfident(null); setPsyFear(null); setPsyRepeat(null); setPsyRevenge(null); setPsyNotes('');
@@ -1169,38 +1155,58 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.985 }}
             transition={SPRING}
-            className="my-auto w-full max-w-[760px] overflow-hidden rounded-[22px]"
-            style={{ background: CARD_BG, border: `1px solid ${line(0.08)}`, boxShadow: '0 40px 100px -14px var(--edge-panel-glow, rgba(0,0,0,0.4))' }}
+            className="my-auto w-full max-w-[1040px] overflow-hidden rounded-[22px]"
+            style={{ background: CARD_BG, border: `1px solid ${line(0.075)}`, boxShadow: '0 40px 120px -20px var(--edge-panel-glow, rgba(0,0,0,0.5)), 0 0 0 1px var(--edge-hair) inset' }}
           >
             {/* ─────────── Шапка ─────────── */}
-            <div className="flex flex-col gap-6 px-6 pb-6 pt-8 sm:px-10 sm:pt-[34px]" style={{ borderBottom: `1px solid ${line(0.06)}` }}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex flex-col gap-2.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ fontFamily: MONO, color: PURPLE }}>
-                    {step === 0
-                      ? `Journal entry · ${tradeDate || todayLocal()}`
-                      : `Journal entry · ${selectedPair || '—'} · ${tradeType} · ${rr ? `${rr}R` : '—'}`}
-                  </span>
-                  <h2 className="text-[27px] font-bold leading-none sm:text-[34px]" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.025em' }}>
+            <div className="flex flex-col gap-[18px] px-6 pb-[18px] pt-[26px] sm:px-7">
+              <div className="flex items-start justify-between gap-6">
+                <div className="min-w-0">
+                  <div className="mb-2.5 flex items-center gap-2.5">
+                    <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 10px 2px rgba(${ACCENT_RGB},0.55)` }} />
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ fontFamily: MONO, color: PURPLE }}>
+                      {step === 0
+                        ? `Journal entry · ${tradeDate || todayLocal()}`
+                        : `Journal entry · ${selectedPair || '—'} · ${tradeType} · ${rr ? `${rr}R` : '—'}`}
+                    </span>
+                  </div>
+                  <h2 className="text-[26px] font-extrabold leading-[1.1] sm:text-[30px]" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.02em' }}>
                     {step === 0
                       ? (existingTrade ? 'Edit Trade' : 'Log Trade')
                       : 'Execution Review'}
                   </h2>
+                  <div className="mt-[7px] text-[13.5px]" style={{ fontFamily: T.sans, color: txt(0.52) }}>
+                    {step === 0 ? 'Step 1 of 2 · numbers first, review after' : 'Step 2 of 2 · honest answers make honest stats'}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[15px] transition-colors duration-200 sm:h-9 sm:w-9"
-                  style={{ border: `1px solid ${line(0.09)}`, color: txt(0.6) }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-text)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.6); }}
-                >
-                  <X size={15} strokeWidth={2.2} />
-                </button>
+                <div className="flex shrink-0 items-center gap-2.5">
+                  <span
+                    className="rounded-[12px] px-4 py-[10px] text-[11.5px] font-bold uppercase"
+                    style={{
+                      fontFamily: MONO,
+                      letterSpacing: '0.14em',
+                      color: tradeType === 'Long' ? GREEN : BAD,
+                      background: `rgba(${tradeType === 'Long' ? GREEN_RGB : BAD_RGB},0.12)`,
+                      border: `1px solid rgba(${tradeType === 'Long' ? GREEN_RGB : BAD_RGB},0.32)`,
+                    }}
+                  >
+                    {tradeType === 'Long' ? 'Long' : 'Short'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="grid h-10 w-10 place-items-center rounded-xl text-[15px] transition-all duration-150"
+                    style={{ background: line(0.03), border: `1px solid ${line(0.08)}`, color: txt(0.6) }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = line(0.07); e.currentTarget.style.color = 'var(--edge-text)'; e.currentTarget.style.borderColor = line(0.16); }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = line(0.03); e.currentTarget.style.color = txt(0.6); e.currentTarget.style.borderColor = line(0.08); }}
+                  >
+                    <X size={15} strokeWidth={2.2} />
+                  </button>
+                </div>
               </div>
 
-              {/* кроки */}
-              <div className="flex gap-9">
+              {/* кроки — пігулки */}
+              <div className="flex gap-2">
                 {['Numbers', 'Review'].map((s, i) => {
                   const done = i < step;
                   const on = i === step;
@@ -1209,17 +1215,18 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       key={s}
                       type="button"
                       onClick={() => (i === 0 ? goBack() : goNext())}
-                      className="flex flex-1 flex-col gap-2.5 text-left"
+                      className="flex items-center gap-2.5 rounded-xl px-[18px] py-[11px] transition-all duration-150"
+                      style={{
+                        border: `1px solid ${on ? `rgba(${ACCENT_RGB},0.5)` : line(0.06)}`,
+                        background: on ? `rgba(${ACCENT_RGB},0.12)` : 'transparent',
+                      }}
                     >
-                      <span className="flex items-center gap-2.5">
-                        <span className="text-[13px] font-semibold" style={{ fontFamily: MONO, color: on ? ACCENT : done ? ACCENT : txt(0.45) }}>
-                          {done ? '✓' : `0${i + 1}`}
-                        </span>
-                        <span className="text-[14px]" style={{ fontFamily: T.sans, fontWeight: on ? 600 : 500, color: on ? 'var(--edge-text)' : txt(0.5) }}>
-                          {s}
-                        </span>
+                      <span className="text-[12px] font-semibold" style={{ fontFamily: MONO, color: on ? ACCENT : done ? ACCENT : txt(0.4) }}>
+                        {done ? '✓' : `0${i + 1}`}
                       </span>
-                      <span className="block h-[2px] rounded-[1px]" style={{ background: on ? ACCENT : done ? `rgba(${ACCENT_RGB},0.4)` : line(0.08) }} />
+                      <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: on ? 'var(--edge-text)' : done ? txt(0.55) : txt(0.42) }}>
+                        {s}
+                      </span>
                     </button>
                   );
                 })}
@@ -1228,189 +1235,132 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
 
             {/* ─────────── Тіло ─────────── */}
             <form onSubmit={handleSubmit} noValidate>
-              <div ref={scrollRef} className="max-h-[62vh] overflow-y-auto px-6 py-2 sm:px-10" style={{ scrollbarWidth: 'thin' }}>
-                <AnimatePresence mode="wait">
+              <div ref={scrollRef} className="max-h-[64vh] overflow-y-auto px-6 py-[10px] sm:px-7" style={{ scrollbarWidth: 'thin', borderTop: `1px solid ${line(0.06)}` }}>
+                {/* Крок міняється без AnimatePresence-exit: усередині
+                    кроку 1 живуть портальні поповери, і їхнє
+                    розмонтування під час exit-анімації підвішувало
+                    framer, і крок 2 не з являвся. */}
+                <div>
                   {step === 0 ? (
                     <motion.div
                       key="step-1"
-                      initial={{ opacity: 0, x: -10 }}
+                      initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -10 }}
-                      transition={{ duration: 0.22, ease: EASE }}
+                      transition={{ duration: 0.2, ease: EASE }}
                     >
-                      {/* Актив і напрямок */}
-                      {/* Актив і напрямок — два блоки в одному рядку,
-                          кожен зі своїм підписом, на одному рівні. */}
-                      <Row label="Asset and Direction" required>
-                        <div className="grid grid-cols-2 items-center gap-4">
-                          <div className="flex flex-col gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Asset</span>
-                            <AssetPicker value={selectedPair} onChange={setSelectedPair} />
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Direction</span>
-                            <DirectionToggle value={tradeType} onChange={setTradeType} />
-                          </div>
-                        </div>
-                      </Row>
-
-                      {/* Session */}
-                      <Row label="Session" required>
-                        <SessionPicker value={session} onChange={setSession} />
-                      </Row>
-
-                      {/* Risk */}
-                      <Row label="Risk" required>
-                        <div className="grid gap-3" style={{ gridTemplateColumns: '1.3fr 1fr 1fr' }}>
-                          <AccountPicker value={account} options={accountOptions} onChange={setAccount} />
-                          <div className="flex h-[52px] items-center justify-between rounded-xl px-4" style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}` }}>
-                            <input
-                              value={risk}
-                              onChange={(e) => setRisk(e.target.value)}
-                              className="w-full min-w-0 bg-transparent text-[16px] font-bold outline-none"
-                              style={{ fontFamily: MONO, color: 'var(--edge-text)' }}
-                            />
-                            <span className="shrink-0 text-[13px] font-medium" style={{ fontFamily: MONO, color: txt(0.55) }}>%</span>
-                          </div>
-                          <div className="flex h-[52px] items-center justify-between rounded-xl px-4" style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}` }}>
-                            <input
-                              value={rr}
-                              onChange={(e) => setRr(e.target.value.replace(',', '.'))}
-                              inputMode="decimal"
-                              placeholder="2.5"
-                              className="w-full min-w-0 bg-transparent text-[16px] font-bold outline-none placeholder:opacity-40"
-                              style={{ fontFamily: MONO, color: rr ? ACCENT : 'var(--edge-text)' }}
-                            />
-                            <span className="shrink-0 text-[13px] font-medium" style={{ fontFamily: MONO, color: txt(0.55) }}>R</span>
-                          </div>
-                        </div>
-                      </Row>
-
-                      {/* Status */}
-                      <Row label="Status" required>
-                        <StatusPicker value={result} onChange={setResult} />
-                      </Row>
-
-                      {/* Setup */}
-                      <Row label="Setup" noBorder>
-                        <div className="flex flex-col gap-2">
-                          <Disclosure
-                            title="Setup name"
-                            summary={setupName || null}
-                            open={setupNameOpen}
-                            onToggle={() => setSetupNameOpen((v) => !v)}
-                          >
-                            <div className="flex flex-col gap-3 pt-2">
-                              <input
-                                autoFocus
-                                value={setupName}
-                                onChange={(e) => setSetupName(e.target.value)}
-                                placeholder="e.g. Sweep + BOS"
-                                className="flex h-11 w-full items-center border-0 border-b bg-transparent px-0 text-[15.5px] font-semibold outline-none transition-colors placeholder:font-normal placeholder:opacity-45"
-                                style={{ borderColor: line(0.08), color: 'var(--edge-text)', fontFamily: T.sans }}
-                                onFocus={(e) => { e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.4)`; }}
-                                onBlur={(e) => { e.currentTarget.style.borderColor = line(0.08); }}
-                              />
-                              {setupOptions.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {setupOptions.map((o) => {
-                                    const on = o === setupName;
-                                    return (
-                                      <button
-                                        key={o}
-                                        type="button"
-                                        onClick={() => setSetupName(on ? '' : o)}
-                                        className="rounded-full px-2.5 py-1 text-[11.5px] font-semibold transition-colors duration-150"
-                                        style={{
-                                          fontFamily: T.sans,
-                                          background: on ? `rgba(${ACCENT_RGB},0.12)` : line(0.04),
-                                          color: on ? ACCENT : txt(0.5),
-                                        }}
-                                      >
-                                        {o}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          </Disclosure>
-
-                          <Disclosure
-                            title="Screenshot"
-                            summary={tradeImages.length ? `${tradeImages.length} screenshot${tradeImages.length === 1 ? '' : 's'}` : null}
-                            open={setupShotOpen}
-                            onToggle={() => setSetupShotOpen((v) => !v)}
-                          >
-                            <div
-                              onPaste={pasteSetup}
-                              onDragOver={(e) => { e.preventDefault(); setSetupDropHot(true); }}
-                              onDragLeave={() => setSetupDropHot(false)}
-                              onDrop={dropSetup}
-                              tabIndex={0}
-                              className="mt-2 overflow-hidden rounded-2xl outline-none transition-colors duration-200"
-                              style={{ border: `1px solid ${setupDropHot ? `rgba(${ACCENT_RGB},0.45)` : line(0.08)}` }}
+                      {/* 01 · Скрін графіка — перша секція, як у v7 */}
+                      <Row num="01" label="Chart screenshot" hint="drag, click or paste from clipboard">
+                        <div
+                          onPaste={pasteSetup}
+                          onDragOver={(e) => { e.preventDefault(); setSetupDropHot(true); }}
+                          onDragLeave={() => setSetupDropHot(false)}
+                          onDrop={dropSetup}
+                          tabIndex={0}
+                          className="relative rounded-[18px] p-1.5 outline-none transition-colors duration-200"
+                          style={{ background: FIELD_BG, border: `1px solid ${setupDropHot ? `rgba(${ACCENT_RGB},0.45)` : line(0.07)}` }}
+                        >
+                          {tradeImages.length > 0 && (
+                            <span
+                              className="pointer-events-none absolute left-[14px] top-[14px] z-[3] rounded-lg px-2.5 py-[5px] text-[10.5px] uppercase"
+                              style={{ fontFamily: MONO, letterSpacing: '0.14em', color: ACCENT, background: 'var(--edge-panel, rgba(10,10,14,0.85))', border: `1px solid ${line(0.1)}` }}
                             >
-                              {tradeImages.length > 0 ? (
-                                <>
-                                  <ImageSlider images={tradeImages} containerClassName="h-[440px] w-full" />
-                                  <div className="flex flex-wrap items-center gap-2 p-2.5" style={{ background: FIELD_BG, borderTop: `1px solid ${line(0.06)}` }}>
-                                    {tradeImages.map((img, i) => (
-                                      <div key={i} className="group relative h-10 w-10 shrink-0 overflow-hidden rounded-lg" style={{ border: `1px solid ${line(0.08)}` }}>
-                                        <img src={img} alt="" className="h-full w-full object-cover" />
-                                        <button
-                                          type="button"
-                                          onClick={() => removeTradeImage(i)}
-                                          className="absolute inset-0 hidden items-center justify-center transition-colors group-hover:flex"
-                                          style={{ background: 'rgba(10,10,12,0.68)', color: 'var(--edge-text)' }}
-                                        >
-                                          <X size={12} strokeWidth={2.8} />
-                                        </button>
-                                      </div>
-                                    ))}
-                                    <span className="text-[11.5px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Ctrl+V or drag — add more</span>
-                                  </div>
-                                </>
-                              ) : (
-                                <motion.div
-                                  animate={{ background: setupDropHot ? `rgba(${ACCENT_RGB},0.05)` : FIELD_BG }}
-                                  className="flex min-h-[300px] cursor-text flex-col items-center justify-center gap-2 text-center"
-                                >
-                                  <ImagePlus size={20} strokeWidth={1.8} style={{ color: setupDropHot ? ACCENT : txt(0.4) }} />
-                                  <span className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: setupDropHot ? ACCENT : txt(0.65) }}>
-                                    {setupDropHot ? 'Drop it' : 'Paste a chart screenshot'}
-                                  </span>
-                                  <span className="text-[12px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Ctrl+V — screenshot or a TradingView link, multiple allowed</span>
-                                </motion.div>
-                              )}
-                            </div>
-                          </Disclosure>
+                              {`Shot ${tradeImages.length}`}
+                            </span>
+                          )}
 
-                          <Disclosure
-                            title="Entry logic"
-                            summary={tradeDescription ? tradeDescription.slice(0, 40) + (tradeDescription.length > 40 ? '…' : '') : null}
-                            open={setupDescOpen}
-                            onToggle={() => setSetupDescOpen((v) => !v)}
-                          >
-                            <textarea
-                              autoFocus
-                              value={tradeDescription}
-                              onChange={(e) => setTradeDescription(e.target.value)}
-                              placeholder="Entry logic, confirmations, emotions in the moment…"
-                              className="mt-2 min-h-[80px] w-full resize-y border-0 bg-transparent p-0 text-[14.5px] outline-none placeholder:opacity-40"
-                              style={{ color: txt(0.8), fontFamily: T.sans, lineHeight: 1.55 }}
-                            />
-                          </Disclosure>
+                          {tradeImages.length > 0 ? (
+                            <div className="overflow-hidden rounded-[13px]">
+                              <ImageSlider images={tradeImages} containerClassName="h-[320px] w-full" />
+                              <div className="flex flex-wrap items-center gap-2 p-2.5" style={{ background: FIELD_BG, borderTop: `1px solid ${line(0.06)}` }}>
+                                {tradeImages.map((img, i) => (
+                                  <div key={i} className="group relative h-10 w-10 shrink-0 overflow-hidden rounded-lg" style={{ border: `1px solid ${line(0.08)}` }}>
+                                    <img src={img} alt="" className="h-full w-full object-cover" />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeTradeImage(i)}
+                                      className="absolute inset-0 hidden items-center justify-center transition-colors group-hover:flex"
+                                      style={{ background: 'rgba(10,10,12,0.68)', color: 'var(--edge-text)' }}
+                                    >
+                                      <X size={12} strokeWidth={2.8} />
+                                    </button>
+                                  </div>
+                                ))}
+                                <span className="text-[11.5px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Ctrl+V or drag — add more</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <motion.div
+                              animate={{ background: setupDropHot ? `rgba(${ACCENT_RGB},0.05)` : FIELD_BG }}
+                              className="flex min-h-[248px] cursor-text flex-col items-center justify-center gap-2 rounded-[13px] text-center"
+                            >
+                              <ImagePlus size={20} strokeWidth={1.8} style={{ color: setupDropHot ? ACCENT : txt(0.4) }} />
+                              <span className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: setupDropHot ? ACCENT : txt(0.65) }}>
+                                {setupDropHot ? 'Drop it' : 'Paste a chart screenshot'}
+                              </span>
+                              <span className="text-[12px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Ctrl+V — screenshot or a TradingView link, multiple allowed</span>
+                            </motion.div>
+                          )}
                         </div>
+                      </Row>
+
+                      {/* 02 · Актив і напрямок */}
+                      <Row num="02" label="Asset and Direction">
+                        <div className="grid gap-3" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.05fr)' }}>
+                          <AssetPicker value={selectedPair} onChange={setSelectedPair} />
+                          <DirectionToggle value={tradeType} onChange={setTradeType} />
+                        </div>
+                      </Row>
+
+                      {/* 03 · Ризик і сетап */}
+                      <Row num="03" label="Risk and Setup">
+                        <div className="mb-3">
+                          <AccountPicker value={account} options={accountOptions} onChange={setAccount} />
+                        </div>
+                        <div className="grid gap-3" style={{ gridTemplateColumns: 'minmax(0,1.15fr) minmax(0,1fr)' }}>
+                          <RiskCard
+                            risk={risk}
+                            setRisk={setRisk}
+                            rr={rr}
+                            setRr={setRr}
+                            balance={Number(accounts.find((a) => a.firm_name === account)?.balance) || null}
+                          />
+                          <SetupCard value={setupName} onChange={setSetupName} options={setupOptions} />
+                        </div>
+                      </Row>
+
+                      {/* 04 · Сесія і статус */}
+                      <Row num="04" label="Session and Status">
+                        <div className="grid gap-3" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.15fr)' }}>
+                          <div className="rounded-[20px] p-[18px]" style={{ border: `1px solid ${line(0.07)}`, background: line(0.022) }}>
+                            <div className="mb-[13px] text-[10px]" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.5) }}>SESSION</div>
+                            <SessionPicker value={session} onChange={setSession} />
+                          </div>
+                          <div className="rounded-[20px] p-[18px]" style={{ border: `1px solid ${line(0.07)}`, background: line(0.022) }}>
+                            <div className="mb-[13px] text-[10px]" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.5) }}>STATUS</div>
+                            <StatusPicker value={result} onChange={setResult} />
+                          </div>
+                        </div>
+                      </Row>
+
+                      {/* 05 · Логіка входу */}
+                      <Row num="05" label="Entry logic">
+                        <textarea
+                          value={tradeDescription}
+                          onChange={(e) => setTradeDescription(e.target.value)}
+                          placeholder="Entry logic, confirmations, emotions in the moment…"
+                          className="h-[112px] w-full resize-none overflow-y-auto rounded-[14px] px-4 py-[14px] text-[14px] outline-none transition-colors placeholder:opacity-40"
+                          style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}`, color: txt(0.85), fontFamily: T.sans, lineHeight: 1.6 }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.45)`; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(${ACCENT_RGB},0.14)`; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = line(0.08); e.currentTarget.style.boxShadow = 'none'; }}
+                        />
                       </Row>
                     </motion.div>
                   ) : (
                     <motion.div
                       key="step-2"
-                      initial={{ opacity: 0, x: 10 }}
+                      initial={{ opacity: 0, x: 8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 10 }}
-                      transition={{ duration: 0.22, ease: EASE }}
+                      transition={{ duration: 0.2, ease: EASE }}
                       className="flex flex-col gap-[22px] py-[30px]"
                     >
                       <div className="flex flex-wrap items-end justify-between gap-5">
@@ -1433,36 +1383,45 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                        {QUESTIONS.map((qq) => {
+                      <div className="flex flex-col gap-2">
+                        {QUESTIONS.map((qq, i) => {
                           const v = psyValues[qq.key];
                           const on = v !== null;
-                          const tone = !on ? ACCENT : (v === qq.good ? ACCENT : AMBER);
                           const set = psySetters[qq.key];
                           return (
                             <div
                               key={qq.key}
-                              className="flex flex-col justify-between gap-3 rounded-[13px] p-3.5 transition-colors duration-200"
-                              style={{ background: on ? 'var(--edge-surface-hi)' : 'var(--edge-sunken)', border: `1px solid ${on ? `${tone}3d` : line(0.06)}` }}
+                              className="flex items-center gap-3.5 rounded-[16px] px-4 py-[13px] transition-colors duration-150"
+                              style={{
+                                background: on ? `rgba(${ACCENT_RGB},0.09)` : line(0.022),
+                                border: `1px solid ${on ? `rgba(${ACCENT_RGB},0.3)` : line(0.06)}`,
+                              }}
                             >
-                              <span className="min-h-[38px] text-[14px] leading-[1.35] font-medium" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
+                              <span className="w-[22px] shrink-0 text-[11px]" style={{ fontFamily: MONO, color: txt(0.34) }}>
+                                {String(i + 1).padStart(2, '0')}
+                              </span>
+                              <span className="min-w-0 flex-1 text-[14.5px] font-semibold leading-[1.35]" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
                                 {qq.q}
                               </span>
-                              <div className="flex gap-1.5">
+                              <div
+                                className="grid shrink-0 grid-cols-2 gap-[5px] rounded-[13px] p-1"
+                                style={{ background: line(0.03), border: `1px solid ${line(0.06)}` }}
+                              >
                                 {[true, false].map((v2) => {
                                   const active = v === v2;
+                                  const tone = v2 ? GREEN : BAD;
+                                  const rgb = v2 ? GREEN_RGB : BAD_RGB;
                                   return (
                                     <button
                                       key={String(v2)}
                                       type="button"
                                       onClick={() => set(active ? null : v2)}
-                                      className="flex h-8 min-w-[48px] items-center justify-center rounded-[10px] text-[12px] transition-all duration-150"
+                                      className="rounded-[11px] px-[18px] py-[10px] text-[13.5px] font-bold transition-all duration-150"
                                       style={{
                                         fontFamily: T.sans,
-                                        fontWeight: active ? 600 : 500,
-                                        border: `1px solid ${active ? tone : line(0.09)}`,
-                                        background: active ? `${tone}22` : 'transparent',
-                                        color: active ? tone : txt(0.6),
+                                        background: active ? `rgba(${rgb},0.15)` : 'transparent',
+                                        color: active ? tone : txt(0.42),
+                                        boxShadow: active ? `inset 0 0 0 1px rgba(${rgb},0.36)` : 'none',
                                       }}
                                     >
                                       {v2 ? 'Yes' : 'No'}
@@ -1565,29 +1524,32 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                 onChange={(e) => setMistakeText(e.target.value)}
                                 placeholder="Describe the mistake in detail so you don't repeat it…"
                                 className="min-h-[80px] w-full resize-y rounded-xl p-4 text-[14px] outline-none"
-                                style={{ background: FIELD_BG, border: `1px solid ${touched && !mistakeText.trim() ? `rgba(${BAD_RGB},0.4)` : line(0.08)}`, color: txt(0.8), fontFamily: T.sans, lineHeight: 1.55 }}
+                                style={{ background: FIELD_BG, border: `1px solid ${touched && !mistakeText.trim() ? `rgba(${BAD_RGB},0.4)` : 'var(--edge-line)'}`, color: txt(0.85), fontFamily: T.sans, lineHeight: 1.55 }}
                               />
                             </div>
                           </motion.div>
                         )}
                       </AnimatePresence>
 
-                      <textarea
-                        value={psyNotes}
-                        onChange={(e) => setPsyNotes(e.target.value)}
-                        placeholder="What exactly hurt or saved this trade?"
-                        className="mt-1.5 min-h-[96px] w-full resize-y rounded-2xl p-[18px] text-[15px] outline-none transition-colors duration-150 placeholder:opacity-40"
-                        style={{ background: FIELD_BG, border: `1px solid ${line(0.08)}`, color: txt(0.85), fontFamily: T.sans, lineHeight: 1.6 }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.35)`; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = line(0.08); }}
-                      />
+                      <div>
+                        <div className="mb-[11px] text-[10px]" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.5) }}>NOTE</div>
+                        <textarea
+                          value={psyNotes}
+                          onChange={(e) => setPsyNotes(e.target.value)}
+                          placeholder="What exactly hurt or saved this trade?"
+                          className="min-h-[116px] w-full resize-y rounded-[18px] p-[18px] text-[14.5px] outline-none transition-colors duration-150 placeholder:opacity-60"
+                          style={{ background: FIELD_BG, border: `1px solid var(--edge-line)`, color: txt(0.85), fontFamily: T.sans, lineHeight: 1.55 }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.6)`; e.currentTarget.style.background = `rgba(${ACCENT_RGB},0.08)`; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line)'; e.currentTarget.style.background = FIELD_BG; }}
+                        />
+                      </div>
                     </motion.div>
                   )}
-                </AnimatePresence>
+                </div>
               </div>
 
               {/* ─────────── Підвал ─────────── */}
-              <div className="flex flex-col gap-3 px-6 py-5 sm:px-10" style={{ borderTop: `1px solid ${line(0.06)}`, background: FOOTER_BG }}>
+              <div className="flex flex-col gap-3 px-6 py-[18px] sm:px-7" style={{ borderTop: `1px solid ${line(0.06)}`, background: FOOTER_BG }}>
                 <AnimatePresence>
                   {errorMsg && (
                     <motion.div
@@ -1604,59 +1566,67 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                   )}
                 </AnimatePresence>
 
-                {step === 0 ? (
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="hidden text-[14px] sm:block" style={{ fontFamily: T.sans, color: txt(0.55) }}>
-                      Draft saves automatically
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5 text-[12.5px]" style={{ fontFamily: T.sans, color: txt(0.5) }}>
+                    <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: GREEN, boxShadow: `0 0 8px 1px rgba(${GREEN_RGB},0.5)` }} />
+                    <span className="hidden sm:inline">Draft saves automatically</span>
+                  </div>
+
+                  <div className="flex items-center gap-3.5">
+                    <span className="hidden text-[12px] sm:block" style={{ fontFamily: MONO, color: step === 0 ? txt(0.42) : (submitReady ? `rgba(${ACCENT_RGB},0.85)` : txt(0.42)) }}>
+                      {step === 0 ? 'Review left' : (submitReady ? 'All answers in place' : `${7 - psyDoneAll} left`)}
                     </span>
-                    <div className="ml-auto flex items-center gap-3.5">
-                      <span className="hidden text-[14px] sm:block" style={{ fontFamily: T.sans, color: txt(0.5) }}>Review left</span>
+
+                    {step === 1 && (
+                      <button
+                        type="button"
+                        onClick={goBack}
+                        className="rounded-[13px] px-5 py-[13px] text-[14px] font-semibold transition-colors duration-150"
+                        style={{ fontFamily: T.sans, background: 'transparent', border: `1px solid ${line(0.1)}`, color: txt(0.65) }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-text)'; e.currentTarget.style.borderColor = line(0.22); }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.65); e.currentTarget.style.borderColor = line(0.1); }}
+                      >
+                        ← Back
+                      </button>
+                    )}
+
+                    {step === 0 ? (
                       <button
                         type="button"
                         onClick={goNext}
-                        className="rounded-xl px-[26px] py-3.5 text-[15px] font-semibold transition-transform duration-150 active:scale-[0.98]"
-                        style={{ fontFamily: T.sans, background: ACCENT, color: 'var(--edge-on-acc)' }}
+                        className="rounded-[13px] px-6 py-[13px] text-[14px] font-bold transition-transform duration-150 active:scale-[0.98]"
+                        style={{
+                          fontFamily: T.sans,
+                          background: `linear-gradient(180deg, color-mix(in srgb, ${ACCENT} 88%, white), ${ACCENT})`,
+                          color: 'var(--edge-on-acc)',
+                          boxShadow: `0 8px 24px -6px rgba(${ACCENT_RGB},0.7)`,
+                        }}
                       >
                         Next →
                       </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between gap-4">
-                    <button
-                      type="button"
-                      onClick={goBack}
-                      className="rounded-[11px] px-5 py-3 text-[14px] font-medium transition-colors duration-150"
-                      style={{ fontFamily: T.sans, border: `1px solid ${line(0.08)}`, color: txt(0.65) }}
-                    >
-                      ← Back
-                    </button>
-                    <div className="flex items-center gap-3.5">
-                      <span className="hidden text-[14px] sm:block" style={{ fontFamily: T.sans, color: submitReady ? `rgba(${ACCENT_RGB},0.85)` : txt(0.5) }}>
-                        {submitReady ? 'All answers in place' : `${7 - psyDoneAll} left`}
-                      </span>
+                    ) : (
                       <button
                         type="submit"
                         disabled={loading || !submitReady}
-                        className="flex items-center gap-2 rounded-xl px-[26px] py-3.5 text-[15px] font-semibold transition-all duration-150"
+                        className="flex items-center gap-2 rounded-[13px] px-6 py-[13px] text-[14px] font-bold transition-all duration-150"
                         style={{
                           fontFamily: T.sans,
                           cursor: submitReady ? 'pointer' : 'not-allowed',
-                          background: submitReady ? ACCENT : line(0.06),
+                          background: submitReady
+                            ? `linear-gradient(180deg, color-mix(in srgb, ${ACCENT} 88%, white), ${ACCENT})`
+                            : line(0.06),
                           color: submitReady ? 'var(--edge-on-acc)' : txt(0.4),
-                          border: `1px solid ${submitReady ? ACCENT : line(0.08)}`,
-                          boxShadow: submitReady ? `0 0 40px rgba(${ACCENT_RGB},0.28)` : 'none',
+                          border: submitReady ? 'none' : `1px solid ${line(0.08)}`,
+                          boxShadow: submitReady ? `0 8px 24px -6px rgba(${ACCENT_RGB},0.7)` : 'none',
                           opacity: loading ? 0.7 : 1,
                         }}
                       >
-                        {loading
-                          ? <Loader2 size={15} strokeWidth={3} className="animate-spin" />
-                          : null}
+                        {loading ? <Loader2 size={15} strokeWidth={3} className="animate-spin" /> : null}
                         {existingTrade ? 'Update Trade' : 'Log Trade'}
                       </button>
-                    </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </form>
           </motion.div>

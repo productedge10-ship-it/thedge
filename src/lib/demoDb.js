@@ -15,7 +15,9 @@
    демо-дані з чужими угодами неможливо.
 ================================================================== */
 
-const KEY = 'edge.demo.db.v3';
+/* Версія в ключі — щоб зміна насіння підхопилась у всіх, хто вже
+   відкривав демо: старий кеш під іншим ключем просто ігнорується. */
+const KEY = 'edge.demo.db.v5';
 
 export const DEMO_USER_ID = 'demo-user-0000-0000-000000000001';
 
@@ -46,17 +48,125 @@ const uid = () => (globalThis.crypto?.randomUUID
    дві взяті повз план — саме на них тримається половина висновків
    аналітики й розділу помилок. */
 const seed = () => ({
+  /* Журнал планів для розділу «Аналізи»: кожен план — гіпотеза
+     напряму на день, і поруч видно, чи ринок її підтвердив. Схема
+     справжня (date / pair / narrative / plan_data), щоб сторінка
+     аналізів і денний план читали ті самі поля. Набір навмисно
+     різний: є влучні, є мимо, дві з помилкою в розборі, один
+     вихідний — рівно те, з чого складається зведення зверху. */
   trading_plans: [
     {
-      id: uid(), user_id: DEMO_USER_ID, plan_date: today(0), pair: 'XAUUSD',
-      direction: 'long', status: 'active', bias: 'Тренд вгору, чекаю відкат до OB',
-      notes: 'Лондон. Вхід тільки після зняття лоу азії та FVG на 1m.',
-      created_at: iso(0, 8, 40), updated_at: iso(0, 8, 40),
+      id: uid(), user_id: DEMO_USER_ID, date: today(-2), pair: 'XAUUSD',
+      narrative: 'Bullish', is_public: false,
+      plan_data: {
+        date: today(-2), pair: 'XAUUSD', narrative: 'Bullish',
+        actualNarrative: 'Bullish',
+        planText: 'Лондон. Тренд вгору, чекаю відкат до 4h OB і вхід після зняття лоу азії з FVG на 1m. Стоп за OB, ціль — попередній хай.',
+        sessionRating: 4, analysisMistake: false, analysisMistakeText: '',
+        conclusionsText: 'Дочекався умови, зайшов з першого тесту. Тримати руки далі від графіка після входу.',
+        updates: [
+          { id: 1, text: 'Зняли лоу азії рівно на відкритті Лондона, чекаю реакцію.' },
+          { id: 2, text: 'FVG сформувалась, вхід за планом.' },
+        ],
+        tdaBlocks: [], reviewBlocks: [],
+      },
+      created_at: iso(-2, 8, 40), updated_at: iso(-2, 18, 10),
     },
     {
-      id: uid(), user_id: DEMO_USER_ID, plan_date: today(-1), pair: 'GER40',
-      direction: 'short', status: 'done', bias: 'Judas swing на відкритті',
-      notes: 'Відпрацював за планом.', created_at: iso(-1, 8, 30), updated_at: iso(-1, 18, 0),
+      id: uid(), user_id: DEMO_USER_ID, date: today(-4), pair: 'GER40',
+      narrative: 'Bearish', is_public: false,
+      plan_data: {
+        date: today(-4), pair: 'GER40', narrative: 'Bearish',
+        actualNarrative: 'Bearish',
+        planText: 'Judas swing на відкритті Франкфурта: чекаю фальшивий вихід угору й розворот вниз під час першої години.',
+        sessionRating: 5, analysisMistake: false, analysisMistakeText: '',
+        conclusionsText: 'Найкраще виконання за тиждень — план описав рух майже дослівно.',
+        updates: [
+          { id: 1, text: 'Фальшивий вихід угору, шорт від рівня.' },
+        ],
+        tdaBlocks: [], reviewBlocks: [],
+      },
+      created_at: iso(-4, 8, 20), updated_at: iso(-4, 17, 0),
+    },
+    {
+      id: uid(), user_id: DEMO_USER_ID, date: today(-6), pair: 'EURUSD',
+      narrative: 'Bullish', is_public: false,
+      plan_data: {
+        date: today(-6), pair: 'EURUSD', narrative: 'Bullish',
+        actualNarrative: 'Bearish',
+        planText: 'Чекаю продовження вгору після пробою. Умови входу так і не зʼявились.',
+        sessionRating: 2, analysisMistake: true,
+        analysisMistakeText: 'Зайшов без сетапу від нудьги, коли ринок стояв. Пробою не було, я вигадав рух.',
+        conclusionsText: 'Немає умови — немає угоди. Закривати термінал, а не шукати вхід силою.',
+        updates: [],
+        tdaBlocks: [], reviewBlocks: [],
+      },
+      created_at: iso(-6, 9, 0), updated_at: iso(-6, 16, 30),
+    },
+    {
+      id: uid(), user_id: DEMO_USER_ID, date: today(-9), pair: 'NAS100',
+      narrative: 'Neutral', is_public: false,
+      plan_data: {
+        date: today(-9), pair: 'NAS100', narrative: 'Neutral',
+        actualNarrative: 'Neutral',
+        planText: 'День даних: до виходу цифри сиджу в стороні, торгую тільки чітку реакцію на рівні.',
+        sessionRating: 3, analysisMistake: false, analysisMistakeText: '',
+        conclusionsText: 'Пропустив дві сумнівні угоди — це теж результат.',
+        updates: [
+          { id: 1, text: 'Дані вийшли по консенсусу, реакція слабка.' },
+          { id: 2, text: 'Діапазон тримається, залишаюсь поза ринком.' },
+          { id: 3, text: 'Закрив день без угод, як і планував.' },
+        ],
+        tdaBlocks: [], reviewBlocks: [],
+      },
+      created_at: iso(-9, 8, 45), updated_at: iso(-9, 20, 0),
+    },
+    {
+      id: uid(), user_id: DEMO_USER_ID, date: today(-16), pair: 'BTCUSD',
+      narrative: 'Bearish', is_public: false,
+      plan_data: {
+        date: today(-16), pair: 'BTCUSD', narrative: 'Bearish',
+        actualNarrative: 'Bullish',
+        planText: 'Чекаю злив під діапазон вихідних. Замість цього ринок викупив і пішов угору.',
+        sessionRating: 2, analysisMistake: true,
+        analysisMistakeText: 'Тримав шорт проти імпульсу занадто довго, переніс стоп. Ризик вийшов 2R замість 1R.',
+        conclusionsText: 'Стоп — це стоп. Не рухати його руками, коли рух іде проти.',
+        updates: [
+          { id: 1, text: 'Пробили діапазон угору, ідея не спрацювала.' },
+        ],
+        tdaBlocks: [], reviewBlocks: [],
+      },
+      created_at: iso(-16, 9, 30), updated_at: iso(-16, 15, 0),
+    },
+    {
+      id: uid(), user_id: DEMO_USER_ID, date: today(-24), pair: 'US100',
+      narrative: 'Bullish', is_public: false,
+      plan_data: {
+        date: today(-24), pair: 'US100', narrative: 'Bullish',
+        actualNarrative: 'Bullish',
+        planText: 'Свіп лоу + FVG на відкритті Лондона, ціль по 3R на попередній хай.',
+        sessionRating: 4, analysisMistake: false, analysisMistakeText: '',
+        conclusionsText: 'Взяв 2R, закрив рано перед новиною — норм рішення.',
+        updates: [
+          { id: 1, text: 'Свіп відбувся, вхід від FVG.' },
+          { id: 2, text: 'Перед виходом даних зафіксував частину.' },
+        ],
+        tdaBlocks: [], reviewBlocks: [],
+      },
+      created_at: iso(-24, 8, 30), updated_at: iso(-24, 14, 20),
+    },
+    {
+      id: uid(), user_id: DEMO_USER_ID, date: today(-33), pair: 'XAUUSD',
+      narrative: 'Day off', is_public: false,
+      plan_data: {
+        date: today(-33), pair: 'XAUUSD', narrative: 'Day off',
+        actualNarrative: '',
+        planText: 'Банківський вихідний у США, ліквідності немає. Не торгую.',
+        sessionRating: 0, analysisMistake: false, analysisMistakeText: '',
+        conclusionsText: '', updates: [],
+        tdaBlocks: [], reviewBlocks: [],
+      },
+      created_at: iso(-33, 9, 0), updated_at: iso(-33, 9, 0),
     },
   ],
 

@@ -10,7 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Check, Cog, GripVertical, Plus, RotateCcw, X,
 } from 'lucide-react';
-import { A, CSS_SPRING, F, P, POP, en, hairline, lightLayer, trackLight } from './theme';
+import { A, CSS_SPRING, F, LAYOUT, P, POP, en, hairline, lightLayer, trackLight } from './theme';
 import { DEFAULT_LAYOUT, WIDGETS, optionsFor } from './widgets';
 import Preview from './Preview';
 
@@ -61,6 +61,31 @@ export const PERIODS = [
 
 const WIDTH_LABEL = { 1: '¼', 2: '½', 3: '¾', 4: 'Full' };
 const REMOVE_MS = 220;
+
+/* ------------------------------------------------------------------
+   Плитка
+
+   Дошка з карток, кожна з яких заввишки рівно під свій вміст, не
+   працює. Це перевірено двічі: спершу всіх розтягувало під найвищого
+   в рядку (число зависало посеред порожнечі), потім кожен отримав
+   власну висоту (під короткими зяяли дірки). Обидва рази проблема та
+   сама — висоту диктував вміст.
+
+   Правильно навпаки: висоту диктує сітка, а вміст під неї
+   підлаштовується. Це модель домашнього екрана iOS, з якої дошка й
+   починалась: плитки бувають кількох розмірів, усі кратні одній
+   клітинці, і саме тому екран ніколи не виглядає рваним. Віджет
+   різниться наповненням, а не габаритом.
+
+   Отже, у віджета тепер два розміри: w — скільки колонок, h —
+   скільки рядів. Обидва вибирає людина, обидва зберігаються. Дірок
+   не буває: усе кратне клітинці, а `row dense` заповнює те, що
+   лишилось, наступною плиткою, яка пасує.
+------------------------------------------------------------------ */
+const ROW_H = 180;
+const GAP = 14;
+
+const HEIGHT_LABEL = { 1: 'S', 2: 'M', 3: 'L', 4: 'XL' };
 
 /* ------------------------------------------------------------------
    Панель налаштувань
@@ -161,6 +186,45 @@ function WidthPicker({ value, tone, onPick }) {
   );
 }
 
+/* Той самий вигляд, що у вибору ширини, і це навмисно: два розміри
+   однієї плитки мають читатись як пара, а не як дві різні настройки. */
+function HeightPicker({ value, tone, onPick }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.07, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      style={{ display: 'flex', flexDirection: 'column', gap: 9 }}
+    >
+      <span style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <span style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 500, color: P.dim }}>Height</span>
+        <span style={{ fontFamily: F.mono, fontSize: 11, color: tone }}>{HEIGHT_LABEL[value]}</span>
+      </span>
+
+      <div style={{ display: 'flex', gap: 4 }}>
+        {[1, 2, 3, 4].map((n) => {
+          const on = n <= value;
+          return (
+            <button
+              key={n}
+              type="button"
+              aria-label={`Height ${HEIGHT_LABEL[n]}`}
+              data-state={n === value ? 'active' : on ? 'filled' : 'idle'}
+              onClick={() => onPick(n)}
+              style={{
+                flex: 1, height: 24, borderRadius: 7, cursor: 'pointer',
+                background: on ? `${tone}2e` : '#ffffff08',
+                border: `1px solid ${n === value ? `${tone}8c` : on ? `${tone}3d` : 'transparent'}`,
+                transition: 'all .18s',
+              }}
+            />
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
 function SettingsPanel({ id, item, onChange, onClose }) {
   const WIDGETS = useRegistry();
   const spec = WIDGETS[id];
@@ -221,9 +285,10 @@ function SettingsPanel({ id, item, onChange, onClose }) {
       </div>
 
       <WidthPicker value={item.w} tone={tone} onPick={(n) => set({ w: n })} />
+      <HeightPicker value={item.h} tone={tone} onPick={(n) => set({ h: n })} />
 
       <Choice
-        label="Period" index={1} tone={tone}
+        label="Period" index={2} tone={tone}
         value={item.p || 'inherit'}
         choices={PERIODS}
         onPick={(v) => set({ p: v })}
@@ -233,7 +298,7 @@ function SettingsPanel({ id, item, onChange, onClose }) {
         <Choice
           key={key}
           label={en(def.label)}
-          index={i + 2}
+          index={i + 3}
           tone={tone}
           choices={def.choices.map(([v, l]) => [v, en(l)])}
           value={opts[key]}
@@ -375,7 +440,24 @@ function CardShell({
         </AnimatePresence>
       </header>
 
-      <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      {/* Вміст живе всередині плитки, а не навпаки.
+
+          `minHeight: 0` обовʼязковий: без нього flex-елемент не має
+          права стати меншим за свій вміст, і висока картка просто
+          вилізла б за межі плитки замість того, щоб віддати графіку
+          рівно те місце, яке лишилось.
+
+          Прокрутка тут — запобіжник, а не спосіб дивитись віджет:
+          якщо людина поставила плитці висоту S, а всередині список на
+          сім правил, краще дати прокрутку, ніж обрізати текст. */}
+      <div
+        className="ov-body"
+        style={{
+          position: 'relative', flex: 1, minHeight: 0,
+          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          overflowY: 'auto', overflowX: 'hidden',
+        }}
+      >
         {/* Віджет знає, якої він зараз ширини й чи на ньому курсор.
             Перше — щоб широка картка не стояла порожньою: місце,
             яке зʼявилось, має чимось наповнитись. Друге — щоб
@@ -404,6 +486,7 @@ function SortableCard({ item, edit, removing, ...rest }) {
     attributes, listeners, setNodeRef, transform, transition, isDragging, isOver,
   } = useSortable({ id: item.id, disabled: !edit });
 
+
   /* Тягнеться вся картка, а не ручка.
 
      Крапки в кутку були єдиною зоною захвату, і це помилка: ціль
@@ -413,12 +496,18 @@ function SortableCard({ item, edit, removing, ...rest }) {
      шапці й панель налаштувань гасять pointerdown у себе, тож клік по
      шестерні лишається кліком.
 
-     Тут же був другий шар — motion.div з layout від framer-motion,
-     який згладжував зміну ширини. Він і був причиною того, що після
-     звуження картки вміст довго повзе на місце: layout-анімація
-     масштабує коробку, а все всередині їде разом із нею й вирівнюється
-     лише в кінці пружини. Ширину міняють рідко й свідомо, тому чесний
-     миттєвий перескок виявився кращим за півсекунди повзання. */
+     Другий шар — layout="position", і саме "position", а не звичайний
+     layout. Різниця вирішальна. Звичайний layout анімує й розмір теж:
+     коробка їде до нової ширини пружиною, а весь вміст масштабується
+     разом із нею й вирівнюється лише в кінці — це те повзання, через
+     яке шар довелось знімати минулого разу. Варіант "position" анімує
+     тільки координати: розмір міняється миттєво, вміст не спотворю-
+     ється, зате картка, яка переїжджає на місце видаленої, доїжджає
+     плавно, а не стрибає.
+
+     Без цього шару видалення виглядало неанімованим: сама картка
+     чесно згасала, але решта сітки в ту ж мить перестрибувала на нові
+     місця, і око читало саме стрибок. */
   return (
     <div
       ref={setNodeRef}
@@ -426,6 +515,7 @@ function SortableCard({ item, edit, removing, ...rest }) {
       {...(edit ? listeners : {})}
       style={{
         gridColumn: `span ${item.w}`,
+        gridRow: `span ${item.h}`,
         /* Тільки зсув. Масштаб із трансформу викидаємо: картки різної
            ширини, і при обміні місцями бібліотека інакше розтягує
            вузьку під розмір широкої — віджет на мить роздувається. */
@@ -437,16 +527,25 @@ function SortableCard({ item, edit, removing, ...rest }) {
         willChange: isDragging ? 'transform' : undefined,
       }}
     >
-      <CardShell
-        item={item}
-        edit={edit}
-        removing={removing}
-        hover={hover && !isDragging}
-        lifted={isDragging}
-        dropTarget={isOver && !isDragging}
-        setHover={setHover}
-        {...rest}
-      />
+      <motion.div
+        /* Поки картку тягнуть, layout вимкнено: інакше framer почне
+           анімувати її до місця, яке щойно порахував dnd-kit, і вони
+           будуть тягнути картку в різні боки. */
+        layout={isDragging ? false : 'position'}
+        transition={LAYOUT}
+        style={{ height: '100%' }}
+      >
+        <CardShell
+          item={item}
+          edit={edit}
+          removing={removing}
+          hover={hover && !isDragging}
+          lifted={isDragging}
+          dropTarget={isOver && !isDragging}
+          setHover={setHover}
+          {...rest}
+        />
+      </motion.div>
     </div>
   );
 }
@@ -684,7 +783,7 @@ export default function Board({
   const add = (id, at) => {
     setLayout((prev) => {
       if (prev.some((x) => x.id === id)) return prev;
-      const item = { id, w: registry[id].defaultW || 1 };
+      const item = { id, w: registry[id].defaultW || 1, h: registry[id].defaultH || 2 };
       if (at == null || at < 0) return [...prev, item];
       const next = [...prev];
       next.splice(at, 0, item);
@@ -723,6 +822,11 @@ export default function Board({
         .ov-board{ --ov-cols: 4 }
         @media (max-width: 1279px){ .ov-board{ --ov-cols: 2 } }
         @media (max-width: 719px){ .ov-board{ --ov-cols: 1 } }
+
+        .ov-body::-webkit-scrollbar{ width: 5px }
+        .ov-body::-webkit-scrollbar-track{ background: transparent }
+        .ov-body::-webkit-scrollbar-thumb{ background: transparent; border-radius: 99px }
+        .ov-body:hover::-webkit-scrollbar-thumb{ background: #2a2a35 }
 
         .ov-lib::-webkit-scrollbar{ height: 6px }
         .ov-lib::-webkit-scrollbar-track{ background: transparent }
@@ -809,15 +913,25 @@ export default function Board({
             className="ov-board"
             style={{
               display: 'grid',
-              gap: 14,
               gridTemplateColumns: 'repeat(var(--ov-cols, 4), minmax(0, 1fr))',
-              alignItems: 'stretch',
+              gridAutoRows: `${ROW_H}px`,
+              /* dense — те, заради чого все це. Без нього плитка, яка
+                 не влізла поруч, чекає кінця найвищої сусідки, і під
+                 короткими лишаються дірки. З ним вона заповзає в
+                 найближчу вільну щілину, бо всі розміри кратні одній
+                 клітинці й будь-яка щілина комусь пасує. */
+              gridAutoFlow: 'row dense',
+              gap: GAP,
             }}
           >
             {layout.map((item, i) => (
               <SortableCard
                 key={item.id}
-                item={{ ...item, w: Math.min(Math.max(item.w || 1, 1), 4) }}
+                item={{
+                  ...item,
+                  w: Math.min(Math.max(item.w || 1, 1), 4),
+                  h: Math.min(Math.max(item.h || registry[item.id]?.defaultH || 2, 1), 4),
+                }}
                 stats={statsFor(item.p)}
                 edit={edit}
                 removing={removingId === item.id}

@@ -234,20 +234,27 @@ export default function Analyses() {
     }
   };
 
+  /* У пісочниці ті самі переходи мусять лишатися всередині /demo/*,
+     інакше клік по плану викидає людину в захищену частину. */
+  const toPlan = (path) =>
+    (typeof window !== 'undefined' && window.location.pathname.startsWith('/demo'))
+      ? `/demo${path}`
+      : path;
+
   /* План відкриваємо строго по id з бази — вміст більше не ганяємо
      через localStorage, щоб він не лежав відкритим на диску. */
   const openPlan = (plan) => {
     localStorage.setItem('last_edited_plan_id', plan.id);
     if (plan.date && plan.pair) {
-      navigate(`/plan/${plan.date}/${encodeURIComponent(plan.pair)}`, { state: { date: plan.date, pair: plan.pair, id: plan.id } });
+      navigate(toPlan(`/plan/${plan.date}/${encodeURIComponent(plan.pair)}`), { state: { date: plan.date, pair: plan.pair, id: plan.id } });
     } else {
-      navigate('/plan', { state: { id: plan.id } });
+      navigate(toPlan('/plan'), { state: { id: plan.id } });
     }
   };
 
   const createNewPlan = () => {
     localStorage.removeItem('last_edited_plan_id');
-    navigate('/plan');
+    navigate(toPlan('/plan'));
   };
 
   /* Зведення по завантажених планах: скільки їх, скільки цього місяця,

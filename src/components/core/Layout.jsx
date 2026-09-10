@@ -714,8 +714,8 @@ const withDemo = (to) => (typeof window !== 'undefined'
 /* У пісочниці лишаються чотири розділи. Показувати всі — означає
    водити людину по вітрині: половина сторінок без її даних порожні
    й нічого не пояснюють. Ці чотири покривають увесь цикл: план,
-   запис, рахунок, розрахунок ризику. */
-export const DEMO_ROUTES = ['/plan', '/journal', '/calculator', '/accounts'];
+   запис, розбір планів, рахунок. */
+export const DEMO_ROUTES = ['/plan', '/journal', '/analyses', '/accounts'];
 
 export const inDemo = () => typeof window !== 'undefined'
   && window.location.pathname.startsWith('/demo');

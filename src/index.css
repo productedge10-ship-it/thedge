@@ -409,11 +409,28 @@ body {
 .edge-add-btn {
   background: #17151f;
   border: 1px solid rgba(139, 123, 255, 0.5);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
 }
 .edge-add-btn:hover {
   background: #1c1a26;
   border-color: rgba(139, 123, 255, 0.85);
+}
+.edge-add-btn svg {
+  color: var(--edge-acc, #8b7bff);
+}
+/* Світла тема: темний блок різав око — робимо суцільний фіолетовий CTA
+   (білий текст й іконка лишаються читабельними). */
+.edge-light .edge-add-btn {
+  background: var(--edge-acc, #5b54c6);
+  border-color: color-mix(in srgb, var(--edge-acc) 70%, #000);
+}
+.edge-light .edge-add-btn:hover {
+  background: var(--edge-acc, #5b54c6);
+  border-color: color-mix(in srgb, var(--edge-acc) 55%, #000);
+  filter: brightness(1.08);
+}
+.edge-light .edge-add-btn svg {
+  color: #fff;
 }
 
 /* ------------------------------------------------------------------

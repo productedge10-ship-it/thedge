@@ -27,6 +27,10 @@ const normalize = (v) => {
     .map((x) => ({
       id: x.id,
       w: Math.min(4, Math.max(1, Number(x.w) || 1)),
+      /* Висота теж належить розкладці, а не вмісту. Стара збережена
+         дошка про неї не знає, тому підставляємо ту, з якою віджет
+         задумувався. */
+      h: Math.min(4, Math.max(1, Number(x.h) || PERF_WIDGETS[x.id].defaultH || 2)),
       p: typeof x.p === 'string' ? x.p : 'inherit',
       o: x.o && typeof x.o === 'object' ? x.o : {},
     }));

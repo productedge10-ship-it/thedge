@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Printer, ImagePlus, Trash2, X, ChevronLeft, RotateCcw, Search,
-  Plus, ArrowRight, Check,
+  Printer, Trash2, X, ChevronLeft, RotateCcw, Search,
+  Plus, ArrowRight, Check, Image as ImageIcon,
 } from 'lucide-react';
 
 import { T, EASE, useEdgeFonts } from '../lib/theme';
@@ -152,6 +152,28 @@ function IconBtn({ icon: Icon, label, onClick, tone }) {
     >
       <Icon size={13.5} strokeWidth={2.2} />
       {label}
+    </button>
+  );
+}
+
+/* Кнопка тулбару секції (макет v2): іконка + підпис, підпис ховається
+   на вузькому екрані. Небезпечна дія — червоний ховер. */
+function TBtn({ label, onClick, danger, children }) {
+  const base = danger ? T.bad : T.text3;
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      className="flex items-center gap-[7px] rounded-[10px] px-[11px] py-[7px] text-[12.5px] transition-colors duration-150 no-print"
+      style={{ fontFamily: T.sans, color: base, background: 'transparent', border: 'none' }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = danger ? '#ff8b99' : T.text;
+        e.currentTarget.style.background = danger ? `rgba(${T.badRgb},0.12)` : 'rgba(var(--edge-text-rgb),0.06)';
+      }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = base; e.currentTarget.style.background = 'transparent'; }}
+    >
+      {children}
+      <span data-lbl className="hidden md:inline">{label}</span>
     </button>
   );
 }
@@ -351,6 +373,40 @@ export default function TradingSystem() {
     [pages, page],
   );
 
+  /* Загальні цифри героя секції — рахуємо тут, а не в розмітці, щоб
+     не тримати IIFE всередині JSX. */
+  const secIdx = page ? sections.findIndex((s) => s.id === page.id) : -1;
+  const secNum = secIdx >= 0 ? String(secIdx + 1).padStart(2, '0') : null;
+  const updLabel = page?.updatedAt
+    ? new Date(page.updatedAt).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '—';
+
+  /* Відтінок розділу — трійка rgb; ним світиться героя, номери, плитки. */
+  const tint = page ? (HUES[page.hue] || HUES.violet) : HUES.violet;
+
+  /* Зміст ліворуч — з великих заголовків (h1 та h2) редактора. */
+  const headings = useMemo(
+    () => (page?.blocks || [])
+      .filter((b) => (b.type === 'h1' || b.type === 'h2') && (b.text || '').trim())
+      .map((b, i) => ({ id: b.id, n: String(i + 1).padStart(2, '0'), label: b.text.trim(), sub: b.type === 'h2' })),
+    [page],
+  );
+  const [tocActive, setTocActive] = useState(null);
+  useEffect(() => {
+    if (!page || headings.length === 0) return undefined;
+    const run = () => {
+      let cur = headings[0]?.id ?? null;
+      for (const h of headings) {
+        const el = document.getElementById(`h-${h.id}`);
+        if (el && el.getBoundingClientRect().top - 120 <= 0) cur = h.id;
+      }
+      setTocActive(cur);
+    };
+    const raf = requestAnimationFrame(run);
+    window.addEventListener('scroll', run, true);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('scroll', run, true); };
+  }, [page, headings]);
+
   /* ---------- зміни ---------- */
 
   const setPages = (updater) =>
@@ -408,8 +464,6 @@ export default function TradingSystem() {
   }, []);
 
   if (!root) return null;
-
-  const hue = page ? (HUES[page.hue] || HUES.violet) : HUES.violet;
 
   return (
     <div className="relative min-h-full">
@@ -603,220 +657,335 @@ export default function TradingSystem() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.3, ease: EASE }}
             >
-              {/* панель дій */}
-              <div className="mb-5 flex flex-wrap items-center gap-1.5">
-                <button
-                  onClick={() => open(page.parentId === root.id ? null : page.parentId)}
-                  className="group flex h-9 items-center gap-1.5 rounded-lg pl-1.5 pr-3 text-[13px] font-semibold transition-colors duration-200 no-print"
-                  style={{ fontFamily: T.sans, color: T.text3 }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
+              <>
+                {/* ─────────── ЛИПКИЙ ТУЛБАР ─────────── */}
+                <div
+                  data-bar
+                  className="sticky top-0 z-40 -mx-3 flex items-center justify-between gap-5 px-6 sm:-mx-5 xl:-mx-7 no-print"
+                  style={{
+                    height: 60,
+                    background: 'color-mix(in srgb, var(--edge-bg) 74%, transparent)',
+                    backdropFilter: 'blur(24px) saturate(140%)',
+                    WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+                    borderBottom: `1px solid ${T.line}`,
+                  }}
                 >
-                  <ChevronLeft size={16} strokeWidth={2.4} className="transition-transform duration-200 group-hover:-translate-x-0.5" />
-                  {page.parentId === root.id ? 'Усі розділи' : 'Назад'}
-                </button>
-
-                {/* у підрозділі видно, з якого саме розділу ти прийшов */}
-                {page.parentId !== root.id && (
-                  <span className="flex min-w-0 items-center gap-1.5 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                    <span style={{ color: T.lineHi }}>/</span>
-                    <span className="truncate">
-                      {pages.find((p) => p.id === page.parentId)?.icon}{' '}
-                      {pages.find((p) => p.id === page.parentId)?.title}
-                    </span>
-                  </span>
-                )}
-
-                <span className="ml-auto flex flex-wrap items-center gap-1">
-                  {/* Підрозділ додається звідси, а не тільки з низу
-                      сторінки: коли розділ довгий, кнопку внизу просто
-                      не знаходять. */}
-                  <button
-                    onClick={() => addSubPage(page.id)}
-                    className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-[12.5px] font-bold transition-colors duration-200 no-print"
-                    style={{
-                      fontFamily: T.sans,
-                      color: T.acc,
-                      background: `rgba(${T.accRgb},0.09)`,
-                      border: `1px solid ${T.lineAcc}`,
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = `rgba(${T.accRgb},0.16)`)}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = `rgba(${T.accRgb},0.09)`)}
-                  >
-                    <Plus size={13.5} strokeWidth={2.6} />
-                    Підрозділ
-                  </button>
-                  <IconBtn icon={Search} label="Пошук" onClick={() => setSearchOpen(true)} />
-                  {!page.cover && <IconBtn icon={ImagePlus} label="Обкладинка" onClick={() => coverRef.current?.click()} />}
-                  <IconBtn icon={Printer} label="PDF" onClick={() => window.print()} />
-                  <IconBtn icon={Trash2} label="Видалити" tone={T.bad} onClick={() => setConfirm(page)} />
-                </span>
-              </div>
-
-              <div
-                className="overflow-hidden rounded-2xl"
-                style={{
-                  background: `linear-gradient(180deg, rgba(${hue},0.05), ${T.surface} 220px)`,
-                  border: `1px solid ${T.line}`,
-                }}
-              >
-                {page.cover ? (
-                  <div className="group/cover relative h-[180px] w-full overflow-hidden">
-                    <img src={page.cover} alt="" className="h-full w-full object-cover" />
-                    <span className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 40%, rgba(19,19,22,0.92))' }} />
-                    <span className="absolute right-3 top-3 flex gap-1.5 opacity-0 transition-opacity duration-200 group-hover/cover:opacity-100 no-print">
-                      <button
-                        onClick={() => coverRef.current?.click()}
-                        className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold"
-                        style={{ background: 'rgba(10,10,12,0.8)', border: `1px solid ${T.line}`, color: T.text2, backdropFilter: 'blur(8px)', fontFamily: T.sans }}
-                      >
-                        Змінити
-                      </button>
-                      <button
-                        onClick={() => patchPage(page.id, { cover: '' })}
-                        className="grid h-8 w-8 place-items-center rounded-lg"
-                        style={{ background: 'rgba(10,10,12,0.8)', border: `1px solid ${T.line}`, color: T.text2, backdropFilter: 'blur(8px)' }}
-                      >
-                        <X size={14} strokeWidth={2.6} />
-                      </button>
+                  <div className="flex min-w-0 items-center gap-4">
+                    <button
+                      onClick={() => open(page.parentId === root.id ? null : page.parentId)}
+                      className="group flex items-center gap-[9px] rounded-[10px] py-[7px] pl-[9px] pr-[13px] text-[13.5px] transition-colors duration-150"
+                      style={{ fontFamily: T.sans, color: T.text2, border: '1px solid transparent' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-text-rgb),0.045)'; e.currentTarget.style.color = T.text; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
+                    >
+                      <span className="text-[14px] leading-none opacity-70">‹</span>
+                      {page.parentId === root.id ? 'Усі розділи' : 'Назад'}
+                    </button>
+                    <span className="hidden h-4 w-px sm:block" style={{ background: T.lineHi }} />
+                    <span className="hidden truncate text-[10.5px] uppercase sm:block" style={{ fontFamily: T.mono, letterSpacing: '0.22em', color: T.text4 }}>
+                      {page.parentId !== root.id
+                        ? `${pages.find((p) => p.id === page.parentId)?.title || ''} / ${page.title}`
+                        : page.title}
                     </span>
                   </div>
-                ) : (
-                  <div className="h-2" />
-                )}
-                <input ref={coverRef} type="file" accept="image/*" hidden onChange={(e) => readCover(e.target.files?.[0])} />
 
-                <div className="px-4 pb-14 pt-6 sm:px-10 xl:px-14">
-                  {/* іконка + назва + підпис */}
-                  <div className="relative mb-7 flex items-start gap-3.5">
-                    <button
-                      onClick={() => setEmojiOpen((v) => !v)}
-                      title="Змінити іконку"
-                      className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-[26px] transition-colors duration-200 sm:h-14 sm:w-14 sm:text-[30px]"
-                      style={{ background: `rgba(${hue},0.08)`, border: `1px solid rgba(${hue},${emojiOpen ? 0.5 : 0.22})` }}
+                  <div data-bar-actions className="flex items-center gap-2.5">
+                    <div
+                      className="flex items-center gap-0.5 rounded-[13px] p-[3px]"
+                      style={{ border: `1px solid ${T.line}`, background: 'rgba(var(--edge-text-rgb),0.025)', boxShadow: 'inset 0 1px 0 rgba(var(--edge-text-rgb),0.05)' }}
                     >
-                      {page.icon || '📄'}
-                    </button>
-
-                    <AnimatePresence>
-                      {emojiOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                          transition={{ duration: 0.16, ease: EASE }}
-                          className="absolute left-0 top-16 z-50 w-[290px] rounded-2xl p-2 no-print"
-                          style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}
-                        >
-                          <div className="grid grid-cols-8 gap-0.5">
-                            {EMOJI.map((e) => (
-                              <button
-                                key={e}
-                                onClick={() => { patchPage(page.id, { icon: e }); setEmojiOpen(false); }}
-                                className="grid h-9 place-items-center rounded-lg text-[18px] transition-colors duration-150"
-                                onMouseEnter={(ev) => (ev.currentTarget.style.background = T.surfaceHi)}
-                                onMouseLeave={(ev) => (ev.currentTarget.style.background = 'transparent')}
-                              >
-                                {e}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-1.5 px-1 pb-1 pt-2" style={{ borderTop: `1px solid ${T.line}` }}>
-                            {Object.entries(HUES).map(([key, rgb]) => (
-                              <button
-                                key={key}
-                                onClick={() => patchPage(page.id, { hue: key })}
-                                className="h-7 w-7 rounded-lg"
-                                style={{
-                                  background: `rgba(${rgb},0.18)`,
-                                  border: `1.5px solid rgba(${rgb},${page.hue === key ? 0.95 : 0.25})`,
-                                }}
-                              />
-                            ))}
-                          </div>
-                        </motion.div>
+                      <TBtn onClick={() => setSearchOpen(true)} label="Пошук">
+                        <Search size={13} strokeWidth={2} />
+                        <span className="ml-0.5 hidden rounded-[5px] border px-[5px] py-[2px] text-[9.5px] tracking-[0.06em] lg:inline" style={{ fontFamily: T.mono, background: 'rgba(var(--edge-text-rgb),0.05)', borderColor: T.line, color: T.text4 }}>/</span>
+                      </TBtn>
+                      <span className="h-4 w-px" style={{ background: T.line }} />
+                      {!page.cover && (
+                        <>
+                          <TBtn onClick={() => coverRef.current?.click()} label="Обкладинка">
+                            <ImageIcon size={13} strokeWidth={2} />
+                          </TBtn>
+                          <span className="h-4 w-px" style={{ background: T.line }} />
+                        </>
                       )}
-                    </AnimatePresence>
+                      <TBtn onClick={() => window.print()} label="PDF">
+                        <Printer size={13} strokeWidth={2} />
+                      </TBtn>
+                      <span className="h-4 w-px" style={{ background: T.line }} />
+                      <TBtn onClick={() => setConfirm(page)} label="Видалити" danger>
+                        <Trash2 size={13} strokeWidth={2} />
+                      </TBtn>
+                    </div>
+                    <button
+                      onClick={() => addSubPage(page.id)}
+                      className="flex items-center gap-2 rounded-[12px] px-[18px] py-[9px] text-[13px] font-bold transition-[transform,box-shadow] duration-150"
+                      style={{
+                        fontFamily: T.sans,
+                        color: 'var(--edge-on-acc)',
+                        letterSpacing: '0.005em',
+                        border: `1px solid rgba(${tint},0.45)`,
+                        background: `linear-gradient(180deg, rgba(${tint},0.9), rgb(${tint}))`,
+                        boxShadow: `0 6px 20px rgba(${tint},0.28), inset 0 1px 0 rgba(255,255,255,0.35)`,
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 12px 30px rgba(${tint},0.4), inset 0 1px 0 rgba(255,255,255,0.35)`; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `0 6px 20px rgba(${tint},0.28), inset 0 1px 0 rgba(255,255,255,0.35)`; }}
+                    >
+                      <Plus size={13} strokeWidth={2.6} />
+                      <span className="hidden sm:inline">Підрозділ</span>
+                    </button>
+                  </div>
+                </div>
 
-                    <div className="min-w-0 flex-1">
-                      <input
-                        value={page.title}
-                        onChange={(e) => patchPage(page.id, { title: e.target.value })}
-                        placeholder="Назва розділу"
-                        className="w-full bg-transparent outline-none placeholder:opacity-30"
-                        style={{
-                          fontFamily: T.display,
-                          fontSize: 'clamp(25px, 5vw, 36px)',
-                          fontWeight: 700,
-                          letterSpacing: '-0.03em',
-                          color: T.text,
-                          lineHeight: 1.1,
-                        }}
-                      />
+                {/* ─────────── ОБКЛАДИНКА + ГЕРОЙ ─────────── */}
+                <div className="relative -mx-3 sm:-mx-5 xl:-mx-7">
+                  <div
+                    data-cover
+                    className="relative h-[76px] overflow-hidden sm:h-[112px]"
+                    style={{
+                      background: page.cover
+                        ? undefined
+                        : `radial-gradient(135% 120% at 50% -10%, rgba(${tint},0.20), transparent 60%), linear-gradient(180deg, color-mix(in srgb, var(--edge-surface) 82%, var(--edge-bg)), var(--edge-bg))`,
+                    }}
+                  >
+                    {page.cover && <img src={page.cover} alt="" className="h-full w-full object-cover" />}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        background: page.cover
+                          ? 'linear-gradient(180deg, transparent 30%, var(--edge-bg) 98%)'
+                          : 'radial-gradient(rgba(var(--edge-text-rgb),0.035) 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(180deg, transparent 45%, var(--edge-bg) 100%)',
+                      }}
+                    />
+                    {page.cover && (
+                      <span className="absolute right-6 top-4 flex gap-1.5 no-print">
+                        <button
+                          onClick={() => coverRef.current?.click()}
+                          className="rounded-lg px-2.5 py-1.5 text-[12px] font-semibold"
+                          style={{ background: 'var(--edge-panel, rgba(10,10,12,0.8))', border: `1px solid ${T.lineHi}`, color: T.text2, backdropFilter: 'blur(8px)', fontFamily: T.sans }}
+                        >
+                          Змінити
+                        </button>
+                        <button
+                          onClick={() => patchPage(page.id, { cover: '' })}
+                          className="grid h-[30px] w-[30px] place-items-center rounded-lg"
+                          style={{ background: 'var(--edge-panel, rgba(10,10,12,0.8))', border: `1px solid ${T.lineHi}`, color: T.text2, backdropFilter: 'blur(8px)' }}
+                        >
+                          <X size={13} strokeWidth={2.6} />
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                  <input ref={coverRef} type="file" accept="image/*" hidden onChange={(e) => readCover(e.target.files?.[0])} />
+
+                  <div className="relative mx-auto max-w-[1180px] px-6 sm:px-[34px]">
+                    <div style={{ marginTop: -56 }}>
+                      <div data-herorow className="flex flex-col items-start gap-5 sm:flex-row sm:items-end sm:gap-7">
+                        <button
+                          onClick={() => setEmojiOpen((v) => !v)}
+                          title="Змінити іконку"
+                          className="grid shrink-0 place-items-center transition-transform duration-200"
+                          style={{
+                            width: 112, height: 112, borderRadius: 28,
+                            fontSize: 50, lineHeight: 1,
+                            background: `linear-gradient(180deg, rgba(${tint},0.26), color-mix(in srgb, var(--edge-surface) 92%, var(--edge-bg)))`,
+                            border: `1px solid rgba(${tint},${emojiOpen ? 0.55 : 0.3})`,
+                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 44px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(${tint},0.06)`,
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-3px)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
+                        >
+                          {page.icon || '📄'}
+                        </button>
+
+                        <div className="relative min-w-0 flex-1 pb-1.5">
+                          <div className="flex flex-wrap items-center gap-3.5">
+                            <span
+                              className="rounded-lg px-[11px] py-[6px] text-[10px] font-medium uppercase"
+                              style={{ fontFamily: T.mono, letterSpacing: '0.2em', color: `rgb(${tint})`, background: `rgba(${tint},0.12)`, border: `1px solid rgba(${tint},0.28)` }}
+                            >
+                              {secNum ? `Розділ ${secNum}` : 'Підрозділ'}
+                            </span>
+                            <span className="text-[10.5px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.16em', color: T.text4 }}>
+                              оновлено {updLabel}
+                            </span>
+                          </div>
+                          <input
+                            value={page.title}
+                            onChange={(e) => patchPage(page.id, { title: e.target.value })}
+                            placeholder="Назва розділу"
+                            className="mt-2.5 w-full bg-transparent outline-none placeholder:opacity-25"
+                            style={{
+                              fontFamily: T.display, fontSize: 'clamp(40px, 7vw, 68px)', fontWeight: 900,
+                              letterSpacing: '-0.042em', color: T.text, lineHeight: 0.98,
+                            }}
+                          />
+                        </div>
+
+                        <AnimatePresence>
+                          {emojiOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                              transition={{ duration: 0.16, ease: EASE }}
+                              className="absolute left-0 top-[120px] z-50 w-[290px] rounded-2xl p-2 no-print"
+                              style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 28px 64px -20px var(--edge-panel-glow, rgba(0,0,0,0.7))' }}
+                            >
+                              <div className="grid grid-cols-8 gap-0.5">
+                                {EMOJI.map((e) => (
+                                  <button
+                                    key={e}
+                                    onClick={() => { patchPage(page.id, { icon: e }); setEmojiOpen(false); }}
+                                    className="grid h-9 place-items-center rounded-lg text-[18px] transition-colors duration-150"
+                                    onMouseEnter={(ev) => (ev.currentTarget.style.background = T.surfaceHi)}
+                                    onMouseLeave={(ev) => (ev.currentTarget.style.background = 'transparent')}
+                                  >
+                                    {e}
+                                  </button>
+                                ))}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-1.5 px-1 pb-1 pt-2" style={{ borderTop: `1px solid ${T.line}` }}>
+                                {Object.entries(HUES).map(([key, rgb]) => (
+                                  <button
+                                    key={key}
+                                    onClick={() => patchPage(page.id, { hue: key })}
+                                    className="h-7 w-7 rounded-lg"
+                                    style={{ background: `rgba(${rgb},0.18)`, border: `1.5px solid rgba(${rgb},${page.hue === key ? 0.95 : 0.25})` }}
+                                  />
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
                       <input
                         value={page.hint || ''}
                         onChange={(e) => patchPage(page.id, { hint: e.target.value })}
                         placeholder="Про що цей розділ — одним рядком"
-                        className="mt-1.5 w-full bg-transparent text-[14px] outline-none placeholder:opacity-30"
-                        style={{ fontFamily: T.sans, color: T.text3 }}
+                        className="mt-2.5 w-full max-w-[640px] bg-transparent text-[17px] outline-none placeholder:opacity-25"
+                        style={{ fontFamily: T.sans, fontWeight: 400, color: T.text, lineHeight: 1.55 }}
                       />
+
+                      <div className="mt-3 flex flex-wrap items-center gap-x-[26px] gap-y-2 pb-[18px]">
+                        <span className="text-[12.5px]" style={{ fontFamily: T.mono, letterSpacing: '0.04em', color: T.text }}>
+                          <span style={{ color: `rgb(${tint})` }}>{String(page.blocks?.length || 0).padStart(2, '0')}</span> блоків
+                        </span>
+                        <span className="h-[3px] w-[3px] rounded-full" style={{ background: T.text3 }} />
+                        <span className="text-[12.5px]" style={{ fontFamily: T.mono, letterSpacing: '0.04em', color: T.text }}>
+                          <span style={{ color: `rgb(${tint})` }}>{String(kids.length).padStart(2, '0')}</span> підрозділів
+                        </span>
+                        <span className="h-[3px] w-[3px] rounded-full" style={{ background: T.text3 }} />
+                        <span className="text-[12.5px]" style={{ fontFamily: T.mono, letterSpacing: '0.04em', color: T.text3 }}>
+                          {updLabel}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* блоки */}
-                  <div className="pl-8 pr-7 xl:pl-[2px] xl:pr-0">
+                <div className="-mx-3 h-px sm:-mx-5 xl:-mx-7" style={{ background: `linear-gradient(90deg, transparent, ${T.lineHi} 20%, ${T.lineHi} 80%, transparent)` }} />
+
+                {/* ─────────── ЗМІСТ + ДОКУМЕНТ ─────────── */}
+                <div className="mx-auto flex max-w-[1180px] px-6 sm:px-[34px]">
+                  {headings.length > 0 && (
+                    <div className="hidden shrink-0 xl:block" style={{ width: 168, padding: '28px 0 80px' }}>
+                      <div className="sticky top-[92px]">
+                        <div className="mb-3 pl-3 text-[9.5px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.24em', color: T.text3 }}>Зміст</div>
+                        <div className="flex flex-col gap-px" style={{ borderLeft: `1px solid ${T.line}` }}>
+                          {headings.map((h) => {
+                            const on = tocActive === h.id;
+                            return (
+                              <a
+                                key={h.id}
+                                href={`#h-${h.id}`}
+                                onClick={(e) => { e.preventDefault(); document.getElementById(`h-${h.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                                className="relative flex items-baseline gap-2 py-[6px] pl-3 pr-2 no-underline transition-colors duration-150"
+                                style={{ color: on ? T.text : T.text2, fontWeight: on ? 500 : 400 }}
+                                onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text; }}
+                                onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
+                              >
+                                <span className="absolute -left-px top-0 h-full w-px" style={{ background: on ? `rgb(${tint})` : 'transparent' }} />
+                                <span className="text-[10px]" style={{ fontFamily: T.mono, color: on ? `rgb(${tint})` : T.text3 }}>{h.n}</span>
+                                <span className="text-[13px] leading-[1.35]">{h.label}</span>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="min-w-0 flex-1 xl:ml-14" style={{ maxWidth: 780, padding: '28px 0 40px' }}>
                     <BlockEditor
                       key={page.id}
                       blocks={page.blocks}
+                      tint={tint}
                       onChange={(blocks) => patchPage(page.id, { blocks })}
                       onFullscreen={setLightbox}
                     />
                   </div>
+                </div>
 
-                  {/* підрозділи */}
-                  <div className="mt-10 pt-6" style={{ borderTop: `1px solid ${T.line}` }}>
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        Підрозділи
-                      </span>
-                      <button
-                        onClick={() => addSubPage(page.id)}
-                        className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-semibold transition-colors duration-200 no-print"
-                        style={{ fontFamily: T.sans, color: T.text4 }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.background = `rgba(${T.accRgb},0.08)`; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
-                      >
-                        <Plus size={13} strokeWidth={2.6} /> Додати
-                      </button>
-                    </div>
-
-                    {kids.length === 0 ? (
-                      <p className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.6 }}>
-                        Якщо розділ став завеликим — розбий його. Кожен сетап чи правило може жити окремою сторінкою.
-                      </p>
-                    ) : (
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {kids.map((k) => (
-                          <button
-                            key={k.id}
-                            onClick={() => open(k.id)}
-                            className="group flex items-center gap-3 rounded-xl px-3.5 py-3 text-left transition-colors duration-200"
-                            style={{ background: T.sunken, border: `1px solid ${T.line}` }}
-                            onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
-                            onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
-                          >
-                            <span className="text-[18px]">{k.icon}</span>
-                            <span className="min-w-0 flex-1 truncate text-[14px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
-                              {k.title}
-                            </span>
-                            <ArrowRight size={14} strokeWidth={2.4} className="transition-transform duration-200 group-hover:translate-x-0.5" style={{ color: T.text4 }} />
-                          </button>
-                        ))}
+                {/* ─────────── ПІДРОЗДІЛИ ─────────── */}
+                <div className="mx-auto max-w-[1180px] px-6 pb-[100px] pt-[60px] sm:px-[34px]">
+                  <div className="h-px" style={{ background: T.line }} />
+                  <div className="mt-[34px] flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                      <div className="text-[10px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.24em', color: T.text4 }}>
+                        Підрозділи · {String(kids.length).padStart(2, '0')}
                       </div>
-                    )}
+                      <div className="mt-3 text-[26px] font-bold" style={{ fontFamily: T.display, letterSpacing: '-0.025em', color: T.text }}>
+                        Глибше по «{page.title || 'розділу'}»
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => addSubPage(page.id)}
+                      className="flex items-center gap-[9px] rounded-[11px] px-[18px] py-[11px] text-[13.5px] transition-colors duration-150 no-print"
+                      style={{ fontFamily: T.sans, color: T.text2, border: `1px solid ${T.lineHi}`, background: 'transparent' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-text-rgb),0.05)'; e.currentTarget.style.color = T.text; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
+                    >
+                      <span className="text-[15px] leading-none">+</span> Додати
+                    </button>
+                  </div>
+
+                  <div className="mt-[26px] grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+                    {kids.map((k, ki) => (
+                      <button
+                        key={k.id}
+                        onClick={() => open(k.id)}
+                        className="sub group block rounded-[16px] p-[22px] text-left transition-all duration-200"
+                        style={{ minHeight: 158, background: T.surface, border: `1px solid ${T.line}`, color: T.text }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = `rgba(${tint},0.4)`; e.currentTarget.style.background = T.surfaceHi; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.background = T.surface; }}
+                      >
+                        <span className="flex items-center justify-between">
+                          <span
+                            className="grid h-[38px] w-[38px] place-items-center rounded-[11px] text-[12px]"
+                            style={{ fontFamily: T.mono, background: `rgba(${tint},0.1)`, border: `1px solid rgba(${tint},0.24)`, color: `rgb(${tint})` }}
+                          >
+                            {k.icon || String(ki + 1).padStart(2, '0')}
+                          </span>
+                          <ArrowRight size={15} strokeWidth={2.2} className="transition-transform duration-200 group-hover:translate-x-[5px]" style={{ color: T.text4 }} />
+                        </span>
+                        <span className="mt-[38px] block text-[19px] font-bold" style={{ fontFamily: T.sans, letterSpacing: '-0.02em', color: T.text }}>
+                          {k.title || 'Без назви'}
+                        </span>
+                        <span className="mt-2 block text-[11px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.1em', color: T.text4 }}>
+                          {String(k.blocks?.length || 0)} блоків
+                        </span>
+                      </button>
+                    ))}
+                    <div className="flex flex-col justify-end gap-2 rounded-[16px] p-[22px]" style={{ minHeight: 158, border: `1px dashed ${T.line}` }}>
+                      <span className="text-[15px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>Розділ став завеликим?</span>
+                      <span className="text-[13.5px]" style={{ fontFamily: T.sans, fontWeight: 400, lineHeight: 1.55, color: T.text4 }}>
+                        Розбий його — кожен сетап чи правило може жити окремою сторінкою.
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             </motion.div>
           )}
         </AnimatePresence>

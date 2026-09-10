@@ -74,6 +74,14 @@ export default function DailyPlan() {
   const targetId = location.state?.id;
 
   const { active: activeSection, scrollTo, scrollToTop, scrolled } = useScrollSpy(SECTION_IDS);
+
+  /* Навігація з лівої рейки: спершу просимо секції фази розгорнутись,
+     потім скролимо до якоря (з невеликою затримкою, щоб розкриття
+     встигло змінити висоту до розрахунку позиції). */
+  const navigateToSection = useCallback((id) => {
+    window.dispatchEvent(new CustomEvent('edge:plan-jump', { detail: { group: id } }));
+    requestAnimationFrame(() => scrollTo(id));
+  }, [scrollTo]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSwitching, setIsSwitching] = useState(false);
   const isFirstLoadRef = useRef(true);
@@ -345,7 +353,12 @@ export default function DailyPlan() {
       setPlanId(null);
       currentPlanIdRef.current = null;
     } finally {
-      setTimeout(() => { setIsInitialLoading(false); setIsSwitching(false); }, 250);
+      /* Пауза згладжує мережеве тремтіння при переході між планами.
+         У пісочниці мережі немає — дані вже тут, тож і чекати нема
+         навіщо: інакше «Завантаження даних з хмари…» висить дарма. */
+      const smooth = (typeof window !== 'undefined'
+        && window.location.pathname.startsWith('/demo')) ? 0 : 250;
+      setTimeout(() => { setIsInitialLoading(false); setIsSwitching(false); }, smooth);
     }
   }, [user?.id]);
 
@@ -627,7 +640,7 @@ export default function DailyPlan() {
         <div className="mt-6">
           <PlanTabs
             active={activeSection}
-            onNavigate={scrollTo}
+            onNavigate={navigateToSection}
             progress={progress}
             overall={overall}
             assetSwitcher={
@@ -660,6 +673,7 @@ export default function DailyPlan() {
             <Section
               icon={Layers}
               storageKey="tda"
+              group="plan"
               title="Top-down аналіз"
               hint="Структура від старших ТФ до молодших"
               done={planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length >= 2}
@@ -678,6 +692,7 @@ export default function DailyPlan() {
             <Section
               icon={Crosshair}
               storageKey="strategy"
+              group="plan"
               title="Стратегія та точки входу"
               hint="Тригери, стоп, інвалідація"
               done={!!planData.planText?.trim()}
@@ -703,6 +718,7 @@ export default function DailyPlan() {
           <Section
             icon={Radio}
             storageKey="updates"
+            group="live"
             title="Апдейти по ходу сесії"
             hint="Що змінилось відносно плану"
             done={progress.live >= 1 && planData.updates.length > 0}
@@ -737,6 +753,7 @@ export default function DailyPlan() {
             <Section
               icon={LineChart}
               storageKey="review"
+              group="review"
               title="Розбір після сесії"
               hint="Як усе виглядало по факту"
               done={planData.reviewBlocks.some((b) => b.image || b.text?.trim())}
@@ -755,6 +772,7 @@ export default function DailyPlan() {
             <Section
               icon={Stethoscope}
               storageKey="diagnostics"
+              group="review"
               title="Діагностика"
               hint="Три перевірки перед висновками"
               done={
@@ -773,6 +791,7 @@ export default function DailyPlan() {
             <Section
               icon={NotebookPen}
               storageKey="conclusions"
+              group="review"
               title="Висновки"
               hint="Головний урок дня"
               done={!!planData.conclusionsText?.trim()}

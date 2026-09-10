@@ -381,7 +381,7 @@ export default function Reviews() {
                   className="edge-add-btn inline-flex h-[42px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold"
                   style={{ color: '#fff', fontFamily: T.sans }}
                 >
-                  <Plus size={15} strokeWidth={3} className="shrink-0" style={{ color: T.acc }} />
+                  <Plus size={15} strokeWidth={3} className="shrink-0" />
                   Новий розбір
                 </button>
           </div>

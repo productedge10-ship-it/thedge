@@ -47,12 +47,8 @@ const TIP = {
 
 const grid = () => <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(var(--edge-hair-rgb),0.04)" />;
 
-const H = { s: 190, m: 250, l: 330 };
-const heightOption = (def = 'm') => ({
-  label: 'Висота',
-  choices: [['s', 'Низька'], ['m', 'Середня'], ['l', 'Висока']],
-  def,
-});
+/* Висота графіка більше не константа й не налаштування: віджет
+   розтягується під плитку, а плитці розмір задає людина. */
 const metricOption = (def = 'net') => ({
   label: 'Показник',
   choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']],
@@ -150,7 +146,7 @@ export const PERF_WIDGETS = {
   expectancy: {
     title: 'Очікування',
     hint: 'Скільки в середньому приносить одна угода',
-    icon: Target, group: 'Числа', tone: 'var(--edge-acc)', shape: 'number', defaultW: 1,
+    icon: Target, group: 'Числа', tone: 'var(--edge-acc)', shape: 'number', defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s, w }) => {
       const timed = s.trades.filter((t) => typeof t.holdMin === 'number');
@@ -172,7 +168,7 @@ export const PERF_WIDGETS = {
   avgwin: {
     title: 'Середній плюс',
     hint: 'І скільки коштує середній мінус',
-    icon: TrendingUp, group: 'Числа', tone: P.ok, shape: 'number', defaultW: 1,
+    icon: TrendingUp, group: 'Числа', tone: P.ok, shape: 'number', defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s, w }) => (
       <Kpi
@@ -190,7 +186,7 @@ export const PERF_WIDGETS = {
   drawdown: {
     title: 'Макс. просадка',
     hint: 'Найглибше дно й наскільки швидко з нього виходиш',
-    icon: ArrowDownRight, group: 'Числа', tone: P.bad, shape: 'dip', defaultW: 1,
+    icon: ArrowDownRight, group: 'Числа', tone: P.bad, shape: 'dip', defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s, w }) => (
       <Kpi
@@ -208,7 +204,7 @@ export const PERF_WIDGETS = {
   discipline: {
     title: 'Дисципліна',
     hint: 'Частка угод за планом і ціна порушень',
-    icon: ShieldCheck, group: 'Числа', tone: P.ok, shape: 'gauge', defaultW: 1,
+    icon: ShieldCheck, group: 'Числа', tone: P.ok, shape: 'gauge', defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s, w }) => (
       <Kpi
@@ -228,19 +224,18 @@ export const PERF_WIDGETS = {
   rolling: {
     title: 'Куди рухається перевага',
     hint: 'Ковзне очікування за останні N угод',
-    icon: Timer, group: 'Динаміка', tone: 'var(--edge-acc)', shape: 'curve', defaultW: 4,
+    icon: Timer, group: 'Динаміка', tone: 'var(--edge-acc)', shape: 'curve', defaultW: 4, defaultH: 2,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       win: { label: 'Вікно', choices: [['5', '5'], ['10', '10'], ['20', '20'], ['30', '30']], def: '10' },
       metric: { label: 'Показник', choices: [['exp', 'Очікування'], ['wr', 'Вінрейт']], def: 'exp' },
-      height: heightOption('m'),
     },
     render: ({ s, o, id }) => {
       const rows = rollingSeries(s.trades, Number(o.win) || 10);
       if (!rows.length) return <Empty>Замало угод для вікна — ще трохи журналу, і крива зʼявиться</Empty>;
 
       return (
-        <div style={{ width: '100%', height: H[o.height] || 250 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <AreaChart data={rows} margin={{ top: 8, right: 6, left: -20, bottom: 0 }}>
               <defs>
@@ -274,14 +269,14 @@ export const PERF_WIDGETS = {
   outliers: {
     title: 'Залежність від крайніх угод',
     hint: 'Що лишиться, якщо прибрати найкращі або найгірші',
-    icon: Crosshair, group: 'Динаміка', tone: 'var(--edge-warn)', shape: 'bars', defaultW: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, height: heightOption('s') },
+    icon: Crosshair, group: 'Динаміка', tone: 'var(--edge-warn)', shape: 'bars', defaultW: 2, defaultH: 2,
+    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => {
       if (s.trades.length <= 5) return <Empty>Треба хоча б шість угод</Empty>;
       const rows = outlierSeries(s.trades);
 
       return (
-        <div style={{ width: '100%', height: H[o.height] || 190 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
               {grid()}
@@ -307,14 +302,14 @@ export const PERF_WIDGETS = {
   chain: {
     title: 'Ланцюг збитків',
     hint: 'Скільки приносить вхід після одного, двох і трьох мінусів',
-    icon: Flame, group: 'Динаміка', tone: P.bad, shape: 'bars', defaultW: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, height: heightOption('s') },
+    icon: Flame, group: 'Динаміка', tone: P.bad, shape: 'bars', defaultW: 2, defaultH: 2,
+    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => {
       const rows = (s.chain || []).filter((c) => c.n > 0);
       if (!rows.length) return <Empty>Ланцюгів збитків у журналі ще немає</Empty>;
 
       return (
-        <div style={{ width: '100%', height: H[o.height] || 190 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
               {grid()}
@@ -335,10 +330,10 @@ export const PERF_WIDGETS = {
   underwater: {
     title: 'Просадка',
     hint: 'Наскільки глибоко й надовго рахунок ішов під воду',
-    icon: ArrowDownRight, group: 'Динаміка', tone: P.bad, shape: 'dip', defaultW: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, height: heightOption('s') },
+    icon: ArrowDownRight, group: 'Динаміка', tone: P.bad, shape: 'dip', defaultW: 2, defaultH: 2,
+    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o, id }) => (
-      <div style={{ width: '100%', height: H[o.height] || 190 }}>
+      <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
         <ResponsiveContainer>
           <AreaChart data={s.equity} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
             <defs>
@@ -367,15 +362,15 @@ export const PERF_WIDGETS = {
   dow: {
     title: 'Дні тижня',
     hint: 'У які дні торгівля приносить найбільше',
-    icon: CalendarDays, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'bars', defaultW: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, metric: metricOption('avg'), height: heightOption('s') },
+    icon: CalendarDays, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'bars', defaultW: 2, defaultH: 2,
+    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, metric: metricOption('avg') },
     render: ({ s, o }) => {
       const rows = s.byDow.filter((x) => x.trades);
       if (!rows.length) return <Empty>Днів з угодами ще немає</Empty>;
       const fmt = fmtBy(o.metric);
 
       return (
-        <div style={{ width: '100%', height: H[o.height] || 190 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
               {grid()}
@@ -396,15 +391,15 @@ export const PERF_WIDGETS = {
   sessions: {
     title: 'Сесії',
     hint: 'Скільки платить кожна торгова сесія',
-    icon: Clock, group: 'Розрізи', tone: 'var(--edge-ok)', shape: 'bars', defaultW: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, metric: metricOption('net'), height: heightOption('s') },
+    icon: Clock, group: 'Розрізи', tone: 'var(--edge-ok)', shape: 'bars', defaultW: 2, defaultH: 2,
+    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, metric: metricOption('net') },
     render: ({ s, o }) => {
       const rows = s.bySession.filter((x) => x.trades);
       if (!rows.length) return <Empty>Сесії ще не набрали угод</Empty>;
       const fmt = fmtBy(o.metric);
 
       return (
-        <div style={{ width: '100%', height: H[o.height] || 190 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
               {grid()}
@@ -425,14 +420,14 @@ export const PERF_WIDGETS = {
   hours: {
     title: 'Години входу',
     hint: 'О котрій годині рахунок росте, а о котрій тане',
-    icon: Clock, group: 'Розрізи', tone: 'var(--edge-info)', shape: 'bars', defaultW: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, height: heightOption('s') },
+    icon: Clock, group: 'Розрізи', tone: 'var(--edge-info)', shape: 'bars', defaultW: 2, defaultH: 2,
+    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => {
       const rows = s.byHour.filter((h) => h.trades);
       if (!rows.length) return <Empty>Час входу ще не проставлений в угодах</Empty>;
 
       return (
-        <div style={{ width: '100%', height: H[o.height] || 190 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
               {grid()}
@@ -453,10 +448,10 @@ export const PERF_WIDGETS = {
   distribution: {
     title: 'Розподіл R-множників',
     hint: 'Форма результатів: де густо, а де хвіст',
-    icon: ChartColumn, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'bars', defaultW: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, height: heightOption('s') },
+    icon: ChartColumn, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'bars', defaultW: 2, defaultH: 2,
+    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => (
-      <div style={{ width: '100%', height: H[o.height] || 190 }}>
+      <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
         <ResponsiveContainer>
           <BarChart data={s.buckets} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
             {grid()}
@@ -475,8 +470,8 @@ export const PERF_WIDGETS = {
   hold: {
     title: 'Час утримання проти результату',
     hint: 'Ліворуч збитки — виходиш рано; праворуч — тримаєш надію',
-    icon: Timer, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'number', defaultW: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, height: heightOption('s') },
+    icon: Timer, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'number', defaultW: 2, defaultH: 2,
+    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => {
       const rows = s.trades
         .filter((t) => typeof t.holdMin === 'number')
@@ -484,7 +479,7 @@ export const PERF_WIDGETS = {
       if (!rows.length) return <Empty>Час утримання ще не рахується — заповни час входу й виходу</Empty>;
 
       return (
-        <div style={{ width: '100%', height: H[o.height] || 190 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <ScatterChart margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
               {grid()}
@@ -510,13 +505,13 @@ export const PERF_WIDGETS = {
   months: {
     title: 'По місяцях',
     hint: 'Чистий R стовпцями і вінрейт лінією поверх',
-    icon: Layers, group: 'Розрізи', tone: P.ok, shape: 'bars', defaultW: 4,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, height: heightOption('m') },
+    icon: Layers, group: 'Розрізи', tone: P.ok, shape: 'bars', defaultW: 4, defaultH: 2,
+    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => {
       if (!s.byMonth.length) return <Empty>Місяців з угодами ще немає</Empty>;
 
       return (
-        <div style={{ width: '100%', height: H[o.height] || 250 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <ComposedChart
               data={s.byMonth.map((m) => ({ m: m.key, net: m.net, wr: m.wr, trades: m.trades }))}
@@ -545,17 +540,16 @@ export const PERF_WIDGETS = {
   equity: {
     title: 'Крива еквіті',
     hint: 'Накопичений результат за весь період',
-    icon: TrendingUp, group: 'Динаміка', tone: 'var(--edge-acc)', shape: 'curve', defaultW: 4,
+    icon: TrendingUp, group: 'Динаміка', tone: 'var(--edge-acc)', shape: 'curve', defaultW: 4, defaultH: 2,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       view: { label: 'Вигляд', choices: [['area', 'Площа'], ['line', 'Лінія']], def: 'area' },
-      height: heightOption('m'),
     },
     render: ({ s, o, id }) => {
       if (!s.equity.length) return <Empty>Ще нема жодної угоди в цьому періоді</Empty>;
 
       return (
-        <div style={{ width: '100%', height: H[o.height] || 250 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <AreaChart data={s.equity} margin={{ top: 8, right: 6, left: -20, bottom: 0 }}>
               <defs>
@@ -585,15 +579,15 @@ export const PERF_WIDGETS = {
   emotions: {
     title: 'Стан проти результату',
     hint: 'Наскільки емоція множить або ділить результат',
-    icon: Activity, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'rows', defaultW: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, metric: metricOption('avg'), height: heightOption('s') },
+    icon: Activity, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'rows', defaultW: 2, defaultH: 2,
+    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, metric: metricOption('avg') },
     render: ({ s, o }) => {
       const rows = (s.emotionStats || []).filter((e) => e.trades);
       if (!rows.length) return <Empty>Стани ще не проставлені в угодах</Empty>;
       const fmt = fmtBy(o.metric);
 
       return (
-        <div style={{ width: '100%', height: H[o.height] || 190 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 12, left: 4, bottom: 4 }}>
               <XAxis type="number" {...AX} />
@@ -615,18 +609,18 @@ export const PERF_WIDGETS = {
    напрямку на всю ширину, далі розрізи парами. Порядок від
    загального до дрібного — так само, як читають графіки. */
 export const PERF_DEFAULT = [
-  { id: 'expectancy', w: 1 },
-  { id: 'avgwin', w: 1 },
-  { id: 'drawdown', w: 1 },
-  { id: 'discipline', w: 1 },
-  { id: 'rolling', w: 4 },
-  { id: 'dow', w: 2 },
-  { id: 'sessions', w: 2 },
-  { id: 'outliers', w: 2 },
-  { id: 'chain', w: 2 },
-  { id: 'distribution', w: 2 },
-  { id: 'underwater', w: 2 },
-  { id: 'hours', w: 2 },
-  { id: 'hold', w: 2 },
-  { id: 'months', w: 4 },
+  { id: 'expectancy', h: 1, w: 1 },
+  { id: 'avgwin', h: 1, w: 1 },
+  { id: 'drawdown', h: 1, w: 1 },
+  { id: 'discipline', h: 1, w: 1 },
+  { id: 'rolling', h: 2, w: 4 },
+  { id: 'dow', h: 2, w: 2 },
+  { id: 'sessions', h: 2, w: 2 },
+  { id: 'outliers', h: 2, w: 2 },
+  { id: 'chain', h: 2, w: 2 },
+  { id: 'distribution', h: 2, w: 2 },
+  { id: 'underwater', h: 2, w: 2 },
+  { id: 'hours', h: 2, w: 2 },
+  { id: 'hold', h: 2, w: 2 },
+  { id: 'months', h: 2, w: 4 },
 ];

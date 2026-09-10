@@ -391,14 +391,14 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
       >
         {/* ─────────── Header ─────────── */}
         <div
-          className="relative flex shrink-0 items-center gap-4 px-5 py-4 sm:px-7"
+          className="relative flex shrink-0 items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-7 sm:py-4"
           style={{
             borderBottom: `1px solid ${T.line}`,
             background: `linear-gradient(120deg, rgba(${T.accRgb},0.08), ${T.surface} 62%)`,
           }}
         >
           <span
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl"
+            className="hidden h-11 w-11 shrink-0 place-items-center rounded-2xl sm:grid"
             style={{ background: T.sunken, border: `1px solid rgba(${T.accRgb},0.24)` }}
           >
             <Building2 size={19} strokeWidth={2} style={{ color: T.acc }} />
@@ -410,11 +410,11 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
             >
               {acc.firm_name}
             </h2>
-            <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: isClosed ? T.text3 : T.ok }}>
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: isClosed ? T.text3 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
-              {isClosed ? 'Closed' : 'Active'}
-              <span style={{ color: T.text3 }}>· {money(initial)} account</span>
-              {isClosed && acc.closed_reason && <span style={{ color: T.text3 }}>· {acc.closed_reason}</span>}
+            <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold sm:text-[12.5px]" style={{ fontFamily: T.sans, color: isClosed ? T.text3 : T.ok }}>
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: isClosed ? T.text3 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
+              <span className="shrink-0">{isClosed ? 'Closed' : 'Active'}</span>
+              <span className="truncate" style={{ color: T.text3 }}>· {money(initial)}<span className="hidden sm:inline"> account</span></span>
+              {isClosed && acc.closed_reason && <span className="hidden shrink-0 sm:inline" style={{ color: T.text3 }}>· {acc.closed_reason}</span>}
             </div>
           </div>
 
@@ -422,7 +422,8 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
             {!isClosed && (
               <button
                 onClick={() => setClosePanel((v) => !v)}
-                className="flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-[12.5px] font-bold transition-colors"
+                title="Close account"
+                className="flex h-10 w-10 items-center justify-center gap-1.5 rounded-xl text-[12.5px] font-bold transition-colors sm:w-auto sm:px-3.5"
                 style={{
                   background: `rgba(${T.badRgb},0.1)`,
                   border: `1px solid rgba(${T.badRgb},0.4)`,
@@ -433,7 +434,8 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                 onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.16)`; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.1)`; }}
               >
-                <Lock size={13} strokeWidth={2.3} /> Close account
+                <Lock size={13} strokeWidth={2.3} />
+                <span className="hidden sm:inline">Close account</span>
               </button>
             )}
           </div>

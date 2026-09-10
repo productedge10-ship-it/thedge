@@ -106,9 +106,10 @@ export default function PremiumAnalysisHover({ children, planData }) {
             <div
               className="relative overflow-hidden rounded-3xl p-5"
               style={{
-                background: 'rgba(11,11,14,0.98)',
+                background: 'var(--edge-panel, rgba(11,11,14,0.98))',
+                backdropFilter: 'blur(24px)',
                 border: `1px solid ${T.lineHi}`,
-                boxShadow: '0 25px 60px rgba(0,0,0,0.95)',
+                boxShadow: '0 25px 60px -15px var(--edge-panel-glow, rgba(0,0,0,0.95))',
               }}
             >
               <div

@@ -27,13 +27,14 @@ const NAV = [
   ['#product', 'Продукт'],
   ['#coach', 'Коуч'],
   ['#pricing', 'Ціни'],
+  ['/uk/blog', 'Блог'],
   ['#faq', 'Питання'],
 ];
 
 const FOOTER_COLS = [
   { title: 'ПРОДУКТ', links: [['#product', 'Що всередині'], ['#autoimport', 'Автоімпорт'], ['#coach', 'AI-коуч']] },
   { title: 'ТАРИФИ', links: [['#pricing', 'Ціни'], ['#pricing', 'Free'], ['#pricing', 'Pro']] },
-  { title: 'ДОВІДКА', links: [['#faq', 'Питання'], ['#autoimport', 'Твої дані'], ['#faq', 'Підключення MT5']] },
+  { title: 'ДОВІДКА', links: [['#faq', 'Питання'], ['/uk/blog', 'Блог'], ['#autoimport', 'Твої дані'], ['#faq', 'Підключення MT5']] },
   {
     title: 'КОНТАКТИ',
     links: [

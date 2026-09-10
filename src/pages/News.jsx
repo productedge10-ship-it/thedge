@@ -248,7 +248,7 @@ function Flag({ ccy, size = 18 }) {
 
 /* ---------- випадашка в шапці ---------- */
 
-function DropButton({ open, active, color, children, onClick, minWidth }) {
+function DropButton({ open, active, color, children, onClick }) {
   const [hov, setHov] = useState(false);
 
   return (
@@ -256,9 +256,8 @@ function DropButton({ open, active, color, children, onClick, minWidth }) {
       onClick={onClick}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      className="flex h-10 items-center gap-2.5 rounded-xl px-3"
+      className="flex h-10 w-full items-center gap-2.5 rounded-xl px-3 sm:w-auto sm:min-w-[168px]"
       style={{
-        minWidth,
         background: open || hov ? "var(--edge-hair-strong)" : "var(--edge-hair)",
         border: `1px solid ${open || active ? `${color}80` : "var(--edge-line)"}`,
         transition: "all .16s",
@@ -279,12 +278,15 @@ function DropButton({ open, active, color, children, onClick, minWidth }) {
   );
 }
 
-const Panel = ({ width, children }) => (
+const Panel = ({ width, align = "right", children }) => (
   <div
-    className="absolute right-0 z-40 mt-2 rounded-2xl p-1.5"
+    className={`absolute z-40 mt-2 rounded-2xl p-1.5 sm:left-auto sm:right-0 ${
+      align === "left" ? "left-0" : "right-0"
+    }`}
     style={{
       top: "100%",
       width,
+      maxWidth: "calc(100vw - 24px)",
       background: "var(--edge-surface)",
       border: "1px solid var(--edge-line-hi)",
       boxShadow: "0 26px 54px -18px var(--edge-panel-glow, rgba(0,0,0,0.5))",
@@ -337,12 +339,13 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
       onDoubleClick={empty ? undefined : onSolo}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      data-strip-active={active ? "1" : undefined}
       title={
         empty
           ? "Подій немає"
           : "Клік — перейти до дня, подвійний — показати тільки його"
       }
-      className="relative overflow-hidden rounded-[15px] px-3.5 pb-3 pt-3.5 text-left"
+      className="relative w-[60px] shrink-0 snap-start overflow-hidden rounded-[15px] px-3 pb-2.5 pt-3 text-left sm:w-auto sm:px-3.5 sm:pb-3 sm:pt-3.5"
       style={{
         background: active
           ? "linear-gradient(165deg, rgba(var(--edge-acc-rgb),0.14), var(--edge-surface))"
@@ -374,19 +377,19 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
 
       <span className="relative flex items-baseline justify-between gap-1.5">
         <span
-          className="text-[9.5px] font-bold uppercase"
+          className="text-[9px] font-bold uppercase sm:text-[9.5px]"
           style={{
             fontFamily: T.mono,
-            letterSpacing: "1.8px",
+            letterSpacing: "1.6px",
             color: active ? "var(--edge-acc)" : "var(--edge-text3)",
           }}
         >
           {day.dow}
         </span>
         <span
+          className="text-[19px] sm:text-[23px]"
           style={{
             fontFamily: T.display,
-            fontSize: 23,
             fontWeight: 700,
             letterSpacing: "-1px",
             lineHeight: 1,
@@ -397,17 +400,17 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
         </span>
       </span>
 
-      <span className="relative mt-3 flex h-3 items-center gap-1">{dots}</span>
+      <span className="relative mt-2.5 flex h-3 items-center gap-1 sm:mt-3">{dots}</span>
 
       <span
-        className="relative mt-2.5 block text-[11px] font-semibold"
+        className="relative mt-2 block truncate text-[10px] font-semibold sm:mt-2.5 sm:text-[11px]"
         style={{
           fontFamily: T.sans,
           color: active ? "var(--edge-acc)" : empty ? "var(--edge-text4)" : "var(--edge-text3)",
           transition: "color .18s",
         }}
       >
-        {solo ? "тільки цей день" : empty ? "вихідний" : evWord(day.total)}
+        {solo ? "тільки цей" : empty ? "вихідний" : evWord(day.total)}
       </span>
     </button>
   );
@@ -619,12 +622,11 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
         : "var(--edge-text)"
     : "var(--edge-text4)";
 
-  const cell = (v, color, weight) => (
+  const cell = (v, color, weight, hideMobile) => (
     <span
-      className="w-[88px] shrink-0 text-right"
+      className={`${hideMobile ? "hidden sm:block " : ""}w-[62px] shrink-0 text-right text-[13px] sm:w-[88px] sm:text-[15px]`}
       style={{
         fontFamily: T.display,
-        fontSize: 15,
         fontWeight: weight,
         letterSpacing: "-0.2px",
         color: v ? color : "var(--edge-text4)",
@@ -673,13 +675,13 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
         className="flex cursor-pointer items-stretch"
       >
         <div
-          className="flex shrink-0 flex-col items-end justify-center pr-3"
-          style={{ width: 74, minHeight: high ? 60 : 52 }}
+          className="flex w-[46px] shrink-0 flex-col items-end justify-center pr-2 sm:w-[74px] sm:pr-3"
+          style={{ minHeight: high ? 60 : 52 }}
         >
           <span
+            className="text-[12px] sm:text-[13px]"
             style={{
               fontFamily: T.mono,
-              fontSize: 13,
               letterSpacing: "0.6px",
               fontWeight: 700,
               color: past ? "var(--edge-text4)" : high ? "var(--edge-text)" : "var(--edge-text3)",
@@ -689,7 +691,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
           </span>
         </div>
 
-        <div className="flex w-7 shrink-0 items-start justify-center pt-[22px]">
+        <div className="flex w-5 shrink-0 items-start justify-center pt-[19px] sm:w-7 sm:pt-[22px]">
           <span
             className="rounded-full"
             style={{
@@ -706,7 +708,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
         </div>
 
         <div
-          className="relative flex min-w-0 flex-1 items-center gap-3.5 overflow-hidden pl-[18px] pr-3"
+          className="relative flex min-w-0 flex-1 items-center gap-2 overflow-hidden pl-3 pr-2 sm:gap-3.5 sm:pl-[18px] sm:pr-3"
           style={{
             minHeight: high ? 60 : 52,
             borderRadius: open ? "14px 14px 0 0" : 14,
@@ -754,7 +756,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
           />
 
           <span
-            className="relative flex h-[25px] w-[62px] shrink-0 items-center justify-center gap-1.5 rounded-lg"
+            className="relative flex h-[25px] w-[52px] shrink-0 items-center justify-center gap-1 rounded-lg sm:w-[62px] sm:gap-1.5"
             style={{
               background: high ? `${imp.color}1f` : "var(--edge-hair)",
               border: `1px solid ${high ? `${imp.color}42` : "var(--edge-line)"}`,
@@ -774,12 +776,11 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
             </span>
           </span>
 
-          <span className="relative flex min-w-0 flex-1 items-center gap-2.5">
+          <span className="relative flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5">
             <span
-              className="min-w-0 truncate"
+              className={`min-w-0 truncate ${high ? "text-[14.5px] sm:text-[16.5px]" : "text-[13.5px] sm:text-[14.5px]"}`}
               style={{
                 fontFamily: T.display,
-                fontSize: high ? 16.5 : 14.5,
                 fontWeight: high ? 600 : 500,
                 letterSpacing: "-0.3px",
                 color: high ? "var(--edge-text)" : hov || open ? "var(--edge-text)" : "var(--edge-text2)",
@@ -789,7 +790,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
               {ev.title}
             </span>
             {high && (
-              <span className="flex shrink-0 items-center gap-[3px]">
+              <span className="hidden shrink-0 items-center gap-[3px] sm:flex">
                 {[0, 1, 2].map((i) => (
                   <span
                     key={i}
@@ -801,17 +802,28 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
             )}
           </span>
 
-          <span className="relative flex w-[88px] shrink-0 items-center justify-end gap-1.5">
+          <span className="relative flex w-[54px] shrink-0 items-center justify-end gap-1 sm:w-[88px] sm:gap-1.5">
             <span
+              className="hidden text-[15px] sm:inline"
               style={{
                 fontFamily: T.display,
-                fontSize: 15,
                 fontWeight: ev.actual ? 700 : 500,
                 letterSpacing: "-0.2px",
                 color: actColor,
               }}
             >
               {ev.actual || "—"}
+            </span>
+            <span
+              className="text-[13px] sm:hidden"
+              style={{
+                fontFamily: T.display,
+                fontWeight: ev.actual ? 700 : 500,
+                letterSpacing: "-0.2px",
+                color: ev.actual ? actColor : "var(--edge-text3)",
+              }}
+            >
+              {ev.actual || ev.forecast || "—"}
             </span>
             {!!sur && ev.actual && (
               <span
@@ -826,10 +838,10 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
             )}
           </span>
 
-          <span className="relative">{cell(ev.forecast, "var(--edge-text2)", 600)}</span>
-          <span className="relative">{cell(ev.previous, "var(--edge-text3)", 500)}</span>
+          <span className="relative hidden sm:block">{cell(ev.forecast, "var(--edge-text2)", 600, true)}</span>
+          <span className="relative hidden sm:block">{cell(ev.previous, "var(--edge-text3)", 500, true)}</span>
 
-          <span className="relative flex w-9 shrink-0 items-center justify-end gap-1">
+          <span className="relative flex w-7 shrink-0 items-center justify-end gap-1 sm:w-9">
             {!past && canWatch && (
               <BellPick
                 watched={watched}
@@ -867,7 +879,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
       >
         <div style={{ overflow: "hidden", minHeight: 0 }}>
           <div className="flex">
-            <div className="w-[102px] shrink-0" />
+            <div className="w-[66px] shrink-0 sm:w-[102px]" />
             <div
               className="min-w-0 flex-1 overflow-hidden"
               style={{
@@ -877,8 +889,51 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                 background: "linear-gradient(180deg,var(--edge-sunken),var(--edge-sunken))",
               }}
             >
+              {/* На вузькому екрані назва події в рядку майже не
+                  вміщається — дублюємо її повністю тут, у шапці
+                  розкритої панелі. На десктопі назва в рядку видна,
+                  тож блок непотрібен. */}
+              <div
+                className="flex items-center gap-2.5 px-4 py-3.5 sm:hidden"
+                style={{ borderBottom: `1px solid ${imp.color}3d` }}
+              >
+                <span
+                  className="flex h-[24px] shrink-0 items-center gap-1 rounded-lg px-1.5"
+                  style={{
+                    background: high ? `${imp.color}1f` : "var(--edge-hair)",
+                    border: `1px solid ${high ? `${imp.color}42` : "var(--edge-line)"}`,
+                    color: high ? "var(--edge-bad)" : "var(--edge-text2)",
+                  }}
+                >
+                  <Flag ccy={ev.ccy} size={12} />
+                  <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.5px", fontWeight: 700 }}>
+                    {ev.ccy}
+                  </span>
+                </span>
+                <span
+                  className="min-w-0 flex-1 leading-snug"
+                  style={{
+                    fontFamily: T.display,
+                    fontSize: 14.5,
+                    fontWeight: 600,
+                    letterSpacing: "-0.2px",
+                    color: "var(--edge-text)",
+                  }}
+                >
+                  {ev.title}
+                </span>
+                {ev.time && (
+                  <span
+                    className="shrink-0"
+                    style={{ fontFamily: T.mono, fontSize: 11.5, fontWeight: 700, color: "var(--edge-text3)" }}
+                  >
+                    {ev.time}
+                  </span>
+                )}
+              </div>
+
               <div className="flex flex-wrap items-stretch">
-                <div className="min-w-[300px] flex-1 px-6 py-5">
+                <div className="min-w-0 flex-1 px-4 py-4 sm:min-w-[300px] sm:px-6 sm:py-5">
                   <span
                     className="text-[10px] font-bold uppercase"
                     style={{
@@ -978,11 +1033,11 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                 </div>
 
                 <div
-                  className="w-px shrink-0"
+                  className="h-px w-full shrink-0 sm:h-auto sm:w-px"
                   style={{ background: "var(--edge-line)" }}
                 />
 
-                <div className="w-[280px] shrink-0 px-[22px] py-5">
+                <div className="w-full shrink-0 px-4 py-4 sm:w-[280px] sm:px-[22px] sm:py-5">
                   <div className="flex items-baseline justify-between gap-2">
                     <span
                       className="text-[10px] font-bold uppercase"
@@ -1142,7 +1197,7 @@ function AlertToasts() {
   if (!list.length) return null;
 
   return (
-    <div className="pointer-events-none fixed bottom-5 right-5 z-[80] flex w-[330px] flex-col gap-2.5">
+    <div className="pointer-events-none fixed bottom-4 left-4 right-4 z-[80] flex flex-col gap-2.5 sm:bottom-5 sm:left-auto sm:right-5 sm:w-[330px]">
       {list.map((a) => (
         <div
           key={a.id}
@@ -1260,6 +1315,7 @@ export default function News() {
   const [tick, setTick] = useState(0);
 
   const dayRefs = useRef({});
+  const stripRef = useRef(null);
   const [folds, setFolds] = useState(readFolds);
 
   useEffect(() => {
@@ -1430,6 +1486,20 @@ export default function News() {
     strip.find((d) => d.total)?.iso ||
     null;
 
+  /* На вузькому екрані стрічка днів горизонтально скролиться —
+     активний день має бути в полі зору, а не з'їхати під стрілку. */
+  useEffect(() => {
+    const host = stripRef.current;
+    if (!host || host.scrollWidth <= host.clientWidth) return;
+    const el = host.querySelector('[data-strip-active="1"]');
+    if (el) {
+      host.scrollTo({
+        left: el.offsetLeft - (host.clientWidth - el.offsetWidth) / 2,
+        behavior: "smooth",
+      });
+    }
+  }, [activeDay, strip.length]);
+
   /* Перемотка написана руками, а не через scrollIntoView({smooth}):
      плавний варіант браузер мовчки вимикає при prefers-reduced-motion
      і в кількох вбудованих webview — сторінка тоді просто не рухається,
@@ -1582,13 +1652,13 @@ export default function News() {
           непомітна), а на великому екрані сторінка нарешті дихає на всю
           доступну ширину. Рядки календаря всередині — flex/grid, тож
           вони просто розтягуються рівномірно. */}
-      <div className="relative z-10 mx-auto w-[94%] max-w-[1880px] pb-24 pt-5 lg:pt-7">
+      <div className="relative z-10 mx-auto w-[92%] max-w-[1880px] pb-20 pt-4 sm:w-[94%] sm:pb-24 sm:pt-5 lg:pt-7">
         {/* ─────────── Хедер ─────────── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="flex flex-wrap items-end justify-between gap-8"
+          className="flex flex-wrap items-end justify-between gap-5 sm:gap-8"
         >
           <div className="min-w-0">
             <div className="flex items-center gap-[9px]">
@@ -1641,14 +1711,13 @@ export default function News() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto sm:flex-nowrap">
             {/* вплив */}
-            <div className="relative">
+            <div className="relative order-1 w-[calc(100%-3.25rem)] min-w-0 sm:w-auto sm:flex-none">
               <DropButton
                 open={impOpen}
                 active={imp !== "all"}
                 color={impCur.color}
-                minWidth={172}
                 onClick={() => {
                   setImpOpen((v) => !v);
                   setCcyOpen(false);
@@ -1662,7 +1731,7 @@ export default function News() {
                   }}
                 />
                 <span
-                  className="min-w-0 flex-1 whitespace-nowrap text-left text-[12.5px] font-semibold"
+                  className="min-w-0 flex-1 truncate text-left text-[12.5px] font-semibold"
                   style={{ fontFamily: T.sans, color: "var(--edge-text)" }}
                 >
                   {impCur.label}
@@ -1670,7 +1739,7 @@ export default function News() {
               </DropButton>
 
               {impOpen && (
-                <Panel width={218}>
+                <Panel width={218} align="left">
                   {LEVELS.map((i) => {
                     const on = imp === i.id;
                     return (
@@ -1714,12 +1783,11 @@ export default function News() {
             </div>
 
             {/* валюта */}
-            <div className="relative">
+            <div className="relative order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:flex-none">
               <DropButton
                 open={ccyOpen}
                 active={ccy !== "all"}
                 color={T.acc}
-                minWidth={156}
                 onClick={() => {
                   setCcyOpen((v) => !v);
                   setImpOpen(false);
@@ -1731,7 +1799,7 @@ export default function News() {
                   style={{ color: "var(--edge-text2)", flex: "none" }}
                 />
                 <span
-                  className="min-w-0 flex-1 whitespace-nowrap text-left text-[12.5px] font-semibold"
+                  className="min-w-0 flex-1 truncate text-left text-[12.5px] font-semibold"
                   style={{ fontFamily: T.sans, color: "var(--edge-text)" }}
                 >
                   {ccy === "all" ? "Всі валюти" : ccy}
@@ -1739,7 +1807,7 @@ export default function News() {
               </DropButton>
 
               {ccyOpen && (
-                <Panel width={242}>
+                <Panel width={242} align="left">
                   <button
                     onClick={() => {
                       setCcy("all");
@@ -1804,7 +1872,7 @@ export default function News() {
             <button
               onClick={refresh}
               title="Оновити"
-              className="grid h-10 w-[42px] shrink-0 place-items-center rounded-xl"
+              className="order-2 grid h-10 w-[42px] shrink-0 place-items-center rounded-xl sm:order-3"
               style={{
                 background: "var(--edge-hair)",
                 border: "1px solid var(--edge-line)",
@@ -1855,7 +1923,10 @@ export default function News() {
               {busy ? "вантажу тиждень…" : "на цей тиждень даних немає"}
             </div>
           ) : (
-            <div className="grid min-w-0 flex-1 grid-cols-7 gap-2">
+            <div
+              ref={stripRef}
+              className="flex min-w-0 flex-1 snap-x gap-2 overflow-x-auto [scrollbar-width:none] sm:grid sm:grid-cols-7 sm:overflow-visible [&::-webkit-scrollbar]:hidden"
+            >
               {strip.map((d) => (
                 <StripDay
                   key={d.iso}
@@ -1879,7 +1950,7 @@ export default function News() {
         {/* ─────────── Найближче ─────────── */}
         {upcoming && (
           <div
-            className="relative mt-3.5 overflow-hidden rounded-2xl px-[18px] py-3.5"
+            className="relative mt-3.5 overflow-hidden rounded-2xl px-3.5 py-3 sm:px-[18px] sm:py-3.5"
             style={{
               background: "linear-gradient(120deg, var(--edge-surface-hi), var(--edge-surface) 52%, var(--edge-surface))",
               border: "1px solid rgba(var(--edge-bad-rgb),0.20)",
@@ -1899,7 +1970,7 @@ export default function News() {
               }}
             />
 
-            <div className="relative flex flex-wrap items-center gap-[18px]">
+            <div className="relative flex flex-wrap items-center gap-3 sm:gap-[18px]">
               <div className="flex shrink-0 items-center gap-[11px]">
                 <span
                   className="h-1.5 w-1.5 rounded-full"
@@ -1948,18 +2019,18 @@ export default function News() {
               </div>
 
               <span
-                className="h-[38px] w-px shrink-0"
+                className="hidden h-[38px] w-px shrink-0 sm:block"
                 style={{
                   background:
                     "linear-gradient(180deg,transparent,var(--edge-hair-strong),transparent)",
                 }}
               />
 
-              <div className="flex min-w-[240px] flex-1 flex-wrap items-center gap-2">
-                {upcoming.list.slice(0, 4).map((e) => (
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:min-w-[240px]">
+                {upcoming.list.slice(0, 4).map((e, i) => (
                   <span
                     key={e.id}
-                    className="flex items-center gap-2.5 rounded-[11px] py-[7px] pl-2 pr-3"
+                    className={`${i >= 2 ? "hidden sm:flex" : "flex"} min-w-0 max-w-full items-center gap-2.5 rounded-[11px] py-[7px] pl-2 pr-3`}
                     style={{
                       background: "var(--edge-hair)",
                       border: "1px solid var(--edge-line-hi)",
@@ -1986,7 +2057,7 @@ export default function News() {
                       </span>
                     </span>
                     <span
-                      className="whitespace-nowrap"
+                      className="min-w-0 truncate"
                       style={{
                         fontFamily: T.display,
                         fontSize: 13.5,
@@ -1999,7 +2070,7 @@ export default function News() {
                     </span>
                     {e.forecast && (
                       <span
-                        className="whitespace-nowrap"
+                        className="hidden whitespace-nowrap sm:inline"
                         style={{
                           fontFamily: T.mono,
                           fontSize: 11,
@@ -2232,9 +2303,9 @@ export default function News() {
                     }
                   }}
                   title={shut ? "Розгорнути день" : "Згорнути день"}
-                  className="flex cursor-pointer select-none items-center gap-3.5">
+                  className="flex cursor-pointer select-none items-center gap-2.5 sm:gap-3.5">
                   <div
-                    className="w-14 shrink-0 rounded-[13px] py-2 text-center"
+                    className="w-12 shrink-0 rounded-[13px] py-1.5 text-center sm:w-14 sm:py-2"
                     style={{
                       background: now ? A(0.12) : "var(--edge-hair)",
                       border: `1px solid ${now ? A(0.37) : "var(--edge-line)"}`,
@@ -2254,10 +2325,9 @@ export default function News() {
                         .replace(".", "")}
                     </div>
                     <div
-                      className="mt-0.5"
+                      className="mt-0.5 text-[18px] sm:text-[21px]"
                       style={{
                         fontFamily: T.display,
-                        fontSize: 21,
                         fontWeight: 700,
                         letterSpacing: "-0.8px",
                         color: "var(--edge-text)",
@@ -2268,13 +2338,12 @@ export default function News() {
                     </div>
                   </div>
 
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1 sm:flex-none">
                     <div className="flex items-center gap-2.5">
                       <span
-                        className="capitalize"
+                        className="truncate capitalize text-[15px] sm:text-[16.5px]"
                         style={{
                           fontFamily: T.display,
-                          fontSize: 16.5,
                           fontWeight: 600,
                           color: "var(--edge-text)",
                           letterSpacing: "-0.3px",
@@ -2369,11 +2438,8 @@ export default function News() {
                 {!shut && (
                 <div className="relative mt-3">
                   <span
-                    className="pointer-events-none absolute w-px"
+                    className="pointer-events-none absolute bottom-[14px] top-[14px] left-[55px] w-px sm:left-[88px]"
                     style={{
-                      left: 88,
-                      top: 14,
-                      bottom: 14,
                       background:
                         "linear-gradient(180deg,transparent,var(--edge-line) 6%,var(--edge-line) 94%,transparent)",
                     }}
@@ -2416,7 +2482,7 @@ function FoldPill({ shut, count }) {
 
   return (
     <span
-      className="flex h-9 shrink-0 items-center gap-2 rounded-xl pl-3.5 pr-3"
+      className="flex h-9 shrink-0 items-center gap-2 rounded-xl px-2.5 sm:pl-3.5 sm:pr-3"
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -2430,7 +2496,10 @@ function FoldPill({ shut, count }) {
         className="whitespace-nowrap text-[11.5px] font-bold"
         style={{ fontFamily: T.sans }}
       >
-        {shut ? `Показати ${evWordAcc(count)}` : "Згорнути день"}
+        <span className="hidden sm:inline">
+          {shut ? `Показати ${evWordAcc(count)}` : "Згорнути день"}
+        </span>
+        <span className="sm:hidden">{shut ? count : ""}</span>
       </span>
       <ChevronDown
         size={15}
@@ -2456,7 +2525,7 @@ function NavBtn({ onClick, disabled, side }) {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       title={side === "left" ? "Попередній тиждень" : "Наступний тиждень"}
-      className="grid w-[38px] shrink-0 place-items-center rounded-[13px]"
+      className="grid w-8 shrink-0 place-items-center rounded-[13px] sm:w-[38px]"
       style={{
         background: hov && !disabled ? "var(--edge-hair-strong)" : "var(--edge-hair)",
         border: `1px solid ${hov && !disabled ? "var(--edge-line-hi)" : "var(--edge-line)"}`,
@@ -2481,11 +2550,11 @@ function NowLine() {
 
   return (
     <div className="relative flex h-[30px] items-center">
-      <div className="flex w-[74px] shrink-0 items-center justify-end pr-3">
+      <div className="flex w-[46px] shrink-0 items-center justify-end pr-2 sm:w-[74px] sm:pr-3">
         <span
+          className="text-[10px] sm:text-[11px]"
           style={{
             fontFamily: T.mono,
-            fontSize: 11,
             letterSpacing: "0.6px",
             fontWeight: 700,
             color: "var(--edge-acc)",
@@ -2494,7 +2563,7 @@ function NowLine() {
           {now}
         </span>
       </div>
-      <div className="flex w-7 shrink-0 items-center justify-center">
+      <div className="flex w-5 shrink-0 items-center justify-center sm:w-7">
         <span
           className="h-2.5 w-2.5 rounded-full"
           style={{

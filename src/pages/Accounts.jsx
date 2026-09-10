@@ -372,7 +372,7 @@ return (
           hidden: { opacity: 0, y: 15, filter: "blur(4px)" },
           visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: "easeOut" } }
         }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6 mb-7 sm:mb-8"
       >
         <div className="min-w-0">
           <div
@@ -392,10 +392,10 @@ return (
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2.5">
+        <div className="flex w-full shrink-0 items-center gap-2.5 md:w-auto">
           <button
             onClick={() => setShowArchive((v) => !v)}
-            className="acc-archive-btn inline-flex h-[54px] shrink-0 items-center gap-2.5 whitespace-nowrap rounded-2xl pl-2.5 pr-5 text-[14px] font-bold"
+            className="acc-archive-btn inline-flex h-[48px] flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 text-[13px] font-bold sm:h-[54px] sm:gap-2.5 sm:pl-2.5 sm:pr-5 sm:text-[14px] md:flex-none"
             style={{
               background: showArchive
                 ? 'linear-gradient(145deg, rgba(139,123,255,0.16), rgba(139,123,255,0.05))'
@@ -422,10 +422,10 @@ return (
           <button
             data-tour="acc-add"
             onClick={guard(openAddModal)}
-            className="edge-add-btn ml-1 inline-flex h-[54px] shrink-0 items-center justify-center gap-2 rounded-2xl px-6 text-[14.5px] font-bold"
+            className="edge-add-btn inline-flex h-[48px] flex-1 shrink-0 items-center justify-center gap-2 rounded-2xl px-4 text-[13.5px] font-bold sm:h-[54px] sm:ml-1 sm:px-6 sm:text-[14.5px] md:flex-none"
             style={{ color: '#fff', fontFamily: T.sans }}
           >
-            <Plus size={16} strokeWidth={3} className="shrink-0" style={{ color: 'var(--edge-acc)' }} />
+            <Plus size={16} strokeWidth={3} className="shrink-0" />
             <span className="whitespace-nowrap">Add Account</span>
           </button>
         </div>
@@ -437,7 +437,7 @@ return (
           hidden: { opacity: 0 },
           visible: { opacity: 1, transition: { staggerChildren: 0.04 } }
         }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10"
       >
         {[
           {
@@ -460,14 +460,14 @@ return (
           },
         ].map((k) => (
           <motion.div key={k.label} variants={{ hidden: { opacity: 0, y: 15, filter: "blur(4px)" }, visible: { opacity: 1, y: 0, filter: "blur(0px)" } }}>
-            <AccCard hue={k.hue} hoverable className="h-full p-5">
-              <div className="relative z-10 mb-3.5 flex items-center gap-2">
-                <k.icon size={14} strokeWidth={2.2} className="acc-soft-icon" style={{ color: `rgb(${k.hue})` }} />
-                <p className="text-[12px] font-semibold uppercase tracking-[0.09em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+            <AccCard hue={k.hue} hoverable className="h-full p-4 sm:p-5">
+              <div className="relative z-10 mb-2.5 flex items-start gap-2 sm:mb-3.5 sm:items-center">
+                <k.icon size={13} strokeWidth={2.2} className="acc-soft-icon mt-[3px] shrink-0 sm:mt-0" style={{ color: `rgb(${k.hue})` }} />
+                <p className="text-[10.5px] font-semibold uppercase leading-tight tracking-[0.07em] sm:text-[12px] sm:tracking-[0.09em]" style={{ fontFamily: T.sans, color: T.text4 }}>
                   {k.label}
                 </p>
               </div>
-              <p className="acc-soft-value relative z-10 text-[27px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: k.color, letterSpacing: '-0.02em' }}>
+              <p className="acc-soft-value relative z-10 text-[20px] font-bold tabular-nums sm:text-[27px]" style={{ fontFamily: T.mono, color: k.color, letterSpacing: '-0.02em' }}>
                 {k.value}
               </p>
             </AccCard>
@@ -495,7 +495,7 @@ return (
             </p>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
             <AnimatePresence mode="popLayout">
               {shownAccounts.map((acc) => {
                 const size = Number(acc.initial_balance ?? acc.balance) || 0;
@@ -526,7 +526,7 @@ return (
                     transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                     className="h-full"
                   >
-                    <AccCard hue={hue} onClick={() => setSelectedAcc(acc)} className="flex h-full flex-col gap-5 p-6" style={{ opacity: isClosed ? 0.72 : 1 }}>
+                    <AccCard hue={hue} onClick={() => setSelectedAcc(acc)} className="flex h-full flex-col gap-4 p-5 sm:gap-5 sm:p-6" style={{ opacity: isClosed ? 0.72 : 1 }}>
                       {isClosed && (
                         <span
                           className="absolute right-5 top-5 z-20 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-black uppercase tracking-[0.08em]"
@@ -559,7 +559,7 @@ return (
                             </div>
                           </div>
                         </div>
-                        <div className="flex shrink-0 gap-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                        <div className={`flex shrink-0 gap-1.5 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100 ${isClosed ? 'opacity-0' : 'opacity-100'}`}>
                           <button
                             onClick={(e) => openEditModal(e, acc)}
                             className="grid h-8 w-8 place-items-center rounded-lg transition-colors"
@@ -644,7 +644,7 @@ return (
                             {paid ? `withdrawn ${money(paid)}` : 'no payouts yet'}
                           </span>
                           <span
-                            className="acc-details-chip flex items-center gap-1 text-[12.5px] font-semibold opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                            className="acc-details-chip flex items-center gap-1 text-[12.5px] font-semibold opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100"
                             style={{ fontFamily: T.sans, color: T.acc }}
                           >
                             Details
@@ -670,7 +670,7 @@ return (
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: "easeInOut" }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050505]/80 backdrop-blur-md" 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-[#050505]/80 backdrop-blur-md"
           onClick={closeModal}
         >
           <motion.div 
@@ -679,10 +679,10 @@ return (
             exit={{ opacity: 0, scale: 0.96, y: 15, filter: "blur(4px)" }} 
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[var(--edge-surface)] border border-[var(--edge-line)] w-full max-w-xl rounded-2xl shadow-2xl relative overflow-hidden"
+            className="bg-[var(--edge-surface)] border border-[var(--edge-line)] w-full max-w-xl rounded-2xl shadow-2xl relative overflow-hidden flex max-h-[92vh] flex-col"
           >
             {/* Хедер модалки */}
-            <div className="flex justify-between items-center px-6 py-5 border-b border-[var(--edge-line)] bg-[var(--edge-sunken)]">
+            <div className="flex shrink-0 justify-between items-center px-5 py-4 sm:px-6 sm:py-5 border-b border-[var(--edge-line)] bg-[var(--edge-sunken)]">
               <h2 className="text-sm font-bold text-[var(--edge-text)] uppercase tracking-wider flex items-center gap-2.5">
                 <span className="w-2 h-2 rounded-full bg-[var(--edge-acc)] shadow-[0_0_10px_rgba(139,123,255,0.6)]"></span>
                 {editingId ? 'Edit account' : 'New account'}
@@ -696,7 +696,7 @@ return (
             </div>
 
             {/* Форма */}
-            <form onSubmit={handleSubmitAccount} className="p-6 flex flex-col gap-8">
+            <form onSubmit={handleSubmitAccount} className="p-5 sm:p-6 flex flex-col gap-6 sm:gap-8 overflow-y-auto">
               
               {/* Секція: Вибір Фірми */}
               <div className="flex flex-col gap-4">
@@ -704,7 +704,7 @@ return (
                   Choose a firm
                 </label>
                 
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {PREDEFINED_FIRMS.map((firm, idx) => {
                     const isSelected = newFirm?.toUpperCase() === firm.toUpperCase();
                     const domain = FIRM_DOMAINS[firm.toUpperCase()];
@@ -805,7 +805,7 @@ return (
                 </div>
                 
                 {/* Швидкі кнопки балансу */}
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                   {QUICK_BALANCES.map((amount, idx) => {
                     const isSelected = Number(newBalance) === amount;
                     return (

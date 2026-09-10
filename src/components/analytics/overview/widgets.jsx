@@ -380,7 +380,7 @@ export const WIDGETS = {
     group: 'Числа',
     tone: 'var(--edge-ok)',
     shape: 'spark',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       spark: sparkOption,
@@ -412,7 +412,7 @@ export const WIDGETS = {
     group: 'Числа',
     tone: 'var(--edge-acc)',
     shape: 'ring',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       spark: sparkOption,
@@ -444,7 +444,7 @@ export const WIDGETS = {
     group: 'Числа',
     tone: 'var(--edge-acc)',
     shape: 'spark',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       spark: sparkOption,
@@ -476,7 +476,7 @@ export const WIDGETS = {
     group: 'Числа',
     tone: 'var(--edge-bad)',
     shape: 'dip',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       spark: sparkOption,
@@ -508,7 +508,7 @@ export const WIDGETS = {
     group: 'Числа',
     tone: 'var(--edge-warn)',
     shape: 'number',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       sub: {
         label: 'Підпис',
@@ -538,7 +538,7 @@ export const WIDGETS = {
     group: 'Числа',
     tone: 'var(--edge-info)',
     shape: 'streak',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s }) => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 122, justifyContent: 'center' }}>
@@ -562,19 +562,17 @@ export const WIDGETS = {
     group: 'Графіки',
     tone: 'var(--edge-acc)',
     shape: 'curve',
-    defaultW: 3,
+    defaultW: 3, defaultH: 2,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       view: { label: 'Вигляд', choices: [['area', 'Площа'], ['line', 'Лінія']], def: 'area' },
-      height: { label: 'Висота', choices: [['s', 'Низька'], ['m', 'Середня'], ['l', 'Висока']], def: 'm' },
       dd: { label: 'Просадка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
     },
     render: ({ s, o }) => {
-      const h = { s: 190, m: 280, l: 380 }[o.height] || 280;
       if (!s.equity.length) return <Empty>Ще нема жодної угоди в цьому періоді</Empty>;
 
       return (
-        <div style={{ width: '100%', height: h }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <AreaChart data={s.equity} margin={{ top: 8, right: 4, left: -22, bottom: 0 }}>
               <defs>
@@ -610,7 +608,7 @@ export const WIDGETS = {
     group: 'Графіки',
     tone: 'var(--edge-ok)',
     shape: 'bars',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'net' },
@@ -642,7 +640,7 @@ export const WIDGETS = {
       }
 
       return (
-        <div style={{ width: '100%', height: 190 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <BarChart data={rows} margin={{ top: 8, right: 4, left: -24, bottom: 0 }}>
               <XAxis dataKey="session" {...ax} />
@@ -668,7 +666,7 @@ export const WIDGETS = {
     group: 'Графіки',
     tone: 'var(--edge-acc)',
     shape: 'bars',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'avg' },
@@ -679,7 +677,7 @@ export const WIDGETS = {
       const fmt = (v) => (o.metric === 'wr' ? `${v}%` : `${signed(v, o.metric === 'avg' ? 2 : 1)}R`);
 
       return (
-        <div style={{ width: '100%', height: 190 }}>
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <BarChart data={rows} margin={{ top: 8, right: 4, left: -24, bottom: 0 }}>
               <XAxis dataKey="day" {...ax} />
@@ -705,7 +703,7 @@ export const WIDGETS = {
     group: 'Графіки',
     tone: 'var(--edge-ok)',
     shape: 'split',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       chart: { label: 'Крива', choices: [['on', 'Показати'], ['off', 'Тільки цифри']], def: 'on' },
@@ -734,7 +732,7 @@ export const WIDGETS = {
           </div>
 
           {o.chart === 'on' && data.length > 0 && (
-            <div style={{ width: '100%', height: 150 }}>
+            <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
               <ResponsiveContainer>
                 <AreaChart data={data} margin={{ top: 6, right: 4, left: -26, bottom: 0 }}>
                   <defs>
@@ -771,7 +769,7 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-info)',
     shape: 'rows',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       count: countOption('6'),
       order: { label: 'Порядок', choices: [['best', 'Спершу найкращі'], ['worst', 'Спершу найгірші']], def: 'best' },
@@ -822,7 +820,7 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-acc)',
     shape: 'rows',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       metric: { label: 'Показник', choices: [['avg', 'Середня угода'], ['net', 'Сума R'], ['wr', 'Вінрейт']], def: 'avg' },
       note: { label: 'Висновок', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
@@ -877,7 +875,7 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-bad)',
     shape: 'rows',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       count: countOption('5'),
       metric: { label: 'Сортувати за', choices: [['cost', 'Ціною'], ['count', 'Частотою']], def: 'cost' },
@@ -914,7 +912,7 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-ok)',
     shape: 'rows',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       count: countOption('5'),
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'net' },
@@ -952,7 +950,7 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-warn)',
     shape: 'rows',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {
       count: countOption('5'),
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'net' },
@@ -990,7 +988,7 @@ export const WIDGETS = {
     group: 'Числа',
     tone: 'var(--edge-ok)',
     shape: 'gauge',
-    defaultW: 1,
+    defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s }) => {
       const potential = s.net - sum(s.broken.filter((t) => t.rr < 0).map((t) => t.rr));
@@ -1031,15 +1029,15 @@ export const WIDGET_IDS = Object.keys(WIDGETS);
    розбори. Це та сама сторінка, що була до дошки, — щоб той, хто
    нічого не налаштовував, не помітив переїзду. */
 export const DEFAULT_LAYOUT = [
-  { id: 'net', w: 1 },
-  { id: 'winrate', w: 1 },
-  { id: 'pf', w: 1 },
-  { id: 'tilt', w: 1 },
-  { id: 'equity', w: 3 },
-  { id: 'sources', w: 1 },
-  { id: 'plan', w: 1 },
-  { id: 'emotions', w: 1 },
-  { id: 'mistakes', w: 1 },
+  { id: 'net', h: 1, w: 1 },
+  { id: 'winrate', h: 1, w: 1 },
+  { id: 'pf', h: 1, w: 1 },
+  { id: 'tilt', h: 1, w: 1 },
+  { id: 'equity', h: 2, w: 3 },
+  { id: 'sources', h: 1, w: 1 },
+  { id: 'plan', h: 1, w: 1 },
+  { id: 'emotions', h: 1, w: 1 },
+  { id: 'mistakes', h: 1, w: 1 },
 ];
 
 /* Значення опції за замовчуванням — з реєстру, а не з розкладки: так
