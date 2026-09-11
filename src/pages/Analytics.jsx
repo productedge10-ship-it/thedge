@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot, ChevronDown, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { T } from '../lib/theme';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +25,92 @@ import ExportStats from '../components/analytics/ExportStats';
 ================================================================== */
 
 const PERIODS = ['Весь час', 'Цей квартал', 'Останні 30 днів', 'Цей тиждень'];
+
+/* ------------------------------------------------------------------
+   Період — випадашка.
+
+   Сегментований перемикач на чотири варіанти був завеликий: на
+   ноутбуці тиснув вкладки, на телефоні розсипався сіткою. Випадашка
+   займає рівно один рядок тексту, а вибір ховає під клік. */
+function PeriodMenu({ value, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative order-3 w-full lg:order-2 lg:ml-auto lg:w-auto">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 rounded-[11px] px-3.5 py-2 text-[12.5px] font-semibold transition-colors duration-150 lg:w-auto"
+        style={{
+          background: T.sunken,
+          border: `1px solid ${open ? T.lineAcc : T.line}`,
+          color: T.text,
+          fontFamily: T.sans,
+        }}
+      >
+        <span>{value}</span>
+        <ChevronDown
+          size={14}
+          strokeWidth={2.4}
+          style={{ color: T.text3, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s ease' }}
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute left-0 right-0 z-50 mt-2 rounded-[12px] p-1 lg:left-auto lg:right-0 lg:min-w-[196px]"
+            style={{
+              background: 'var(--edge-panel, rgba(10,10,12,0.96))',
+              border: `1px solid ${T.lineHi}`,
+              boxShadow: '0 24px 60px -20px var(--edge-panel-glow, rgba(0,0,0,0.7))',
+              backdropFilter: 'blur(18px)',
+            }}
+          >
+            {options.map((p) => {
+              const on = p === value;
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => { onChange(p); setOpen(false); }}
+                  className="flex w-full items-center justify-between rounded-[8px] px-3 py-2 text-left text-[12.5px] transition-colors duration-150"
+                  style={{
+                    background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
+                    color: on ? T.acc : T.text2,
+                    fontWeight: on ? 600 : 450,
+                  }}
+                  onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(var(--edge-text-rgb),0.05)'; }}
+                  onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  {p}
+                  {on && <Check size={13} strokeWidth={2.6} />}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function Analytics() {
   const { user } = useAuth();
@@ -95,6 +181,7 @@ export default function Analytics() {
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         .animate-fade-in { animation: fade-in-up 0.35s ease both; }
+        @keyframes ai-soon-sweep { 0% { transform: translateX(-120%); } 60%, 100% { transform: translateX(220%); } }
       `}</style>
 
       {/* ---------- ВЕРХНЯ ПАНЕЛЬ ----------
@@ -126,41 +213,7 @@ export default function Analytics() {
               Аналітика
             </h1>
 
-            {/* Період: сегментований перемикач із ковзною пігулкою на
-                layoutId. Праворуч від назви на широкому екрані, окремим
-                рядком на всю ширину — на вузькому, щоб не тиснути кнопку. */}
-            <div
-              className="hide-scrollbar order-3 flex w-full shrink items-center gap-0.5 overflow-x-auto rounded-[11px] p-1 lg:order-2 lg:ml-auto lg:w-auto"
-              style={{ background: T.sunken }}
-            >
-              {PERIODS.map((p) => {
-                const on = period === p;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setPeriod(p)}
-                    className="relative flex-1 shrink-0 whitespace-nowrap rounded-[8px] px-3 py-1.5 text-center text-[12.5px] transition-colors duration-150 lg:flex-none"
-                    style={{ color: on ? T.text : T.text3, fontWeight: on ? 600 : 450 }}
-                    onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
-                    onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
-                  >
-                    {on && (
-                      <motion.span
-                        layoutId="an-period"
-                        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                        className="absolute inset-0 rounded-[8px]"
-                        style={{
-                          background: T.surfaceHi,
-                          border: `1px solid ${T.lineAcc}`,
-                          boxShadow: `0 4px 14px -8px rgba(${T.accRgb},0.9)`,
-                        }}
-                      />
-                    )}
-                    <span className="relative">{p}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <PeriodMenu value={period} onChange={setPeriod} options={PERIODS} />
 
             <button
               onClick={() => setExportOpen(true)}
@@ -227,12 +280,26 @@ export default function Analytics() {
                       </em>
                     )}
 
+                    {/* «Скоро» — під стиль хедера самого розділу AI:
+                        м'ятна пігулка з тонкою рамкою й відблиском, що
+                        пробігає раз на кілька секунд. */}
                     {soon && (
                       <em
-                        className="not-italic rounded-[20px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.12em]"
-                        style={{ background: `rgba(${T.accRgb},0.12)`, color: T.acc }}
+                        className="relative inline-flex items-center overflow-hidden rounded-full px-[9px] py-[3px] text-[9px] not-italic uppercase"
+                        style={{
+                          fontFamily: T.mono, letterSpacing: '0.2em', color: '#2ee6a8',
+                          border: '1px solid rgba(46,230,168,0.32)', background: 'rgba(46,230,168,0.08)',
+                        }}
                       >
                         скоро
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute inset-y-0 w-2/5"
+                          style={{
+                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent)',
+                            animation: 'ai-soon-sweep 3.4s ease-in-out infinite',
+                          }}
+                        />
                       </em>
                     )}
 

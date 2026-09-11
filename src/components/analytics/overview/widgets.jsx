@@ -208,6 +208,10 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
         position: 'absolute', left: -6, right: -6, bottom: -6, height: 74,
         opacity: hover ? 1 : 0.62,
         transition: 'opacity .28s ease',
+        /* Лише верхній край кривої мʼяко гасне — щоб випадковий пік не
+           різав підпис над графіком; сам графік лишається читабельним. */
+        WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 24%)',
+        maskImage: 'linear-gradient(180deg, transparent 0%, #000 24%)',
       }}
     >
       <ResponsiveContainer width="100%" height="100%">
@@ -293,7 +297,7 @@ function KpiBody({ value, color, sub, spark, facts = [], w = 1, hover }) {
       <div
         style={{
           position: 'relative', flex: wide ? '0 0 auto' : 1, pointerEvents: 'none',
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10,
+          display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 7,
         }}
       >
         <Num color={color} size={34}>{value}</Num>

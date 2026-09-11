@@ -454,7 +454,12 @@ function CardShell({
         className="ov-body"
         style={{
           position: 'relative', flex: 1, minHeight: 0,
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          display: 'flex', flexDirection: 'column',
+          /* `safe center` — доки вміст влазить, він по центру; щойно
+             переростає плитку, вирівнювання падає на початок, і
+             прокрутка бере від першого рядка, а не обрізає його
+             згори (класичний баг flex + overflow + center). */
+          justifyContent: 'safe center',
           overflowY: 'auto', overflowX: 'hidden',
         }}
       >
