@@ -1,14 +1,14 @@
 import {
   Area, AreaChart, Bar, BarChart, Cell, CartesianGrid, ComposedChart, Line,
   ReferenceLine, ResponsiveContainer, Scatter, ScatterChart,
-  Tooltip as RTooltip, XAxis, YAxis, ZAxis,
+  Tooltip as RTooltip, XAxis, YAxis,
 } from 'recharts';
 import {
   Activity, ArrowDownRight, CalendarDays, ChartColumn, Clock, Crosshair,
   Flame, Layers, ShieldCheck, Target, Timer, TrendingUp,
 } from 'lucide-react';
 import { F, P } from '../overview/theme';
-import { r1, r2, signed, sum } from '../data';
+import { EMOTION_COLOR, EMOTION_LABEL, EMOTIONS, r1, r2, signed, sum } from '../data';
 
 /* ==================================================================
    Бібліотека віджетів «Перформансу».
@@ -106,6 +106,53 @@ function Fact({ label, value }) {
   );
 }
 
+/* Класична KPI-картка з дошки до переходу на віджети: велике число,
+   підписані підрядки й жива крива внизу замість таблиці фактів.
+   Заголовок і шестерня налаштувань лишились у шапці картки — тут
+   тільки вміст, який людина впізнає з попередньої версії розділу. */
+function ClassicKpi({ id, value, subtext, subStats = [], color, data, dataKey }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minHeight: 96 }}>
+      <div>
+        <b style={{ fontFamily: F.mono, fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color }}>
+          {value}
+        </b>
+        {subtext && (
+          <div style={{ marginTop: 6, fontFamily: F.sans, fontSize: 11, fontWeight: 600, color: P.text5 }}>
+            {subtext}
+          </div>
+        )}
+      </div>
+
+      {subStats.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {subStats.map((st) => (
+            <span key={st.label} style={{ fontFamily: F.sans, fontSize: 11, color: P.text5 }}>
+              {st.label}: <b style={{ color: P.text2, fontWeight: 700 }}>{st.val}</b>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {data && data.length > 0 && (
+        <div style={{ flex: 1, minHeight: 40 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data}>
+              <defs>
+                <linearGradient id={`pk-${id}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={color} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={`url(#pk-${id})`} isAnimationActive animationDuration={900} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---------- обчислення ---------- */
 
 const rollingSeries = (trades, win) => {
@@ -148,18 +195,15 @@ export const PERF_WIDGETS = {
     hint: 'Скільки в середньому приносить одна угода',
     icon: Target, group: 'Числа', tone: 'var(--edge-acc)', shape: 'number', defaultW: 1, defaultH: 1,
     options: {},
-    render: ({ s, w }) => {
+    render: ({ s, id }) => {
       const timed = s.trades.filter((t) => typeof t.holdMin === 'number');
       const avgHold = timed.length ? Math.round(sum(timed.map((t) => t.holdMin)) / timed.length) : null;
       return (
-        <Kpi
-          w={w} color="var(--edge-acc)" value={`${signed(s.expectancy, 2)}R`}
-          facts={[
-            ['угод', String(s.trades.length)],
-            ['утримання', avgHold === null ? '—' : `${avgHold} хв`],
-            ['профіт-фактор', r2(s.pf)],
-            ['вінрейт', `${s.wr}%`],
-          ]}
+        <ClassicKpi
+          id={id} color="var(--edge-acc)" value={`${signed(s.expectancy, 2)}R`}
+          subtext="на кожну угоду"
+          subStats={[{ label: 'Сер. утримання', val: avgHold === null ? '—' : `${avgHold} хв` }]}
+          data={s.equity} dataKey="value"
         />
       );
     },
@@ -170,15 +214,11 @@ export const PERF_WIDGETS = {
     hint: 'І скільки коштує середній мінус',
     icon: TrendingUp, group: 'Числа', tone: P.ok, shape: 'number', defaultW: 1, defaultH: 1,
     options: {},
-    render: ({ s, w }) => (
-      <Kpi
-        w={w} color={P.ok} value={`${signed(s.avgWin, 2)}R`}
-        facts={[
-          ['середній мінус', `${r2(s.avgLoss)}R`],
-          ['профіт-фактор', r2(s.pf)],
-          ['виграшів', String(s.wins.length)],
-          ['програшів', String(s.losses.length)],
-        ]}
+    render: ({ s, id }) => (
+      <ClassicKpi
+        id={id} color={P.ok} value={`${signed(s.avgWin, 2)}R`}
+        subStats={[{ label: 'Середній мінус', val: `${r2(s.avgLoss)}R` }]}
+        data={s.trades.slice(-20)} dataKey="rr"
       />
     ),
   },
@@ -188,15 +228,28 @@ export const PERF_WIDGETS = {
     hint: 'Найглибше дно й наскільки швидко з нього виходиш',
     icon: ArrowDownRight, group: 'Числа', tone: P.bad, shape: 'dip', defaultW: 1, defaultH: 1,
     options: {},
-    render: ({ s, w }) => (
-      <Kpi
-        w={w} color={P.bad} value={`${r1(s.maxDD)}R`}
-        facts={[
-          ['відновлення', `×${r2(s.recovery)}`],
-          ['серія мінусів', String(s.worstL)],
-          ['чистий R', `${signed(s.net)}R`],
-          ['угод', String(s.trades.length)],
+    render: ({ s, id }) => (
+      <ClassicKpi
+        id={id} color={P.bad} value={`${r1(s.maxDD)}R`}
+        subStats={[{ label: 'Фактор відновл.', val: `${r1(s.recovery)}×` }]}
+        data={s.equity} dataKey="dd"
+      />
+    ),
+  },
+
+  streak: {
+    title: 'Серія плюсів',
+    hint: 'Найдовша серія виграшів поспіль і що коштують помилки',
+    icon: ShieldCheck, group: 'Числа', tone: 'var(--edge-acc)', shape: 'gauge', defaultW: 1, defaultH: 1,
+    options: {},
+    render: ({ s, id }) => (
+      <ClassicKpi
+        id={id} color="var(--edge-acc)" value={String(s.bestW)}
+        subStats={[
+          { label: 'Серія мінусів', val: String(s.worstL) },
+          { label: 'Помилки', val: `${s.mistakeRate}%` },
         ]}
+        data={s.byMonth} dataKey="wr"
       />
     ),
   },
@@ -328,7 +381,7 @@ export const PERF_WIDGETS = {
   },
 
   underwater: {
-    title: 'Просадка',
+    title: 'Просадка (underwater)',
     hint: 'Наскільки глибоко й надовго рахунок ішов під воду',
     icon: ArrowDownRight, group: 'Динаміка', tone: P.bad, shape: 'dip', defaultW: 2, defaultH: 2,
     options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
@@ -368,21 +421,29 @@ export const PERF_WIDGETS = {
       const rows = s.byDow.filter((x) => x.trades);
       if (!rows.length) return <Empty>Днів з угодами ще немає</Empty>;
       const fmt = fmtBy(o.metric);
+      const best = [...rows].sort((a, b) => b[o.metric] - a[o.metric])[0];
 
       return (
-        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
-          <ResponsiveContainer>
-            <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
-              {grid()}
-              <XAxis dataKey="day" {...AX} />
-              <YAxis {...AX} />
-              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
-              <ReferenceLine y={0} stroke={P.lineHover} />
-              <Bar dataKey={o.metric} radius={[5, 5, 0, 0]} maxBarSize={44} isAnimationActive animationDuration={420}>
-                {rows.map((x) => <Cell key={x.day} fill={x[o.metric] >= 0 ? 'var(--edge-acc)' : P.bad} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minHeight: 120 }}>
+          {best && (
+            <div style={{ fontFamily: F.sans, fontSize: 11, color: P.text5 }}>
+              Найкращий: <b style={{ color: P.ok, fontWeight: 700 }}>{best.day}</b>
+            </div>
+          )}
+          <div style={{ width: '100%', flex: 1 }}>
+            <ResponsiveContainer>
+              <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
+                {grid()}
+                <XAxis dataKey="day" {...AX} />
+                <YAxis {...AX} />
+                {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+                <ReferenceLine y={0} stroke={P.lineHover} />
+                <Bar dataKey={o.metric} radius={[3, 3, 3, 3]} maxBarSize={34} isAnimationActive animationDuration={420}>
+                  {rows.map((x) => <Cell key={x.day} fill={x[o.metric] > 0 ? 'var(--edge-acc)' : x[o.metric] < 0 ? P.bad : P.lineHover} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       );
     },
@@ -397,21 +458,29 @@ export const PERF_WIDGETS = {
       const rows = s.bySession.filter((x) => x.trades);
       if (!rows.length) return <Empty>Сесії ще не набрали угод</Empty>;
       const fmt = fmtBy(o.metric);
+      const best = [...rows].sort((a, b) => b[o.metric] - a[o.metric])[0];
 
       return (
-        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
-          <ResponsiveContainer>
-            <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
-              {grid()}
-              <XAxis dataKey="session" {...AX} />
-              <YAxis {...AX} />
-              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
-              <ReferenceLine y={0} stroke={P.lineHover} />
-              <Bar dataKey={o.metric} radius={[5, 5, 0, 0]} maxBarSize={54} isAnimationActive animationDuration={420}>
-                {rows.map((x) => <Cell key={x.session} fill={x[o.metric] >= 0 ? 'var(--edge-ok)' : P.bad} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minHeight: 120 }}>
+          {best && (
+            <div style={{ fontFamily: F.sans, fontSize: 11, color: P.text5 }}>
+              Ядро: <b style={{ color: P.ok, fontWeight: 700 }}>{best.session}</b>
+            </div>
+          )}
+          <div style={{ width: '100%', flex: 1 }}>
+            <ResponsiveContainer>
+              <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
+                {grid()}
+                <XAxis dataKey="session" {...AX} />
+                <YAxis {...AX} />
+                {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+                <ReferenceLine y={0} stroke={P.lineHover} />
+                <Bar dataKey={o.metric} radius={[3, 3, 0, 0]} maxBarSize={54} isAnimationActive animationDuration={420}>
+                  {rows.map((x) => <Cell key={x.session} fill={x[o.metric] >= 0 ? P.ok : P.bad} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       );
     },
@@ -420,7 +489,7 @@ export const PERF_WIDGETS = {
   hours: {
     title: 'Години входу',
     hint: 'О котрій годині рахунок росте, а о котрій тане',
-    icon: Clock, group: 'Розрізи', tone: 'var(--edge-info)', shape: 'bars', defaultW: 2, defaultH: 2,
+    icon: Clock, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'bars', defaultW: 2, defaultH: 2,
     options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => {
       const rows = s.byHour.filter((h) => h.trades);
@@ -435,8 +504,8 @@ export const PERF_WIDGETS = {
               <YAxis {...AX} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${signed(v)}R · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
               <ReferenceLine y={0} stroke={P.lineHover} />
-              <Bar dataKey="net" radius={[4, 4, 0, 0]} isAnimationActive animationDuration={420}>
-                {rows.map((h) => <Cell key={h.hour} fill={h.net >= 0 ? 'var(--edge-info)' : P.bad} fillOpacity={0.85} />)}
+              <Bar dataKey="net" radius={[2, 2, 0, 0]} maxBarSize={16} isAnimationActive animationDuration={420}>
+                {rows.map((h) => <Cell key={h.hour} fill={h.net >= 0 ? 'var(--edge-acc)' : P.bad} fillOpacity={0.85} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -451,18 +520,23 @@ export const PERF_WIDGETS = {
     icon: ChartColumn, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'bars', defaultW: 2, defaultH: 2,
     options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => (
-      <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
-        <ResponsiveContainer>
-          <BarChart data={s.buckets} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
-            {grid()}
-            <XAxis dataKey="name" {...AX} tick={{ ...AX.tick, fontSize: 9.5 }} interval={0} />
-            <YAxis {...AX} allowDecimals={false} />
-            {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [`${v} угод`, 'Кількість']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
-            <Bar dataKey="value" radius={[5, 5, 0, 0]} isAnimationActive animationDuration={420}>
-              {s.buckets.map((b) => <Cell key={b.name} fill={b.color} fillOpacity={0.85} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 120 }}>
+        <div style={{ width: '100%', flex: 1 }}>
+          <ResponsiveContainer>
+            <BarChart data={s.buckets} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
+              {grid()}
+              <XAxis dataKey="name" {...AX} tick={{ ...AX.tick, fontSize: 9.5 }} interval={0} />
+              <YAxis {...AX} allowDecimals={false} />
+              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [`${v} угод`, 'Кількість']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+              <Bar dataKey="value" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={420}>
+                {s.buckets.map((b) => <Cell key={b.name} fill={b.color} fillOpacity={0.85} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <p style={{ margin: '10px 0 0', fontFamily: F.sans, fontSize: 11.5, lineHeight: 1.6, color: P.text5 }}>
+          Хвіст справа — це те, за що ти платиш усіма мінусами. Угод понад 2R: <b style={{ color: P.ok, fontWeight: 700 }}>{s.trades.filter((t) => t.rr > 2).length}</b>.
+        </p>
       </div>
     ),
   },
@@ -473,30 +547,37 @@ export const PERF_WIDGETS = {
     icon: Timer, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'number', defaultW: 2, defaultH: 2,
     options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => {
-      const rows = s.trades
-        .filter((t) => typeof t.holdMin === 'number')
-        .map((t) => ({ hold: t.holdMin, rr: t.rr, z: Math.abs(t.rr) + 1 }));
+      const rows = s.trades.filter((t) => typeof t.holdMin === 'number');
       if (!rows.length) return <Empty>Час утримання ще не рахується — заповни час входу й виходу</Empty>;
 
       return (
-        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
-          <ResponsiveContainer>
-            <ScatterChart margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
-              {grid()}
-              <XAxis type="number" dataKey="hold" name="хв" {...AX} />
-              <YAxis type="number" dataKey="rr" name="R" {...AX} />
-              <ZAxis type="number" dataKey="z" range={[24, 130]} />
-              {o.tip !== 'off' && <RTooltip
-                {...TIP}
-                cursor={{ strokeDasharray: '3 3', stroke: P.lineHover }}
-                formatter={(v, n) => [n === 'R' ? `${signed(v, 2)}R` : `${v} хв`, n === 'R' ? 'Результат' : 'Утримання']}
-              />}
-              <ReferenceLine y={0} stroke={P.lineHover} />
-              <Scatter data={rows} isAnimationActive animationDuration={420}>
-                {rows.map((p, i) => <Cell key={i} fill={p.rr >= 0 ? P.ok : P.bad} fillOpacity={0.55} />)}
-              </Scatter>
-            </ScatterChart>
-          </ResponsiveContainer>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 120 }}>
+          <div style={{ width: '100%', flex: 1 }}>
+            <ResponsiveContainer>
+              <ScatterChart margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
+                {grid()}
+                <XAxis type="number" dataKey="holdMin" name="хв" {...AX} />
+                <YAxis type="number" dataKey="rr" name="R" {...AX} />
+                {o.tip !== 'off' && <RTooltip
+                  {...TIP}
+                  cursor={{ strokeDasharray: '3 3', stroke: P.lineHover }}
+                  formatter={(v, n) => [n === 'R' ? `${signed(v, 2)}R` : `${v} хв`, n === 'R' ? 'Результат' : 'Утримання']}
+                />}
+                <ReferenceLine y={0} stroke={P.lineHover} />
+                <Scatter data={rows} isAnimationActive animationDuration={420}>
+                  {rows.map((t, i) => <Cell key={i} fill={EMOTION_COLOR[t.emotion]} fillOpacity={0.8} />)}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 10 }}>
+            {EMOTIONS.map((e) => (
+              <span key={e} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: F.sans, fontSize: 11, color: P.text5 }}>
+                <i style={{ width: 8, height: 8, borderRadius: 3, display: 'inline-block', background: EMOTION_COLOR[e] }} />
+                {EMOTION_LABEL[e]}
+              </span>
+            ))}
+          </div>
         </div>
       );
     },
@@ -519,16 +600,14 @@ export const PERF_WIDGETS = {
             >
               {grid()}
               <XAxis dataKey="m" {...AX} />
-              <YAxis yAxisId="l" {...AX} />
-              <YAxis yAxisId="r" orientation="right" {...AX} domain={[0, 100]} />
-              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n) => [n === 'Вінрейт' ? `${v}%` : `${signed(v)}R`, n]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
-              <ReferenceLine yAxisId="l" y={0} stroke={P.lineHover} />
-              <Bar yAxisId="l" dataKey="net" name="Чистий R" radius={[5, 5, 0, 0]} maxBarSize={54} isAnimationActive animationDuration={420}>
-                {s.byMonth.map((m) => <Cell key={m.key} fill={m.net >= 0 ? P.ok : P.bad} fillOpacity={0.8} />)}
+              <YAxis {...AX} />
+              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n) => [n === 'Вінрейт %' ? `${v}%` : `${signed(v)}R`, n]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+              <Bar dataKey="net" name="Чистий R" barSize={40} radius={[3, 3, 0, 0]} isAnimationActive animationDuration={420}>
+                {s.byMonth.map((m) => <Cell key={m.key} fill={m.net >= 0 ? P.ok : P.bad} />)}
               </Bar>
               <Line
-                yAxisId="r" type="monotone" dataKey="wr" name="Вінрейт" stroke="var(--edge-acc)" strokeWidth={2.4}
-                dot={{ r: 3, fill: 'var(--edge-acc)' }} activeDot={{ r: 5, fill: 'var(--edge-acc)', stroke: 'var(--edge-sunken)', strokeWidth: 2 }}
+                type="monotone" dataKey="wr" name="Вінрейт %" stroke={P.warn} strokeWidth={2}
+                dot={{ r: 3 }} isAnimationActive animationDuration={900}
               />
             </ComposedChart>
           </ResponsiveContainer>
@@ -612,12 +691,9 @@ export const PERF_DEFAULT = [
   { id: 'expectancy', h: 1, w: 1 },
   { id: 'avgwin', h: 1, w: 1 },
   { id: 'drawdown', h: 1, w: 1 },
-  { id: 'discipline', h: 1, w: 1 },
-  { id: 'rolling', h: 2, w: 4 },
+  { id: 'streak', h: 1, w: 1 },
   { id: 'dow', h: 2, w: 2 },
   { id: 'sessions', h: 2, w: 2 },
-  { id: 'outliers', h: 2, w: 2 },
-  { id: 'chain', h: 2, w: 2 },
   { id: 'distribution', h: 2, w: 2 },
   { id: 'underwater', h: 2, w: 2 },
   { id: 'hours', h: 2, w: 2 },

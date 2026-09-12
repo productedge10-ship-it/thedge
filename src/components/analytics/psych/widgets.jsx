@@ -5,7 +5,7 @@ import {
   Tooltip as RTooltip,
 } from 'recharts';
 import {
-  Activity, ArrowRight, CalendarDays, CheckCircle2, Clock, Cpu, Crosshair, Droplet,
+  Activity, AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, Clock, Cpu, Crosshair, Droplet,
   Flame, Gauge, Info, Layers, Radar as RadarIcon, ShieldCheck, Sparkles, Target, XCircle,
 } from 'lucide-react';
 import { Delta, ChartTip, axis } from '../ui';
@@ -165,7 +165,10 @@ export const PSYCH_WIDGETS = {
   neuro: {
     title: 'Нейропрофіль',
     hint: 'Пʼять осей психіки, зібраних із твоїх угод',
-    icon: Cpu, group: 'Психологія', tone: '#8b7bff', shape: 'gauge', defaultW: 4, defaultH: 4,
+    icon: Cpu, group: 'Психологія', tone: '#8b7bff', shape: 'gauge',
+    /* Сканер + 5 осей + плитки + кнопка звіту вкладаються в h:3;
+       h:4 лишав ~300px порожнечі внизу картки. */
+    defaultW: 4, defaultH: 3, minH: 3,
     options: {
     },
     render: ({ s, w }) => <NeuroBody s={s} w={w} />,
@@ -279,11 +282,14 @@ export const PSYCH_WIDGETS = {
   states: {
     title: 'Стан входу → гроші',
     hint: 'Рейтинг станів за тим, скільки вони платять',
-    icon: Activity, group: 'Психологія', tone: '#34d399', shape: 'rows', defaultW: 4, defaultH: 3,
+    icon: Activity, group: 'Психологія', tone: '#34d399', shape: 'rows',
+    /* Список станів + підсумковий висновок унизу не влазять у h:3 —
+       останній рядок тексту йшов під прокрутку. */
+    defaultW: 4, defaultH: 4, minH: 4,
     options: {
     },
     render: ({ s }) => {
-      const { totalTrades, rankedStates, maxAbsNet, netTotal, impulsiveTrades, netWithoutImpulse, bestState, worstState } = derive(s);
+      const { totalTrades, rankedStates, maxAbsNet, netTotal, impulsiveTrades, netWithoutImpulse, bestState, worstState, calmStat, tiltStat } = derive(s);
       return (
         <>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
@@ -362,12 +368,18 @@ export const PSYCH_WIDGETS = {
             );
           })}
         </div>
+
+        <div className="mt-4 p-4 bg-[var(--edge-surface-hi)]/80 border border-[var(--edge-hair)] rounded-[12px]">
+          <p className="text-[12.5px] text-[#FAFAFA] leading-[1.6] m-0">
+            <span className="text-[#8b7bff] font-bold">💡 Простими словами:</span> Спокійний вхід приносить <b className="text-[#34d399]">{signed(calmStat.avg, 2)}R</b>, вхід у тільті — <b className="text-[#f87171]">{signed(tiltStat.avg, 2)}R</b>. Різниця в <b className="text-[var(--edge-text)]">{r2(Math.abs(calmStat.avg - tiltStat.avg))}R</b> на кожну угоду — це і є ціна одного емоційного рішення.
+          </p>
+        </div>
         </>
       );
     },
   },
   mistakes: {
-    title: 'Реєстр помилок',
+    title: 'Реєстр помилок (Дисципліна)',
     hint: 'Скільки коштує кожне порушення й скільки їх було',
     icon: XCircle, group: 'Психологія', tone: '#f87171', shape: 'rows', defaultW: 4, defaultH: 2,
     options: {
@@ -514,11 +526,13 @@ export const PSYCH_WIDGETS = {
   risk: {
     title: 'Ризик і стан',
     hint: 'Чи росте обсяг позиції разом з емоціями',
-    icon: Gauge, group: 'Психологія', tone: '#fbbf24', shape: 'gauge', defaultW: 2, defaultH: 2,
+    icon: Gauge, group: 'Психологія', tone: '#fbbf24', shape: 'gauge',
+    /* Чотири рядки шкали + вердикт-плашка внизу не влазять у h:2. */
+    defaultW: 2, defaultH: 3, minH: 3,
     options: {
     },
     render: ({ s }) => {
-      const { riskRows, extraRiskR } = derive(s);
+      const { riskRows, extraRiskR, riskVerdict } = derive(s);
       return (
         <>
         <div className="flex items-center justify-between text-[9.5px] uppercase tracking-[0.14em] font-black text-[#7A7A85] mt-2 mb-1.5 px-[100px]">
@@ -581,14 +595,30 @@ export const PSYCH_WIDGETS = {
           </div>
           <b className="text-[15px] font-extrabold text-[#8b7bff]">{r1(extraRiskR)}R</b>
         </div>
+
+        {riskVerdict.warn ? (
+          <div className="mt-3 p-3 bg-[#f87171]/10 border border-[#f87171]/20 rounded-xl flex items-start gap-3">
+            <AlertTriangle size={16} className="text-[#f87171] mt-0.5 shrink-0" />
+            <p className="text-[12px] text-[#f87171] leading-[1.5] m-0">
+              <b>Попередження:</b> У стані <b>«{EMOTION_LABEL[riskVerdict.emotion]}»</b> твій ризик зростає до {r2(riskVerdict.risk)}%. Ти емоційно збільшуєш об'єм, щоб відігратися. Контролюй розмір позиції!
+            </p>
+          </div>
+        ) : (
+          <div className="mt-3 p-3 bg-[#34d399]/10 border border-[#34d399]/20 rounded-xl flex items-start gap-3">
+            <CheckCircle2 size={16} className="text-[#34d399] mt-0.5 shrink-0" />
+            <p className="text-[12px] text-[#34d399] leading-[1.5] m-0">
+              <b>Все чудово:</b> Твій розмір позиції стабільний і не піддається впливу емоцій. Так тримати!
+            </p>
+          </div>
+        )}
         </>
       );
     },
   },
   verdict: {
-    title: 'Куди течуть гроші',
+    title: 'Вердикт по дисципліні',
     hint: 'Різниця між тим, що є, і тим, що вже могло бути',
-    icon: Droplet, group: 'Психологія', tone: '#8b7bff', shape: 'bars', defaultW: 2, defaultH: 3,
+    icon: Gauge, group: 'Психологія', tone: '#8b7bff', shape: 'bars', defaultW: 2, defaultH: 3,
     options: {
     },
     render: ({ s }) => {
@@ -656,6 +686,10 @@ export const PSYCH_WIDGETS = {
             );
           })}
         </div>
+
+        <p className="text-[10.5px] text-[#4A4A52] mt-3 m-0 leading-snug">
+          Категорії частково перетинаються — одна угода може бути і в тільті, і з порушенням плану.
+        </p>
         </>
       );
     },
@@ -703,6 +737,13 @@ export const PSYCH_WIDGETS = {
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-3 p-3 rounded-xl border border-[#8b7bff]/20 bg-[#8b7bff]/[0.06] flex items-start gap-2.5">
+          <Target size={15} className="text-[#8b7bff] mt-0.5 shrink-0" />
+          <p className="text-[11.5px] text-[#B4B4BD] leading-[1.5] m-0">
+            Фокус тижня — <b className="text-[var(--edge-text)]">«{liveRules[0]?.txt}»</b>. Це найслабше правило: {liveRules[0]?.pct}% виконання.
+          </p>
         </div>
         </>
       );
@@ -921,22 +962,22 @@ export const PSYCH_WIDGETS = {
   },
 };
 
-/* Розкладка за замовчуванням. Нейропрофіль на всю ширину зверху, бо
-   це портрет цілком; далі пари: причина й наслідок поруч. */
+/* Розкладка за замовчуванням — порядок старої, фіксованої сторінки:
+   нейропрофіль на всю ширину зверху (це портрет цілком), далі ліва
+   колонка старого дизайну (тільт → емоції → стани → помилки → план і
+   ризик), потім права (AI-психолог → вердикт → чек-лист). Пʼять
+   розрізів, яких у старому дизайні не було (streaks, revenge,
+   cleancurve, dowmood, hourrisk), лишаються в реєстрі — додати їх
+   можна з бібліотеки, — але не займають місце за замовчуванням. */
 export const PSYCH_DEFAULT = [
-  { id: 'neuro', h: 4, w: 4, p: 'inherit', o: {} },
+  { id: 'neuro', h: 3, w: 4, p: 'inherit', o: {} },
   { id: 'tilt', h: 2, w: 2, p: 'inherit', o: {} },
   { id: 'emotions', h: 2, w: 2, p: 'inherit', o: {} },
-  { id: 'states', h: 3, w: 2, p: 'inherit', o: {} },
-  { id: 'verdict', h: 3, w: 2, p: 'inherit', o: {} },
+  { id: 'states', h: 4, w: 2, p: 'inherit', o: {} },
   { id: 'mistakes', h: 2, w: 2, p: 'inherit', o: {} },
-  { id: 'checklist', h: 3, w: 2, p: 'inherit', o: {} },
   { id: 'plan', h: 2, w: 2, p: 'inherit', o: {} },
-  { id: 'risk', h: 2, w: 2, p: 'inherit', o: {} },
-  { id: 'streaks', h: 1, w: 1, p: 'inherit', o: {} },
-  { id: 'revenge', h: 1, w: 1, p: 'inherit', o: {} },
-  { id: 'cleancurve', h: 2, w: 2, p: 'inherit', o: {} },
-  { id: 'dowmood', h: 2, w: 2, p: 'inherit', o: {} },
-  { id: 'hourrisk', h: 2, w: 2, p: 'inherit', o: {} },
+  { id: 'risk', h: 3, w: 2, p: 'inherit', o: {} },
   { id: 'aicoach', h: 1, w: 4, p: 'inherit', o: {} },
+  { id: 'verdict', h: 3, w: 2, p: 'inherit', o: {} },
+  { id: 'checklist', h: 3, w: 2, p: 'inherit', o: {} },
 ];

@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import useCloudState from '../../hooks/useCloudState';
 import { useStats } from './data';
 import Board from './overview/Board';
-import { DEFAULT_LAYOUT, WIDGETS } from './overview/widgets';
+import { DEFAULT_LAYOUT, PINNED_IDS, WIDGETS } from './overview/widgets';
 
 /* ==================================================================
    Огляд.
@@ -56,7 +56,19 @@ const normalize = (v) => {
      свідомо, і підсовувати їй розкладку назад було б нахабством.
      Повертаємо стандарт лише коли не лишилось жодного впізнаваного
      запису, тобто дані справді зіпсовані. */
-  return v.length && !clean.length ? DEFAULT_LAYOUT : clean;
+  const result = v.length && !clean.length ? DEFAULT_LAYOUT.slice() : clean;
+
+  /* Закріплені віджети виведені з дошки в окремий рядок і більше не
+     видаляються — але старий запис міг зберегтись без одного з них
+     (людина прибрала його ще до цієї зміни). Дописуємо, чого бракує,
+     інакше трійка внизу одного разу не сходиться. */
+  PINNED_IDS.forEach((id) => {
+    if (!result.some((x) => x.id === id)) {
+      result.push({ id, w: WIDGETS[id].defaultW || 1, h: WIDGETS[id].defaultH || 2, p: 'inherit', o: {} });
+    }
+  });
+
+  return result;
 };
 
 export default function Overview({ s, rows = [] }) {

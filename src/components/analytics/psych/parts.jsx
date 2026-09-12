@@ -7,13 +7,6 @@ import {
 } from 'lucide-react';
 import { motion, useMotionValue, useMotionTemplate, useTransform, useSpring, AnimatePresence } from 'framer-motion';
 import { EMOTION_COLOR, EMOTION_LABEL, signed, r1, r2, sum } from '../data';
-import ComingSoon from '../shared/ComingSoon';
-
-/* Поки модель не підключена, усе, що є судженням, а не арифметикою,
-   показує заглушку замість тексту. Один прапорець замість чотирьох
-   закоментованих блоків: коли AI зʼявиться, тут буде true, і місця
-   повернуться самі. */
-export const AI_READY = false;
 
 // ==========================================
 // АНІМАЦІЇ
@@ -558,36 +551,19 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
               ))}
             </div>
 
-            {/* Осі вище рахуються з угод і лишаються. Повний звіт —
-                це вже зв'язний текст про те, чому індекс саме такий, а
-                його пише модель, тому поки заглушка. */}
-            {AI_READY ? (
-              <button
-                onClick={() => setOpen(true)}
-                className="mt-1 w-full py-2.5 rounded-xl border text-[12.5px] font-bold transition-colors flex items-center justify-center gap-2"
-                style={{ borderColor: `${neuro.tier.color}33`, background: `${neuro.tier.color}10`, color: neuro.tier.color }}
-              >
-                <Brain size={15} /> Відкрити повний нейро-звіт
-              </button>
-            ) : (
-              <div className="mt-1">
-                {/* Той самий акцент, що й у заглушки AI-психолога, а не
-                    колір типу трейдера: дві заглушки на одній сторінці
-                    мають виглядати як одна річ, інакше читаються як
-                    два різні стани. */}
-                <ComingSoon
-                  tone="#8b7bff"
-                  title="Повний нейро-звіт"
-                  text="Розбір усіх пʼяти осей одним текстом: що саме тягне індекс вниз, на яких угодах це видно і з чого почати. Зʼявиться разом з AI."
-                />
-              </div>
-            )}
+            <button
+              onClick={() => setOpen(true)}
+              className="mt-1 w-full py-2.5 rounded-xl border text-[12.5px] font-bold transition-colors flex items-center justify-center gap-2"
+              style={{ borderColor: `${neuro.tier.color}33`, background: `${neuro.tier.color}10`, color: neuro.tier.color }}
+            >
+              <Brain size={15} /> Відкрити повний нейро-звіт
+            </button>
           </div>
         </div>
       </>
 
       <AnimatePresence>
-        {AI_READY && open && (
+        {open && (
           <NeuroModal
             neuro={neuro}
             s={s}
@@ -665,6 +641,24 @@ function compute(s) {
   const netWithoutImpulse = netTotal - impulsiveNet;
   const bestState = rankedStates[0] || { emotion: 'calm', avg: 0 };
   const worstState = rankedStates[rankedStates.length - 1] || { emotion: 'tilt', avg: 0 };
+
+  const calmStat = s.emotionStats.find((e) => e.emotion === 'calm') || { avg: 0, net: 0, trades: 0, list: [] };
+  const tiltStat = s.emotionStats.find((e) => e.emotion === 'tilt') || { avg: 0, net: 0, trades: 0, list: [] };
+
+  /* Той самий вердикт, що жив у старому компоненті: чи росте розмір
+     позиції разом з тривогою чи тільтом, а не лишається сталим. */
+  const riskVerdict = once(() => {
+    let maxState = calmStat;
+    let highestRisk = calmStat.trades ? sum(calmStat.list.map((t) => t.risk)) / calmStat.trades : 0;
+    s.emotionStats.forEach((e) => {
+      const avg = e.trades ? sum(e.list.map((t) => t.risk)) / e.trades : 0;
+      if (avg > highestRisk && (e.emotion === 'tilt' || e.emotion === 'fomo' || e.emotion === 'anxiety')) {
+        highestRisk = avg;
+        maxState = e;
+      }
+    });
+    return { emotion: maxState.emotion, risk: highestRisk, warn: highestRisk > 1.05 };
+  });
 
   const riskRows = once(() => s.emotionStats.map((e) => {
     const avgRisk = e.trades ? sum(e.list.map((t) => t.risk)) / e.trades : 0;
@@ -744,6 +738,9 @@ function compute(s) {
     netWithoutImpulse,
     bestState,
     worstState,
+    calmStat,
+    tiltStat,
+    riskVerdict,
     riskRows,
     extraRiskR,
     leaks,

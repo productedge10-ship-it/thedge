@@ -53,6 +53,14 @@ export const F = { display: T.display, sans: T.sans, mono: T.mono };
    рядком. Тільки через rgba з трійкою. */
 export const A = (a) => `rgba(${T.accRgb}, ${a})`;
 
+/* Те саме обмеження стосується будь-якого кольору на дошці: `tone`
+   віджета — це теж CSS-змінна (var(--edge-ok) тощо), а не hex, тож
+   `${tone}1f` ніколи не був прозорим тоном — це невалиде значення,
+   яке браузер тихо відкидає. Через це половина ховерів на дошці не
+   мала кольору взагалі. color-mix працює однаково для var(), hex і
+   rgba. */
+export const mix = (color, pct) => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+
 /* Пружина з «Записника»: легкий перескок за ціллю (1.2 у третьому
    параметрі) — саме він дає відчуття, що елемент має вагу, а не
    просто змінює координату. */
@@ -165,7 +173,7 @@ export function trackLight(e) {
 
 export const lightLayer = (tone, on, size = 280) => ({
   position: 'absolute', inset: 0, borderRadius: 'inherit', pointerEvents: 'none',
-  background: `radial-gradient(${size}px circle at var(--mx, 50%) var(--my, 0%), ${tone}1f, transparent 72%)`,
+  background: `radial-gradient(${size}px circle at var(--mx, 50%) var(--my, 0%), ${mix(tone, 12)}, transparent 72%)`,
   opacity: on ? 1 : 0,
   transition: 'opacity .32s ease',
 });

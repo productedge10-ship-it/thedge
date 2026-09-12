@@ -10,7 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Check, Cog, GripVertical, Plus, RotateCcw, X,
 } from 'lucide-react';
-import { A, CSS_SPRING, F, LAYOUT, P, POP, en, hairline, lightLayer, trackLight } from './theme';
+import { A, CSS_SPRING, F, LAYOUT, P, POP, en, hairline, lightLayer, mix, trackLight } from './theme';
 import { DEFAULT_LAYOUT, WIDGETS, optionsFor } from './widgets';
 import Preview from './Preview';
 
@@ -134,7 +134,7 @@ function Choice({ label, value, choices, tone, onPick, index }) {
                   transition={POP}
                   style={{
                     position: 'absolute', left: 0, right: 0, bottom: 0, height: 1.5,
-                    borderRadius: 2, background: tone, boxShadow: `0 0 8px ${tone}99`,
+                    borderRadius: 2, background: tone, boxShadow: `0 0 8px ${mix(tone, 60)}`,
                   }}
                 />
               )}
@@ -174,8 +174,8 @@ function WidthPicker({ value, tone, onPick }) {
               onClick={() => onPick(n)}
               style={{
                 flex: 1, height: 24, borderRadius: 7, cursor: 'pointer',
-                background: on ? `${tone}2e` : 'rgba(var(--edge-hair-rgb),0.03)',
-                border: `1px solid ${n === value ? `${tone}8c` : on ? `${tone}3d` : 'transparent'}`,
+                background: on ? mix(tone, 18) : 'rgba(var(--edge-hair-rgb),0.03)',
+                border: `1px solid ${n === value ? mix(tone, 55) : on ? mix(tone, 24) : 'transparent'}`,
                 transition: 'all .18s',
               }}
             />
@@ -218,8 +218,8 @@ function HeightPicker({ value, tone, min = 1, onPick }) {
               onClick={() => !disabled && onPick(n)}
               style={{
                 flex: 1, height: 24, borderRadius: 7, cursor: disabled ? 'not-allowed' : 'pointer',
-                background: on ? `${tone}2e` : '#ffffff08',
-                border: `1px solid ${n === value ? `${tone}8c` : on ? `${tone}3d` : 'transparent'}`,
+                background: on ? mix(tone, 18) : '#ffffff08',
+                border: `1px solid ${n === value ? mix(tone, 55) : on ? mix(tone, 24) : 'transparent'}`,
                 opacity: disabled ? 0.35 : 1,
                 transition: 'all .18s',
               }}
@@ -231,7 +231,7 @@ function HeightPicker({ value, tone, min = 1, onPick }) {
   );
 }
 
-function SettingsPanel({ id, item, onChange, onClose }) {
+function SettingsPanel({ id, item, onChange, onClose, resizable = true }) {
   const WIDGETS = useRegistry();
   const spec = WIDGETS[id];
   const opts = optionsFor(spec, item.o);
@@ -290,8 +290,12 @@ function SettingsPanel({ id, item, onChange, onClose }) {
         </button>
       </div>
 
-      <WidthPicker value={item.w} tone={tone} onPick={(n) => set({ w: n })} />
-      <HeightPicker value={item.h} tone={tone} min={spec.minH || 1} onPick={(n) => set({ h: n })} />
+      {resizable && (
+        <>
+          <WidthPicker value={item.w} tone={tone} onPick={(n) => set({ w: n })} />
+          <HeightPicker value={item.h} tone={tone} min={spec.minH || 1} onPick={(n) => set({ h: n })} />
+        </>
+      )}
 
       <Choice
         label="Period" index={2} tone={tone}
@@ -322,6 +326,7 @@ function SettingsPanel({ id, item, onChange, onClose }) {
 function CardShell({
   item, stats, edit, hover, lifted, overlay, removing, openSettings, dropTarget,
   setHover, onRemove, onToggleSettings, onChange,
+  draggable = true, removable = true, resizable = true,
 }) {
   const WIDGETS = useRegistry();
   const spec = WIDGETS[item.id];
@@ -344,7 +349,7 @@ function CardShell({
         position: 'relative', height: '100%',
         display: 'flex', flexDirection: 'column',
         background: P.card,
-        border: `1px solid ${overlay || dropTarget || hover ? `${tone}59` : P.line}`,
+        border: `1px solid ${overlay || dropTarget || hover ? mix(tone, 35) : P.line}`,
         borderRadius: 20,
         padding: 18,
         opacity: removing ? 0 : lifted ? 0.26 : 1,
@@ -357,9 +362,9 @@ function CardShell({
            box-shadow, не border: рамка змінила б внутрішній розмір і
            вміст смикнувся б на піксель. */
         boxShadow: overlay
-          ? `0 40px 80px -28px var(--edge-panel, rgba(0,0,0,0.9)), 0 0 0 1px ${tone}3d`
-          : dropTarget ? `0 0 0 2px ${tone}66, 0 0 34px -6px ${tone}4d` : 'none',
-        cursor: overlay || lifted ? 'grabbing' : edit ? 'grab' : 'default',
+          ? `0 40px 80px -28px var(--edge-panel, rgba(0,0,0,0.9)), 0 0 0 1px ${mix(tone, 24)}`
+          : dropTarget ? `0 0 0 2px ${mix(tone, 40)}, 0 0 34px -6px ${mix(tone, 30)}` : 'none',
+        cursor: overlay || lifted ? 'grabbing' : edit && draggable ? 'grab' : 'default',
         transition: overlay ? 'none' : `opacity ${REMOVE_MS}ms ease, ${CSS_SPRING}`,
       }}
     >
@@ -377,7 +382,7 @@ function CardShell({
 
       <header style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, minHeight: 22 }}>
         <AnimatePresence initial={false} mode="popLayout">
-          {(edit || overlay) && (
+          {(edit || overlay) && draggable && (
             <motion.span
               key="grip"
               initial={{ opacity: 0, width: 0, marginRight: -8 }}
@@ -414,8 +419,8 @@ function CardShell({
         {item.p && item.p !== 'inherit' && (
           <span
             style={{
-              fontFamily: F.mono, fontSize: 9.5, letterSpacing: '.8px', color: `${tone}e6`,
-              background: `${tone}1f`, border: `1px solid ${tone}3d`, borderRadius: 999,
+              fontFamily: F.mono, fontSize: 9.5, letterSpacing: '.8px', color: mix(tone, 90),
+              background: mix(tone, 12), border: `1px solid ${mix(tone, 24)}`, borderRadius: 999,
               padding: '2px 7px', flexShrink: 0,
             }}
           >
@@ -438,9 +443,11 @@ function CardShell({
               <IconBtn title="Settings" active={openSettings} tone={tone} onClick={onToggleSettings}>
                 <Cog size={13} />
               </IconBtn>
-              <IconBtn title="Remove" danger onClick={onRemove}>
-                <X size={13} />
-              </IconBtn>
+              {removable && (
+                <IconBtn title="Remove" danger onClick={onRemove}>
+                  <X size={13} />
+                </IconBtn>
+              )}
             </motion.span>
           )}
         </AnimatePresence>
@@ -484,7 +491,7 @@ function CardShell({
 
       <AnimatePresence>
         {openSettings && !overlay && (
-          <SettingsPanel id={item.id} item={item} onChange={onChange} onClose={onToggleSettings} />
+          <SettingsPanel id={item.id} item={item} onChange={onChange} onClose={onToggleSettings} resizable={resizable} />
         )}
       </AnimatePresence>
     </div>
@@ -561,6 +568,29 @@ function SortableCard({ item, edit, removing, ...rest }) {
   );
 }
 
+/* Закріплена картка — та сама CardShell, але без dnd-kit: рядок унизу
+   не сортується й не змінює розмір, тож тягнути й ресайзити тут
+   нічого. */
+function PinnedCard({ item, stats, edit, openSettings, onToggleSettings, onChange }) {
+  const [hover, setHover] = useState(false);
+
+  return (
+    <CardShell
+      item={item}
+      stats={stats}
+      edit={edit}
+      hover={hover}
+      setHover={setHover}
+      openSettings={openSettings}
+      onToggleSettings={onToggleSettings}
+      onChange={onChange}
+      draggable={false}
+      removable={false}
+      resizable={false}
+    />
+  );
+}
+
 function IconBtn({ children, onClick, title, danger, active, tone = P.acc }) {
   const [hover, setHover] = useState(false);
   const color = danger && hover ? P.bad : active ? tone : hover ? 'var(--edge-text)' : P.text5;
@@ -577,8 +607,8 @@ function IconBtn({ children, onClick, title, danger, active, tone = P.acc }) {
       data-state={active ? 'active' : hover ? 'hover' : 'idle'}
       style={{
         display: 'grid', placeItems: 'center', width: 27, height: 27, borderRadius: 9,
-        cursor: 'pointer', color, border: `1px solid ${active ? `${tone}4d` : 'transparent'}`,
-        background: active ? `${tone}24` : hover ? (danger ? 'rgba(var(--edge-bad-rgb),0.12)' : 'rgba(var(--edge-hair-rgb),0.08)') : 'transparent',
+        cursor: 'pointer', color, border: `1px solid ${active ? mix(tone, 30) : 'transparent'}`,
+        background: active ? mix(tone, 14) : hover ? (danger ? 'rgba(var(--edge-bad-rgb),0.12)' : 'rgba(var(--edge-hair-rgb),0.08)') : 'transparent',
         transition: 'all .16s',
       }}
     >
@@ -674,7 +704,7 @@ function LibCard({ id, onAdd }) {
         display: 'flex', flexDirection: 'column', gap: 11, padding: 13,
         width: 214, flexShrink: 0, borderRadius: 16, touchAction: 'none',
         background: hover ? P.cardHi : 'rgba(var(--edge-hair-rgb),0.02)',
-        border: `1px solid ${hover ? `${tone}59` : P.lineSoft}`,
+        border: `1px solid ${hover ? mix(tone, 35) : P.lineSoft}`,
         /* Без підйому: у горизонтальному ряду картка, що вилазить
            угору, читається як збій прокрутки. */
         opacity: isDragging ? 0.35 : 1,
@@ -686,7 +716,7 @@ function LibCard({ id, onAdd }) {
       <span
         style={{
           position: 'relative', display: 'block', padding: '11px 12px', borderRadius: 11,
-          background: 'var(--edge-panel-glow, rgba(0,0,0,0.28))', border: `1px solid ${hover ? `${tone}2e` : 'rgba(var(--edge-hair-rgb),0.04)'}`,
+          background: 'var(--edge-panel-glow, rgba(0,0,0,0.28))', border: `1px solid ${hover ? mix(tone, 18) : 'rgba(var(--edge-hair-rgb),0.04)'}`,
           transition: 'border-color .2s',
         }}
       >
@@ -723,12 +753,12 @@ function LibGhost({ id }) {
       style={{
         width: 214, padding: 13, borderRadius: 16, cursor: 'grabbing',
         display: 'flex', flexDirection: 'column', gap: 11,
-        background: P.cardHi, border: `1px solid ${tone}8c`,
-        boxShadow: `0 30px 60px -24px var(--edge-panel-glow, rgba(0,0,0,0.5)), 0 0 0 1px ${tone}3d`,
+        background: P.cardHi, border: `1px solid ${mix(tone, 55)}`,
+        boxShadow: `0 30px 60px -24px var(--edge-panel-glow, rgba(0,0,0,0.5)), 0 0 0 1px ${mix(tone, 24)}`,
         transform: 'rotate(-1.4deg)',
       }}
     >
-      <span style={{ display: 'block', padding: '11px 12px', borderRadius: 11, background: 'var(--edge-panel-glow, rgba(0,0,0,0.28))', border: `1px solid ${tone}2e` }}>
+      <span style={{ display: 'block', padding: '11px 12px', borderRadius: 11, background: 'var(--edge-panel-glow, rgba(0,0,0,0.28))', border: `1px solid ${mix(tone, 18)}` }}>
         <Preview shape={w.shape} tone={tone} id={`${id}-ghost`} />
       </span>
       <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -761,12 +791,30 @@ export default function Board({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  const hidden = useMemo(
-    () => Object.keys(registry).filter((id) => !layout.some((x) => x.id === id)),
-    [layout, registry],
+  /* Закріплені віджети (План/Емоції/Звички в огляді) виходять із
+     загальної сітки — не пропонуємо додати те, що й так завжди на
+     місці. Позначені `pinned: true` на самому віджеті в ЦЬОМУ
+     реєстрі, а не окремим списком id: список id, спільний для всіх
+     дощок, одного разу вже зіткнувся з тим, що інший реєстр
+     (perf/widgets.jsx) має свій widget з тим самим ключем 'emotions'
+     і випадково ховав його з бібліотеки Перформансу. */
+  const pinnedIds = useMemo(
+    () => Object.keys(registry).filter((id) => registry[id]?.pinned),
+    [registry],
   );
 
-  const ids = useMemo(() => layout.map((x) => x.id), [layout]);
+  const hidden = useMemo(
+    () => Object.keys(registry).filter((id) => !pinnedIds.includes(id) && !layout.some((x) => x.id === id)),
+    [layout, registry, pinnedIds],
+  );
+
+  const boardLayout = useMemo(() => layout.filter((x) => !pinnedIds.includes(x.id)), [layout, pinnedIds]);
+  const pinnedLayout = useMemo(
+    () => pinnedIds.map((id) => layout.find((x) => x.id === id)).filter(Boolean),
+    [layout, pinnedIds],
+  );
+
+  const ids = useMemo(() => boardLayout.map((x) => x.id), [boardLayout]);
   const libId = typeof activeId === 'string' && activeId.startsWith('lib:') ? activeId.slice(4) : null;
   const activeItem = activeId && !libId ? layout.find((x) => x.id === activeId) : null;
 
@@ -776,12 +824,13 @@ export default function Board({
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  const patch = (index, item) => setLayout((prev) => prev.map((x, i) => (i === index ? item : x)));
+  const patchById = (id, item) => setLayout((prev) => prev.map((x) => (x.id === id ? item : x)));
 
   /* Спершу картка згасає власним переходом, і лише потім зникає з
      масиву. Миттєве видалення виглядало так, ніби сітка смикнулась
      сама по собі. */
   const remove = (id) => {
+    if (registry[id]?.pinned) return;
     setOpenId(null);
     setRemovingId(id);
     clearTimeout(timer.current);
@@ -792,6 +841,7 @@ export default function Board({
   };
 
   const add = (id, at) => {
+    if (registry[id]?.pinned) return;
     setLayout((prev) => {
       if (prev.some((x) => x.id === id)) return prev;
       const item = { id, w: registry[id].defaultW || 1, h: registry[id].defaultH || 2 };
@@ -833,6 +883,11 @@ export default function Board({
         .ov-board{ --ov-cols: 4 }
         @media (max-width: 1279px){ .ov-board{ --ov-cols: 2 } }
         @media (max-width: 719px){ .ov-board{ --ov-cols: 1 } }
+
+        /* Закріплена трійка — рівні третини на всю ширину, незалежно
+           від сітки над нею: чверть на три картки не ділиться. */
+        .ov-pinned{ grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(260px, auto) }
+        @media (max-width: 1279px){ .ov-pinned{ grid-template-columns: 1fr } }
 
         .ov-body::-webkit-scrollbar{ width: 5px }
         .ov-body::-webkit-scrollbar-track{ background: transparent }
@@ -935,7 +990,7 @@ export default function Board({
               gap: GAP,
             }}
           >
-            {layout.map((item, i) => (
+            {boardLayout.map((item) => (
               <SortableCard
                 key={item.id}
                 item={{
@@ -949,11 +1004,26 @@ export default function Board({
                 openSettings={openId === item.id}
                 onRemove={() => remove(item.id)}
                 onToggleSettings={() => setOpenId((v) => (v === item.id ? null : item.id))}
-                onChange={(next) => patch(i, next)}
+                onChange={(next) => patchById(item.id, next)}
               />
             ))}
           </div>
         </SortableContext>
+
+        {/* ---------- закріплена трійка ---------- */}
+        <div className="ov-pinned" style={{ display: 'grid', gap: GAP, marginTop: GAP }}>
+          {pinnedLayout.map((item) => (
+            <PinnedCard
+              key={item.id}
+              item={item}
+              stats={statsFor(item.p)}
+              edit={edit}
+              openSettings={openId === item.id}
+              onToggleSettings={() => setOpenId((v) => (v === item.id ? null : item.id))}
+              onChange={(next) => patchById(item.id, next)}
+            />
+          ))}
+        </div>
 
         {/* Портал до body: сторінка аналітики має анімацію появи з
             transform, а будь-який transform у предка робить його новим

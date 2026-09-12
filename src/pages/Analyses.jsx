@@ -285,14 +285,11 @@ export default function Analyses() {
     const thisMonth = plans.filter((p) => String(p.date || '').startsWith(ym)).length;
 
     if (planType === 'weekly') {
-      /* Плановий bias — один на весь тиждень, тому факт по кожному
-         активу звіряється саме з ним, а не з окремою тезою на актив. */
-      const reviewed = plans.flatMap((p) => {
-        const weekBias = p.narrative || p.plan_data?.narrative;
-        return (p.plan_data?.assets || [])
-          .filter((a) => a.actualBias)
-          .map((a) => ({ hit: weekBias ? a.actualBias === weekBias : false }));
-      });
+      /* Плановий bias живе в самому top-down розборі — кожен актив
+         звіряється з власним планом, а не з чужою тезою на весь тиждень. */
+      const reviewed = plans.flatMap((p) => (p.plan_data?.tdaAnalyses || [])
+        .filter((t) => t.pair && t.actualBias)
+        .map((t) => ({ hit: t.narrative ? t.actualBias === t.narrative : false })));
       const hits = reviewed.filter((r) => r.hit).length;
       const rated = plans.map((p) => p.plan_data?.weekRating || 0).filter((r) => r > 0);
 
@@ -302,7 +299,7 @@ export default function Analyses() {
         accuracy: reviewed.length ? Math.round((hits / reviewed.length) * 100) : null,
         checked: reviewed.length,
         rating: rated.length ? (rated.reduce((a, b) => a + b, 0) / rated.length) : null,
-        mistakes: plans.filter((p) => !(p.plan_data?.assets || []).length).length,
+        mistakes: plans.filter((p) => !(p.plan_data?.tdaAnalyses || []).some((t) => t.pair)).length,
       };
     }
 
@@ -335,12 +332,9 @@ export default function Analyses() {
 
       let accuracy = null;
       if (planType === 'weekly') {
-        const reviewed = list.flatMap((p) => {
-          const weekBias = p.narrative || p.plan_data?.narrative;
-          return (p.plan_data?.assets || [])
-            .filter((a) => a.actualBias)
-            .map((a) => ({ hit: weekBias ? a.actualBias === weekBias : false }));
-        });
+        const reviewed = list.flatMap((p) => (p.plan_data?.tdaAnalyses || [])
+          .filter((t) => t.pair && t.actualBias)
+          .map((t) => ({ hit: t.narrative ? t.actualBias === t.narrative : false })));
         const hits = reviewed.filter((r) => r.hit).length;
         accuracy = reviewed.length ? Math.round((hits / reviewed.length) * 100) : null;
       } else {
@@ -401,17 +395,6 @@ export default function Analyses() {
                   ? 'Кожен тиждень — список того, за чим стежиш. Тут видно, що з цього вийшло.'
                   : 'Кожен план — гіпотеза. Тут видно, скільки з них ринок підтвердив.'}
               </p>
-
-              {/* Daily/Weekly — та сама пара, що й на самій сторінці плану.
-                  Актив-фільтр стосується тільки денних, тому при перемиканні
-                  скидаємо його, щоб він не ховав усі тижневі рядки мовчки. */}
-              <div className="mt-3.5">
-                <PlanTypeToggle
-                  mode={planType}
-                  onChange={(id) => { setPlanType(id); setSelectedPair('All'); }}
-                  layoutId="plan-type-toggle-analyses"
-                />
-              </div>
             </div>
 
             <button
@@ -531,8 +514,10 @@ export default function Analyses() {
           <div className="flex flex-wrap items-center gap-3 bg-[var(--edge-bg)]/80 backdrop-blur-xl p-2.5 rounded-2xl border border-[var(--edge-hair)] shadow-md">
             
             {/* Пошук — головний елемент рядка, тому він і виглядає так:
-               ширший, з фокус-обідком і підказкою про гарячу клавішу. */}
-            <div className="relative min-w-[240px] flex-1">
+               ширший, з фокус-обідком і підказкою про гарячу клавішу.
+               layout — щоб він плавно перетікав у звільнене місце, коли
+               поруч зникає фільтр активів, а не стрибав миттєво. */}
+            <motion.div layout transition={{ duration: 0.3, ease: premiumEasing }} className="relative min-w-[240px] flex-1">
               <Search
                 className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-200"
                 size={17}
@@ -544,7 +529,7 @@ export default function Analyses() {
                 placeholder="Шукати всюди: актив, bias, нотатки, висновки…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-12 w-full rounded-xl pl-12 pr-24 text-[14.5px] outline-none transition-all duration-200"
+                className="h-12 w-full rounded-xl pl-12 pr-24 text-[13px] outline-none transition-all duration-200"
                 style={{
                   background: T.sunken,
                   border: `1px solid ${searchTerm ? T.lineAcc : T.line}`,
@@ -602,13 +587,41 @@ export default function Analyses() {
                   </kbd>
                 )}
               </span>
+            </motion.div>
+
+            {/* Daily/Weekly — той самий перемикач, що й на сторінці плану,
+               тепер серед інших фільтрів рядка: він і є першим фільтром —
+               усе праворуч від нього (актив, дата) стосується вже
+               обраного типу планів. */}
+            <div className="w-full sm:w-auto">
+              <PlanTypeToggle
+                mode={planType}
+                onChange={(id) => { setPlanType(id); setSelectedPair('All'); }}
+                layoutId="plan-type-toggle-analyses"
+              />
             </div>
-            
-            {planType === 'daily' && (
-              <div className="w-full sm:w-40 z-[90]">
-                <AssetSelect value={selectedPair} onChange={setSelectedPair} options={uniquePairs} />
-              </div>
-            )}
+
+            {/* Слот під фільтр активів лишається на місці навіть коли
+               порожній (Weekly): search — flex-1, і без цього забору
+               він щоразу перерахував би собі іншу ширину, тільки-но
+               сусід зникає з розкладки. На мобільному, де рядок і так
+               складається в стовпчик, тримати порожній рядок нема
+               сенсу — там слот просто ховається. */}
+            <div className={planType === 'daily' ? 'w-full sm:w-40 z-[90]' : 'hidden sm:block sm:w-40'}>
+              <AnimatePresence mode="wait">
+                {planType === 'daily' && (
+                  <motion.div
+                    key="asset-filter"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <AssetSelect value={selectedPair} onChange={setSelectedPair} options={uniquePairs} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             <div className="w-full sm:w-auto z-[100]">
                <DateRangePicker dateFrom={dateFrom} dateTo={dateTo} onChange={(from, to) => { setDateFrom(from); setDateTo(to); }} />
@@ -658,14 +671,14 @@ export default function Analyses() {
             <AnimatePresence>
               {(selectedPair !== 'All' || dateFrom || dateTo || searchTerm) && (
                 <DelayedTooltip text="Clear Filters">
-                  <motion.button 
-                    initial={{ opacity: 0, scale: 0.3 }} 
-                    animate={{ opacity: 1, scale: 1 }} 
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.3 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.3 }}
                     transition={{ type: "spring", stiffness: 400, damping: 22 }}
                     whileHover={{ scale: 1.08 }}
                     whileTap={{ scale: 0.92 }}
-                    onClick={() => { setSelectedPair('All'); setDateFrom(''); setDateTo(''); setSearchTerm(''); }} 
+                    onClick={() => { setSelectedPair('All'); setDateFrom(''); setDateTo(''); setSearchTerm(''); }}
                     className="p-2 text-zinc-500 hover:text-red-400 bg-[var(--edge-hair)] hover:bg-red-500/10 rounded-xl transition-colors border border-transparent hover:border-red-500/30 ml-2 flex items-center justify-center shrink-0"
                   >
                     <motion.div

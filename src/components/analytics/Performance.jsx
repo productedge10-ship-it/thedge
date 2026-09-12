@@ -39,7 +39,11 @@ const normalize = (v) => {
 
 export default function Performance({ s, rows = [] }) {
   const [layout, setLayout, { saving }] = useCloudState(
-    'analytics_performance_v2',
+    /* v3 — набір за замовчуванням змінився (назад на старий вигляд
+       карток і порядок), тож стара збережена дошка з новими
+       віджетами (Дисципліна, Ланцюг збитків тощо) в дефолтних
+       слотах не повинна лишатись видимою мовчки. */
+    'analytics_performance_v3',
     PERF_DEFAULT,
     { normalize },
   );

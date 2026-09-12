@@ -40,7 +40,11 @@ const normalize = (v) => {
 
 export default function Psychology({ s, rows = [] }) {
   const [layout, setLayout, { saving }] = useCloudState(
-    'analytics_psychology_v1',
+    /* v2 — набір за замовчуванням звузили назад до блоків старого
+       дизайну (streaks/revenge/cleancurve/dowmood/hourrisk більше не
+       в дефолтних слотах), тож стара збережена дошка з ними на видноті
+       не повинна лишатись мовчки. */
+    'analytics_psychology_v2',
     PSYCH_DEFAULT,
     { normalize },
   );

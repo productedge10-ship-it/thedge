@@ -18,19 +18,13 @@ export default function AssetSearchModal({
   handleAssetSelect,
   handleToggleFavorite,
   assetPair,
-  favorites,
-  /* Мультивибір: тижневий план стежить за кількома активами одразу,
-     тому клік не закриває модалку і не заміняє вибір, а додає/прибирає
-     його з набору — закриває тільки кнопка «Готово». */
-  multiple = false,
-  selectedPairs = [],
+  favorites
 }) {
   if (!isOpen) return null;
-  const isPicked = (symbol) => (multiple ? selectedPairs.includes(symbol) : assetPair === symbol);
 
   return (
-    <motion.div 
-      id="modal-backdrop" 
+    <motion.div
+      id="modal-backdrop"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -39,7 +33,7 @@ export default function AssetSearchModal({
         if (e.target.id === 'modal-backdrop') onClose();
       }}
     >
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 25 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
@@ -49,11 +43,11 @@ export default function AssetSearchModal({
       >
         <div className="p-6 border-b border-[var(--edge-hair)] relative bg-[var(--edge-surface)]">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-[1px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent"></div>
-          
+
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-[var(--edge-text)] uppercase tracking-wider flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_var(--edge-info)]"></span>
-              {multiple ? `Select Instruments${selectedPairs.length ? ` · ${selectedPairs.length}` : ''}` : 'Select Trading Instrument'}
+              Select Trading Instrument
             </h3>
             <button onClick={onClose} className="text-zinc-500 hover:text-[var(--edge-text)] transition-colors p-1 bg-[var(--edge-hair)] rounded-lg border border-[var(--edge-hair)]">
               <X size={18} />
@@ -61,19 +55,19 @@ export default function AssetSearchModal({
           </div>
           <div className="relative">
             <SearchIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-            <input 
+            <input
               ref={searchInputRef}
-              type="text" 
-              value={assetSearch} 
-              onChange={(e) => setAssetSearch(e.target.value)} 
-              placeholder="Search e.g. EUR/USD, BTC, GER40..." 
-              className="w-full bg-[var(--edge-surface)] border border-blue-500/20 focus:border-blue-500/60 rounded-xl pl-12 pr-4 py-3.5 text-[var(--edge-text)] outline-none text-sm transition-all tracking-wide font-medium" 
+              type="text"
+              value={assetSearch}
+              onChange={(e) => setAssetSearch(e.target.value)}
+              placeholder="Search e.g. EUR/USD, BTC, GER40..."
+              className="w-full bg-[var(--edge-surface)] border border-blue-500/20 focus:border-blue-500/60 rounded-xl pl-12 pr-4 py-3.5 text-[var(--edge-text)] outline-none text-sm transition-all tracking-wide font-medium"
             />
           </div>
         </div>
 
         <div className="p-6 overflow-y-scroll overflow-x-hidden custom-scrollbar space-y-8 flex-1 bg-[var(--edge-bg)]">
-          
+
           {deferredSearch.trim() === '' && favoriteAssetsList.length > 0 && (
             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
               <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
@@ -81,15 +75,12 @@ export default function AssetSearchModal({
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {favoriteAssetsList.map(asset => (
-                  <button key={asset.symbol} onClick={() => handleAssetSelect(asset)} className={`flex items-center justify-between p-3 bg-[var(--edge-surface)] border rounded-xl transition-all group text-left ${isPicked(asset.symbol) ? 'border-amber-500 bg-amber-500/5' : 'border-[var(--edge-hair)] hover:border-amber-500/30 hover:bg-[var(--edge-surface-hi)]'}`}>
+                  <button key={asset.symbol} onClick={() => handleAssetSelect(asset)} className={`flex items-center justify-between p-3 bg-[var(--edge-surface)] border rounded-xl transition-all group text-left ${assetPair === asset.symbol ? 'border-amber-500 bg-amber-500/5' : 'border-[var(--edge-hair)] hover:border-amber-500/30 hover:bg-[var(--edge-surface-hi)]'}`}>
                     <div className="flex items-center gap-3">
                       <AssetIcon symbol={asset.symbol} category={asset.category} />
                       <span className="text-xs font-bold text-zinc-300 group-hover:text-[var(--edge-text)] uppercase tracking-wider">{asset.symbol}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {multiple && isPicked(asset.symbol) && <Check size={14} className="text-amber-500" />}
-                      <Star size={14} className="text-amber-500 fill-amber-500 opacity-50 group-hover:opacity-100 transition-opacity" onClick={(e) => handleToggleFavorite(e, asset.symbol)} />
-                    </div>
+                    <Star size={14} className="text-amber-500 fill-amber-500 opacity-50 group-hover:opacity-100 transition-opacity" onClick={(e) => handleToggleFavorite(e, asset.symbol)} />
                   </button>
                 ))}
               </div>
@@ -103,15 +94,12 @@ export default function AssetSearchModal({
                 {quickSelectAssets.map(asset => {
                   const isFav = favorites.includes(asset.symbol);
                   return (
-                    <button key={asset.symbol} onClick={() => handleAssetSelect(asset)} className={`flex items-center justify-between p-3 bg-[var(--edge-surface)] border rounded-xl transition-all group text-left ${isPicked(asset.symbol) ? 'border-blue-500 bg-blue-500/5' : 'border-[var(--edge-hair)] hover:border-[var(--edge-hair-strong)] hover:bg-[var(--edge-surface-hi)]'}`}>
+                    <button key={asset.symbol} onClick={() => handleAssetSelect(asset)} className={`flex items-center justify-between p-3 bg-[var(--edge-surface)] border rounded-xl transition-all group text-left ${assetPair === asset.symbol ? 'border-blue-500 bg-blue-500/5' : 'border-[var(--edge-hair)] hover:border-[var(--edge-hair-strong)] hover:bg-[var(--edge-surface-hi)]'}`}>
                       <div className="flex items-center gap-3">
                         <AssetIcon symbol={asset.symbol} category={asset.category} />
                         <span className="text-xs font-bold text-zinc-300 group-hover:text-[var(--edge-text)] uppercase tracking-wider">{asset.symbol}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {multiple && isPicked(asset.symbol) && <Check size={14} className="text-blue-500" />}
-                        <Star size={14} className={`transition-colors ${isFav ? 'text-amber-500 fill-amber-500' : 'text-zinc-700 hover:text-amber-500'}`} onClick={(e) => handleToggleFavorite(e, asset.symbol)} />
-                      </div>
+                      <Star size={14} className={`transition-colors ${isFav ? 'text-amber-500 fill-amber-500' : 'text-zinc-700 hover:text-amber-500'}`} onClick={(e) => handleToggleFavorite(e, asset.symbol)} />
                     </button>
                   );
                 })}
@@ -138,7 +126,7 @@ export default function AssetSearchModal({
                             {items.map(asset => {
                               const isFav = favorites.includes(asset.symbol);
                               return (
-                                <button key={asset.symbol} onClick={() => handleAssetSelect(asset)} className={`flex items-center justify-between p-3 rounded-xl transition-all text-left group ${isPicked(asset.symbol) ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-[var(--edge-surface)]/60 text-zinc-400 hover:bg-[var(--edge-surface-hi)] hover:text-[var(--edge-text)] border border-transparent'}`}>
+                                <button key={asset.symbol} onClick={() => handleAssetSelect(asset)} className={`flex items-center justify-between p-3 rounded-xl transition-all text-left group ${assetPair === asset.symbol ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-[var(--edge-surface)]/60 text-zinc-400 hover:bg-[var(--edge-surface-hi)] hover:text-[var(--edge-text)] border border-transparent'}`}>
                                   <div className="flex items-center gap-4">
                                     <AssetIcon symbol={asset.symbol} category={asset.category} />
                                     <div>
@@ -148,7 +136,7 @@ export default function AssetSearchModal({
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <Star size={16} className={`transition-all ${isFav ? 'text-amber-500 fill-amber-500' : 'text-zinc-700 opacity-0 group-hover:opacity-100 hover:text-amber-500'}`} onClick={(e) => handleToggleFavorite(e, asset.symbol)} />
-                                    {isPicked(asset.symbol) && <Check size={14} className="text-blue-500" />}
+                                    {assetPair === asset.symbol && <Check size={14} className="text-blue-500" />}
                                   </div>
                                 </button>
                               );
@@ -165,20 +153,6 @@ export default function AssetSearchModal({
             </div>
           </div>
         </div>
-
-        {multiple && (
-          <div className="flex items-center justify-between gap-3 p-4 border-t border-[var(--edge-hair)] bg-[var(--edge-surface)]">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-              {selectedPairs.length ? `Обрано: ${selectedPairs.join(', ')}` : 'Нічого не обрано'}
-            </span>
-            <button
-              onClick={onClose}
-              className="shrink-0 rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-400"
-            >
-              Готово
-            </button>
-          </div>
-        )}
       </motion.div>
     </motion.div>
   );

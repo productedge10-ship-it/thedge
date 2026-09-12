@@ -1,7 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, AlertCircle, ArrowUpRight, ArrowDownRight, Calendar as CalendarIcon, X, Filter, Activity, Clock, ChevronLeft, ChevronRight, BarChart2, Layers } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useMotionTemplate } from 'framer-motion';
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, format, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, isFuture, isToday } from 'date-fns';
+import {
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter,
+  eachDayOfInterval, eachMonthOfInterval, format, isSameMonth, isSameDay,
+  addMonths, subMonths, addQuarters, subQuarters, isFuture, isToday,
+} from 'date-fns';
 import { EMOTION_COLOR, EMOTION_LABEL, signed } from './data';
 import { T } from '../../lib/theme';
 
@@ -9,7 +13,6 @@ import { T } from '../../lib/theme';
 // ЛОКАЛІЗАЦІЯ ДАТ
 // ==========================================
 const UKR_MONTHS = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
-const UKR_MONTHS_GEN = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
 
 function getUkrDayIndex(date) { return (date.getDay() + 6) % 7; } // Пн = 0, Нд = 6
 
@@ -101,15 +104,82 @@ function StatCell({ label, value, color, small, br, bb }) {
   );
 }
 
+/* Один місяць у кварталі — той самий принцип клітинок, що й у великому
+   місячному вигляді, тільки вдвічі менший і без числа R у клітинці:
+   три місяці поруч не лишають місця для другого рядка тексту, а сама
+   сила кольору вже показує, яким був день. Деталі — у підказці. */
+function MiniMonth({ monthDate, tradesByDate, selectedDate, setSelectedDate, maxAbs }) {
+  const days = useMemo(() => {
+    const start = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
+    const end = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
+    return eachDayOfInterval({ start, end });
+  }, [monthDate]);
+
+  return (
+    <div style={{ flex: '1 1 240px', minWidth: 210 }}>
+      <div style={{ fontFamily: T.mono, fontSize: 11.5, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: '#d6d6e4', marginBottom: 11 }}>
+        {UKR_MONTHS[monthDate.getMonth()]}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 4, marginBottom: 6 }}>
+        {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'].map((w) => (
+          <div key={w} style={{ fontFamily: T.mono, fontSize: 8, letterSpacing: '.1em', color: '#6f6f85', textAlign: 'center' }}>{w[0]}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 4 }}>
+        {days.map((day) => {
+          const list = tradesByDate[format(day, 'yyyy-MM-dd')] || [];
+          const has = list.length > 0;
+          const val = has ? list.reduce((a, t) => a + t.rr, 0) : undefined;
+          const muted = !isSameMonth(day, monthDate);
+          const today = isToday(day);
+          const selected = selectedDate && isSameDay(day, selectedDate);
+          const tint = has ? tintOf(val) : '255,255,255';
+          const sInt = has ? Math.min(1, Math.abs(val) / maxAbs) : 0;
+          return (
+            <button
+              key={day.toString()}
+              type="button"
+              title={has ? `${format(day, 'dd.MM')} — ${fmtR(val)}R · ${list.length} уг.` : format(day, 'dd.MM')}
+              onClick={() => setSelectedDate(selected ? null : day)}
+              style={{
+                position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                aspectRatio: '1', borderRadius: 7, cursor: 'pointer', appearance: 'none',
+                transition: 'transform .15s ease, box-shadow .15s ease',
+                background: has ? `rgba(${tint},${(0.1 + sInt * 0.35).toFixed(3)})` : 'rgba(255,255,255,.02)',
+                border: `1px solid rgba(${has ? tint : '255,255,255'},${has ? (0.2 + sInt * 0.32).toFixed(3) : 0.04})`,
+                boxShadow: selected ? '0 0 0 2px #fff' : today ? 'inset 0 0 0 1.5px rgba(46,230,168,.9)' : 'none',
+                opacity: muted ? 0.32 : 1,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.14)'; e.currentTarget.style.zIndex = 1; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.zIndex = 0; }}
+            >
+              <span style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: today ? 800 : 500, color: today ? '#2ee6a8' : muted ? '#6f6f85' : has ? '#f2f2f8' : '#8a8aa0' }}>
+                {format(day, 'd')}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ==========================================
 // КАЛЕНДАР УГОД v2
 // ==========================================
 function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate }) {
-  const [viewMode, setViewMode] = useState('month'); // 'month' | 'week'
+  const [viewMode, setViewMode] = useState('month'); // 'month' | 'quarter'
   const [navDate, setNavDate] = useState(selectedDate || new Date());
 
-  const handlePrev = () => setNavDate(viewMode === 'month' ? subMonths(navDate, 1) : subWeeks(navDate, 1));
-  const handleNext = () => setNavDate(viewMode === 'month' ? addMonths(navDate, 1) : addWeeks(navDate, 1));
+  const handlePrev = () => setNavDate(viewMode === 'month' ? subMonths(navDate, 1) : subQuarters(navDate, 1));
+  const handleNext = () => setNavDate(viewMode === 'month' ? addMonths(navDate, 1) : addQuarters(navDate, 1));
+
+  /* У кварталі свій розклад не по днях, а по трьох окремих місяцях —
+     кожен малюється своєю міні-сіткою нижче. */
+  const quarterMonths = useMemo(
+    () => eachMonthOfInterval({ start: startOfQuarter(navDate), end: endOfQuarter(navDate) }),
+    [navDate],
+  );
 
   const days = useMemo(() => {
     if (viewMode === 'month') {
@@ -117,9 +187,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
       const end = endOfWeek(endOfMonth(navDate), { weekStartsOn: 1 });
       return eachDayOfInterval({ start, end });
     }
-    const start = startOfWeek(navDate, { weekStartsOn: 1 });
-    const end = endOfWeek(navDate, { weekStartsOn: 1 });
-    return eachDayOfInterval({ start, end });
+    return eachDayOfInterval({ start: startOfQuarter(navDate), end: endOfQuarter(navDate) });
   }, [navDate, viewMode]);
 
   /* Дні з угодами у видимому періоді — з них рахується вся права колонка. */
@@ -147,7 +215,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
     const sums = [0, 0, 0, 0, 0, 0, 0];
     active.forEach((a) => { sums[getUkrDayIndex(a.day)] += a.v; });
     const wdPeak = Math.max(1, ...sums.map((v) => Math.abs(v)));
-    const byWeekday = NAMES.map((name, i) => ({ name, sum: sums[i] })).filter((w) => w.sum !== 0 || viewMode === 'month');
+    const byWeekday = NAMES.map((name, i) => ({ name, sum: sums[i] }));
 
     const sorted = active.slice().sort((a, b) => b.v - a.v);
     const maxAbs = Math.max(5, ...active.map((a) => Math.abs(a.v)));
@@ -158,16 +226,13 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
       bestD: sorted[0] || null,
       worstD: sorted.length ? sorted[sorted.length - 1] : null,
     };
-  }, [active, viewMode]);
+  }, [active]);
 
   const periodLabel = useMemo(() => {
     if (viewMode === 'month') return `${UKR_MONTHS[navDate.getMonth()]} ${navDate.getFullYear()}`;
-    const a0 = days[0];
-    const b0 = days[6];
-    return a0.getMonth() === b0.getMonth()
-      ? `${a0.getDate()} — ${b0.getDate()} ${UKR_MONTHS_GEN[a0.getMonth()]}`
-      : `${a0.getDate()} ${UKR_MONTHS_GEN[a0.getMonth()]} — ${b0.getDate()} ${UKR_MONTHS_GEN[b0.getMonth()]}`;
-  }, [viewMode, navDate, days]);
+    const qNum = Math.floor(navDate.getMonth() / 3) + 1;
+    return `${qNum}-й квартал ${navDate.getFullYear()}`;
+  }, [viewMode, navDate]);
 
   return (
     <div
@@ -216,7 +281,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
           )}
           <div style={{ display: 'flex', padding: 3, borderRadius: 11, border: '1px solid rgba(255,255,255,.08)', background: 'rgba(255,255,255,.02)' }}>
             <TabBtn active={viewMode === 'month'} onClick={() => setViewMode('month')}>МІСЯЦЬ</TabBtn>
-            <TabBtn active={viewMode === 'week'} onClick={() => setViewMode('week')}>ТИЖДЕНЬ</TabBtn>
+            <TabBtn active={viewMode === 'quarter'} onClick={() => setViewMode('quarter')}>КВАРТАЛ</TabBtn>
           </div>
         </div>
       </div>
@@ -225,59 +290,76 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
       <div style={{ display: 'flex', gap: 34, alignItems: 'stretch', flexWrap: 'wrap', paddingTop: 22 }}>
 
         {/* календар */}
-        <div style={{ flex: '1 1 440px', minWidth: 300, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 7, marginBottom: 9 }}>
-            {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'].map((w) => (
-              <div key={w} style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: '.18em', color: '#8a8aa0', textAlign: 'center' }}>{w}</div>
-            ))}
-          </div>
+        <div style={{ flex: viewMode === 'quarter' ? '1 1 620px' : '1 1 440px', minWidth: 300, display: 'flex', flexDirection: 'column' }}>
+          {viewMode === 'quarter' ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
+              {quarterMonths.map((m) => (
+                <MiniMonth
+                  key={m.toString()}
+                  monthDate={m}
+                  tradesByDate={tradesByDate}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  maxAbs={stats.maxAbs}
+                />
+              ))}
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 7, marginBottom: 9 }}>
+                {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'].map((w) => (
+                  <div key={w} style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: '.18em', color: '#8a8aa0', textAlign: 'center' }}>{w}</div>
+                ))}
+              </div>
 
-          <div style={{ flex: '1 1 auto', display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gridAutoRows: 'minmax(44px,1fr)', gap: 7 }}>
-            {days.map((day) => {
-              const list = tradesByDate[format(day, 'yyyy-MM-dd')] || [];
-              const has = list.length > 0;
-              const val = has ? list.reduce((a, t) => a + t.rr, 0) : undefined;
-              const muted = viewMode === 'month' && !isSameMonth(day, navDate);
-              const today = isToday(day);
-              const selected = selectedDate && isSameDay(day, selectedDate);
-              const tint = has ? tintOf(val) : '255,255,255';
-              const sInt = has ? Math.min(1, Math.abs(val) / stats.maxAbs) : 0;
-              return (
-                <button
-                  key={day.toString()}
-                  type="button"
-                  title={has ? `${format(day, 'dd.MM')} — ${fmtR(val)}R · ${list.length} уг.` : format(day, 'dd.MM')}
-                  onClick={() => setSelectedDate(selected ? null : day)}
-                  style={{
-                    position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    gap: 3, minHeight: 0, borderRadius: 11, cursor: 'pointer', appearance: 'none',
-                    transition: 'transform .2s ease, box-shadow .2s ease',
-                    background: has ? `rgba(${tint},${(0.07 + sInt * 0.3).toFixed(3)})` : 'rgba(255,255,255,.025)',
-                    border: `1px solid rgba(${has ? tint : '255,255,255'},${has ? (0.16 + sInt * 0.3).toFixed(3) : 0.05})`,
-                    boxShadow: selected
-                      ? '0 0 0 2px #fff'
-                      : today
-                        ? undefined
-                        : (has && sInt > 0.55 ? `0 0 18px rgba(${tint},.3)` : 'none'),
-                    animation: today ? 'tcv2Pulse 2.8s ease-in-out infinite' : 'none',
-                    opacity: muted ? 0.55 : 1,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; }}
-                >
-                  <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: today ? 700 : 500, lineHeight: 1, color: today ? '#2ee6a8' : muted ? '#8a8aa0' : has ? '#f2f2f8' : '#9a9ab0' }}>
-                    {format(day, 'd')}
-                  </span>
-                  {has && (
-                    <span style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, lineHeight: 1, letterSpacing: '-.02em', color: `rgb(${tint})` }}>
-                      {fmtR(val)}
-                    </span>
-                  )}
-                  {!has && !today && <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,.12)' }} />}
-                </button>
-              );
-            })}
-          </div>
+              <div style={{ flex: '1 1 auto', display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gridAutoRows: 'minmax(44px,1fr)', gap: 7 }}>
+                {days.map((day) => {
+                  const list = tradesByDate[format(day, 'yyyy-MM-dd')] || [];
+                  const has = list.length > 0;
+                  const val = has ? list.reduce((a, t) => a + t.rr, 0) : undefined;
+                  const muted = !isSameMonth(day, navDate);
+                  const today = isToday(day);
+                  const selected = selectedDate && isSameDay(day, selectedDate);
+                  const tint = has ? tintOf(val) : '255,255,255';
+                  const sInt = has ? Math.min(1, Math.abs(val) / stats.maxAbs) : 0;
+                  return (
+                    <button
+                      key={day.toString()}
+                      type="button"
+                      title={has ? `${format(day, 'dd.MM')} — ${fmtR(val)}R · ${list.length} уг.` : format(day, 'dd.MM')}
+                      onClick={() => setSelectedDate(selected ? null : day)}
+                      style={{
+                        position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        gap: 3, minHeight: 0, borderRadius: 11, cursor: 'pointer', appearance: 'none',
+                        transition: 'transform .2s ease, box-shadow .2s ease',
+                        background: has ? `rgba(${tint},${(0.07 + sInt * 0.3).toFixed(3)})` : 'rgba(255,255,255,.025)',
+                        border: `1px solid rgba(${has ? tint : '255,255,255'},${has ? (0.16 + sInt * 0.3).toFixed(3) : 0.05})`,
+                        boxShadow: selected
+                          ? '0 0 0 2px #fff'
+                          : today
+                            ? undefined
+                            : (has && sInt > 0.55 ? `0 0 18px rgba(${tint},.3)` : 'none'),
+                        animation: today ? 'tcv2Pulse 2.8s ease-in-out infinite' : 'none',
+                        opacity: muted ? 0.55 : 1,
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; }}
+                    >
+                      <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: today ? 700 : 500, lineHeight: 1, color: today ? '#2ee6a8' : muted ? '#8a8aa0' : has ? '#f2f2f8' : '#9a9ab0' }}>
+                        {format(day, 'd')}
+                      </span>
+                      {has && (
+                        <span style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, lineHeight: 1, letterSpacing: '-.02em', color: `rgb(${tint})` }}>
+                          {fmtR(val)}
+                        </span>
+                      )}
+                      {!has && !today && <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,.12)' }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, fontFamily: T.mono, fontSize: 9.5, letterSpacing: '.16em', color: '#8a8aa0' }}>
             <span>−5R</span>
