@@ -10,7 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Check, Cog, GripVertical, Plus, RotateCcw, X,
 } from 'lucide-react';
-import { A, CSS_SPRING, F, LAYOUT, P, POP, en, hairline, lightLayer, trackLight } from './theme';
+import { A, CSS_SPRING, F, LAYOUT, P, POP, en, hairline, lightLayer, mix, trackLight } from './theme';
 import { DEFAULT_LAYOUT, WIDGETS, optionsFor } from './widgets';
 import Preview from './Preview';
 
@@ -121,7 +121,7 @@ function Choice({ label, value, choices, tone, onPick, index }) {
               style={{
                 position: 'relative', padding: '1px 0 5px', border: 0, background: 'transparent',
                 cursor: 'pointer', fontFamily: F.sans, fontSize: 13, fontWeight: on ? 600 : 500,
-                letterSpacing: '-0.1px', color: on ? '#fff' : P.text5,
+                letterSpacing: '-0.1px', color: on ? 'var(--edge-text)' : P.text5,
                 transition: 'color .18s',
               }}
               onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = P.text2; }}
@@ -134,7 +134,7 @@ function Choice({ label, value, choices, tone, onPick, index }) {
                   transition={POP}
                   style={{
                     position: 'absolute', left: 0, right: 0, bottom: 0, height: 1.5,
-                    borderRadius: 2, background: tone, boxShadow: `0 0 8px ${tone}99`,
+                    borderRadius: 2, background: tone, boxShadow: `0 0 8px ${mix(tone, 60)}`,
                   }}
                 />
               )}
@@ -174,8 +174,8 @@ function WidthPicker({ value, tone, onPick }) {
               onClick={() => onPick(n)}
               style={{
                 flex: 1, height: 24, borderRadius: 7, cursor: 'pointer',
-                background: on ? `${tone}2e` : '#ffffff08',
-                border: `1px solid ${n === value ? `${tone}8c` : on ? `${tone}3d` : 'transparent'}`,
+                background: on ? mix(tone, 18) : 'rgba(var(--edge-hair-rgb),0.03)',
+                border: `1px solid ${n === value ? mix(tone, 55) : on ? mix(tone, 24) : 'transparent'}`,
                 transition: 'all .18s',
               }}
             />
@@ -188,7 +188,7 @@ function WidthPicker({ value, tone, onPick }) {
 
 /* Той самий вигляд, що у вибору ширини, і це навмисно: два розміри
    однієї плитки мають читатись як пара, а не як дві різні настройки. */
-function HeightPicker({ value, tone, onPick }) {
+function HeightPicker({ value, tone, min = 1, onPick }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -204,17 +204,23 @@ function HeightPicker({ value, tone, onPick }) {
       <div style={{ display: 'flex', gap: 4 }}>
         {[1, 2, 3, 4].map((n) => {
           const on = n <= value;
+          /* Нижче за minH клітинка не влазить власний вміст, тому ці
+             сходинки просто вимкнені, а не приховані — видно, що вони
+             були б менші, і чому їх не можна вибрати. */
+          const disabled = n < min;
           return (
             <button
               key={n}
               type="button"
               aria-label={`Height ${HEIGHT_LABEL[n]}`}
+              disabled={disabled}
               data-state={n === value ? 'active' : on ? 'filled' : 'idle'}
-              onClick={() => onPick(n)}
+              onClick={() => !disabled && onPick(n)}
               style={{
-                flex: 1, height: 24, borderRadius: 7, cursor: 'pointer',
-                background: on ? `${tone}2e` : '#ffffff08',
-                border: `1px solid ${n === value ? `${tone}8c` : on ? `${tone}3d` : 'transparent'}`,
+                flex: 1, height: 24, borderRadius: 7, cursor: disabled ? 'not-allowed' : 'pointer',
+                background: on ? mix(tone, 18) : '#ffffff08',
+                border: `1px solid ${n === value ? mix(tone, 55) : on ? mix(tone, 24) : 'transparent'}`,
+                opacity: disabled ? 0.35 : 1,
                 transition: 'all .18s',
               }}
             />
@@ -225,7 +231,7 @@ function HeightPicker({ value, tone, onPick }) {
   );
 }
 
-function SettingsPanel({ id, item, onChange, onClose }) {
+function SettingsPanel({ id, item, onChange, onClose, resizable = true }) {
   const WIDGETS = useRegistry();
   const spec = WIDGETS[id];
   const opts = optionsFor(spec, item.o);
@@ -261,7 +267,7 @@ function SettingsPanel({ id, item, onChange, onClose }) {
         background: 'rgba(14,14,19,.92)',
         backdropFilter: 'blur(28px) saturate(140%)',
         WebkitBackdropFilter: 'blur(28px) saturate(140%)',
-        border: '1px solid #ffffff14', borderRadius: 16,
+        border: '1px solid rgba(var(--edge-hair-rgb),0.08)', borderRadius: 16,
         padding: '15px 16px 17px', display: 'flex', flexDirection: 'column', gap: 17,
         boxShadow: '0 24px 60px -18px rgba(0,0,0,.85)',
         cursor: 'default',
@@ -269,7 +275,7 @@ function SettingsPanel({ id, item, onChange, onClose }) {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ width: 5, height: 5, borderRadius: 99, background: tone, flexShrink: 0 }} />
-        <span style={{ flex: 1, fontFamily: F.sans, fontSize: 12.5, fontWeight: 600, color: '#fff', letterSpacing: '-0.1px' }}>
+        <span style={{ flex: 1, fontFamily: F.sans, fontSize: 12.5, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.1px' }}>
           {en(spec.title)}
         </span>
         <button
@@ -277,15 +283,19 @@ function SettingsPanel({ id, item, onChange, onClose }) {
           onClick={onClose}
           aria-label="Close"
           style={{ display: 'grid', placeItems: 'center', width: 20, height: 20, borderRadius: 6, border: 0, background: 'transparent', cursor: 'pointer', color: P.dim }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-text)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = P.dim; }}
         >
           <X size={13} />
         </button>
       </div>
 
-      <WidthPicker value={item.w} tone={tone} onPick={(n) => set({ w: n })} />
-      <HeightPicker value={item.h} tone={tone} onPick={(n) => set({ h: n })} />
+      {resizable && (
+        <>
+          <WidthPicker value={item.w} tone={tone} onPick={(n) => set({ w: n })} />
+          <HeightPicker value={item.h} tone={tone} min={spec.minH || 1} onPick={(n) => set({ h: n })} />
+        </>
+      )}
 
       <Choice
         label="Period" index={2} tone={tone}
@@ -316,6 +326,7 @@ function SettingsPanel({ id, item, onChange, onClose }) {
 function CardShell({
   item, stats, edit, hover, lifted, overlay, removing, openSettings, dropTarget,
   setHover, onRemove, onToggleSettings, onChange,
+  draggable = true, removable = true, resizable = true,
 }) {
   const WIDGETS = useRegistry();
   const spec = WIDGETS[item.id];
@@ -338,7 +349,7 @@ function CardShell({
         position: 'relative', height: '100%',
         display: 'flex', flexDirection: 'column',
         background: P.card,
-        border: `1px solid ${overlay || dropTarget || hover ? `${tone}59` : P.line}`,
+        border: `1px solid ${overlay || dropTarget || hover ? mix(tone, 35) : P.line}`,
         borderRadius: 20,
         padding: 18,
         opacity: removing ? 0 : lifted ? 0.26 : 1,
@@ -351,9 +362,9 @@ function CardShell({
            box-shadow, не border: рамка змінила б внутрішній розмір і
            вміст смикнувся б на піксель. */
         boxShadow: overlay
-          ? `0 40px 80px -28px #000000e6, 0 0 0 1px ${tone}3d`
-          : dropTarget ? `0 0 0 2px ${tone}66, 0 0 34px -6px ${tone}4d` : 'none',
-        cursor: overlay || lifted ? 'grabbing' : edit ? 'grab' : 'default',
+          ? `0 40px 80px -28px var(--edge-panel, rgba(0,0,0,0.9)), 0 0 0 1px ${mix(tone, 24)}`
+          : dropTarget ? `0 0 0 2px ${mix(tone, 40)}, 0 0 34px -6px ${mix(tone, 30)}` : 'none',
+        cursor: overlay || lifted ? 'grabbing' : edit && draggable ? 'grab' : 'default',
         transition: overlay ? 'none' : `opacity ${REMOVE_MS}ms ease, ${CSS_SPRING}`,
       }}
     >
@@ -371,7 +382,7 @@ function CardShell({
 
       <header style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, minHeight: 22 }}>
         <AnimatePresence initial={false} mode="popLayout">
-          {(edit || overlay) && (
+          {(edit || overlay) && draggable && (
             <motion.span
               key="grip"
               initial={{ opacity: 0, width: 0, marginRight: -8 }}
@@ -408,8 +419,8 @@ function CardShell({
         {item.p && item.p !== 'inherit' && (
           <span
             style={{
-              fontFamily: F.mono, fontSize: 9.5, letterSpacing: '.8px', color: `${tone}e6`,
-              background: `${tone}1f`, border: `1px solid ${tone}3d`, borderRadius: 999,
+              fontFamily: F.mono, fontSize: 9.5, letterSpacing: '.8px', color: mix(tone, 90),
+              background: mix(tone, 12), border: `1px solid ${mix(tone, 24)}`, borderRadius: 999,
               padding: '2px 7px', flexShrink: 0,
             }}
           >
@@ -432,9 +443,11 @@ function CardShell({
               <IconBtn title="Settings" active={openSettings} tone={tone} onClick={onToggleSettings}>
                 <Cog size={13} />
               </IconBtn>
-              <IconBtn title="Remove" danger onClick={onRemove}>
-                <X size={13} />
-              </IconBtn>
+              {removable && (
+                <IconBtn title="Remove" danger onClick={onRemove}>
+                  <X size={13} />
+                </IconBtn>
+              )}
             </motion.span>
           )}
         </AnimatePresence>
@@ -454,7 +467,12 @@ function CardShell({
         className="ov-body"
         style={{
           position: 'relative', flex: 1, minHeight: 0,
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          display: 'flex', flexDirection: 'column',
+          /* `safe center` — доки вміст влазить, він по центру; щойно
+             переростає плитку, вирівнювання падає на початок, і
+             прокрутка бере від першого рядка, а не обрізає його
+             згори (класичний баг flex + overflow + center). */
+          justifyContent: 'safe center',
           overflowY: 'auto', overflowX: 'hidden',
         }}
       >
@@ -473,7 +491,7 @@ function CardShell({
 
       <AnimatePresence>
         {openSettings && !overlay && (
-          <SettingsPanel id={item.id} item={item} onChange={onChange} onClose={onToggleSettings} />
+          <SettingsPanel id={item.id} item={item} onChange={onChange} onClose={onToggleSettings} resizable={resizable} />
         )}
       </AnimatePresence>
     </div>
@@ -550,9 +568,32 @@ function SortableCard({ item, edit, removing, ...rest }) {
   );
 }
 
+/* Закріплена картка — та сама CardShell, але без dnd-kit: рядок унизу
+   не сортується й не змінює розмір, тож тягнути й ресайзити тут
+   нічого. */
+function PinnedCard({ item, stats, edit, openSettings, onToggleSettings, onChange }) {
+  const [hover, setHover] = useState(false);
+
+  return (
+    <CardShell
+      item={item}
+      stats={stats}
+      edit={edit}
+      hover={hover}
+      setHover={setHover}
+      openSettings={openSettings}
+      onToggleSettings={onToggleSettings}
+      onChange={onChange}
+      draggable={false}
+      removable={false}
+      resizable={false}
+    />
+  );
+}
+
 function IconBtn({ children, onClick, title, danger, active, tone = P.acc }) {
   const [hover, setHover] = useState(false);
-  const color = danger && hover ? P.bad : active ? tone : hover ? '#fff' : P.text5;
+  const color = danger && hover ? P.bad : active ? tone : hover ? 'var(--edge-text)' : P.text5;
 
   return (
     <button
@@ -566,8 +607,8 @@ function IconBtn({ children, onClick, title, danger, active, tone = P.acc }) {
       data-state={active ? 'active' : hover ? 'hover' : 'idle'}
       style={{
         display: 'grid', placeItems: 'center', width: 27, height: 27, borderRadius: 9,
-        cursor: 'pointer', color, border: `1px solid ${active ? `${tone}4d` : 'transparent'}`,
-        background: active ? `${tone}24` : hover ? (danger ? '#ff7b7b1f' : '#ffffff14') : 'transparent',
+        cursor: 'pointer', color, border: `1px solid ${active ? mix(tone, 30) : 'transparent'}`,
+        background: active ? mix(tone, 14) : hover ? (danger ? 'rgba(var(--edge-bad-rgb),0.12)' : 'rgba(var(--edge-hair-rgb),0.08)') : 'transparent',
         transition: 'all .16s',
       }}
     >
@@ -603,13 +644,13 @@ function AddPanel({ hidden, onAdd, onClose }) {
         <span style={hairline()} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '0 18px', marginBottom: 14 }}>
-          <span style={{ fontFamily: F.sans, fontSize: 13, fontWeight: 600, color: '#fff', letterSpacing: '-0.2px' }}>
+          <span style={{ fontFamily: F.sans, fontSize: 13, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.2px' }}>
             Бібліотека
           </span>
           <span style={{ fontFamily: F.sans, fontSize: 12, color: P.dim }}>
             клікни, щоб додати в кінець, або перетягни на потрібне місце
           </span>
-          <span style={{ height: 1, flex: 1, background: 'linear-gradient(90deg,#26262f,transparent)' }} />
+          <span style={{ height: 1, flex: 1, background: 'linear-gradient(90deg,var(--edge-line),transparent)' }} />
           <IconBtn title="Згорнути" onClick={onClose}><X size={14} /></IconBtn>
         </div>
 
@@ -662,8 +703,8 @@ function LibCard({ id, onAdd }) {
         position: 'relative', overflow: 'hidden', textAlign: 'left', cursor: 'grab',
         display: 'flex', flexDirection: 'column', gap: 11, padding: 13,
         width: 214, flexShrink: 0, borderRadius: 16, touchAction: 'none',
-        background: hover ? P.cardHi : '#ffffff05',
-        border: `1px solid ${hover ? `${tone}59` : P.lineSoft}`,
+        background: hover ? P.cardHi : 'rgba(var(--edge-hair-rgb),0.02)',
+        border: `1px solid ${hover ? mix(tone, 35) : P.lineSoft}`,
         /* Без підйому: у горизонтальному ряду картка, що вилазить
            угору, читається як збій прокрутки. */
         opacity: isDragging ? 0.35 : 1,
@@ -675,7 +716,7 @@ function LibCard({ id, onAdd }) {
       <span
         style={{
           position: 'relative', display: 'block', padding: '11px 12px', borderRadius: 11,
-          background: '#00000047', border: `1px solid ${hover ? `${tone}2e` : '#ffffff0a'}`,
+          background: 'var(--edge-panel-glow, rgba(0,0,0,0.28))', border: `1px solid ${hover ? mix(tone, 18) : 'rgba(var(--edge-hair-rgb),0.04)'}`,
           transition: 'border-color .2s',
         }}
       >
@@ -684,7 +725,7 @@ function LibCard({ id, onAdd }) {
 
       <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
         <w.icon size={13} color={tone} style={{ flexShrink: 0 }} />
-        <span style={{ flex: 1, minWidth: 0, fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ flex: 1, minWidth: 0, fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: 'var(--edge-text)', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {w.title}
         </span>
         <Plus
@@ -712,17 +753,17 @@ function LibGhost({ id }) {
       style={{
         width: 214, padding: 13, borderRadius: 16, cursor: 'grabbing',
         display: 'flex', flexDirection: 'column', gap: 11,
-        background: P.cardHi, border: `1px solid ${tone}8c`,
-        boxShadow: `0 30px 60px -24px #000, 0 0 0 1px ${tone}3d`,
+        background: P.cardHi, border: `1px solid ${mix(tone, 55)}`,
+        boxShadow: `0 30px 60px -24px var(--edge-panel-glow, rgba(0,0,0,0.5)), 0 0 0 1px ${mix(tone, 24)}`,
         transform: 'rotate(-1.4deg)',
       }}
     >
-      <span style={{ display: 'block', padding: '11px 12px', borderRadius: 11, background: '#00000047', border: `1px solid ${tone}2e` }}>
+      <span style={{ display: 'block', padding: '11px 12px', borderRadius: 11, background: 'var(--edge-panel-glow, rgba(0,0,0,0.28))', border: `1px solid ${mix(tone, 18)}` }}>
         <Preview shape={w.shape} tone={tone} id={`${id}-ghost`} />
       </span>
       <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <w.icon size={13} color={tone} />
-        <span style={{ fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: '#fff' }}>{w.title}</span>
+        <span style={{ fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: 'var(--edge-text)' }}>{w.title}</span>
       </span>
     </div>
   );
@@ -750,12 +791,30 @@ export default function Board({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  const hidden = useMemo(
-    () => Object.keys(registry).filter((id) => !layout.some((x) => x.id === id)),
-    [layout, registry],
+  /* Закріплені віджети (План/Емоції/Звички в огляді) виходять із
+     загальної сітки — не пропонуємо додати те, що й так завжди на
+     місці. Позначені `pinned: true` на самому віджеті в ЦЬОМУ
+     реєстрі, а не окремим списком id: список id, спільний для всіх
+     дощок, одного разу вже зіткнувся з тим, що інший реєстр
+     (perf/widgets.jsx) має свій widget з тим самим ключем 'emotions'
+     і випадково ховав його з бібліотеки Перформансу. */
+  const pinnedIds = useMemo(
+    () => Object.keys(registry).filter((id) => registry[id]?.pinned),
+    [registry],
   );
 
-  const ids = useMemo(() => layout.map((x) => x.id), [layout]);
+  const hidden = useMemo(
+    () => Object.keys(registry).filter((id) => !pinnedIds.includes(id) && !layout.some((x) => x.id === id)),
+    [layout, registry, pinnedIds],
+  );
+
+  const boardLayout = useMemo(() => layout.filter((x) => !pinnedIds.includes(x.id)), [layout, pinnedIds]);
+  const pinnedLayout = useMemo(
+    () => pinnedIds.map((id) => layout.find((x) => x.id === id)).filter(Boolean),
+    [layout, pinnedIds],
+  );
+
+  const ids = useMemo(() => boardLayout.map((x) => x.id), [boardLayout]);
   const libId = typeof activeId === 'string' && activeId.startsWith('lib:') ? activeId.slice(4) : null;
   const activeItem = activeId && !libId ? layout.find((x) => x.id === activeId) : null;
 
@@ -765,12 +824,13 @@ export default function Board({
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  const patch = (index, item) => setLayout((prev) => prev.map((x, i) => (i === index ? item : x)));
+  const patchById = (id, item) => setLayout((prev) => prev.map((x) => (x.id === id ? item : x)));
 
   /* Спершу картка згасає власним переходом, і лише потім зникає з
      масиву. Миттєве видалення виглядало так, ніби сітка смикнулась
      сама по собі. */
   const remove = (id) => {
+    if (registry[id]?.pinned) return;
     setOpenId(null);
     setRemovingId(id);
     clearTimeout(timer.current);
@@ -781,6 +841,7 @@ export default function Board({
   };
 
   const add = (id, at) => {
+    if (registry[id]?.pinned) return;
     setLayout((prev) => {
       if (prev.some((x) => x.id === id)) return prev;
       const item = { id, w: registry[id].defaultW || 1, h: registry[id].defaultH || 2 };
@@ -823,6 +884,11 @@ export default function Board({
         @media (max-width: 1279px){ .ov-board{ --ov-cols: 2 } }
         @media (max-width: 719px){ .ov-board{ --ov-cols: 1 } }
 
+        /* Закріплена трійка — рівні третини на всю ширину, незалежно
+           від сітки над нею: чверть на три картки не ділиться. */
+        .ov-pinned{ grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(260px, auto) }
+        @media (max-width: 1279px){ .ov-pinned{ grid-template-columns: 1fr } }
+
         .ov-body::-webkit-scrollbar{ width: 5px }
         .ov-body::-webkit-scrollbar-track{ background: transparent }
         .ov-body::-webkit-scrollbar-thumb{ background: transparent; border-radius: 99px }
@@ -830,8 +896,8 @@ export default function Board({
 
         .ov-lib::-webkit-scrollbar{ height: 6px }
         .ov-lib::-webkit-scrollbar-track{ background: transparent }
-        .ov-lib::-webkit-scrollbar-thumb{ background: #23232e; border-radius: 99px }
-        .ov-lib:hover::-webkit-scrollbar-thumb{ background: #33333f }
+        .ov-lib::-webkit-scrollbar-thumb{ background: var(--edge-line); border-radius: 99px }
+        .ov-lib:hover::-webkit-scrollbar-thumb{ background: var(--edge-line-hi) }
       `}</style>
 
       <DndContext
@@ -924,13 +990,13 @@ export default function Board({
               gap: GAP,
             }}
           >
-            {layout.map((item, i) => (
+            {boardLayout.map((item) => (
               <SortableCard
                 key={item.id}
                 item={{
                   ...item,
                   w: Math.min(Math.max(item.w || 1, 1), 4),
-                  h: Math.min(Math.max(item.h || registry[item.id]?.defaultH || 2, 1), 4),
+                  h: Math.min(Math.max(item.h || registry[item.id]?.defaultH || 2, registry[item.id]?.minH || 1), 4),
                 }}
                 stats={statsFor(item.p)}
                 edit={edit}
@@ -938,11 +1004,26 @@ export default function Board({
                 openSettings={openId === item.id}
                 onRemove={() => remove(item.id)}
                 onToggleSettings={() => setOpenId((v) => (v === item.id ? null : item.id))}
-                onChange={(next) => patch(i, next)}
+                onChange={(next) => patchById(item.id, next)}
               />
             ))}
           </div>
         </SortableContext>
+
+        {/* ---------- закріплена трійка ---------- */}
+        <div className="ov-pinned" style={{ display: 'grid', gap: GAP, marginTop: GAP }}>
+          {pinnedLayout.map((item) => (
+            <PinnedCard
+              key={item.id}
+              item={item}
+              stats={statsFor(item.p)}
+              edit={edit}
+              openSettings={openId === item.id}
+              onToggleSettings={() => setOpenId((v) => (v === item.id ? null : item.id))}
+              onChange={(next) => patchById(item.id, next)}
+            />
+          ))}
+        </div>
 
         {/* Портал до body: сторінка аналітики має анімацію появи з
             transform, а будь-який transform у предка робить його новим
@@ -999,18 +1080,18 @@ function ToolButton({ icon: Icon, children, onClick, active, primary, iconOnly, 
           height: 42, width: iconOnly ? 42 : undefined,
           padding: iconOnly ? 0 : '0 20px', borderRadius: 13, border: 0, cursor: 'pointer',
           overflow: 'hidden', whiteSpace: 'nowrap',
-          background: `linear-gradient(180deg, ${hover ? '#6355ff, #4a3bf5' : '#5546f8, #3f30e8'})`,
+          background: `linear-gradient(180deg, ${hover ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
           boxShadow: hover
-            ? `0 18px 40px -14px ${A(0.85)}, inset 0 1px 0 #ffffff4d`
-            : `0 12px 30px -14px ${A(0.7)}, inset 0 1px 0 #ffffff33`,
+            ? `0 18px 40px -14px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-text-rgb),0.3)`
+            : `0 12px 30px -14px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
           transform: `translateY(${hover ? '-2px' : '0'})`,
           transition: CSS_SPRING,
         }}
       >
-        <span style={{ position: 'absolute', insetInline: 0, top: 0, height: 1, background: 'linear-gradient(90deg,transparent,#ffffff99,transparent)' }} />
-        <Icon size={iconOnly ? 16 : 14} strokeWidth={2.4} color="#fff" />
+        <span style={{ position: 'absolute', insetInline: 0, top: 0, height: 1, background: 'linear-gradient(90deg,transparent,rgba(var(--edge-text-rgb),0.6),transparent)' }} />
+        <Icon size={iconOnly ? 16 : 14} strokeWidth={2.4} color="var(--edge-text)" />
         {!iconOnly && (
-          <span style={{ fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: '#fff', letterSpacing: '-0.1px' }}>
+          <span style={{ fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: 'var(--edge-text)', letterSpacing: '-0.1px' }}>
             {children}
           </span>
         )}
@@ -1033,9 +1114,9 @@ function ToolButton({ icon: Icon, children, onClick, active, primary, iconOnly, 
         height: 42, width: iconOnly ? 42 : undefined,
         padding: iconOnly ? 0 : '0 15px', borderRadius: 13, whiteSpace: 'nowrap',
         fontFamily: F.sans, fontSize: 13, fontWeight: 600,
-        color: active || hover ? '#fff' : P.text3,
-        background: active ? A(0.17) : hover ? '#ffffff14' : '#ffffff0a',
-        border: `1px solid ${active ? A(0.5) : hover ? P.lineHover : '#21212b'}`,
+        color: active || hover ? 'var(--edge-text)' : P.text3,
+        background: active ? A(0.17) : hover ? 'rgba(var(--edge-hair-rgb),0.08)' : 'rgba(var(--edge-hair-rgb),0.04)',
+        border: `1px solid ${active ? A(0.5) : hover ? P.lineHover : 'var(--edge-line)'}`,
         transition: 'all .16s',
       }}
     >

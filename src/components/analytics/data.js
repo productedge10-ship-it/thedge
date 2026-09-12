@@ -255,6 +255,21 @@ export function useStats(trades) {
 
     const byMonth = groupStats(t, (x) => x.date.slice(0, 7)).sort((a, b) => a.key.localeCompare(b.key));
 
+    /* Вінрейт і профіт-фактор рахуємо наростаючим підсумком по кожній
+       угоді, а не по місяцях: місяців у періоді лише кілька, і крива
+       з трьох-чотирьох точок виглядає прямою лінією, тоді як еквіті
+       з тієї ж кількості угод — живою кривою. */
+    let wrWins = 0, wrLosses = 0, pfGross = 0, pfLoss = 0;
+    const wrCurve = [];
+    const pfCurve = [];
+    t.forEach((x) => {
+      if (x.result === 'WIN') wrWins++; else if (x.result === 'LOSS') wrLosses++;
+      if (x.rr >= 0) pfGross += x.rr; else pfLoss += Math.abs(x.rr);
+      const decided = wrWins + wrLosses;
+      wrCurve.push({ date: x.date.slice(5), wr: decided ? Math.round((wrWins / decided) * 100) : 0 });
+      pfCurve.push({ date: x.date.slice(5), net: +(pfLoss ? pfGross / pfLoss : pfGross).toFixed(2) });
+    });
+
     return {
       trades: t, wins, losses, be, gross, grossLoss, net, equity, maxDD,
       wr: wins.length + losses.length
@@ -268,7 +283,7 @@ export function useStats(trades) {
       tiltCost, mistakeLedger, emotionStats, chain,
       avgAfterLoss, avgAfterWin, revenge,
       followed, broken, buckets, byDow, bySession, byHour,
-      byAsset, bySetup, byAccount, matrix, byMonth,
+      byAsset, bySetup, byAccount, matrix, byMonth, wrCurve, pfCurve,
       mistakeRate: n ? Math.round((t.filter((x) => x.mistakes.length).length / n) * 100) : 0,
       adherence: n ? Math.round((followed.length / n) * 100) : 0,
       recovery: maxDD ? net / Math.abs(maxDD) : 0,

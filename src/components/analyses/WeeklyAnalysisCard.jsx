@@ -20,22 +20,23 @@ const BIAS = {
   'Day off': { color: T.text3, rgb: '122,122,133', icon: Coffee },
 };
 
-/* Плановий bias тепер один на весь тиждень, а не окремий на кожен
-   актив — тому чіп звіряє факт по активу саме з ним. */
-function AssetChip({ asset, weekNarrative }) {
-  const actual = BIAS[asset.actualBias];
-  const hit = weekNarrative && asset.actualBias ? asset.actualBias === weekNarrative : null;
+/* Плановий bias живе в самому розборі — кожен актив свій, тому й
+   чіп фарбується власним плановим bias, а не спільним для тижня. */
+function AssetChip({ analysis }) {
+  const planned = BIAS[analysis.narrative];
+  const actual = BIAS[analysis.actualBias];
+  const hit = analysis.narrative && analysis.actualBias ? analysis.actualBias === analysis.narrative : null;
   return (
     <span
       className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-bold"
       style={{
         fontFamily: T.mono,
-        color: T.text2,
-        background: T.sunken,
-        border: `1px solid ${T.line}`,
+        color: planned?.color || T.text2,
+        background: planned ? `rgba(${planned.rgb},0.09)` : T.sunken,
+        border: `1px solid ${planned ? `rgba(${planned.rgb},0.22)` : T.line}`,
       }}
     >
-      {asset.pair || '—'}
+      {analysis.pair}
       {actual && (
         <span style={{ color: hit ? T.ok : T.bad, opacity: 0.85 }}>
           {hit ? '✓' : '✕'}
@@ -47,12 +48,9 @@ function AssetChip({ asset, weekNarrative }) {
 
 export default function WeeklyAnalysisCard({ plan, onClick, onDelete }) {
   const data = plan.plan_data || {};
-  const assets = data.assets || [];
-  const planned = BIAS[plan.narrative || data.narrative];
-  const Icon = planned?.icon;
-  const color = planned?.color || T.text3;
+  const named = (data.tdaAnalyses || []).filter((t) => t.pair);
   const rating = data.weekRating || 0;
-  const reviewed = assets.filter((a) => a.actualBias || a.outcome?.trim()).length;
+  const reviewed = named.filter((t) => t.actualBias || t.outcome?.trim()).length;
   const isCurrentWeek = plan.date === mondayOf(new Date().toISOString().slice(0, 10));
 
   return (
@@ -68,8 +66,8 @@ export default function WeeklyAnalysisCard({ plan, onClick, onDelete }) {
         transition: 'border-color 240ms ease, box-shadow 240ms ease',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = `${color}55`;
-        e.currentTarget.style.boxShadow = `0 20px 44px -28px rgba(0,0,0,0.95), 0 0 0 1px ${color}22 inset`;
+        e.currentTarget.style.borderColor = `${T.acc}55`;
+        e.currentTarget.style.boxShadow = `0 20px 44px -28px rgba(0,0,0,0.95), 0 0 0 1px ${T.acc}22 inset`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = T.line;
@@ -101,32 +99,21 @@ export default function WeeklyAnalysisCard({ plan, onClick, onDelete }) {
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          {isCurrentWeek && (
-            <span
-              className="rounded-full px-1.5 py-[1px] text-[10px] font-bold uppercase tracking-[0.06em]"
-              style={{ fontFamily: T.sans, color: T.acc, background: `rgba(${T.accRgb},0.14)`, border: `1px solid rgba(${T.accRgb},0.3)` }}
-            >
-              Зараз
-            </span>
-          )}
-          {planned && (
-            <span
-              className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-bold"
-              style={{ fontFamily: T.sans, color, background: `rgba(${planned.rgb},0.10)`, border: `1px solid rgba(${planned.rgb},0.24)` }}
-            >
-              <Icon size={12} strokeWidth={2.6} />
-              {plan.narrative || data.narrative}
-            </span>
-          )}
-        </div>
+        {isCurrentWeek && (
+          <span
+            className="shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-bold uppercase tracking-[0.06em]"
+            style={{ fontFamily: T.sans, color: T.acc, background: `rgba(${T.accRgb},0.14)`, border: `1px solid rgba(${T.accRgb},0.3)` }}
+          >
+            Зараз
+          </span>
+        )}
       </div>
 
       {/* активи */}
       <div className="relative flex-1 px-4">
-        {assets.length ? (
+        {named.length ? (
           <div className="flex flex-wrap gap-1.5">
-            {assets.map((a) => <AssetChip key={a.id} asset={a} weekNarrative={plan.narrative || data.narrative} />)}
+            {named.map((a) => <AssetChip key={a.id} analysis={a} />)}
           </div>
         ) : (
           <p className="text-[13.5px] italic" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.6 }}>
@@ -137,13 +124,13 @@ export default function WeeklyAnalysisCard({ plan, onClick, onDelete }) {
 
       {/* підвал */}
       <div className="relative mt-4 flex min-h-[46px] items-center gap-2 px-4 py-3" style={{ borderTop: `1px solid ${T.line}` }}>
-        {assets.length > 0 && (
+        {named.length > 0 && (
           <span
             className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-bold"
             style={{ fontFamily: T.sans, color: reviewed ? T.ok : T.text4, background: reviewed ? `rgba(${T.okRgb},0.10)` : 'transparent' }}
             title="Скільки активів уже розібрано"
           >
-            {reviewed}/{assets.length} розібрано
+            {reviewed}/{named.length} розібрано
           </span>
         )}
 

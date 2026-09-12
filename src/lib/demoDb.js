@@ -19,7 +19,7 @@ import { WEEK_PAIR } from './weekPlan';
 
 /* Версія в ключі — щоб зміна насіння підхопилась у всіх, хто вже
    відкривав демо: старий кеш під іншим ключем просто ігнорується. */
-const KEY = 'edge.demo.db.v9';
+const KEY = 'edge.demo.db.v11';
 
 export const DEMO_USER_ID = 'demo-user-0000-0000-000000000001';
 
@@ -180,26 +180,48 @@ const seed = () => ({
     },
 
     /* Тижневі плани: той самий рядок, інший plan_type. `date` —
-       завжди понеділок, `pair` — сентинел WEEK_PAIR (список активів
-       живе всередині plan_data.assets). Один тиждень уже пройшов і
+       завжди понеділок, `pair` — сентинел WEEK_PAIR (активи живуть
+       всередині plan_data.tdaAnalyses — кожен розбір і є активом,
+       зі своїм плановим bias і фактом). Один тиждень уже пройшов і
        розібраний повністю, другий — поточний, ще в процесі. */
     {
       id: uid(), user_id: DEMO_USER_ID, date: monday(-1), pair: WEEK_PAIR,
-      narrative: 'Bullish', is_public: false, plan_type: 'weekly',
+      is_public: false, plan_type: 'weekly',
       plan_data: {
-        date: monday(-1), pair: WEEK_PAIR, narrative: 'Bullish',
-        tdaBlocks: [
-          { id: 1, tf: '1W', image: null, text: 'Тижневий DXY у низхідному каналі третій тиждень поспіль, свіжого імпульсу вниз поки нема.' },
-          { id: 2, tf: '1D', image: null, text: 'Ризикові індекси тримаються вище денної EMA50 — тренд угору не зламаний.' },
-          { id: 3, tf: '', image: null, text: '' },
-          { id: 4, tf: '', image: null, text: '' },
+        date: monday(-1), pair: WEEK_PAIR,
+        tdaAnalyses: [
+          {
+            id: 'ta1', pair: 'XAUUSD', narrative: 'Bullish',
+            blocks: [
+              { id: 1, tf: '1W', image: null, text: 'Тижневий DXY у низхідному каналі третій тиждень поспіль, свіжого імпульсу вниз поки нема.' },
+              { id: 2, tf: '1D', image: null, text: 'Ціна тримається вище денної EMA50, структура вищих лоу не зламана.' },
+              { id: 3, tf: '', image: null, text: '' },
+              { id: 4, tf: '', image: null, text: '' },
+            ],
+            actualBias: 'Bullish', outcome: 'Дійшло до 2658, закрив 3R у середу.',
+          },
+          {
+            id: 'ta2', pair: 'NAS100', narrative: 'Bullish',
+            blocks: [
+              { id: 1, tf: '1D', image: null, text: 'Ризикові індекси тримаються вище денної EMA50 — тренд угору не зламаний.' },
+              { id: 2, tf: '4H', image: null, text: 'Консолідація під хаєм, чекаю пробою для продовження.' },
+              { id: 3, tf: '', image: null, text: '' },
+              { id: 4, tf: '', image: null, text: '' },
+            ],
+            actualBias: 'Bullish', outcome: 'Пробив і закріпився, взяв 2R на ретесті.',
+          },
+          {
+            id: 'ta3gbp', pair: 'GBPUSD', narrative: 'Bearish',
+            blocks: [
+              { id: 1, tf: '4H', image: null, text: 'Опір біля 1.2750 тримається третій день поспіль, шукаю відбій униз.' },
+              { id: 2, tf: '', image: null, text: '' },
+              { id: 3, tf: '', image: null, text: '' },
+              { id: 4, tf: '', image: null, text: '' },
+            ],
+            actualBias: 'Bullish', outcome: 'Не спрацювало — фунт пішов проти тези, угоду не відкривав.',
+          },
         ],
         planText: 'Ринок після FOMC — очікую продовження ризик-апетиту, поки долар слабкий. Головна теза ламається, якщо DXY повертається вище тижневого хаю.',
-        assets: [
-          { id: 'wa1', pair: 'XAUUSD', actualBias: 'Bullish', outcome: 'Дійшло до 2658, закрив 3R у середу.' },
-          { id: 'wa2', pair: 'NAS100', actualBias: 'Bullish', outcome: 'Пробив і закріпився, взяв 2R на ретесті.' },
-          { id: 'wa3', pair: 'GBPUSD', actualBias: 'Bearish', outcome: 'Не спрацювало — фунт пішов проти тижневої тези, угоду не відкривав.' },
-        ],
         updates: [
           { id: 1, date: 'Ср, 09:30', tf: '', image: null, text: 'Теза на золото і насдак підтверджується, долар слабкий по всій дошці.' },
           { id: 2, date: 'Пт, 17:00', tf: '', image: null, text: 'Фунт зламав тезу — забираю з наступного тижня, недостатньо чіткий сетап.' },
@@ -211,19 +233,22 @@ const seed = () => ({
     },
     {
       id: uid(), user_id: DEMO_USER_ID, date: monday(0), pair: WEEK_PAIR,
-      narrative: 'Neutral', is_public: false, plan_type: 'weekly',
+      is_public: false, plan_type: 'weekly',
       plan_data: {
-        date: monday(0), pair: WEEK_PAIR, narrative: 'Neutral',
-        tdaBlocks: [
-          { id: 1, tf: '1W', image: null, text: 'Тиждень даних — тижнева свічка, скоріш за все, закриється доджем до виходу CPI.' },
-          { id: 2, tf: '', image: null, text: '' },
-          { id: 3, tf: '', image: null, text: '' },
-          { id: 4, tf: '', image: null, text: '' },
+        date: monday(0), pair: WEEK_PAIR,
+        tdaAnalyses: [
+          {
+            id: 'ta3', pair: 'XAUUSD', narrative: 'Neutral',
+            blocks: [
+              { id: 1, tf: '1W', image: null, text: 'Тиждень даних — тижнева свічка, скоріш за все, закриється доджем до виходу CPI.' },
+              { id: 2, tf: '', image: null, text: '' },
+              { id: 3, tf: '', image: null, text: '' },
+              { id: 4, tf: '', image: null, text: '' },
+            ],
+            actualBias: '', outcome: '',
+          },
         ],
         planText: 'Тиждень даних (CPI у четвер) — до звіту очікую вузький діапазон майже по всій дошці. Активно шукаю сетапи тільки після виходу цифри.',
-        assets: [
-          { id: 'wa4', pair: 'XAUUSD', actualBias: '', outcome: '' },
-        ],
         updates: [
           { id: 1, date: 'Пн, 10:15', tf: '', image: null, text: 'Діапазон тримається, як і очікував — поки поза ринком.' },
         ],

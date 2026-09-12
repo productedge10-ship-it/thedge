@@ -66,105 +66,110 @@ export default function PlanHeader({
 }) {
   const weekly = mode === 'weekly';
   return (
-    <div className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-      {/* Заголовок */}
-      <div className="min-w-0">
+    <div className="mb-7 flex flex-col gap-6">
+      {/* Верхній рядок: перемикач і дії — на одному рівні. Раніше
+          перемикач стояв над заголовком окремим рядком, і дії опинялись
+          десь між ним і назвою — жодного зі співставлень не читалось.
+          Тепер це один рядок службових елементів, а заголовок унизу
+          отримує весь рядок і звучить голосніше сам по собі. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {onModeChange ? (
-          <div className="mb-3">
-            <PlanTypeToggle mode={mode} onChange={onModeChange} layoutId="plan-type-toggle-header" />
-          </div>
+          <PlanTypeToggle mode={mode} onChange={onModeChange} layoutId="plan-type-toggle-header" />
         ) : (
           <div
-            className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]"
+            className="text-[12px] font-bold uppercase tracking-[0.22em]"
             style={{ fontFamily: T.sans, color: T.acc }}
           >
             Daily plan
           </div>
         )}
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1
-            className="text-[28px] font-bold capitalize leading-none sm:text-[38px] lg:text-[46px]"
-            style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
+
+        {/* Diagnostics-квіз про «сьогодні», а не про конкретний план,
+            тому лишається однаковим і на денному, і на тижневому масштабі —
+            «все те саме» навмисно, щоб хедер не міняв форму при перемиканні. */}
+        <div className="flex flex-wrap items-center gap-2 no-print">
+          <TextBtn
+            icon={Briefcase}
+            data-tour="plan-add-trade"
+            onClick={onAddTrade}
+            tone={T.ok}
+            softBg={`rgba(${T.okRgb},0.08)`}
+            softLine={`rgba(${T.okRgb},0.20)`}
           >
-            {title}
-          </h1>
-          {pair && (
-            <motion.span
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={SPRING}
-              className="rounded-lg px-2.5 py-1 text-[15px] font-semibold tabular-nums"
-              style={{
-                fontFamily: T.sans,
-                background: `rgba(${T.accRgb},0.10)`,
-                border: `1px solid rgba(${T.accRgb},0.22)`,
-                color: T.acc,
-              }}
-            >
-              {pair}
-            </motion.span>
-          )}
+            Add trade
+          </TextBtn>
+
+          <button
+            onClick={onOpenQuiz}
+            className="flex h-[38px] items-center gap-2 rounded-xl px-3.5 text-[14px] font-semibold transition-all duration-200 active:scale-[0.97]"
+            style={{
+              background: isQuizFullyCompleted ? `rgba(${T.okRgb},0.08)` : `rgba(${T.warnRgb},0.07)`,
+              border: `1px solid ${isQuizFullyCompleted ? `rgba(${T.okRgb},0.20)` : `rgba(${T.warnRgb},0.20)`}`,
+              color: isQuizFullyCompleted ? T.ok : T.warn,
+              fontFamily: T.sans,
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.35)')}
+            onMouseLeave={(e) => (e.currentTarget.style.filter = 'none')}
+          >
+            {isQuizFullyCompleted ? <Check size={14} strokeWidth={3} /> : <ClipboardCheck size={14} strokeWidth={2.3} />}
+            Quiz
+            <span className="tabular-nums opacity-70" style={{ fontFamily: T.sans }}>
+              {quizCompletedCount}/4
+            </span>
+          </button>
+
+          <div className="mx-1 h-6 w-px" style={{ background: T.line }} />
+
+          <IconBtn icon={Send}    label="Telegram alert" onClick={onOpenTgAlert} tone={T.info} />
+          <IconBtn icon={Share2}  label="Копіювати лінк"  onClick={onShare} />
+
+          {/* Головна дія хедера. Магнітний ефект прибрано — кнопка їхала
+              з-під курсора; колір нейтральний, бо поруч уже є зелена
+              «Add trade» і бурштиновий «Quiz», і фіолетовий з ними бився. */}
+          <button
+            data-tour="plan-new"
+            onClick={onNewPlan}
+            className="group ml-1 inline-flex h-[38px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
+            style={{
+              background: T.text,
+              color: 'var(--edge-bg, #0A0A0C)',
+              fontFamily: T.sans,
+              boxShadow: '0 8px 22px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 12px 28px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))')}
+            onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 8px 22px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))')}
+          >
+            <Plus size={15} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+            {weekly ? 'New week' : 'New plan'}
+          </button>
         </div>
       </div>
 
-      {/* Дії. Diagnostics-квіз про «сьогодні», а не про конкретний план,
-          тому лишається однаковим і на денному, і на тижневому масштабі —
-          «все те саме» навмисно, щоб хедер не міняв форму при перемиканні. */}
-      <div className="flex flex-wrap items-center gap-2 no-print">
-        <TextBtn
-          icon={Briefcase}
-          data-tour="plan-add-trade"
-          onClick={onAddTrade}
-          tone={T.ok}
-          softBg={`rgba(${T.okRgb},0.08)`}
-          softLine={`rgba(${T.okRgb},0.20)`}
+      {/* Нижній рядок: сама назва — тепер на всю ширину і без сусідів
+          зверху, звучить як заголовок, а не тіснитись поруч з перемикачем. */}
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h1
+          className="text-[28px] font-bold capitalize leading-none sm:text-[38px] lg:text-[46px]"
+          style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
         >
-          Add trade
-        </TextBtn>
-
-        <button
-          onClick={onOpenQuiz}
-          className="flex h-[38px] items-center gap-2 rounded-xl px-3.5 text-[14px] font-semibold transition-all duration-200 active:scale-[0.97]"
-          style={{
-            background: isQuizFullyCompleted ? `rgba(${T.okRgb},0.08)` : `rgba(${T.warnRgb},0.07)`,
-            border: `1px solid ${isQuizFullyCompleted ? `rgba(${T.okRgb},0.20)` : `rgba(${T.warnRgb},0.20)`}`,
-            color: isQuizFullyCompleted ? T.ok : T.warn,
-            fontFamily: T.sans,
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.35)')}
-          onMouseLeave={(e) => (e.currentTarget.style.filter = 'none')}
-        >
-          {isQuizFullyCompleted ? <Check size={14} strokeWidth={3} /> : <ClipboardCheck size={14} strokeWidth={2.3} />}
-          Quiz
-          <span className="tabular-nums opacity-70" style={{ fontFamily: T.sans }}>
-            {quizCompletedCount}/4
-          </span>
-        </button>
-
-        <div className="mx-1 h-6 w-px" style={{ background: T.line }} />
-
-        <IconBtn icon={Send}    label="Telegram alert" onClick={onOpenTgAlert} tone={T.info} />
-        <IconBtn icon={Share2}  label="Копіювати лінк"  onClick={onShare} />
-
-        {/* Головна дія хедера. Магнітний ефект прибрано — кнопка їхала
-            з-під курсора; колір нейтральний, бо поруч уже є зелена
-            «Add trade» і бурштиновий «Quiz», і фіолетовий з ними бився. */}
-        <button
-          data-tour="plan-new"
-          onClick={onNewPlan}
-          className="group ml-1 inline-flex h-[38px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-          style={{
-            background: T.text,
-            color: 'var(--edge-bg, #0A0A0C)',
-            fontFamily: T.sans,
-            boxShadow: '0 8px 22px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 12px 28px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))')}
-          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 8px 22px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))')}
-        >
-          <Plus size={15} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
-          {weekly ? 'New week' : 'New plan'}
-        </button>
+          {title}
+        </h1>
+        {pair && (
+          <motion.span
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={SPRING}
+            className="rounded-lg px-2.5 py-1 text-[15px] font-semibold tabular-nums"
+            style={{
+              fontFamily: T.sans,
+              background: `rgba(${T.accRgb},0.10)`,
+              border: `1px solid rgba(${T.accRgb},0.22)`,
+              color: T.acc,
+            }}
+          >
+            {pair}
+          </motion.span>
+        )}
       </div>
     </div>
   );

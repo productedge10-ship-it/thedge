@@ -7,7 +7,7 @@ import {
   Activity, AlertOctagon, BrainCircuit, Clock, CalendarDays, CheckCircle2,
   Crosshair, Flame, Layers, ShieldCheck, Target, TrendingUp, Wallet, XCircle, Zap,
 } from 'lucide-react';
-import { P, F } from './theme';
+import { P, F, mix } from './theme';
 import { EMOTION_COLOR, EMOTION_LABEL, r1, r2, signed, sum } from '../data';
 
 /* ==================================================================
@@ -63,7 +63,7 @@ const Sub = ({ children }) => (
    зʼявляється тонка рамка. Без цього список виглядав як картинка —
    людина вела по ньому мишею, нічого не відбувалось, і ставало
    незрозуміло, чи це взагалі жива таблиця. */
-function Row({ label, sub, value, color = P.acc, barColor, share = 0, index }) {
+function Row({ label, sub, value, color = P.acc, barColor, share = 0, index, pill }) {
   const [hover, setHover] = useState(false);
   const bar = barColor || color;
 
@@ -74,7 +74,7 @@ function Row({ label, sub, value, color = P.acc, barColor, share = 0, index }) {
       onMouseLeave={() => setHover(false)}
       style={{
         position: 'relative', borderRadius: 9, overflow: 'hidden',
-        border: `1px solid ${hover ? `${bar}3d` : 'transparent'}`,
+        border: `1px solid ${hover ? mix(bar, 24) : 'transparent'}`,
         transition: 'border-color .2s',
       }}
     >
@@ -82,7 +82,7 @@ function Row({ label, sub, value, color = P.acc, barColor, share = 0, index }) {
         aria-hidden
         style={{
           position: 'absolute', inset: 0, width: `${Math.max(2, share * 100)}%`,
-          background: `${bar}${hover ? '33' : '1f'}`,
+          background: mix(bar, hover ? 20 : 12),
           transition: 'width .5s cubic-bezier(.22,1,.36,1), background .2s',
         }}
       />
@@ -93,12 +93,23 @@ function Row({ label, sub, value, color = P.acc, barColor, share = 0, index }) {
           </span>
         )}
         <span style={{ minWidth: 0, flex: 1 }}>
-          <span style={{ display: 'block', fontFamily: F.sans, fontSize: 12.5, color: hover ? '#fff' : P.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color .2s' }}>
+          <span style={{ display: 'block', fontFamily: F.sans, fontSize: 12.5, color: hover ? 'var(--edge-text)' : P.text2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color .2s' }}>
             {label}
           </span>
           {sub && <span style={{ display: 'block', fontFamily: F.sans, fontSize: 10.5, color: hover ? P.text4 : P.text5, marginTop: 2, transition: 'color .2s' }}>{sub}</span>}
         </span>
-        <b style={{ fontFamily: F.mono, fontSize: 12.5, fontWeight: 700, color, flexShrink: 0 }}>{value}</b>
+        <b
+          style={{
+            fontFamily: F.mono, fontSize: 12.5, fontWeight: 700, color, flexShrink: 0,
+            ...(pill && {
+              padding: '3px 9px', borderRadius: 8,
+              background: mix(color, 12),
+              border: `1px solid ${mix(color, 30)}`,
+            }),
+          }}
+        >
+          {value}
+        </b>
       </div>
     </div>
   );
@@ -118,12 +129,12 @@ function StreakRow({ label, value, color, sub }) {
       style={{
         display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10,
         padding: '7px 9px', marginInline: -9, borderRadius: 9,
-        background: hover ? `${color}14` : 'transparent',
+        background: hover ? mix(color, 8) : 'transparent',
         transition: 'background .18s',
       }}
     >
       <span style={{ minWidth: 0 }}>
-        <span style={{ display: 'block', fontFamily: F.sans, fontSize: 12, color: hover ? '#fff' : P.text3, transition: 'color .18s' }}>{label}</span>
+        <span style={{ display: 'block', fontFamily: F.sans, fontSize: 12, color: hover ? 'var(--edge-text)' : P.text3, transition: 'color .18s' }}>{label}</span>
         <span style={{ display: 'block', fontFamily: F.sans, fontSize: 10.5, color: hover ? P.text4 : P.text5, transition: 'color .18s' }}>{sub}</span>
       </span>
       <Num color={color} size={22}>{value}</Num>
@@ -143,8 +154,8 @@ function PlanTile({ Icon, label, value, n, color }) {
       onMouseLeave={() => setHover(false)}
       style={{
         flex: 1, padding: '11px 13px', borderRadius: 12,
-        background: `${color}${hover ? '1c' : '0d'}`,
-        border: `1px solid ${color}${hover ? '4d' : '26'}`,
+        background: mix(color, hover ? 11 : 5),
+        border: `1px solid ${mix(color, hover ? 30 : 15)}`,
         transition: 'background .2s, border-color .2s',
       }}
     >
@@ -171,7 +182,7 @@ const Empty = ({ children }) => (
 
 const tip = {
   contentStyle: {
-    background: '#0a0a0f', border: `1px solid ${P.line}`, borderRadius: 10,
+    background: 'var(--edge-sunken)', border: `1px solid ${P.line}`, borderRadius: 10,
     fontFamily: F.sans, fontSize: 12, padding: '8px 11px',
   },
   labelStyle: { color: P.text5, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' },
@@ -208,6 +219,10 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
         position: 'absolute', left: -6, right: -6, bottom: -6, height: 74,
         opacity: hover ? 1 : 0.62,
         transition: 'opacity .28s ease',
+        /* Лише верхній край кривої мʼяко гасне — щоб випадковий пік не
+           різав підпис над графіком; сам графік лишається читабельним. */
+        WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, #000 24%)',
+        maskImage: 'linear-gradient(180deg, transparent 0%, #000 24%)',
       }}
     >
       <ResponsiveContainer width="100%" height="100%">
@@ -222,7 +237,7 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
             />}
             <Line
               type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={false}
-              activeDot={{ r: 4, fill: color, stroke: '#0c0c11', strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: color, stroke: 'var(--edge-sunken)', strokeWidth: 2 }}
               isAnimationActive animationDuration={420}
             />
           </LineChart>
@@ -243,7 +258,7 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
             />}
             <Area
               type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={`url(#${gid})`}
-              activeDot={{ r: 4, fill: color, stroke: '#0c0c11', strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: color, stroke: 'var(--edge-sunken)', strokeWidth: 2 }}
               isAnimationActive animationDuration={520}
             />
           </AreaChart>
@@ -293,7 +308,7 @@ function KpiBody({ value, color, sub, spark, facts = [], w = 1, hover }) {
       <div
         style={{
           position: 'relative', flex: wide ? '0 0 auto' : 1, pointerEvents: 'none',
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10,
+          display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 7,
         }}
       >
         <Num color={color} size={34}>{value}</Num>
@@ -331,14 +346,14 @@ function Fact({ label, value, color = P.text2 }) {
       style={{
         display: 'flex', alignItems: 'baseline', gap: 8,
         padding: '4px 7px', marginInline: -7, borderRadius: 7,
-        background: hover ? '#ffffff0a' : 'transparent',
+        background: hover ? 'rgba(var(--edge-hair-rgb),0.04)' : 'transparent',
         transition: 'background .18s',
       }}
     >
       <span style={{ fontFamily: F.sans, fontSize: 11, color: hover ? P.text3 : P.text5, whiteSpace: 'nowrap', transition: 'color .18s' }}>
         {label}
       </span>
-      <span style={{ flex: 1, height: 1, background: hover ? '#ffffff1a' : '#ffffff0d', transition: 'background .18s' }} />
+      <span style={{ flex: 1, height: 1, background: hover ? 'rgba(var(--edge-hair-rgb),0.10)' : 'rgba(var(--edge-hair-rgb),0.05)', transition: 'background .18s' }} />
       <b style={{ fontFamily: F.mono, fontSize: 12.5, fontWeight: 700, color, whiteSpace: 'nowrap' }}>
         {value}
       </b>
@@ -378,7 +393,7 @@ export const WIDGETS = {
     hint: 'Підсумок за період і крива під ним',
     icon: TrendingUp,
     group: 'Числа',
-    tone: '#2fbf8f',
+    tone: 'var(--edge-ok)',
     shape: 'spark',
     defaultW: 1, defaultH: 1,
     options: {
@@ -410,7 +425,7 @@ export const WIDGETS = {
     hint: 'Частка виграшних угод',
     icon: Target,
     group: 'Числа',
-    tone: '#8b7cff',
+    tone: 'var(--edge-acc)',
     shape: 'ring',
     defaultW: 1, defaultH: 1,
     options: {
@@ -429,7 +444,7 @@ export const WIDGETS = {
         sub={o.sub === 'off' ? null
           : o.sub === 'be' ? `${s.be.length} у беззбиток`
             : `${s.wins.length}W · ${s.losses.length}L`}
-        spark={<Spark id={id} data={s.byMonth} dataKey="wr" labelKey="key" name="Вінрейт" unit="%" color={P.acc} view={o.spark} hover={hover} tip={o.tip !== 'off'} />}
+        spark={<Spark id={id} data={s.wrCurve} dataKey="wr" labelKey="date" name="Вінрейт" unit="%" color={P.acc} view={o.spark} hover={hover} tip={o.tip !== 'off'} />}
         w={w}
         hover={hover}
         facts={[['Виграшів', String(s.wins.length), P.ok], ['Програшів', String(s.losses.length), P.bad], ['У беззбиток', String(s.be.length)], ['Смуга', String(s.bestW), P.ok]]}
@@ -442,7 +457,7 @@ export const WIDGETS = {
     hint: 'Скільки зароблено на кожну втрачену одиницю',
     icon: Activity,
     group: 'Числа',
-    tone: '#a78bfa',
+    tone: 'var(--edge-acc)',
     shape: 'spark',
     defaultW: 1, defaultH: 1,
     options: {
@@ -457,11 +472,11 @@ export const WIDGETS = {
     render: ({ s, o, id, w, hover }) => (
       <KpiBody
         value={r2(s.pf)}
-        color="#a78bfa"
+        color="var(--edge-acc)"
         sub={o.sub === 'off' ? null
           : o.sub === 'dd' ? `Макс. просадка ${r1(s.maxDD)}R`
             : `+${r1(s.gross)} / −${r1(s.grossLoss)}`}
-        spark={<Spark id={id} data={s.byMonth} dataKey="net" labelKey="key" name="Чистий R" color="#a78bfa" view={o.spark} hover={hover} tip={o.tip !== 'off'} />}
+        spark={<Spark id={id} data={s.pfCurve} dataKey="net" labelKey="date" name="Профіт-фактор" color="var(--edge-acc)" view={o.spark} hover={hover} tip={o.tip !== 'off'} />}
         w={w}
         hover={hover}
         facts={[['Прибуток', `+${r1(s.gross)}R`, P.ok], ['Збитки', `−${r1(s.grossLoss)}R`, P.bad], ['Відновлення', `×${r2(s.recovery)}`], ['Просадка', `${r1(s.maxDD)}R`, P.bad]]}
@@ -474,7 +489,7 @@ export const WIDGETS = {
     hint: 'Скільки коштували угоди на емоціях і з порушеннями',
     icon: Flame,
     group: 'Числа',
-    tone: '#ff7b7b',
+    tone: 'var(--edge-bad)',
     shape: 'dip',
     defaultW: 1, defaultH: 1,
     options: {
@@ -506,7 +521,7 @@ export const WIDGETS = {
     hint: 'Скільки в середньому приносить одна угода',
     icon: Zap,
     group: 'Числа',
-    tone: '#f5a33b',
+    tone: 'var(--edge-warn)',
     shape: 'number',
     defaultW: 1, defaultH: 1,
     options: {
@@ -536,9 +551,12 @@ export const WIDGETS = {
     hint: 'Найдовші смуги виграшів, програшів і чистих угод',
     icon: Layers,
     group: 'Числа',
-    tone: '#5bc8ff',
+    tone: 'var(--edge-info)',
     shape: 'streak',
-    defaultW: 1, defaultH: 1,
+    /* Три рядки не влазять у одну клітинку (звідси й minH): без
+       нього дошка дозволяла зберегти h:1, і плитку доводилось
+       читати обрізаною по обидва краї. */
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {},
     render: ({ s }) => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 122, justifyContent: 'center' }}>
@@ -560,7 +578,7 @@ export const WIDGETS = {
     hint: 'Накопичений результат у R за весь період',
     icon: TrendingUp,
     group: 'Графіки',
-    tone: '#8b7cff',
+    tone: 'var(--edge-acc)',
     shape: 'curve',
     defaultW: 3, defaultH: 2,
     options: {
@@ -606,7 +624,7 @@ export const WIDGETS = {
     hint: 'Скільки платить кожна торгова сесія',
     icon: Clock,
     group: 'Графіки',
-    tone: '#4ecdc4',
+    tone: 'var(--edge-ok)',
     shape: 'bars',
     defaultW: 1, defaultH: 1,
     options: {
@@ -664,7 +682,7 @@ export const WIDGETS = {
     hint: 'У які дні торгівля приносить найбільше',
     icon: CalendarDays,
     group: 'Графіки',
-    tone: '#b3a8ff',
+    tone: 'var(--edge-acc)',
     shape: 'bars',
     defaultW: 1, defaultH: 1,
     options: {
@@ -701,9 +719,18 @@ export const WIDGETS = {
     hint: 'Дві криві: угоди за планом і повз нього',
     icon: ShieldCheck,
     group: 'Графіки',
-    tone: '#2fbf8f',
+    tone: 'var(--edge-ok)',
     shape: 'split',
-    defaultW: 1, defaultH: 1,
+    /* Закріплений — трійка (plan/emotions/mistakes) виведена в окремий
+       рядок рівними третинами, а не звичайну сітку чвертей. Ознака
+       на самому віджеті, а не в окремому списку id: список id колись
+       уже зіткнувся з тим, що інший реєстр (perf/widgets.jsx) має
+       свій widget з тим самим ключем 'emotions' і випадково ховав
+       його з бібліотеки Перформансу. */
+    pinned: true,
+    /* Дві плитки й крива під ними не влазять у h:1 — крива просто
+       ставала недоступною без прокрутки. */
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       chart: { label: 'Крива', choices: [['on', 'Показати'], ['off', 'Тільки цифри']], def: 'on' },
@@ -732,27 +759,30 @@ export const WIDGETS = {
           </div>
 
           {o.chart === 'on' && data.length > 0 && (
-            <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
-              <ResponsiveContainer>
-                <AreaChart data={data} margin={{ top: 6, right: 4, left: -26, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="ov-pf" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={P.ok} stopOpacity={0.35} />
-                      <stop offset="100%" stopColor={P.ok} stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="ov-pb" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={P.bad} stopOpacity={0.35} />
-                      <stop offset="100%" stopColor={P.bad} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="step" {...ax} />
-                  <YAxis {...ax} />
-                  {o.tip !== 'off' && <RTooltip {...tip} formatter={(v, n) => [`${signed(v, 2)}R`, n]} />}
-                  <ReferenceLine y={0} stroke={P.line} />
-                  <Area type="monotone" dataKey="fa" name="По плану" stroke={P.ok} strokeWidth={2} fill="url(#ov-pf)" isAnimationActive animationDuration={420} />
-                  <Area type="monotone" dataKey="ba" name="Порушення" stroke={P.bad} strokeWidth={2} fill="url(#ov-pb)" isAnimationActive animationDuration={420} />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 6 }}>
+              <Cap>Накопичений PnL</Cap>
+              <div style={{ width: '100%', flex: 1, minHeight: 110 }}>
+                <ResponsiveContainer>
+                  <AreaChart data={data} margin={{ top: 6, right: 4, left: -26, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="ov-pf" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={P.ok} stopOpacity={0.35} />
+                        <stop offset="100%" stopColor={P.ok} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="ov-pb" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={P.bad} stopOpacity={0.35} />
+                        <stop offset="100%" stopColor={P.bad} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="step" {...ax} />
+                    <YAxis {...ax} />
+                    {o.tip !== 'off' && <RTooltip {...tip} formatter={(v, n) => [`${signed(v, 2)}R`, n]} />}
+                    <ReferenceLine y={0} stroke={P.line} />
+                    <Area type="monotone" dataKey="fa" name="По плану" stroke={P.ok} strokeWidth={2} fill="url(#ov-pf)" isAnimationActive animationDuration={420} />
+                    <Area type="monotone" dataKey="ba" name="Порушення" stroke={P.bad} strokeWidth={2} fill="url(#ov-pb)" isAnimationActive animationDuration={420} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
         </div>
@@ -767,9 +797,11 @@ export const WIDGETS = {
     hint: 'Найприбутковіші й найзбитковіші джерела разом',
     icon: Layers,
     group: 'Списки',
-    tone: '#7dd3fc',
+    tone: 'var(--edge-info)',
     shape: 'rows',
-    defaultW: 1, defaultH: 1,
+    /* За замовчуванням тут 6 рядків — у клітинку h:1 влазить два-три,
+       решта обрізалась би. */
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       count: countOption('6'),
       order: { label: 'Порядок', choices: [['best', 'Спершу найкращі'], ['worst', 'Спершу найгірші']], def: 'best' },
@@ -818,9 +850,13 @@ export const WIDGETS = {
     hint: 'Скільки приносить кожен емоційний стан',
     icon: BrainCircuit,
     group: 'Списки',
-    tone: '#c084fc',
+    tone: 'var(--edge-acc)',
     shape: 'rows',
-    defaultW: 1, defaultH: 1,
+    pinned: true,
+    /* Емоційних станів до чотирьох, і кожен — свій рядок: на h:2
+       чотири рядки й висновок під ними вже не влазять і зрізають
+       останній рядок тексту. */
+    defaultW: 1, defaultH: 3, minH: 3,
     options: {
       metric: { label: 'Показник', choices: [['avg', 'Середня угода'], ['net', 'Сума R'], ['wr', 'Вінрейт']], def: 'avg' },
       note: { label: 'Висновок', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
@@ -873,9 +909,10 @@ export const WIDGETS = {
     hint: 'Порушення, відсортовані за ціною',
     icon: AlertOctagon,
     group: 'Списки',
-    tone: '#ff7b7b',
+    tone: 'var(--edge-bad)',
     shape: 'rows',
-    defaultW: 1, defaultH: 1,
+    pinned: true,
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       count: countOption('5'),
       metric: { label: 'Сортувати за', choices: [['cost', 'Ціною'], ['count', 'Частотою']], def: 'cost' },
@@ -898,6 +935,7 @@ export const WIDGETS = {
               value={`${signed(m.cost)}R`}
               color={P.bad}
               share={Math.abs(m.cost) / max}
+              pill
             />
           ))}
         </div>
@@ -910,9 +948,9 @@ export const WIDGETS = {
     hint: 'Що приносить, а що забирає',
     icon: Wallet,
     group: 'Списки',
-    tone: '#34d399',
+    tone: 'var(--edge-ok)',
     shape: 'rows',
-    defaultW: 1, defaultH: 1,
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       count: countOption('5'),
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'net' },
@@ -948,9 +986,9 @@ export const WIDGETS = {
     hint: 'Які схеми входу справді платять',
     icon: Crosshair,
     group: 'Списки',
-    tone: '#fbbf24',
+    tone: 'var(--edge-warn)',
     shape: 'rows',
-    defaultW: 1, defaultH: 1,
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       count: countOption('5'),
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'net' },
@@ -986,7 +1024,7 @@ export const WIDGETS = {
     hint: 'Частка угод за планом і що буде без витоків',
     icon: ShieldCheck,
     group: 'Числа',
-    tone: '#2fbf8f',
+    tone: 'var(--edge-ok)',
     shape: 'gauge',
     defaultW: 1, defaultH: 1,
     options: {},
@@ -1034,11 +1072,22 @@ export const DEFAULT_LAYOUT = [
   { id: 'pf', h: 1, w: 1 },
   { id: 'tilt', h: 1, w: 1 },
   { id: 'equity', h: 2, w: 3 },
-  { id: 'sources', h: 1, w: 1 },
+  { id: 'sources', h: 2, w: 1 },
   { id: 'plan', h: 1, w: 1 },
-  { id: 'emotions', h: 1, w: 1 },
-  { id: 'mistakes', h: 1, w: 1 },
+  { id: 'emotions', h: 2, w: 1 },
+  { id: 'mistakes', h: 2, w: 1 },
 ];
+
+/* Ці три завжди йдуть трійкою внизу — рівними третинами на всю
+   ширину, а не чвертями з дошки. Чверть на три картки не ділиться,
+   тож замість вписувати їх у загальну сітку віджетів (де вони або
+   лишають порожню колонку, або їх висоти розходяться), дошка виводить
+   їх окремим фіксованим рядком: без перетягування й зміни розміру,
+   але з тими самими налаштуваннями. Позначені `pinned: true` прямо на
+   віджеті (див. вище) — а не окремим списком id, який завжди ризикує
+   зіткнутися з однойменним ключем в іншому реєстрі (perf/widgets.jsx
+   теж має свій 'emotions'). */
+export const PINNED_IDS = Object.keys(WIDGETS).filter((id) => WIDGETS[id].pinned);
 
 /* Значення опції за замовчуванням — з реєстру, а не з розкладки: так
    новий перемикач у вже збереженій дошці не стає undefined. */

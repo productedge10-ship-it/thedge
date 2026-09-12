@@ -32,7 +32,11 @@ import { Section, SectionAnchor, WriteBlock } from '../components/trading/PlanPr
 import WeeklyPlanView from '../components/trading/WeeklyPlanView';
 import { T, EASE, useEdgeFonts } from '../components/trading/planTheme';
 import useTerminalSkin from '../hooks/useTerminalSkin';
-import { WEEK_PAIR, mondayOf, weekRangeLabel, emptyWeekPlan, emptyAsset, checkIsWeekPlanEmpty } from '../lib/weekPlan';
+import {
+  WEEK_PAIR, mondayOf, weekRangeLabel, emptyWeekPlan, checkIsWeekPlanEmpty,
+  wasPlanTypeAskedToday, markPlanTypeAskedToday,
+} from '../lib/weekPlan';
+import PlanTypeModal from '../components/modals/PlanTypeModal';
 
 const SECTION_IDS = SECTIONS.map((s) => s.id);
 
@@ -108,6 +112,10 @@ export default function DailyPlan() {
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
   const [favorites, setFavorites] = useState([]);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+  /* У тижневому режимі та сама модалка обирає актив не для planData,
+     а для конкретного top-down розбору — потрібно памʼятати, для якого
+     саме, доки вона відкрита. */
+  const [tdaModalTargetId, setTdaModalTargetId] = useState(null);
   const [assetSearch, setAssetSearch] = useState('');
   const deferredSearch = useDeferredValue(assetSearch);
   const searchInputRef = useRef(null);
@@ -179,8 +187,65 @@ export default function DailyPlan() {
     setWeekHasUnsaved(true);
   }, []);
 
+  /* ==================================================================
+     Вибір типу плану: денний чи тижневий.
+
+     Два незалежні входи в ту саму модалку. «auto» — пн-вт пропонують
+     явний вибір замість тихого дефолту на денний, і лише перемикають
+     režим (жодних скидань — кожен масштаб сам вантажить свої дані).
+     «new» — свідомий клік на «New plan»: як і денний скид нижче, це
+     чистий старт, тому вибір тижневого тут заводить порожній тижневий
+     план, а не продовжує те, що вже було. */
+  const [isPlanTypeModalOpen, setIsPlanTypeModalOpen] = useState(false);
+  const [planTypeModalContext, setPlanTypeModalContext] = useState('auto');
+  const isPlanTypeModalOpenRef = useRef(false);
+  isPlanTypeModalOpenRef.current = isPlanTypeModalOpen;
+  const skipNextWeekLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (isInitialLoading || location.state?.mode) return;
+    const day = new Date().getDay();
+    if ((day === 1 || day === 2) && !wasPlanTypeAskedToday()) {
+      markPlanTypeAskedToday();
+      setPlanTypeModalContext('auto');
+      setTimeout(() => setIsPlanTypeModalOpen(true), 500);
+    }
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [isInitialLoading]);
+
+  const openPlanTypeModalForNewPlan = useCallback(() => {
+    setPlanTypeModalContext('new');
+    setIsPlanTypeModalOpen(true);
+  }, []);
+
+  const handleChoosePlanType = useCallback(async (type) => {
+    setIsPlanTypeModalOpen(false);
+    if (planTypeModalContext === 'auto') { setMode(type); return; }
+
+    if (type === 'daily') { await handleNewPlan(); return; }
+
+    /* «New plan» → тижневий: свідомо порожній тиждень, а не продовження
+       того, що вже лежить у weekData, — той самий принцип, що й у
+       handleNewPlan для денного. emptyWeekPlan сама заводить ОДИН новий
+       tdaAnalyses-розбір, тому нового блоку ніколи не буде «всередині»
+       вже існуючого. */
+    if (mode === 'daily' && canSaveToCloud && hasUnsavedChanges && !isSaving) await performSave();
+    const monday = mondayOf(todayLocal());
+    skipNextWeekLoadRef.current = true;
+    weekPlanIdRef.current = null;
+    setWeekMonday(monday);
+    setWeekData(emptyWeekPlan(monday));
+    setWeekHasUnsaved(false);
+    setWeekLastSaved(null);
+    setMode('weekly');
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [planTypeModalContext, mode, canSaveToCloud, hasUnsavedChanges, isSaving]);
+
   useEffect(() => {
     if (mode !== 'weekly' || !user?.id) return undefined;
+    /* «New plan» щойно завів свій порожній тиждень локально — не тягнемо
+       поверх нього те, що лежить у хмарі, інакше скидання й не було. */
+    if (skipNextWeekLoadRef.current) { skipNextWeekLoadRef.current = false; return undefined; }
     let alive = true;
     setIsWeekLoading(true);
 
@@ -215,7 +280,10 @@ export default function DailyPlan() {
 
     setIsWeekSaving(true);
     try {
-      const row = { date: weekMonday, pair: WEEK_PAIR, plan_type: 'weekly', narrative: raw.narrative || '', plan_data: raw };
+      /* Немає більше одного bias на весь тиждень — колонка narrative
+         для тижневих рядків лишається порожньою, план читають з
+         plan_data.tdaAnalyses, де в кожного розбору свій bias. */
+      const row = { date: weekMonday, pair: WEEK_PAIR, plan_type: 'weekly', narrative: '', plan_data: raw };
       let id = weekPlanIdRef.current;
 
       if (id) {
@@ -498,8 +566,14 @@ export default function DailyPlan() {
       /* Питаємо рівно один раз на добу: або запису ще немає, або він
          неповний, і ми ще не показували модалку сьогодні */
       if ((!saved || !diagComplete(saved)) && !wasShownToday()) {
-        markShownToday();
-        setTimeout(() => setIsQuizModalOpen(true), 700);
+        setTimeout(() => {
+          /* У пн-вт може саме зараз стояти питання «денний чи тижневий» —
+             дві модалки одна на одній не показуємо, квіз почекає до
+             наступного відкриття сторінки */
+          if (isPlanTypeModalOpenRef.current) return;
+          markShownToday();
+          setIsQuizModalOpen(true);
+        }, 700);
       }
     })();
   }, [user?.id, diagDate]);
@@ -707,16 +781,18 @@ export default function DailyPlan() {
     setTimeout(() => setAssetSearch(''), 300);
   };
 
-  /* Тижневий вибір активів — та сама модалка, але клік не закриває її
-     й не заміняє вибір, а додає/прибирає символ зі списку тижня. */
-  const toggleWeekAsset = useCallback((asset) => {
-    const symbol = asset.symbol;
-    const exists = weekData.assets.some((a) => a.pair === symbol);
-    const nextAssets = exists
-      ? weekData.assets.filter((a) => a.pair !== symbol)
-      : [...weekData.assets, emptyAsset(symbol)];
-    updateWeekData({ ...weekData, assets: nextAssets });
-  }, [weekData, updateWeekData]);
+  /* Той самий вибір активу, що й у денному плані, тільки пише не в
+     planData.pair, а в pair конкретного top-down розбору — того, чия
+     кнопка відкрила модалку. */
+  const handleTdaAssetSelect = (asset) => {
+    setIsAssetModalOpen(false);
+    updateWeekData({
+      ...weekData,
+      tdaAnalyses: weekData.tdaAnalyses.map((t) => (t.id === tdaModalTargetId ? { ...t, pair: asset.symbol } : t)),
+    });
+    setTdaModalTargetId(null);
+    setTimeout(() => setAssetSearch(''), 300);
+  };
 
   /* Стабільні посилання — інакше memo на блоках марна: нова функція
      на кожен рендер змушує перемальовувати всі картки з картинками */
@@ -741,7 +817,7 @@ export default function DailyPlan() {
           pair={mode === 'weekly' ? '' : planData.pair}
           mode={mode}
           onModeChange={setMode}
-          onNewPlan={mode === 'weekly' ? goThisWeek : handleNewPlan}
+          onNewPlan={mode === 'weekly' ? goThisWeek : openPlanTypeModalForNewPlan}
           onShare={handleShare}
           onOpenQuiz={() => setIsQuizModalOpen(true)}
           isQuizFullyCompleted={quizDone}
@@ -756,9 +832,8 @@ export default function DailyPlan() {
             onChange={updateWeekData}
             activeSection={activeSection}
             onNavigateSection={navigateToSection}
-            onOpenAssetModal={() => !isLoadingAssets && setIsAssetModalOpen(true)}
+            onOpenAssetModal={(id) => { if (!isLoadingAssets) { setTdaModalTargetId(id); setIsAssetModalOpen(true); } }}
             isLoadingAssets={isLoadingAssets}
-            onRemoveAsset={(pair) => toggleWeekAsset({ symbol: pair })}
           />
         )}
 
@@ -971,6 +1046,12 @@ export default function DailyPlan() {
         />
       )}
 
+      <PlanTypeModal
+        isOpen={isPlanTypeModalOpen}
+        onClose={() => setIsPlanTypeModalOpen(false)}
+        onChoose={handleChoosePlanType}
+      />
+
       <PreSessionQuiz
         isOpen={isQuizModalOpen}
         onClose={() => setIsQuizModalOpen(false)}
@@ -994,7 +1075,7 @@ export default function DailyPlan() {
         {isAssetModalOpen && (
           <AssetSearchModal
             isOpen={isAssetModalOpen}
-            onClose={() => setIsAssetModalOpen(false)}
+            onClose={() => { setIsAssetModalOpen(false); setTdaModalTargetId(null); }}
             searchInputRef={searchInputRef}
             assetSearch={assetSearch}
             setAssetSearch={setAssetSearch}
@@ -1007,7 +1088,10 @@ export default function DailyPlan() {
             handleToggleFavorite={handleToggleFavorite}
             favorites={favorites}
             {...(mode === 'weekly'
-              ? { multiple: true, selectedPairs: weekData.assets.map((a) => a.pair).filter(Boolean), handleAssetSelect: toggleWeekAsset }
+              ? {
+                handleAssetSelect: handleTdaAssetSelect,
+                assetPair: weekData.tdaAnalyses.find((t) => t.id === tdaModalTargetId)?.pair || '',
+              }
               : { handleAssetSelect: handleAssetSelectModal, assetPair: planData.pair })}
           />
         )}

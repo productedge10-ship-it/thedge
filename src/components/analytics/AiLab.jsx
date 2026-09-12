@@ -383,8 +383,12 @@ export default function AiLab({ s }) {
         КОУЧ
       </div>
 
-      {/* ---------- контент ---------- */}
-      <div style={{ position: 'relative', maxWidth: 1400, margin: '0 auto' }}>
+      {/* ---------- контент ----------
+          1400 було вужче за саму сторінку аналітики (max-w-[1800px]):
+          на 14" це непомітно, а на великому моніторі розділ виглядав
+          вузькою колонкою посеред власного фону на всю ширину. Тепер
+          межа та сама, що й у решти вкладок. */}
+      <div style={{ position: 'relative', maxWidth: 1800, margin: '0 auto' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26, flexWrap: 'wrap' }}>
           <div style={{ width: 34, height: 1, background: 'linear-gradient(90deg, transparent, #6c5ce7)' }} />
