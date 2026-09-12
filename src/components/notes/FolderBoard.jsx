@@ -57,7 +57,7 @@ const FolderIcon = ({ name, color, size = 20 }) => (
 );
 
 /* Акцент у темі — CSS-змінна, а не hex. Тому альфу до неї не можна
-   дописати рядком: `var(--edge-acc)8c` браузер просто викидає, і
+   дописати рядком: `rgba(var(--edge-acc-rgb),0.55)` браузер просто викидає, і
    замість напівпрозорого бордера виходить його відсутність. Саме так
    зникав ховер на пошуку й на картці «Нова папка». */
 const A = (a) => `rgba(${T.accRgb}, ${a})`;
@@ -148,9 +148,9 @@ function ActionBtn({ title, onClick, danger, active, d }) {
         borderRadius: 10,
         cursor: 'pointer',
         transition: 'all .16s',
-        background: danger && hov ? '#ff8f8f24' : active ? `${A(0.19)}` : on ? '#ffffff1a' : '#ffffff0d',
-        border: `1px solid ${danger && hov ? '#ff8f8f66' : active ? `${A(0.50)}` : on ? '#42424f' : '#2c2c38'}`,
-        color: danger && hov ? '#ff9d9d' : active ? '#b3a8ff' : on ? '#ffffff' : '#a5a3b3',
+        background: danger && hov ? 'rgba(var(--edge-bad-rgb),0.14)' : active ? `${A(0.19)}` : on ? 'rgba(var(--edge-hair-rgb),0.10)' : 'rgba(var(--edge-hair-rgb),0.05)',
+        border: `1px solid ${danger && hov ? 'rgba(var(--edge-bad-rgb),0.40)' : active ? `${A(0.50)}` : on ? 'var(--edge-line-hi)' : 'var(--edge-line-hi)'}`,
+        color: danger && hov ? 'var(--edge-bad)' : active ? 'var(--edge-acc)' : on ? 'var(--edge-text)' : 'var(--edge-text2)',
       }}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -166,7 +166,7 @@ function Actions({ pinned, onPin, onEdit, onDelete, style }) {
       <ActionBtn title={pinned ? 'Відкріпити' : 'Закріпити'} onClick={onPin} active={pinned} d={PATHS.pin} />
       <ActionBtn title="Перейменувати" onClick={onEdit} d={PATHS.pencil} />
       <ActionBtn title="Видалити" onClick={onDelete} danger d={PATHS.trash} />
-      <div style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5f5d6c', cursor: 'grab' }} title="Перетягнути">
+      <div style={{ width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--edge-text4)', cursor: 'grab' }} title="Перетягнути">
         <Grip />
       </div>
     </div>
@@ -195,11 +195,11 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
           overflow: 'hidden',
           padding: '20px 22px',
           borderRadius: 20,
-          background: `linear-gradient(165deg, ${hov ? '#16151f' : '#121218'}, #0b0b10)`,
-          border: `1px solid ${hov ? `${c}70` : '#20202a'}`,
+          background: `linear-gradient(165deg, ${hov ? 'var(--edge-surface)' : 'var(--edge-surface)'}, var(--edge-sunken))`,
+          border: `1px solid ${hov ? `${c}70` : 'var(--edge-line)'}`,
           cursor: 'pointer',
           transition: SPRING,
-          boxShadow: hov ? `0 28px 54px -24px ${c}80, 0 0 0 1px ${c}1f` : '0 14px 30px -22px #000000cc',
+          boxShadow: hov ? `0 28px 54px -24px ${c}80, 0 0 0 1px ${c}1f` : '0 14px 30px -22px var(--edge-panel-glow, rgba(0,0,0,0.80))',
           transform: dragging ? 'scale(.96) rotate(-1.4deg)' : hov ? 'translateY(-6px)' : 'none',
           opacity: dragging ? 0.5 : 1,
         }}
@@ -219,7 +219,7 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
             transition: 'all .24s',
           }}
         />
-        <div style={{ position: 'absolute', inset: '0 0 auto 0', height: 1, background: 'linear-gradient(90deg,transparent,#ffffff2e 30%,#ffffff2e 70%,transparent)' }} />
+        <div style={{ position: 'absolute', inset: '0 0 auto 0', height: 1, background: 'linear-gradient(90deg,transparent,rgba(var(--edge-hair-rgb),0.18) 30%,rgba(var(--edge-hair-rgb),0.18) 70%,transparent)' }} />
         <div
           style={{
             position: 'absolute',
@@ -246,15 +246,15 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
               width: 46,
               height: 46,
               borderRadius: 14,
-              background: hov ? `${c}26` : '#ffffff0a',
-              border: `1px solid ${hov ? `${c}5e` : '#26262f'}`,
-              boxShadow: hov ? `inset 0 1px 0 ${c}55` : 'inset 0 1px 0 #ffffff0f',
+              background: hov ? `${c}26` : 'rgba(var(--edge-hair-rgb),0.04)',
+              border: `1px solid ${hov ? `${c}5e` : 'var(--edge-line)'}`,
+              boxShadow: hov ? `inset 0 1px 0 ${c}55` : 'inset 0 1px 0 rgba(var(--edge-hair-rgb),0.06)',
               transition: 'all .22s',
             }}
           >
             {folder.icon
               ? <span className="text-[20px]">{folder.icon}</span>
-              : <FolderIcon name={iconOf(folder.id)} color={hov ? c : '#8f8da0'} />}
+              : <FolderIcon name={iconOf(folder.id)} color={hov ? c : 'var(--edge-text3)'} />}
           </div>
 
           {/* «Без папки» — не папка, а місце для решти записів: її
@@ -268,7 +268,7 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
               style={{
                 fontFamily: T.mono,
                 letterSpacing: '1.4px',
-                color: '#7d7b8e',
+                color: 'var(--edge-text3)',
                 opacity: hov ? 1 : 0,
                 transition: 'opacity .22s',
               }}
@@ -303,7 +303,7 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
                 letterSpacing: '1.7px',
                 textTransform: 'uppercase',
                 fontWeight: 700,
-                color: empty ? '#56545f' : `${c}ee`,
+                color: empty ? 'var(--edge-text4)' : `${c}ee`,
                 textShadow: empty ? 'none' : `0 0 14px ${c}55`,
               }}
             >
@@ -311,8 +311,8 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
             </div>
             {folder.pinned && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 99, background: `${A(0.14)}`, border: `1px solid ${A(0.30)}` }}>
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="#a99cff"><path d="M10 3h4v8l3 4v2H7v-2l3-4V3z" /></svg>
-                <span style={{ fontFamily: T.mono, fontSize: 8.5, letterSpacing: '1.2px', color: '#b3a8ff', textTransform: 'uppercase', fontWeight: 700 }}>Закріплено</span>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="var(--edge-acc)"><path d="M10 3h4v8l3 4v2H7v-2l3-4V3z" /></svg>
+                <span style={{ fontFamily: T.mono, fontSize: 8.5, letterSpacing: '1.2px', color: 'var(--edge-acc)', textTransform: 'uppercase', fontWeight: 700 }}>Закріплено</span>
               </div>
             )}
           </div>
@@ -323,7 +323,7 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
               fontFamily: T.display,
               fontSize: 21,
               fontWeight: 700,
-              color: '#ffffff',
+              color: 'var(--edge-text)',
               letterSpacing: '-0.6px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -332,7 +332,7 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
           >
             {folder.name}
           </div>
-          <div style={{ marginTop: 9, fontSize: 12.5, color: '#75738a', lineHeight: 1.5, height: 38, overflow: 'hidden', fontFamily: T.sans }}>
+          <div style={{ marginTop: 9, fontSize: 12.5, color: 'var(--edge-text3)', lineHeight: 1.5, height: 38, overflow: 'hidden', fontFamily: T.sans }}>
             {preview}
           </div>
 
@@ -347,7 +347,7 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
                 fontFamily: hov ? T.sans : T.mono,
                 fontSize: hov ? 11.5 : 10.5,
                 fontWeight: hov ? 700 : 400,
-                color: hov ? c : '#5b5967',
+                color: hov ? c : 'var(--edge-text4)',
                 transition: 'color .2s',
               }}
             >
@@ -383,8 +383,8 @@ function Row({ folder, count, preview, updated, color, dragging, plain, onOpen, 
         gap: 18,
         padding: '14px 18px',
         borderRadius: 15,
-        background: `linear-gradient(90deg, ${hov ? '#15141d' : '#101016'}, #0b0b10)`,
-        border: `1px solid ${hov ? `${c}5e` : '#1c1c25'}`,
+        background: `linear-gradient(90deg, ${hov ? 'var(--edge-surface)' : 'var(--edge-panel)'}, var(--edge-sunken))`,
+        border: `1px solid ${hov ? `${c}5e` : 'var(--edge-line)'}`,
         cursor: 'pointer',
         transition: SPRING,
         boxShadow: hov ? `0 16px 34px -22px ${c}99` : 'none',
@@ -403,35 +403,35 @@ function Row({ folder, count, preview, updated, color, dragging, plain, onOpen, 
           width: 40,
           height: 40,
           borderRadius: 12,
-          background: hov ? `${c}26` : '#ffffff0a',
-          border: `1px solid ${hov ? `${c}5e` : '#26262f'}`,
+          background: hov ? `${c}26` : 'rgba(var(--edge-hair-rgb),0.04)',
+          border: `1px solid ${hov ? `${c}5e` : 'var(--edge-line)'}`,
           transition: 'all .2s',
         }}
       >
         {folder.icon
           ? <span style={{ fontSize: 18 }}>{folder.icon}</span>
-          : <FolderIcon name={iconOf(folder.id)} color={hov ? c : '#8f8da0'} />}
+          : <FolderIcon name={iconOf(folder.id)} color={hov ? c : 'var(--edge-text3)'} />}
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ fontFamily: T.display, fontSize: 15.5, fontWeight: 600, color: '#ffffff', letterSpacing: '-0.3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontFamily: T.display, fontSize: 15.5, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {folder.name}
           </div>
           {folder.pinned && (
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="#a99cff" style={{ flex: 'none' }}><path d="M10 3h4v8l3 4v2H7v-2l3-4V3z" /></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--edge-acc)" style={{ flex: 'none' }}><path d="M10 3h4v8l3 4v2H7v-2l3-4V3z" /></svg>
           )}
         </div>
-        <div style={{ marginTop: 4, fontSize: 12, color: '#6d6b80', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: T.sans }}>
+        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--edge-text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: T.sans }}>
           {preview}
         </div>
       </div>
 
-      <div style={{ flex: 'none', width: 96, textAlign: 'right', fontFamily: T.mono, fontSize: 10.5, letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 700, color: empty ? '#56545f' : `${c}ee` }}>
+      <div style={{ flex: 'none', width: 96, textAlign: 'right', fontFamily: T.mono, fontSize: 10.5, letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 700, color: empty ? 'var(--edge-text4)' : `${c}ee` }}>
         {metaOf(count)}
       </div>
 
-      <div style={{ flex: 'none', width: 64, textAlign: 'right', fontFamily: T.mono, fontSize: 10.5, color: '#5b5967' }}>{updated}</div>
+      <div style={{ flex: 'none', width: 64, textAlign: 'right', fontFamily: T.mono, fontSize: 10.5, color: 'var(--edge-text4)' }}>{updated}</div>
 
       {plain ? (
         <div
@@ -444,7 +444,7 @@ function Row({ folder, count, preview, updated, color, dragging, plain, onOpen, 
             letterSpacing: '1.4px',
             textTransform: 'uppercase',
             fontWeight: 700,
-            color: '#7d7b8e',
+            color: 'var(--edge-text3)',
             opacity: hov ? 1 : 0,
             transition: 'opacity .22s',
           }}
@@ -491,7 +491,7 @@ function NewCard({ onClick, compact }) {
           gap: 14,
           padding: '14px 18px',
           borderRadius: 15,
-          border: `1.5px dashed ${hov ? `${A(0.55)}` : '#24242f'}`,
+          border: `1.5px dashed ${hov ? `${A(0.55)}` : 'var(--edge-line)'}`,
           background: hov ? `${A(0.07)}` : 'transparent',
           cursor: 'pointer',
           transition: 'all .2s',
@@ -506,15 +506,15 @@ function NewCard({ onClick, compact }) {
             width: 40,
             height: 40,
             borderRadius: 12,
-            background: hov ? `${A(0.17)}` : '#ffffff0a',
-            border: `1px solid ${hov ? `${A(0.44)}` : '#26262f'}`,
-            color: hov ? '#b3a8ff' : '#7c7a8a',
+            background: hov ? `${A(0.17)}` : 'rgba(var(--edge-hair-rgb),0.04)',
+            border: `1px solid ${hov ? `${A(0.44)}` : 'var(--edge-line)'}`,
+            color: hov ? 'var(--edge-acc)' : 'var(--edge-text3)',
             transition: 'all .2s',
           }}
         >
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>
         </div>
-        <div style={{ fontFamily: T.display, fontSize: 14, fontWeight: 600, color: '#9694a6' }}>Нова папка</div>
+        <div style={{ fontFamily: T.display, fontSize: 14, fontWeight: 600, color: 'var(--edge-text3)' }}>Нова папка</div>
       </div>
     );
   }
@@ -531,8 +531,8 @@ function NewCard({ onClick, compact }) {
         justifyContent: 'center',
         minHeight: 228,
         borderRadius: 20,
-        border: `1.5px dashed ${hov ? `${A(0.55)}` : '#24242f'}`,
-        background: hov ? `${A(0.07)}` : '#ffffff03',
+        border: `1.5px dashed ${hov ? `${A(0.55)}` : 'var(--edge-line)'}`,
+        background: hov ? `${A(0.07)}` : 'rgba(var(--edge-hair-rgb),0.01)',
         cursor: 'pointer',
         transition: SPRING,
         transform: `translateY(${hov ? '-4px' : '0'})`,
@@ -546,17 +546,17 @@ function NewCard({ onClick, compact }) {
           width: 48,
           height: 48,
           borderRadius: 15,
-          background: hov ? `${A(0.17)}` : '#ffffff0a',
-          border: `1px solid ${hov ? `${A(0.44)}` : '#26262f'}`,
-          color: hov ? '#b3a8ff' : '#7c7a8a',
-          boxShadow: 'inset 0 1px 0 #ffffff12',
+          background: hov ? `${A(0.17)}` : 'rgba(var(--edge-hair-rgb),0.04)',
+          border: `1px solid ${hov ? `${A(0.44)}` : 'var(--edge-line)'}`,
+          color: hov ? 'var(--edge-acc)' : 'var(--edge-text3)',
+          boxShadow: 'inset 0 1px 0 rgba(var(--edge-hair-rgb),0.07)',
           transition: 'all .22s',
         }}
       >
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>
       </div>
-      <div style={{ marginTop: 15, fontFamily: T.display, fontSize: 15, fontWeight: 600, color: '#9694a6' }}>Нова папка</div>
-      <div style={{ marginTop: 6, fontSize: 11.5, color: '#54525f', fontFamily: T.sans }}>або перетягни записи сюди</div>
+      <div style={{ marginTop: 15, fontFamily: T.display, fontSize: 15, fontWeight: 600, color: 'var(--edge-text3)' }}>Нова папка</div>
+      <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--edge-text4)', fontFamily: T.sans }}>або перетягни записи сюди</div>
     </div>
   );
 }
@@ -641,18 +641,18 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
           className="relative w-full rounded-[24px]"
           style={{
             maxWidth: 880,
-            background: `linear-gradient(170deg, ${color}14, #0e0e13 24%, #0b0b10)`,
-            border: '1px solid #23232e',
+            background: `linear-gradient(170deg, ${color}14, var(--edge-sunken) 24%, var(--edge-sunken))`,
+            border: '1px solid var(--edge-line)',
             boxShadow: `0 50px 110px -40px #000, 0 0 0 1px ${color}14`,
           }}
         >
           <span
             className="pointer-events-none absolute inset-x-0 top-0 h-px"
-            style={{ borderRadius: '24px 24px 0 0', background: `linear-gradient(90deg,transparent,${color}cc 30%,#8b7cffcc 70%,transparent)` }}
+            style={{ borderRadius: '24px 24px 0 0', background: `linear-gradient(90deg,transparent,${color}cc 30%,rgba(var(--edge-acc-rgb),0.80) 70%,transparent)` }}
           />
 
           {/* ─── шапка ─── */}
-          <div className="flex items-center justify-between gap-5 py-4 pl-[22px] pr-[18px]" style={{ borderBottom: '1px solid #1c1c25' }}>
+          <div className="flex items-center justify-between gap-5 py-4 pl-[22px] pr-[18px]" style={{ borderBottom: '1px solid var(--edge-line)' }}>
             <div className="flex min-w-0 items-center gap-3">
               <span
                 className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[11px] text-[16px]"
@@ -664,7 +664,7 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                 <div className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.2px', color }}>
                   {fresh ? 'Нова папка' : 'Папка'}
                 </div>
-                <div className="mt-1 truncate text-[12px]" style={{ fontFamily: T.sans, color: '#8b8998' }}>
+                <div className="mt-1 truncate text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                   {named ? 'зʼявиться в списку папок одразу' : 'дай назву, решта — за бажанням'}
                 </div>
               </div>
@@ -674,9 +674,9 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
               type="button"
               onClick={onClose}
               className="grid h-[34px] w-[34px] place-items-center rounded-[10px]"
-              style={{ background: '#ffffff08', border: '1px solid #23232e', color: '#b3b1c0', transition: 'all .16s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff16'; e.currentTarget.style.borderColor = '#3d3d4c'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#23232e'; }}
+              style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', transition: 'all .16s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.09)'; e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.03)'; e.currentTarget.style.borderColor = 'var(--edge-line)'; }}
             >
               <X size={15} strokeWidth={2} />
             </button>
@@ -685,14 +685,14 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
           <div className="grid" style={{ gridTemplateColumns: '1fr 268px' }}>
 
             {/* ─────────── поля ─────────── */}
-            <div className="min-w-0 px-[22px] pb-5 pt-[22px]" style={{ borderRight: '1px solid #1c1c25' }}>
+            <div className="min-w-0 px-[22px] pb-5 pt-[22px]" style={{ borderRight: '1px solid var(--edge-line)' }}>
               <DialogLabel>Назва</DialogLabel>
 
               <div
                 className="relative mt-2.5 flex h-14 items-center gap-3 rounded-[14px] px-4"
                 style={{
-                  background: nameFocus ? '#ffffff0d' : '#ffffff06',
-                  border: `1px solid ${nameFocus ? `${color}8c` : '#1e1e27'}`,
+                  background: nameFocus ? 'rgba(var(--edge-hair-rgb),0.05)' : 'rgba(var(--edge-hair-rgb),0.02)',
+                  border: `1px solid ${nameFocus ? `${color}8c` : 'var(--edge-line)'}`,
                   boxShadow: nameFocus ? `0 0 0 4px ${color}1f` : 'none',
                   transition: 'all .2s',
                 }}
@@ -715,17 +715,17 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                   onBlur={() => setNameFocus(false)}
                   placeholder="Розбори тижня"
                   className="min-w-0 flex-1 border-none bg-transparent outline-none"
-                  style={{ fontFamily: T.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.7px', color: '#ffffff' }}
+                  style={{ fontFamily: T.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.7px', color: 'var(--edge-text)' }}
                 />
 
-                <span className="shrink-0 text-[11px]" style={{ fontFamily: T.mono, color: named.length >= NAME_MAX ? '#ff9d9d' : '#6f6d7d' }}>
+                <span className="shrink-0 text-[11px]" style={{ fontFamily: T.mono, color: named.length >= NAME_MAX ? 'var(--edge-bad)' : 'var(--edge-text3)' }}>
                   {named ? `${named.length}/${NAME_MAX}` : ''}
                 </span>
 
               </div>
 
               <div className="mt-2.5 flex flex-wrap items-center gap-[7px]">
-                <span className="mr-0.5 text-[10px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: '#7d7b8e' }}>
+                <span className="mr-0.5 text-[10px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}>
                   Швидко
                 </span>
                 {PRESETS.map((p) => {
@@ -738,9 +738,9 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                       className="flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[12px] font-semibold"
                       style={{
                         fontFamily: T.sans,
-                        background: on ? `${color}2b` : '#ffffff08',
-                        border: `1px solid ${on ? `${color}80` : '#21212b'}`,
-                        color: on ? '#ffffff' : '#a9a7b8',
+                        background: on ? `${color}2b` : 'rgba(var(--edge-hair-rgb),0.03)',
+                        border: `1px solid ${on ? `${color}80` : 'var(--edge-line)'}`,
+                        color: on ? 'var(--edge-text)' : 'var(--edge-text2)',
                         transition: 'all .16s',
                       }}
                     >
@@ -763,7 +763,7 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                       className="h-[30px] w-[30px] rounded-[10px]"
                       style={{
                         background: `linear-gradient(160deg, ${col}, ${col}b3)`,
-                        border: `2px solid ${on ? '#ffffff' : 'transparent'}`,
+                        border: `2px solid ${on ? 'var(--edge-text)' : 'transparent'}`,
                         boxShadow: on ? `0 0 0 3px ${col}44, 0 6px 16px -6px ${col}cc` : 'none',
                         transform: `scale(${on ? 1 : 0.88})`,
                         transition: 'all .18s',
@@ -776,9 +776,9 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                   className="relative grid h-[30px] w-[30px] cursor-pointer place-items-center rounded-[10px]"
                   title="Свій колір"
                   style={{
-                    background: custom ? `${color}2b` : '#ffffff08',
-                    border: custom ? `1px solid ${color}cc` : '1px dashed #2d2d3a',
-                    color: custom ? color : '#6f6d7d',
+                    background: custom ? `${color}2b` : 'rgba(var(--edge-hair-rgb),0.03)',
+                    border: custom ? `1px solid ${color}cc` : '1px dashed var(--edge-line-hi)',
+                    color: custom ? color : 'var(--edge-text3)',
                     boxShadow: custom ? `0 0 0 3px ${color}33` : 'none',
                     transition: 'all .18s',
                   }}
@@ -793,7 +793,7 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                 </label>
 
                 {custom && (
-                  <span className="text-[11px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.6px', color: '#a3a1b2' }}>{color}</span>
+                  <span className="text-[11px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.6px', color: 'var(--edge-text2)' }}>{color}</span>
                 )}
               </div>
 
@@ -808,12 +808,12 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                   title="Без емодзі"
                   className="grid h-9 w-9 place-items-center rounded-[10px]"
                   style={{
-                    background: icon ? '#ffffff08' : `${color}24`,
-                    border: `1px solid ${icon ? '#22222c' : `${color}80`}`,
+                    background: icon ? 'rgba(var(--edge-hair-rgb),0.03)' : `${color}24`,
+                    border: `1px solid ${icon ? 'var(--edge-line)' : `${color}80`}`,
                     transition: 'all .16s',
                   }}
                 >
-                  <FolderIcon name="folder" color={icon ? '#8b8998' : color} size={16} />
+                  <FolderIcon name="folder" color={icon ? 'var(--edge-text3)' : color} size={16} />
                 </button>
 
                 {QUICK_ICONS.map((e) => {
@@ -825,8 +825,8 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                       onClick={() => setIcon(e)}
                       className="grid h-9 w-9 place-items-center rounded-[10px] text-[17px]"
                       style={{
-                        background: on ? `${color}24` : '#ffffff08',
-                        border: `1px solid ${on ? `${color}80` : '#22222c'}`,
+                        background: on ? `${color}24` : 'rgba(var(--edge-hair-rgb),0.03)',
+                        border: `1px solid ${on ? `${color}80` : 'var(--edge-line)'}`,
                         boxShadow: on ? `0 0 18px -8px ${color}cc` : 'none',
                         transition: 'all .16s',
                       }}
@@ -843,9 +843,9 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                     title="Усі емодзі"
                     className="grid h-9 w-9 place-items-center rounded-[10px]"
                     style={{
-                      background: emojiOpen ? `${color}2b` : '#ffffff08',
-                      border: emojiOpen ? `1px solid ${color}cc` : '1px dashed #2d2d3a',
-                      color: emojiOpen ? color : '#8b8998',
+                      background: emojiOpen ? `${color}2b` : 'rgba(var(--edge-hair-rgb),0.03)',
+                      border: emojiOpen ? `1px solid ${color}cc` : '1px dashed var(--edge-line-hi)',
+                      color: emojiOpen ? color : 'var(--edge-text3)',
                       transition: 'all .16s',
                     }}
                   >
@@ -869,7 +869,7 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                 </div>
 
                 {icon && (
-                  <span className="text-[12px]" style={{ fontFamily: T.sans, color: '#8b8998' }}>
+                  <span className="text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                     {icon} — так папку буде видно в списку
                   </span>
                 )}
@@ -881,9 +881,9 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                 onClick={() => setPinned((v) => !v)}
                 className="mt-2.5 flex h-[38px] w-full items-center gap-2.5 rounded-[11px] px-3"
                 style={{
-                  background: pinned ? `${color}14` : '#ffffff08',
-                  border: `1px solid ${pinned ? `${color}4d` : '#21212b'}`,
-                  color: pinned ? color : '#a3a1b2',
+                  background: pinned ? `${color}14` : 'rgba(var(--edge-hair-rgb),0.03)',
+                  border: `1px solid ${pinned ? `${color}4d` : 'var(--edge-line)'}`,
+                  color: pinned ? color : 'var(--edge-text2)',
                   transition: 'all .16s',
                 }}
               >
@@ -894,9 +894,9 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                   style={{
                     fontFamily: T.mono,
                     letterSpacing: '0.8px',
-                    background: pinned ? `${color}24` : '#ffffff0a',
-                    border: `1px solid ${pinned ? `${color}4d` : '#26262f'}`,
-                    color: pinned ? color : '#8b8998',
+                    background: pinned ? `${color}24` : 'rgba(var(--edge-hair-rgb),0.04)',
+                    border: `1px solid ${pinned ? `${color}4d` : 'var(--edge-line)'}`,
+                    color: pinned ? color : 'var(--edge-text3)',
                   }}
                 >
                   {pinned ? 'так' : 'ні'}
@@ -908,13 +908,13 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
             <div className="flex min-w-0 flex-col px-[18px] pb-5 pt-[22px]">
               <div className="flex items-baseline justify-between gap-2">
                 <DialogLabel>Прев&apos;ю</DialogLabel>
-                <span className="text-[11px]" style={{ fontFamily: T.sans, color: '#6f6d7d' }}>як у списку</span>
+                <span className="text-[11px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>як у списку</span>
               </div>
 
               <div
                 className="relative mt-2.5 overflow-hidden rounded-[20px] px-5 py-[18px]"
                 style={{
-                  background: 'linear-gradient(165deg,#141420,#0b0b10)',
+                  background: 'linear-gradient(165deg,var(--edge-surface),var(--edge-sunken))',
                   border: `1px solid ${color}5e`,
                   boxShadow: `0 24px 48px -24px ${color}80`,
                   transition: 'all .24s',
@@ -950,30 +950,30 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                 </div>
 
                 <div className="relative mt-[22px]">
-                  <div className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: '#7d7b8e' }}>
+                  <div className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: 'var(--edge-text3)' }}>
                     Порожня
                   </div>
                   <div
                     className="mt-2 truncate"
-                    style={{ fontFamily: T.display, fontSize: 19, fontWeight: 700, color: '#ffffff', letterSpacing: '-0.5px' }}
+                    style={{ fontFamily: T.display, fontSize: 19, fontWeight: 700, color: 'var(--edge-text)', letterSpacing: '-0.5px' }}
                   >
                     {named || 'Назва папки'}
                   </div>
-                  <div className="mt-2 overflow-hidden text-[12px]" style={{ fontFamily: T.sans, color: '#8b8998', lineHeight: 1.5, height: 36 }}>
+                  <div className="mt-2 overflow-hidden text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.5, height: 36 }}>
                     {named ? 'Порожня папка. Додай перший запис.' : 'Тут зʼявиться прев\u2019ю перших нотаток.'}
                   </div>
                   <div className="mt-3.5 flex items-center justify-end">
-                    <span className="text-[11px]" style={{ fontFamily: T.mono, color: '#7d7b8e' }}>щойно</span>
+                    <span className="text-[11px]" style={{ fontFamily: T.mono, color: 'var(--edge-text3)' }}>щойно</span>
                   </div>
                 </div>
               </div>
 
               <div
                 className="mt-3.5 flex items-start gap-2.5 rounded-[13px] px-3 py-3"
-                style={{ background: '#ffffff05', border: '1px solid #1e1e27' }}
+                style={{ background: 'rgba(var(--edge-hair-rgb),0.02)', border: '1px solid var(--edge-line)' }}
               >
                 <Sparkles size={14} strokeWidth={1.8} style={{ color, flex: 'none', marginTop: 1 }} />
-                <span className="min-w-0 flex-1 text-[12px]" style={{ fontFamily: T.sans, color: '#a3a1b2', lineHeight: 1.5 }}>
+                <span className="min-w-0 flex-1 text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)', lineHeight: 1.5 }}>
                   {pinned
                     ? 'Закріплена папка завжди перша в списку, незалежно від сортування.'
                     : 'Колір і іконка визначають, як папка виглядає в списку та на картках її нотаток.'}
@@ -985,14 +985,14 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
           {/* ─── дії ─── */}
           <div
             className="flex items-center justify-between gap-5 py-3.5 pl-[22px] pr-[18px]"
-            style={{ borderTop: '1px solid #1c1c25', background: '#0a0a0e', borderRadius: '0 0 24px 24px' }}
+            style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)', borderRadius: '0 0 24px 24px' }}
           >
             <div className="hidden items-center gap-3.5 sm:flex">
               {[{ k: 'esc', t: 'закрити' }].map(({ k, t }) => (
-                <span key={k} className="flex items-center gap-[7px] text-[12px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+                <span key={k} className="flex items-center gap-[7px] text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                   <span
                     className="rounded-md px-1.5 py-[3px]"
-                    style={{ fontFamily: T.mono, background: '#ffffff0d', border: '1px solid #26262f', color: '#a3a1b2' }}
+                    style={{ fontFamily: T.mono, background: 'rgba(var(--edge-hair-rgb),0.05)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)' }}
                   >
                     {k}
                   </span>
@@ -1006,9 +1006,9 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                 type="button"
                 onClick={onClose}
                 className="flex h-[42px] items-center rounded-xl px-[18px] text-[13px] font-semibold"
-                style={{ background: '#ffffff08', border: '1px solid #23232e', color: '#b3b1c0', fontFamily: T.sans, transition: 'all .16s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff14'; e.currentTarget.style.color = '#ffffff'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.color = '#b3b1c0'; }}
+                style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', fontFamily: T.sans, transition: 'all .16s' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.08)'; e.currentTarget.style.color = 'var(--edge-text)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.03)'; e.currentTarget.style.color = 'var(--edge-text2)'; }}
               >
                 Скасувати
               </button>
@@ -1023,7 +1023,7 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
 }
 
 const DialogLabel = ({ children }) => (
-  <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: '#9a98ab' }}>
+  <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}>
     {children}
   </span>
 );
@@ -1044,19 +1044,19 @@ function DialogCta({ onClick, disabled, label, fresh }) {
       onMouseLeave={() => setHov(false)}
       className="relative flex h-[42px] items-center gap-[9px] overflow-hidden rounded-xl px-5"
       style={{
-        background: `linear-gradient(180deg, ${on ? '#6355ff, #4a3bf5' : '#5546f8, #3f30e8'})`,
+        background: `linear-gradient(180deg, ${on ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
         boxShadow: on
-          ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 #ffffff4d`
-          : `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 #ffffff33`,
+          ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)`
+          : `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
         transform: `translateY(${on ? '-2px' : '0'})`,
         opacity: disabled ? 0.45 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: SPRING,
       }}
     >
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,#ffffff99,transparent)' }} />
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-hair-rgb),0.60),transparent)' }} />
       {fresh ? <Plus size={15} strokeWidth={2.4} style={{ color: '#fff' }} /> : <Check size={15} strokeWidth={2.3} style={{ color: '#fff' }} />}
-      <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: '#ffffff' }}>{label}</span>
+      <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>{label}</span>
     </button>
   );
 }
@@ -1147,7 +1147,7 @@ export default function FolderBoard({
   /* «Без папки» — не папка: її не перетягують, не перейменовують і
      не видаляють. Тому в неї свій колір і порожні дії. */
   const loose = looseCount > 0
-    ? { id: NO_FOLDER, name: 'Без папки', color: '#8a8a94', pinned: false }
+    ? { id: NO_FOLDER, name: 'Без папки', color: 'var(--edge-text3)', pinned: false }
     : null;
 
   const propsOf = (f, plain) => ({
@@ -1186,7 +1186,7 @@ export default function FolderBoard({
                   fontFamily: T.mono,
                   fontSize: 9,
                   letterSpacing: '1.8px',
-                  color: '#5d5b6a',
+                  color: 'var(--edge-text4)',
                   textTransform: 'uppercase',
                   fontWeight: 700,
                 }}

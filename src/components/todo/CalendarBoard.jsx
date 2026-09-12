@@ -119,7 +119,7 @@ export default function CalendarBoard({ tasks, sessions, onToggle, onEdit, onDel
                     className="grid h-6 min-w-[24px] place-items-center rounded-md px-1 text-[13px] font-bold tabular-nums transition-colors duration-200"
                     style={{
                       fontFamily: T.mono,
-                      color: c.isToday ? 'var(--edge-bg, #0A0A0C)' : c.inMonth ? T.text2 : T.text4,
+                      color: c.isToday ? 'var(--edge-on-acc, #0A0A0C)' : c.inMonth ? T.text2 : T.text4,
                       background: c.isToday ? T.acc : 'transparent',
                     }}
                   >

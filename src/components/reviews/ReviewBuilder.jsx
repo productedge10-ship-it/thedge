@@ -900,7 +900,7 @@ export default function ReviewBuilder({
                           size={12}
                           strokeWidth={3.4}
                           style={{
-                            color: 'var(--edge-bg, #0A0A0C)',
+                            color: 'var(--edge-on-acc, #0A0A0C)',
                             opacity: on ? 1 : 0,
                             transform: on ? 'scale(1)' : 'scale(0.5)',
                             transition: 'opacity .16s ease, transform .22s cubic-bezier(.22,1,.36,1)',
@@ -1135,7 +1135,7 @@ function Box({ on, tone }) {
         size={13}
         strokeWidth={3.4}
         style={{
-          color: 'var(--edge-bg, #0A0A0C)',
+          color: 'var(--edge-on-acc, #0A0A0C)',
           opacity: on ? 1 : 0,
           transform: on ? 'scale(1)' : 'scale(0.6)',
           transition: 'opacity .15s ease, transform .18s cubic-bezier(.22,1,.36,1)',

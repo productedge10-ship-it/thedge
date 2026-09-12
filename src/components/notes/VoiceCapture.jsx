@@ -158,11 +158,11 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
   return (
     <div
       className="w-[440px] overflow-hidden rounded-2xl"
-      style={{ background: '#14141b', border: '1px solid #2c2c38', boxShadow: `0 28px 60px -20px #000, 0 0 0 1px ${A(0.1)}` }}
+      style={{ background: 'var(--edge-surface)', border: '1px solid var(--edge-line-hi)', boxShadow: `0 28px 60px -20px #000, 0 0 0 1px ${A(0.1)}` }}
     >
       {/* ─── мова ─── */}
       <div className="flex items-center gap-2 px-3.5 pb-0 pt-3.5">
-        <span className="mr-1 text-[10px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: '#9a98ab' }}>
+        <span className="mr-1 text-[10px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}>
           Мова
         </span>
         {SPEECH_LANGS.map((l) => {
@@ -177,9 +177,9 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
               className="rounded-lg px-2.5 py-1 text-[11.5px] font-bold"
               style={{
                 fontFamily: T.mono,
-                background: on ? A(0.17) : '#ffffff08',
-                border: `1px solid ${on ? A(0.5) : '#22222c'}`,
-                color: on ? '#ffffff' : '#a3a1b2',
+                background: on ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.03)',
+                border: `1px solid ${on ? A(0.5) : 'var(--edge-line)'}`,
+                color: on ? 'var(--edge-text)' : 'var(--edge-text2)',
                 opacity: state === 'rec' && !on ? 0.4 : 1,
                 cursor: state === 'rec' ? 'not-allowed' : 'pointer',
                 transition: 'all .16s',
@@ -190,7 +190,7 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
           );
         })}
 
-        <span className="ml-auto text-[11.5px]" style={{ fontFamily: T.mono, color: state === 'rec' ? '#ff9d9d' : '#7d7b8e' }}>
+        <span className="ml-auto text-[11.5px]" style={{ fontFamily: T.mono, color: state === 'rec' ? 'var(--edge-bad)' : 'var(--edge-text3)' }}>
           {fmtDur(sec)}
         </span>
       </div>
@@ -203,10 +203,10 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
           disabled={busy}
           className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full"
           style={{
-            background: state === 'rec' ? 'linear-gradient(180deg,#ff6b6b,#e04141)' : 'linear-gradient(180deg,#5546f8,#3f30e8)',
+            background: state === 'rec' ? 'linear-gradient(180deg,var(--edge-bad),var(--edge-bad))' : 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))',
             boxShadow: state === 'rec'
-              ? `0 0 0 ${6 + level * 14}px rgba(224,65,65,0.14), 0 12px 26px -12px #e0414199`
-              : `0 12px 26px -12px ${A(0.8)}, inset 0 1px 0 #ffffff33`,
+              ? `0 0 0 ${6 + level * 14}px rgba(224,65,65,0.14), 0 12px 26px -12px rgba(var(--edge-bad-rgb),0.60)`
+              : `0 12px 26px -12px ${A(0.8)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
             transition: 'box-shadow .12s linear, background .2s',
             cursor: busy ? 'not-allowed' : 'pointer',
             opacity: busy ? 0.6 : 1,
@@ -218,7 +218,7 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
         </button>
 
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-semibold" style={{ fontFamily: T.sans, color: '#e4e2ec' }}>
+          <div className="text-[13px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
             {state === 'rec' ? 'Слухаю…' : state === 'done' ? 'Готово' : 'Натисни і говори'}
           </div>
 
@@ -235,7 +235,7 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
                     flex: 1,
                     height: `${wave * 100}%`,
                     borderRadius: 99,
-                    background: state === 'rec' ? `rgba(255,107,107,${0.35 + wave * 0.65})` : '#22222c',
+                    background: state === 'rec' ? `rgba(255,107,107,${0.35 + wave * 0.65})` : 'var(--edge-line)',
                     transition: 'height .09s linear, background .2s',
                   }}
                 />
@@ -248,15 +248,15 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
       {/* ─── розшифровка ─── */}
       <div
         className="mx-3.5 mb-3.5 max-h-[168px] min-h-[86px] overflow-auto rounded-[14px] px-3.5 py-3"
-        style={{ background: '#ffffff05', border: '1px solid #1e1e27' }}
+        style={{ background: 'rgba(var(--edge-hair-rgb),0.02)', border: '1px solid var(--edge-line)' }}
       >
         {full ? (
-          <span style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.65, color: '#eceaf4' }}>
+          <span style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.65, color: 'var(--edge-text)' }}>
             {text}
-            {partial && <span style={{ color: '#8b8998' }}> {partial}</span>}
+            {partial && <span style={{ color: 'var(--edge-text3)' }}> {partial}</span>}
           </span>
         ) : (
-          <span className="flex items-center gap-2 text-[13px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+          <span className="flex items-center gap-2 text-[13px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
             {state === 'rec'
               ? <><Loader2 size={13} className="animate-spin" /> чекаю на голос…</>
               : canHear
@@ -267,13 +267,13 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
       </div>
 
       {err && (
-        <div className="mx-3.5 mb-3.5 rounded-[10px] px-3 py-2 text-[12px]" style={{ background: '#ff8f8f14', border: '1px solid #ff8f8f3d', color: '#ff9d9d', fontFamily: T.sans }}>
+        <div className="mx-3.5 mb-3.5 rounded-[10px] px-3 py-2 text-[12px]" style={{ background: 'rgba(var(--edge-bad-rgb),0.08)', border: '1px solid rgba(var(--edge-bad-rgb),0.24)', color: 'var(--edge-bad)', fontFamily: T.sans }}>
           {err}
         </div>
       )}
 
       {/* ─── дії ─── */}
-      <div className="flex items-center gap-2 px-3.5 pb-3.5" style={{ borderTop: '1px solid #1c1c25', paddingTop: 12 }}>
+      <div className="flex items-center gap-2 px-3.5 pb-3.5" style={{ borderTop: '1px solid var(--edge-line)', paddingTop: 12 }}>
         {state === 'done' ? (
           <>
             <button
@@ -281,7 +281,7 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
               onClick={reset}
               title="Записати ще раз"
               className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]"
-              style={{ background: '#ffffff08', border: '1px solid #22222c', color: '#a3a1b2' }}
+              style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)' }}
             >
               <Trash2 size={14} strokeWidth={1.9} />
             </button>
@@ -292,7 +292,7 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
                 onClick={() => onAttach(clip)}
                 disabled={busy}
                 className="flex h-9 items-center gap-2 rounded-[10px] px-3 text-[12.5px] font-semibold"
-                style={{ background: '#ffffff08', border: '1px solid #22222c', color: '#c2c0ce', fontFamily: T.sans, opacity: busy ? 0.5 : 1 }}
+                style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', fontFamily: T.sans, opacity: busy ? 0.5 : 1 }}
               >
                 {busy ? <Loader2 size={13} className="animate-spin" /> : <AudioLines size={13} strokeWidth={1.9} />}
                 Додати голосове
@@ -305,9 +305,9 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
               disabled={!full}
               className="ml-auto flex h-9 items-center gap-2 rounded-[10px] px-3.5 text-[12.5px] font-bold"
               style={{
-                background: full ? 'linear-gradient(180deg,#5546f8,#3f30e8)' : '#ffffff08',
-                border: full ? 'none' : '1px solid #22222c',
-                color: full ? '#ffffff' : '#6f6d7d',
+                background: full ? 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))' : 'rgba(var(--edge-hair-rgb),0.03)',
+                border: full ? 'none' : '1px solid var(--edge-line)',
+                color: full ? 'var(--edge-text)' : 'var(--edge-text3)',
                 fontFamily: T.sans,
                 cursor: full ? 'pointer' : 'not-allowed',
               }}
@@ -318,14 +318,14 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
           </>
         ) : (
           <>
-            <span className="text-[11.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+            <span className="text-[11.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
               {state === 'rec' ? 'Натисни квадрат, коли договориш' : 'Текст і голос беруться одночасно'}
             </span>
             <button
               type="button"
               onClick={onClose}
               className="ml-auto flex h-9 items-center rounded-[10px] px-3 text-[12.5px] font-semibold"
-              style={{ background: '#ffffff08', border: '1px solid #22222c', color: '#a3a1b2', fontFamily: T.sans }}
+              style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', fontFamily: T.sans }}
             >
               Закрити
             </button>

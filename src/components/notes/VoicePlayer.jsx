@@ -108,21 +108,21 @@ export default function VoicePlayer({ src, sec, label, color = T.acc }) {
         className="grid h-10 w-10 shrink-0 place-items-center rounded-full"
         style={{
           background: `linear-gradient(180deg, ${color}, ${color}c4)`,
-          boxShadow: `0 10px 22px -12px ${color}, inset 0 1px 0 #ffffff33`,
+          boxShadow: `0 10px 22px -12px ${color}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
           transition: 'transform .16s',
         }}
         onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.04)')}
         onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
       >
         {playing
-          ? <Pause size={16} strokeWidth={2.4} style={{ color: '#0b0b10' }} />
-          : <Play size={16} strokeWidth={2.4} style={{ color: '#0b0b10', marginLeft: 2 }} />}
+          ? <Pause size={16} strokeWidth={2.4} style={{ color: 'var(--edge-sunken)' }} />
+          : <Play size={16} strokeWidth={2.4} style={{ color: 'var(--edge-sunken)', marginLeft: 2 }} />}
       </button>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="truncate text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: '#e4e2ec' }}>{label}</span>
-          <span className="ml-auto shrink-0 text-[11px]" style={{ fontFamily: T.mono, color: '#8b8998' }}>
+          <span className="truncate text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>{label}</span>
+          <span className="ml-auto shrink-0 text-[11px]" style={{ fontFamily: T.mono, color: 'var(--edge-text3)' }}>
             {fmtDur(at)} / {fmtDur(dur)}
           </span>
         </div>
@@ -143,7 +143,7 @@ export default function VoicePlayer({ src, sec, label, color = T.acc }) {
                   flex: 1,
                   height: `${Math.round(v * 100)}%`,
                   borderRadius: 99,
-                  background: played ? color : '#2a2a35',
+                  background: played ? color : 'var(--edge-line)',
                   opacity: played ? 1 : 0.7,
                   transition: 'background .12s linear',
                 }}
@@ -161,9 +161,9 @@ export default function VoicePlayer({ src, sec, label, color = T.acc }) {
           className="rounded-md px-1.5 py-[3px] text-[10.5px] font-bold"
           style={{
             fontFamily: T.mono,
-            background: speed === 1 ? '#ffffff0a' : `${color}24`,
-            border: `1px solid ${speed === 1 ? '#26262f' : `${color}4d`}`,
-            color: speed === 1 ? '#8b8998' : color,
+            background: speed === 1 ? 'rgba(var(--edge-hair-rgb),0.04)' : `${color}24`,
+            border: `1px solid ${speed === 1 ? 'var(--edge-line)' : `${color}4d`}`,
+            color: speed === 1 ? 'var(--edge-text3)' : color,
           }}
         >
           {speed}×
@@ -174,9 +174,9 @@ export default function VoicePlayer({ src, sec, label, color = T.acc }) {
           download
           title="Завантажити"
           className="grid h-6 w-6 place-items-center rounded-md"
-          style={{ color: '#6f6d7d' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#c2c0ce')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#6f6d7d')}
+          style={{ color: 'var(--edge-text3)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--edge-text2)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--edge-text3)')}
         >
           <Download size={12} strokeWidth={2} />
         </a>

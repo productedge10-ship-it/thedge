@@ -429,7 +429,7 @@ export default function BacktestSession() {
                 <button
                   onClick={() => removeTrade(confirm.id)}
                   className="h-11 flex-1 rounded-xl text-[14px] font-bold"
-                  style={{ background: T.bad, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+                  style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
                   Видалити
                 </button>

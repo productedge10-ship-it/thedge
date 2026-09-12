@@ -106,8 +106,8 @@ ${JSON.stringify(brief)}
     >
       <div className="max-h-[330px] overflow-y-auto flex flex-col gap-3 pr-1 custom-scrollbar">
         {messages.length === 0 && (
-          <div className="text-center text-[#7A7A85] p-[14px_8px_20px]">
-            <BrainCircuit size={30} className="text-[#33333A] mb-[10px] mx-auto" />
+          <div className="text-center text-[var(--edge-text3)] p-[14px_8px_20px]">
+            <BrainCircuit size={30} className="text-[var(--edge-line-hi)] mb-[10px] mx-auto" />
             <p className="text-[12.5px] leading-[1.6] m-0">
               Я бачу всі {stats.trades.length} угод: емоції, помилки, сесії, час утримання.
               Питай про будь-що — відповім цифрами з твого журналу, а не загальними словами.
@@ -115,12 +115,12 @@ ${JSON.stringify(brief)}
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={`text-[13px] leading-[1.62] rounded-xl p-[12px_14px] ${m.role === 'user' ? 'bg-[#221E3D] text-[#FAFAFA] self-end max-w-[92%]' : 'bg-[var(--edge-surface-hi)] text-[#B4B4BD] shadow-[inset_0_0_0_1px_#232328]'}`}>
+          <div key={i} className={`text-[13px] leading-[1.62] rounded-xl p-[12px_14px] ${m.role === 'user' ? 'bg-[#221E3D] text-[var(--edge-text)] self-end max-w-[92%]' : 'bg-[var(--edge-surface-hi)] text-[var(--edge-text2)] shadow-[inset_0_0_0_1px_var(--edge-line)]'}`}>
             {m.role === 'ai' && <span className="block text-[9.5px] tracking-[0.13em] uppercase text-[#fbbf24] mb-[7px]">Психолог{m.local ? ' · офлайн' : ''}</span>}
             {m.content.split('\n').filter(Boolean).map((p, j) => <p key={j} className="mb-2 last:mb-0">{p}</p>)}
           </div>
         ))}
-        {busy && <div className="flex items-center gap-[9px] text-[#7A7A85] text-[12px] bg-[var(--edge-surface-hi)] shadow-[inset_0_0_0_1px_#232328] rounded-xl p-[12px_14px]"><Loader2 size={14} className="animate-spin" /> Читаю журнал…</div>}
+        {busy && <div className="flex items-center gap-[9px] text-[var(--edge-text3)] text-[12px] bg-[var(--edge-surface-hi)] shadow-[inset_0_0_0_1px_var(--edge-line)] rounded-xl p-[12px_14px]"><Loader2 size={14} className="animate-spin" /> Читаю журнал…</div>}
         <div ref={endRef} />
       </div>
 
@@ -130,26 +130,26 @@ ${JSON.stringify(brief)}
             key={c}
             onClick={() => ask(c)}
             disabled={busy}
-            className="text-[11.5px] px-[11px] py-[7px] rounded-[20px] text-[#7A7A85] shadow-[inset_0_0_0_1px_#232328] transition-all hover:enabled:text-[#FAFAFA] hover:enabled:shadow-[inset_0_0_0_1px_#3A3A44] disabled:opacity-45 disabled:cursor-default"
+            className="text-[11.5px] px-[11px] py-[7px] rounded-[20px] text-[var(--edge-text3)] shadow-[inset_0_0_0_1px_var(--edge-line)] transition-all hover:enabled:text-[var(--edge-text)] hover:enabled:shadow-[inset_0_0_0_1px_#3A3A44] disabled:opacity-45 disabled:cursor-default"
           >
             {c}
           </button>
         ))}
       </div>
 
-      <div className="flex gap-2 items-center bg-[var(--edge-surface-hi)] border border-[#232328] rounded-xl p-[6px_6px_6px_13px]">
+      <div className="flex gap-2 items-center bg-[var(--edge-surface-hi)] border border-[var(--edge-line)] rounded-xl p-[6px_6px_6px_13px]">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') ask(input); }}
           placeholder="Напиши, що тебе турбує в торгівлі…"
-          className="flex-1 bg-transparent border-none outline-none text-[#FAFAFA] text-[13px]"
+          className="flex-1 bg-transparent border-none outline-none text-[var(--edge-text)] text-[13px]"
         />
         <button
           onClick={() => ask(input)}
           disabled={busy || !input.trim()}
           aria-label="Надіслати"
-          className="w-[34px] h-[34px] rounded-lg bg-[#8b7bff] text-[#0A0A0C] grid place-items-center disabled:bg-[#1C1C21] disabled:text-[#4A4A52] transition-colors"
+          className="w-[34px] h-[34px] rounded-lg bg-[var(--edge-acc)] text-[#0A0A0C] grid place-items-center disabled:bg-[#1C1C21] disabled:text-[var(--edge-text4)] transition-colors"
         >
           <Send size={15} />
         </button>

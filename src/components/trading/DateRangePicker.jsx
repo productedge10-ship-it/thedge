@@ -126,7 +126,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
               
               /* Базовий стиль для кожного дня */
               .trade-calendar .rdp-day { 
-                color: #d4d4d8; 
+                color: var(--edge-text2); 
                 border-radius: 10px; /* Красиві заокруглення за замовчуванням */
                 font-weight: 500; 
                 font-size: 13px; 
@@ -144,7 +144,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
               
               /* Загальний стиль для всіх вибраних днів (включаючи початок і кінець) */
               .trade-calendar .rdp-day_selected { 
-                background-color: #3b82f6 !important; 
+                background-color: var(--edge-info) !important; 
                 color: white !important; 
                 font-weight: 800; 
                 box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
@@ -153,7 +153,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
               /* Середина діапазону (між початком і кінцем) */
               .trade-calendar .rdp-day_range_middle { 
                 background-color: rgba(59, 130, 246, 0.15) !important; 
-                color: #93c5fd !important; 
+                color: var(--edge-info) !important; 
                 border-radius: 0 !important; /* Прибираємо заокруглення, щоб з'єднати в лінію */
                 box-shadow: none !important; /* Прибираємо світіння всередині діапазону */
               }
@@ -180,7 +180,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
 
               /* --- СТИЛІЗАЦІЯ ШАПКИ ТА НАВІГАЦІЇ --- */
               .trade-calendar .rdp-head_cell { 
-                color: #71717a; 
+                color: var(--edge-text3); 
                 font-size: 10px; 
                 font-weight: 800; 
                 text-transform: uppercase; 
@@ -198,7 +198,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
                 align-items: center; 
                 justify-content: center; 
                 transition: all 0.2s; 
-                color: #a1a1aa; 
+                color: var(--edge-text3); 
               }
               
               .trade-calendar .rdp-nav_button:hover { 

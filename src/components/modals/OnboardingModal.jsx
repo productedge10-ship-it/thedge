@@ -445,7 +445,7 @@ function Portrait({ p, onNext, onRestart }) {
           style={{
             fontFamily: T.sans,
             background: T.acc,
-            color: 'var(--edge-bg, #0A0A0C)',
+            color: 'var(--edge-on-acc, #0A0A0C)',
             boxShadow: `0 16px 40px -16px rgba(${T.accRgb},0.9)`,
           }}
         >
@@ -666,9 +666,9 @@ function Mt5Step({ onDone }) {
           className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-[13px] font-black"
           style={{
             fontFamily: T.sans,
-            background: 'linear-gradient(145deg, #1b4d8f, #0d2444)',
+            background: 'linear-gradient(145deg, var(--edge-info), rgba(var(--edge-info-rgb),0.12))',
             border: '1px solid rgba(96,165,250,0.3)',
-            color: '#cfe3ff',
+            color: 'rgba(var(--edge-info-rgb),0.16)',
             letterSpacing: '0.02em',
           }}
         >
@@ -775,7 +775,7 @@ function Mt5Step({ onDone }) {
             fontFamily: T.sans,
             background: ready ? T.acc : T.sunken,
             border: `1px solid ${ready ? 'transparent' : T.line}`,
-            color: ready ? 'var(--edge-bg, #0A0A0C)' : T.text4,
+            color: ready ? 'var(--edge-on-acc, #0A0A0C)' : T.text4,
             boxShadow: ready ? `0 16px 40px -16px rgba(${T.accRgb},0.9)` : 'none',
             cursor: ready ? 'pointer' : 'default',
           }}

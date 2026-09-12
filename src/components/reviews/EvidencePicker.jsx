@@ -42,7 +42,7 @@ function Row({ selected, onToggle, accent, children }) {
           border: `1.5px solid ${selected ? T.acc : T.lineHi}`,
         }}
       >
-        {selected && <Check size={12} strokeWidth={3.4} style={{ color: 'var(--edge-bg, #0A0A0C)' }} />}
+        {selected && <Check size={12} strokeWidth={3.4} style={{ color: 'var(--edge-on-acc, #0A0A0C)' }} />}
       </span>
 
       <div className="min-w-0 flex-1">{children}</div>

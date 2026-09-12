@@ -1,11 +1,10 @@
-import { Plus, X } from 'lucide-react';
 import { T } from '../../../lib/theme';
 
 /* ==================================================================
-   Таблиця.
-   Перший рядок — шапка. Клітинки редагуються прямо на місці,
-   рядки й колонки додаються кнопками по краях, зайві прибираються
-   хрестиком, який зʼявляється тільки при наведенні.
+   Таблиця (макет «System Section v2»).
+   Перший рядок — шапка (моноширинний лейбл). Рамок і заливки немає,
+   лише hairline під шапкою й між рядками. Колонка/рядок видаляються
+   хрестиком, що зʼявляється при наведенні на клітинку.
 ================================================================== */
 
 export default function TableBlock({ block, onChange }) {
@@ -23,34 +22,51 @@ export default function TableBlock({ block, onChange }) {
   const delRow = (i) => rows.length > 2 && onChange({ rows: rows.filter((_, x) => x !== i) });
   const delCol = (i) => cols > 1 && onChange({ rows: rows.map((r) => r.filter((_, x) => x !== i)) });
 
+  const delBtn = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: 18, height: 18, borderRadius: 5,
+    background: T.surfaceHi, border: `1px solid ${T.line}`, color: T.text4,
+    fontSize: 8, cursor: 'pointer',
+  };
+
   return (
     <div className="group/table w-full">
-      <div className="overflow-x-auto rounded-xl" style={{ border: `1px solid ${T.line}` }}>
-        <table className="w-full border-collapse">
+      <div className="overflow-x-auto">
+        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
           <tbody>
             {rows.map((row, r) => (
               <tr key={r} className="group/row">
                 {row.map((cell, c) => (
                   <td
                     key={c}
-                    className="relative p-0"
+                    className="group/cell relative"
                     style={{
-                      borderRight: c < cols - 1 ? `1px solid ${T.line}` : 'none',
-                      borderBottom: r < rows.length - 1 ? `1px solid ${T.line}` : 'none',
-                      background: r === 0 ? T.sunken : 'transparent',
+                      padding: 0,
+                      borderBottom: r === 0 ? `1px solid ${T.lineHi}` : `1px solid ${T.line}`,
                     }}
                   >
-                    {/* прибрати колонку */}
                     {r === 0 && cols > 1 && (
                       <button
                         onClick={() => delCol(c)}
                         title="Прибрати колонку"
-                        className="absolute -top-2 left-1/2 z-10 grid h-5 w-5 -translate-x-1/2 place-items-center rounded-md opacity-0 transition-opacity duration-200 group-hover/table:opacity-100"
-                        style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text4 }}
+                        className="absolute -top-[9px] right-1 z-10 opacity-0 transition-opacity duration-150 group-hover/cell:opacity-100"
+                        style={delBtn}
                         onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
                         onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
                       >
-                        <X size={10} strokeWidth={3} />
+                        ✕
+                      </button>
+                    )}
+                    {r > 0 && c === cols - 1 && rows.length > 2 && (
+                      <button
+                        onClick={() => delRow(r)}
+                        title="Прибрати рядок"
+                        className="absolute right-[-30px] top-1/2 z-10 -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover/row:opacity-100"
+                        style={{ ...delBtn, width: 19, height: 19 }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
+                      >
+                        ✕
                       </button>
                     )}
 
@@ -58,55 +74,56 @@ export default function TableBlock({ block, onChange }) {
                       value={cell}
                       onChange={(e) => setCell(r, c, e.target.value)}
                       placeholder={r === 0 ? 'Колонка' : '—'}
-                      className="w-full bg-transparent px-3 py-2.5 text-[14px] outline-none transition-colors duration-200"
-                      style={{
-                        fontFamily: T.sans,
-                        color: r === 0 ? T.text : T.text2,
-                        fontWeight: r === 0 ? 700 : 400,
-                      }}
+                      className="w-full bg-transparent outline-none transition-colors duration-150 placeholder:opacity-40"
+                      style={
+                        r === 0
+                          ? {
+                              fontFamily: T.mono,
+                              fontSize: 10,
+                              fontWeight: 400,
+                              letterSpacing: '0.22em',
+                              textTransform: 'uppercase',
+                              color: T.text4,
+                              padding: '0 16px 12px 0',
+                            }
+                          : {
+                              fontFamily: c === 0 ? T.mono : T.sans,
+                              fontSize: c === 0 ? 14 : 15.5,
+                              fontWeight: c === 0 ? 500 : 400,
+                              color: c === 0 ? T.text : T.text2,
+                              padding: '16px 16px 16px 0',
+                            }
+                      }
                       onFocus={(e) => (e.currentTarget.style.background = `rgba(${T.accRgb},0.05)`)}
                       onBlur={(e) => (e.currentTarget.style.background = 'transparent')}
                     />
                   </td>
                 ))}
-
-                {/* прибрати рядок */}
-                <td className="w-0 p-0">
-                  {r > 0 && rows.length > 2 && (
-                    <button
-                      onClick={() => delRow(r)}
-                      title="Прибрати рядок"
-                      className="absolute -ml-1 grid h-5 w-5 place-items-center rounded-md opacity-0 transition-opacity duration-200 group-hover/table:opacity-100"
-                      style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text4 }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
-                    >
-                      <X size={10} strokeWidth={3} />
-                    </button>
-                  )}
-                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <div className="mt-2 flex gap-2 opacity-0 transition-opacity duration-200 group-hover/table:opacity-100">
-        {[
-          { label: 'рядок', fn: addRow },
-          { label: 'колонку', fn: addCol },
-        ].map((a) => (
-          <button
-            key={a.label}
-            onClick={a.fn}
-            className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-semibold transition-colors duration-200"
-            style={{ fontFamily: T.sans, color: T.text4, border: `1px solid ${T.line}` }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = T.lineAcc; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
-          >
-            <Plus size={12} strokeWidth={2.8} /> {a.label}
-          </button>
-        ))}
+      <div className="mt-3.5 flex gap-2">
+        <button
+          onClick={addRow}
+          className="rounded-[9px] px-[14px] py-[8px] text-[12.5px] font-medium transition-colors duration-150"
+          style={{ fontFamily: T.sans, color: T.acc, background: `rgba(${T.accRgb},0.08)`, border: `1px solid rgba(${T.accRgb},0.28)` }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.16)`; e.currentTarget.style.color = '#b3a8ff'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.08)`; e.currentTarget.style.color = T.acc; }}
+        >
+          + рядок
+        </button>
+        <button
+          onClick={addCol}
+          className="rounded-[9px] px-[14px] py-[8px] text-[12.5px] transition-colors duration-150"
+          style={{ fontFamily: T.sans, fontWeight: 400, color: T.text4, background: 'transparent', border: `1px solid ${T.line}` }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = T.text2; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
+        >
+          + колонку
+        </button>
       </div>
     </div>
   );

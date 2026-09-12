@@ -208,7 +208,7 @@ export default function AssetSwitcher({
           {current ? (
             <AssetIcon symbol={current.symbol} category={current.category} />
           ) : (
-            <Layers size={16} strokeWidth={2.2} style={{ color: T.text3 }} />
+            <Layers size={16} strokeWidth={2.2} style={{ color: T.text2 }} />
           )}
 
           {/* стрілка-індикатор */}
@@ -224,7 +224,7 @@ export default function AssetSwitcher({
         {!open && (
           <span
             className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-lg px-3 py-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-            style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 12px 30px rgba(0,0,0,0.6)' }}
+            style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 12px 30px -8px var(--edge-panel-glow, rgba(0,0,0,0.6))' }}
           >
             <span className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
               {currentPair || 'Вибрати актив'}
@@ -243,10 +243,10 @@ export default function AssetSwitcher({
             transition={{ duration: 0.24, ease: EASE }}
             className="absolute left-[calc(100%+12px)] top-1/2 z-50 w-[286px] origin-left -translate-y-1/2 overflow-hidden rounded-2xl"
             style={{
-              background: 'rgba(13,13,16,0.97)',
+              background: 'var(--edge-panel, rgba(13,13,16,0.97))',
               backdropFilter: 'blur(24px)',
               border: `1px solid ${T.lineHi}`,
-              boxShadow: '0 30px 70px rgba(0,0,0,0.8)',
+              boxShadow: '0 30px 70px -18px var(--edge-panel-glow, rgba(0,0,0,0.8))',
             }}
           >
             {/* Пошук */}

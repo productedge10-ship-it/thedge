@@ -52,7 +52,7 @@ const GROUPS = [
   },
 ];
 
-const axis = { stroke: 'var(--edge-text4, #4A4A52)', fontSize: 10, tickLine: false, axisLine: false };
+const axis = { stroke: 'var(--edge-text4, var(--edge-text4))', fontSize: 10, tickLine: false, axisLine: false };
 
 function Slider({ label, unit, value, min, max, step, onChange }) {
   return (
@@ -287,7 +287,7 @@ export default function Risk({ trades, carried }) {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--edge-surface-hi, #18181C)" />
               <XAxis dataKey="i" {...axis} minTickGap={34} />
               <YAxis {...axis} unit="%" />
-              <RTooltip content={<FanTip />} cursor={{ stroke: 'var(--edge-line-hi, #33333A)' }} />
+              <RTooltip content={<FanTip />} cursor={{ stroke: 'var(--edge-line-hi, var(--edge-line-hi))' }} />
 
               {/* Межі — головне на цьому графіку. Саме до них
                   дотягуються крайні сценарії, і бачити їх треба разом
@@ -300,7 +300,7 @@ export default function Risk({ trades, carried }) {
                 <ReferenceLine y={-cfg.ddPct} stroke={T.bad} strokeDasharray="4 4"
                   label={{ value: 'просадка', position: 'right', fill: T.bad, fontSize: 10 }} />
               )}
-              <ReferenceLine y={0} stroke="var(--edge-line-hi, #33333A)" />
+              <ReferenceLine y={0} stroke="var(--edge-line-hi, var(--edge-line-hi))" />
 
               {/* Дві смуги стеком: спершу невидима основа, потім
                   товщина. Так recharts малює діапазон, не вміючи
@@ -331,7 +331,7 @@ export default function Risk({ trades, carried }) {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--edge-surface-hi, #18181C)" />
                 <XAxis dataKey="x" {...axis} unit="%" minTickGap={26} />
                 <YAxis {...axis} />
-                <ReferenceLine x={0} stroke="var(--edge-line-hi, #33333A)" />
+                <ReferenceLine x={0} stroke="var(--edge-line-hi, var(--edge-line-hi))" />
                 <Bar dataKey="n" radius={[2, 2, 0, 0]} isAnimationActive={false}>
                   {sim.hist.map((h, i) => (
                     <Cell key={i} fill={h.x >= 0 ? `rgba(${T.accRgb},0.75)` : 'rgba(248,113,113,0.7)'} />

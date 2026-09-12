@@ -56,7 +56,7 @@ function useContentBox() {
 }
 
 /* Акцент у темі — CSS-змінна, а не hex, тому альфу до нього не можна
-   дописати рядком: `var(--edge-acc)8c` браузер викидає цілком. */
+   дописати рядком: `rgba(var(--edge-acc-rgb),0.55)` браузер викидає цілком. */
 const A = (a) => `rgba(${T.accRgb}, ${a})`;
 
 const SPRING = 'transform .3s cubic-bezier(.22,1.2,.36,1), border-color .18s, background .18s, box-shadow .24s';
@@ -69,7 +69,7 @@ const TYPO = {
   fontSize: 15.5,
   lineHeight: 1.7,
   letterSpacing: 'normal',
-  color: '#eceaf4',
+  color: 'var(--edge-text)',
   margin: 0,
   padding: 0,
   border: 0,
@@ -151,9 +151,9 @@ function ToolButton({ tool, onClick }) {
       onMouseLeave={() => setHov(false)}
       className="grid h-7 w-7 place-items-center rounded-lg text-[13.5px]"
       style={{
-        background: hov ? '#ffffff14' : '#ffffff08',
-        border: `1px solid ${hov ? '#33333f' : '#21212b'}`,
-        color: hov ? '#ffffff' : '#8f8d9c',
+        background: hov ? 'rgba(var(--edge-hair-rgb),0.08)' : 'rgba(var(--edge-hair-rgb),0.03)',
+        border: `1px solid ${hov ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
+        color: hov ? 'var(--edge-text)' : 'var(--edge-text3)',
         fontFamily: T.sans,
         fontWeight: tool.weight,
         fontStyle: tool.italic ? 'italic' : 'normal',
@@ -180,9 +180,9 @@ function PickRow({ color, active, children, onClick }) {
       className="flex h-[38px] w-full items-center gap-2.5 rounded-[11px] px-3 text-[13.5px] font-semibold"
       style={{
         fontFamily: T.sans,
-        background: active ? `${c}20` : hov ? '#ffffff0d' : '#ffffff06',
-        border: `1px solid ${active ? `${c}73` : hov ? '#2c2c38' : '#1e1e27'}`,
-        color: active ? '#ffffff' : '#8f8d9c',
+        background: active ? `${c}20` : hov ? 'rgba(var(--edge-hair-rgb),0.05)' : 'rgba(var(--edge-hair-rgb),0.02)',
+        border: `1px solid ${active ? `${c}73` : hov ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
+        color: active ? 'var(--edge-text)' : 'var(--edge-text3)',
         transition: 'all .16s',
       }}
     >
@@ -192,14 +192,14 @@ function PickRow({ color, active, children, onClick }) {
 }
 
 const PanelLabel = ({ children }) => (
-  <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.5px', color: '#9a98ab' }}>
+  <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.5px', color: 'var(--edge-text3)' }}>
     {children}
   </span>
 );
 
 const SideLabel = ({ children, right }) => (
   <div className="flex items-baseline justify-between gap-2">
-    <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: '#9a98ab' }}>
+    <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}>
       {children}
     </span>
     {right}
@@ -234,7 +234,7 @@ export default function NoteEditor({
 
   /* Колір, яким малюється вся картка: вибраний вручну, інакше колір
      першого тега, інакше нейтральний. */
-  const look = card.color || (form.tags || [])[0] ? (card.color || T.acc) : '#6b6980';
+  const look = card.color || (form.tags || [])[0] ? (card.color || T.acc) : 'var(--edge-text3)';
   const custom = !!card.color && !CARD_COLORS.includes(card.color);
   const lookLabel = [
     card.icon ? 'з іконкою' : 'без іконки',
@@ -551,7 +551,7 @@ export default function NoteEditor({
 
   const images = form.images || [];
   const empty = !images.length && !busy;
-  const folderOptions = [{ id: null, name: 'Без папки', color: '#6b6980' }, ...folders];
+  const folderOptions = [{ id: null, name: 'Без папки', color: 'var(--edge-text3)' }, ...folders];
 
   /* ================================================================ */
 
@@ -562,7 +562,7 @@ export default function NoteEditor({
           явно, інакше підказка в порожньому полі просто зникає. */}
       <style>{`
         .note-editor input::placeholder,
-        .note-editor textarea::placeholder { color: #8f8da0; opacity: 1; }
+        .note-editor textarea::placeholder { color: var(--edge-text3); opacity: 1; }
       `}</style>
     <motion.div
       initial={{ opacity: 0 }}
@@ -597,8 +597,8 @@ export default function NoteEditor({
              текст це все одно не додавало: рядок довший за 90
              символів читається гірше, ніж коротший. */
           maxWidth: 980,
-          background: 'linear-gradient(170deg,#111117,#0b0b10)',
-          border: '1px solid #23232e',
+          background: 'linear-gradient(170deg,var(--edge-surface),var(--edge-sunken))',
+          border: '1px solid var(--edge-line)',
           boxShadow: `0 50px 110px -40px #000, 0 0 0 1px ${A(0.08)}`,
           }}
       >
@@ -606,31 +606,31 @@ export default function NoteEditor({
           className="pointer-events-none absolute inset-x-0 top-0 h-px"
           style={{
             borderRadius: '24px 24px 0 0',
-            background: `linear-gradient(90deg,transparent,${A(0.8)} 30%,#8b7cffcc 70%,transparent)`,
+            background: `linear-gradient(90deg,transparent,${A(0.8)} 30%,rgba(var(--edge-acc-rgb),0.80) 70%,transparent)`,
           }}
         />
 
         {/* ─── шапка ─── */}
         <div
           className="flex items-center justify-between gap-5 py-4 pl-6 pr-5"
-          style={{ borderBottom: '1px solid #1c1c25' }}
+          style={{ borderBottom: '1px solid var(--edge-line)' }}
         >
           <div className="flex min-w-0 items-center gap-3">
             <span
               className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[11px]"
-              style={{ background: A(0.12), border: `1px solid ${A(0.3)}`, boxShadow: `inset 0 1px 0 ${A(0.33)}`, color: '#a99cff' }}
+              style={{ background: A(0.12), border: `1px solid ${A(0.3)}`, boxShadow: `inset 0 1px 0 ${A(0.33)}`, color: 'var(--edge-acc)' }}
             >
               <Pencil size={16} strokeWidth={1.8} />
             </span>
 
             <div className="min-w-0">
-              <div className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.2px', color: '#a99cff' }}>
+              <div className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.2px', color: 'var(--edge-acc)' }}>
                 {form.id ? 'Редагування' : 'Нова нотатка'}
               </div>
-              <div className="mt-1 flex items-center gap-[7px] text-[12.5px]" style={{ fontFamily: T.sans, color: '#8b8998' }}>
+              <div className="mt-1 flex items-center gap-[7px] text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                 <span
                   className="h-[5px] w-[5px] rounded-full"
-                  style={{ background: busy ? '#f5a33b' : '#6fe0b4', boxShadow: `0 0 8px 1px ${busy ? '#f5a33b99' : '#2fbf8f99'}` }}
+                  style={{ background: busy ? 'var(--edge-warn)' : 'var(--edge-ok)', boxShadow: `0 0 8px 1px ${busy ? 'rgba(var(--edge-warn-rgb),0.60)' : 'rgba(var(--edge-ok-rgb),0.60)'}` }}
                 />
                 <span>
                   {busy > 0
@@ -650,13 +650,13 @@ export default function NoteEditor({
               title="Розгорнути на весь екран"
               className="flex h-[34px] items-center gap-[7px] rounded-[10px] px-3"
               style={{
-                background: focusMode ? A(0.14) : '#ffffff08',
-                border: `1px solid ${focusMode ? A(0.4) : '#23232e'}`,
+                background: focusMode ? A(0.14) : 'rgba(var(--edge-hair-rgb),0.03)',
+                border: `1px solid ${focusMode ? A(0.4) : 'var(--edge-line)'}`,
                 transition: 'all .16s',
               }}
             >
-              <Maximize2 size={14} strokeWidth={1.8} style={{ color: focusMode ? '#c4baff' : '#a3a1b2' }} />
-              <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: focusMode ? '#ffffff' : '#a5a3b3' }}>
+              <Maximize2 size={14} strokeWidth={1.8} style={{ color: focusMode ? 'var(--edge-acc)' : 'var(--edge-text2)' }} />
+              <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: focusMode ? 'var(--edge-text)' : 'var(--edge-text2)' }}>
                 Фокус
               </span>
             </button>
@@ -665,9 +665,9 @@ export default function NoteEditor({
               type="button"
               onClick={onCancel}
               className="grid h-[34px] w-[34px] place-items-center rounded-[10px]"
-              style={{ background: '#ffffff08', border: '1px solid #23232e', color: '#c9c7d6', transition: 'all .16s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff16'; e.currentTarget.style.borderColor = '#3d3d4c'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#23232e'; }}
+              style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', transition: 'all .16s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.09)'; e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.03)'; e.currentTarget.style.borderColor = 'var(--edge-line)'; }}
             >
               <X size={15} strokeWidth={2} />
             </button>
@@ -677,10 +677,10 @@ export default function NoteEditor({
         <div className="grid" style={{ gridTemplateColumns: focusMode ? '1fr 288px' : '1fr 288px' }}>
 
           {/* ─────────── письмо ─────────── */}
-          <div className="min-w-0 px-6 pb-5 pt-[22px]" style={{ borderRight: '1px solid #1c1c25' }}>
+          <div className="min-w-0 px-6 pb-5 pt-[22px]" style={{ borderRight: '1px solid var(--edge-line)' }}>
             {!form.id && (
               <div className="flex flex-wrap items-center gap-[7px]">
-                <span className="mr-1 text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: '#9a98ab' }}>
+                <span className="mr-1 text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}>
                   Шаблон
                 </span>
                 {Object.keys(TEMPLATES).map((name) => {
@@ -693,9 +693,9 @@ export default function NoteEditor({
                       className="rounded-full px-[11px] py-[5px] text-[12.5px] font-semibold"
                       style={{
                         fontFamily: T.sans,
-                        background: on ? A(0.17) : '#ffffff08',
-                        border: `1px solid ${on ? A(0.5) : '#21212b'}`,
-                        color: on ? '#ffffff' : '#8f8d9c',
+                        background: on ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.03)',
+                        border: `1px solid ${on ? A(0.5) : 'var(--edge-line)'}`,
+                        color: on ? 'var(--edge-text)' : 'var(--edge-text3)',
                         boxShadow: on ? `0 0 18px -6px ${A(0.6)}` : 'none',
                         transition: 'all .16s',
                       }}
@@ -713,15 +713,15 @@ export default function NoteEditor({
               onChange={(e) => patch({ title: e.target.value })}
               placeholder="Про що ця нотатка?"
               className="mt-[18px] w-full border-none bg-transparent outline-none"
-              style={{ fontFamily: T.display, fontSize: 30, fontWeight: 700, letterSpacing: '-1px', color: '#ffffff' }}
+              style={{ fontFamily: T.display, fontSize: 30, fontWeight: 700, letterSpacing: '-1px', color: 'var(--edge-text)' }}
             />
 
-            <div className="mt-3.5 flex items-center gap-1.5 pb-3" style={{ borderBottom: '1px solid #1c1c25' }}>
+            <div className="mt-3.5 flex items-center gap-1.5 pb-3" style={{ borderBottom: '1px solid var(--edge-line)' }}>
               {TOOLS.map((tool) => (
                 <ToolButton key={tool.label} tool={tool} onClick={() => applyTool(tool)} />
               ))}
 
-              <span className="mx-1 h-5 w-px" style={{ background: '#22222c' }} />
+              <span className="mx-1 h-5 w-px" style={{ background: 'var(--edge-line)' }} />
 
               {/* Диктовка стоїть у тому ж ряду, що й розмітка: це
                   такий самий спосіб набрати текст, просто голосом. */}
@@ -732,9 +732,9 @@ export default function NoteEditor({
                   onClick={() => { setVoiceOpen((v) => !v); setLookOpen(false); setTradeOpen(false); }}
                   className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold"
                   style={{
-                    background: voiceOpen ? A(0.17) : '#ffffff08',
-                    border: `1px solid ${voiceOpen ? A(0.5) : '#21212b'}`,
-                    color: voiceOpen ? '#ffffff' : '#a9a7b8',
+                    background: voiceOpen ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.03)',
+                    border: `1px solid ${voiceOpen ? A(0.5) : 'var(--edge-line)'}`,
+                    color: voiceOpen ? 'var(--edge-text)' : 'var(--edge-text2)',
                     fontFamily: T.sans,
                     transition: 'all .16s',
                   }}
@@ -764,9 +764,9 @@ export default function NoteEditor({
                 onClick={() => setPreview((v) => !v)}
                 className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold"
                 style={{
-                  background: preview ? A(0.17) : '#ffffff08',
-                  border: `1px solid ${preview ? A(0.5) : '#21212b'}`,
-                  color: preview ? '#ffffff' : '#a9a7b8',
+                  background: preview ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.03)',
+                  border: `1px solid ${preview ? A(0.5) : 'var(--edge-line)'}`,
+                  color: preview ? 'var(--edge-text)' : 'var(--edge-text2)',
                   fontFamily: T.sans,
                   transition: 'all .16s',
                 }}
@@ -776,15 +776,15 @@ export default function NoteEditor({
               </button>
 
               <span className="flex-1" />
-              <span className="text-[11px]" style={{ fontFamily: T.mono, color: '#6f6d7d' }}>Markdown</span>
+              <span className="text-[11px]" style={{ fontFamily: T.mono, color: 'var(--edge-text3)' }}>Markdown</span>
             </div>
 
             <div
               className="mt-3.5 rounded-[14px] px-4 py-3.5"
               style={{
                 height: focusMode ? 'min(64vh, 620px)' : 'min(38vh, 320px)',
-                background: bodyFocus ? '#ffffff0a' : '#ffffff05',
-                border: `1px solid ${bodyFocus ? A(0.45) : '#1e1e27'}`,
+                background: bodyFocus ? 'rgba(var(--edge-hair-rgb),0.04)' : 'rgba(var(--edge-hair-rgb),0.02)',
+                border: `1px solid ${bodyFocus ? A(0.45) : 'var(--edge-line)'}`,
                 boxShadow: bodyFocus ? `0 0 0 4px ${A(0.11)}` : 'none',
                 transition: 'all .2s, height .3s cubic-bezier(.22,1.2,.36,1)',
               }}
@@ -795,8 +795,8 @@ export default function NoteEditor({
                   style={TYPO}
                 >
                   {form.description.trim()
-                    ? renderMd(form.description, { accent: T.acc, text: '#eceaf4', muted: '#8b8998', line: '#26262f' })
-                    : <span style={{ color: '#8f8da0' }}>Порожньо — тут з&apos;явиться те, що напишеш.</span>}
+                    ? renderMd(form.description, { accent: T.acc, text: 'var(--edge-text)', muted: 'var(--edge-text3)', line: 'var(--edge-line)' })
+                    : <span style={{ color: 'var(--edge-text3)' }}>Порожньо — тут з&apos;явиться те, що напишеш.</span>}
                 </div>
               ) : (
                 /* Два шари, які мусять збігатись символ у символ:
@@ -813,7 +813,7 @@ export default function NoteEditor({
                     className="pointer-events-none absolute inset-0 overflow-hidden"
                     style={{ ...TYPO, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}
                   >
-                    {highlightMd(form.description, { accent: T.acc, text: '#eceaf4', muted: '#8b8998' })}
+                    {highlightMd(form.description, { accent: T.acc, text: 'var(--edge-text)', muted: 'var(--edge-text3)' })}
                   </div>
 
                   <textarea
@@ -827,7 +827,7 @@ export default function NoteEditor({
                     placeholder="Пиши як думаєш. Ctrl+V вставить скрін або лінк прямо сюди."
                     spellCheck={false}
                     className="relative h-full w-full resize-none border-none bg-transparent p-0 outline-none"
-                    style={{ ...TYPO, color: 'transparent', caretColor: '#ffffff' }}
+                    style={{ ...TYPO, color: 'transparent', caretColor: 'var(--edge-text)' }}
                   />
                 </div>
               )}
@@ -850,17 +850,17 @@ export default function NoteEditor({
                   onMouseLeave={() => setDropHover(false)}
                   className="flex w-full items-center gap-[13px] rounded-[14px] px-3.5 py-[13px] text-left"
                   style={{
-                    border: `1.5px dashed ${drag || dropHover ? A(0.55) : '#24242f'}`,
-                    background: drag || dropHover ? A(0.07) : '#ffffff03',
+                    border: `1.5px dashed ${drag || dropHover ? A(0.55) : 'var(--edge-line)'}`,
+                    background: drag || dropHover ? A(0.07) : 'rgba(var(--edge-hair-rgb),0.01)',
                     transition: 'all .2s',
                   }}
                 >
                   <span
                     className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
                     style={{
-                      background: drag || dropHover ? A(0.17) : '#ffffff0a',
-                      border: `1px solid ${drag || dropHover ? A(0.44) : '#26262f'}`,
-                      color: drag || dropHover ? '#b3a8ff' : '#a3a1b2',
+                      background: drag || dropHover ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.04)',
+                      border: `1px solid ${drag || dropHover ? A(0.44) : 'var(--edge-line)'}`,
+                      color: drag || dropHover ? 'var(--edge-acc)' : 'var(--edge-text2)',
                       transition: 'all .2s',
                     }}
                   >
@@ -868,17 +868,17 @@ export default function NoteEditor({
                   </span>
 
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: '#d9d7e4' }}>
+                    <span className="block text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
                       {drag ? 'Відпусти — заберемо' : 'Скрін, файл або лінк'}
                     </span>
-                    <span className="mt-[3px] block text-[12.5px]" style={{ fontFamily: T.sans, color: '#8b8998' }}>
+                    <span className="mt-[3px] block text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                       Ctrl+V · перетягни · клікни щоб вибрати
                     </span>
                   </span>
 
                   <span
                     className="shrink-0 rounded-[7px] px-2 py-1 text-[11px]"
-                    style={{ background: '#ffffff0d', border: '1px solid #26262f', fontFamily: T.mono, color: '#8b8998' }}
+                    style={{ background: 'rgba(var(--edge-hair-rgb),0.05)', border: '1px solid var(--edge-line)', fontFamily: T.mono, color: 'var(--edge-text3)' }}
                   >
                     ⌘V
                   </span>
@@ -886,7 +886,7 @@ export default function NoteEditor({
               ) : (
                 <div
                   className="flex flex-wrap gap-2.5 rounded-[14px] p-2.5"
-                  style={{ background: drag ? A(0.05) : '#ffffff05', border: `1px solid ${drag ? A(0.55) : '#1e1e27'}`, transition: 'all .2s' }}
+                  style={{ background: drag ? A(0.05) : 'rgba(var(--edge-hair-rgb),0.02)', border: `1px solid ${drag ? A(0.55) : 'var(--edge-line)'}`, transition: 'all .2s' }}
                 >
                   <AnimatePresence initial={false}>
                     {images.map((src, i) => (
@@ -898,7 +898,7 @@ export default function NoteEditor({
                         exit={{ opacity: 0, scale: 0.94 }}
                         transition={{ duration: 0.26, ease: EASE }}
                         className="group/img relative h-[92px] w-[136px] overflow-hidden rounded-xl"
-                        style={{ border: '1px solid #23232e', background: '#0f0f14' }}
+                        style={{ border: '1px solid var(--edge-line)', background: 'var(--edge-sunken)' }}
                       >
                         <img
                           src={src}
@@ -916,7 +916,7 @@ export default function NoteEditor({
                             onClick={() => onImage(src)}
                             title="На весь екран"
                             className="grid h-7 w-7 place-items-center rounded-lg"
-                            style={{ background: 'rgba(10,10,12,0.86)', border: '1px solid #23232e', color: '#c9c7d6', backdropFilter: 'blur(8px)' }}
+                            style={{ background: 'rgba(10,10,12,0.86)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', backdropFilter: 'blur(8px)' }}
                           >
                             <Maximize2 size={12} strokeWidth={2.4} />
                           </button>
@@ -925,9 +925,9 @@ export default function NoteEditor({
                             onClick={() => patch({ images: images.filter((_, j) => j !== i) })}
                             title="Прибрати"
                             className="grid h-7 w-7 place-items-center rounded-lg"
-                            style={{ background: 'rgba(10,10,12,0.86)', border: '1px solid #23232e', color: '#c9c7d6', backdropFilter: 'blur(8px)' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = '#ff9d9d'; e.currentTarget.style.borderColor = '#ff8f8f66'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = '#b3b1c0'; e.currentTarget.style.borderColor = '#23232e'; }}
+                            style={{ background: 'rgba(10,10,12,0.86)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', backdropFilter: 'blur(8px)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-bad)'; e.currentTarget.style.borderColor = 'rgba(var(--edge-bad-rgb),0.40)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--edge-text2)'; e.currentTarget.style.borderColor = 'var(--edge-line)'; }}
                           >
                             <X size={12} strokeWidth={2.8} />
                           </button>
@@ -941,7 +941,7 @@ export default function NoteEditor({
                     <div
                       key={`busy-${i}`}
                       className="grid h-[92px] w-[136px] place-items-center rounded-xl"
-                      style={{ border: '1px dashed #2c2c38', background: '#0f0f14' }}
+                      style={{ border: '1px dashed var(--edge-line-hi)', background: 'var(--edge-sunken)' }}
                     >
                       <Loader2 size={17} strokeWidth={2.4} className="animate-spin" style={{ color: T.acc }} />
                     </div>
@@ -952,9 +952,9 @@ export default function NoteEditor({
                       type="button"
                       onClick={() => fileRef.current?.click()}
                       className="grid h-[92px] w-[136px] place-items-center rounded-xl"
-                      style={{ border: `1px dashed ${drag ? A(0.55) : '#2c2c38'}`, color: drag ? '#b3a8ff' : '#66646f', transition: 'all .18s' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.55); e.currentTarget.style.color = '#b3a8ff'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = drag ? A(0.55) : '#2c2c38'; e.currentTarget.style.color = drag ? '#b3a8ff' : '#66646f'; }}
+                      style={{ border: `1px dashed ${drag ? A(0.55) : 'var(--edge-line-hi)'}`, color: drag ? 'var(--edge-acc)' : 'var(--edge-text4)', transition: 'all .18s' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.55); e.currentTarget.style.color = 'var(--edge-acc)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = drag ? A(0.55) : 'var(--edge-line-hi)'; e.currentTarget.style.color = drag ? 'var(--edge-acc)' : 'var(--edge-text4)'; }}
                     >
                       <ImagePlus size={19} strokeWidth={1.9} />
                     </button>
@@ -996,7 +996,7 @@ export default function NoteEditor({
             </div>
 
             <div>
-              <SideLabel right={<span className="text-[11.5px]" style={{ fontFamily: T.sans, color: '#6f6d7d' }}>клік — прибрати</span>}>
+              <SideLabel right={<span className="text-[11.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>клік — прибрати</span>}>
                 Теги
               </SideLabel>
               <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -1035,18 +1035,18 @@ export default function NoteEditor({
                 {linkOpen ? (
                   <div
                     className="flex h-10 items-center gap-2.5 rounded-[11px] px-3"
-                    style={{ background: '#ffffff08', border: `1px solid ${form.chart_link ? A(0.35) : '#21212b'}` }}
+                    style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: `1px solid ${form.chart_link ? A(0.35) : 'var(--edge-line)'}` }}
                   >
-                    <Link2 size={14} strokeWidth={1.7} style={{ color: '#a3a1b2', flex: 'none' }} />
+                    <Link2 size={14} strokeWidth={1.7} style={{ color: 'var(--edge-text2)', flex: 'none' }} />
                     <input
                       value={form.chart_link}
                       onChange={(e) => patch({ chart_link: e.target.value })}
                       placeholder="Посилання на джерело"
                       className="min-w-0 flex-1 border-none bg-transparent text-[13.5px] font-semibold outline-none"
-                      style={{ fontFamily: T.sans, color: '#e4e2ec' }}
+                      style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
                     />
                     {!form.chart_link && (
-                      <button type="button" onClick={() => setLinkOpen(false)} style={{ color: '#8b8998', flex: 'none' }}>
+                      <button type="button" onClick={() => setLinkOpen(false)} style={{ color: 'var(--edge-text3)', flex: 'none' }}>
                         <X size={13} strokeWidth={2.5} />
                       </button>
                     )}
@@ -1075,15 +1075,15 @@ export default function NoteEditor({
                       className="flex h-10 items-center gap-2.5 rounded-[11px] px-3"
                       style={{ background: A(0.1), border: `1px solid ${A(0.35)}` }}
                     >
-                      <Link size={14} strokeWidth={1.7} style={{ color: '#b3a8ff', flex: 'none' }} />
-                      <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: '#ffffff' }}>
+                      <Link size={14} strokeWidth={1.7} style={{ color: 'var(--edge-acc)', flex: 'none' }} />
+                      <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
                         {card.trade.name}
                       </span>
                       <button
                         type="button"
                         title="Відвʼязати"
                         onClick={() => setCard({ trade: null })}
-                        style={{ color: '#a3a1b2', flex: 'none' }}
+                        style={{ color: 'var(--edge-text2)', flex: 'none' }}
                       >
                         <X size={13} strokeWidth={2.5} />
                       </button>
@@ -1109,18 +1109,18 @@ export default function NoteEditor({
                         marginTop: tradeDrop.up ? 0 : 8,
                         marginBottom: tradeDrop.up ? 8 : 0,
                         maxHeight: Math.min(tradeDrop.max, 240),
-                        background: '#14141b',
-                        border: '1px solid #2c2c38',
+                        background: 'var(--edge-surface)',
+                        border: '1px solid var(--edge-line-hi)',
                         boxShadow: `0 24px 50px -18px #000, 0 0 0 1px ${A(0.1)}`,
                       }}
                     >
                       {trades === null && (
-                        <div className="flex items-center gap-2 px-2.5 py-3 text-[13px]" style={{ fontFamily: T.sans, color: '#a3a1b2' }}>
+                        <div className="flex items-center gap-2 px-2.5 py-3 text-[13px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
                           <Loader2 size={13} className="animate-spin" /> шукаю бектести…
                         </div>
                       )}
                       {trades?.length === 0 && (
-                        <div className="px-2.5 py-3 text-[13px]" style={{ fontFamily: T.sans, color: '#8b8998' }}>
+                        <div className="px-2.5 py-3 text-[13px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                           Бектестів ще немає
                         </div>
                       )}
@@ -1130,13 +1130,13 @@ export default function NoteEditor({
                           type="button"
                           onClick={() => { setCard({ trade: { id: t.id, name: t.name } }); setTradeOpen(false); }}
                           className="flex h-[34px] w-full items-center gap-2.5 rounded-[9px] px-2.5 text-left text-[13px] font-semibold"
-                          style={{ fontFamily: T.sans, color: '#b3b1c0', background: 'transparent', transition: 'all .14s' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff0d'; e.currentTarget.style.color = '#ffffff'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9d9bad'; }}
+                          style={{ fontFamily: T.sans, color: 'var(--edge-text2)', background: 'transparent', transition: 'all .14s' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.05)'; e.currentTarget.style.color = 'var(--edge-text)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--edge-text3)'; }}
                         >
                           <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: A(0.9) }} />
                           <span className="min-w-0 flex-1 truncate">{t.name}</span>
-                          {t.pair && <span className="shrink-0 text-[11px]" style={{ fontFamily: T.mono, color: '#5f5d6b' }}>{t.pair}</span>}
+                          {t.pair && <span className="shrink-0 text-[11px]" style={{ fontFamily: T.mono, color: 'var(--edge-text4)' }}>{t.pair}</span>}
                         </button>
                       ))}
                     </div>
@@ -1161,8 +1161,8 @@ export default function NoteEditor({
                 onClick={() => { setLookOpen((v) => !v); setTradeOpen(false); }}
                 className="mt-2.5 flex h-10 w-full items-center gap-2.5 rounded-[11px] px-3"
                 style={{
-                  background: lookOpen ? '#ffffff12' : '#ffffff08',
-                  border: `1px solid ${lookOpen ? `${look}80` : '#21212b'}`,
+                  background: lookOpen ? 'rgba(var(--edge-hair-rgb),0.07)' : 'rgba(var(--edge-hair-rgb),0.03)',
+                  border: `1px solid ${lookOpen ? `${look}80` : 'var(--edge-line)'}`,
                   transition: 'all .16s',
                 }}
               >
@@ -1172,13 +1172,13 @@ export default function NoteEditor({
                 >
                   {card.icon || ''}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-left text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: '#ffffff' }}>
+                <span className="min-w-0 flex-1 truncate text-left text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
                   {lookLabel}
                 </span>
                 <ChevronDown
                   size={13}
                   strokeWidth={1.9}
-                  style={{ color: '#a3a1b2', flex: 'none', transform: `rotate(${lookOpen ? 180 : 0}deg)`, transition: 'transform .2s' }}
+                  style={{ color: 'var(--edge-text2)', flex: 'none', transform: `rotate(${lookOpen ? 180 : 0}deg)`, transition: 'transform .2s' }}
                 />
               </button>
 
@@ -1191,8 +1191,8 @@ export default function NoteEditor({
                     marginTop: lookDrop.up ? 0 : 8,
                     marginBottom: lookDrop.up ? 8 : 0,
                     maxHeight: lookDrop.max,
-                    background: '#14141b',
-                    border: '1px solid #2c2c38',
+                    background: 'var(--edge-surface)',
+                    border: '1px solid var(--edge-line-hi)',
                     boxShadow: `0 28px 60px -20px #000, 0 0 0 1px ${A(0.1)}`,
                   }}
                 >
@@ -1204,9 +1204,9 @@ export default function NoteEditor({
                       title="Колір першого тега"
                       className="grid h-7 w-7 place-items-center rounded-[9px] text-[10px] font-bold"
                       style={{
-                        background: '#ffffff08',
-                        border: `2px solid ${card.color ? 'transparent' : '#ffffff'}`,
-                        color: '#a9a7b8',
+                        background: 'rgba(var(--edge-hair-rgb),0.03)',
+                        border: `2px solid ${card.color ? 'transparent' : 'var(--edge-text)'}`,
+                        color: 'var(--edge-text2)',
                         fontFamily: T.mono,
                         transform: `scale(${card.color ? 0.88 : 1})`,
                         transition: 'all .18s',
@@ -1225,7 +1225,7 @@ export default function NoteEditor({
                           className="h-7 w-7 rounded-[9px]"
                           style={{
                             background: `linear-gradient(160deg, ${col}, ${col}b3)`,
-                            border: `2px solid ${on ? '#ffffff' : 'transparent'}`,
+                            border: `2px solid ${on ? 'var(--edge-text)' : 'transparent'}`,
                             boxShadow: on ? `0 0 0 3px ${col}44, 0 6px 16px -6px ${col}cc` : 'none',
                             transform: `scale(${on ? 1 : 0.88})`,
                             transition: 'all .18s',
@@ -1239,9 +1239,9 @@ export default function NoteEditor({
                       className="relative grid h-7 w-7 cursor-pointer place-items-center rounded-[9px]"
                       title="Свій колір"
                       style={{
-                        background: custom ? `${look}2b` : '#ffffff08',
-                        border: custom ? `1px solid ${look}cc` : '1px dashed #2d2d3a',
-                        color: custom ? look : '#6f6d7d',
+                        background: custom ? `${look}2b` : 'rgba(var(--edge-hair-rgb),0.03)',
+                        border: custom ? `1px solid ${look}cc` : '1px dashed var(--edge-line-hi)',
+                        color: custom ? look : 'var(--edge-text3)',
                         boxShadow: custom ? `0 0 0 3px ${look}33` : 'none',
                         transition: 'all .18s',
                       }}
@@ -1268,8 +1268,8 @@ export default function NoteEditor({
                           onClick={() => setCard({ bg: b.id })}
                           className="h-[38px] rounded-[11px] p-[3px]"
                           style={{
-                            background: on ? `${look}1f` : '#ffffff06',
-                            border: `1px solid ${on ? `${look}80` : '#22222c'}`,
+                            background: on ? `${look}1f` : 'rgba(var(--edge-hair-rgb),0.02)',
+                            border: `1px solid ${on ? `${look}80` : 'var(--edge-line)'}`,
                             boxShadow: on ? `0 0 18px -8px ${look}cc` : 'none',
                             transition: 'all .16s',
                           }}
@@ -1283,14 +1283,14 @@ export default function NoteEditor({
                                  інакше в квадратику 34×34 видно одну
                                  крапку й ніякої різниці між варіантами. */
                               backgroundSize: cardBackground(b.id, look, false).backgroundSize?.replace(/(\d+)px (\d+)px/g, (_, a2, b2) => `${Math.round(a2 / 2)}px ${Math.round(b2 / 2)}px`),
-                              border: b.id === 'none' ? '1px solid #23232c' : 'none',
+                              border: b.id === 'none' ? '1px solid var(--edge-line)' : 'none',
                             }}
                           />
                         </button>
                       );
                     })}
                   </div>
-                  <div className="mt-2 text-[11.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+                  <div className="mt-2 text-[11.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                     {CARD_BGS.find((b) => b.id === card.bg)?.name} — застосується до картки в списку
                   </div>
 
@@ -1301,9 +1301,9 @@ export default function NoteEditor({
                       onClick={() => setCard({ icon: '' })}
                       className="grid h-[34px] place-items-center rounded-[10px] text-[10px] font-bold uppercase"
                       style={{
-                        background: card.icon ? '#ffffff08' : `${look}24`,
-                        border: `1px solid ${card.icon ? '#22222c' : `${look}73`}`,
-                        color: card.icon ? '#6f6d7d' : '#ffffff',
+                        background: card.icon ? 'rgba(var(--edge-hair-rgb),0.03)' : `${look}24`,
+                        border: `1px solid ${card.icon ? 'var(--edge-line)' : `${look}73`}`,
+                        color: card.icon ? 'var(--edge-text3)' : 'var(--edge-text)',
                         fontFamily: T.mono,
                         transition: 'all .16s',
                       }}
@@ -1319,8 +1319,8 @@ export default function NoteEditor({
                           onClick={() => setCard({ icon: on ? '' : ic })}
                           className="grid h-[34px] place-items-center rounded-[10px] text-[15px]"
                           style={{
-                            background: on ? `${look}24` : '#ffffff08',
-                            border: `1px solid ${on ? `${look}73` : '#22222c'}`,
+                            background: on ? `${look}24` : 'rgba(var(--edge-hair-rgb),0.03)',
+                            border: `1px solid ${on ? `${look}73` : 'var(--edge-line)'}`,
                             transition: 'all .16s',
                           }}
                         >
@@ -1336,9 +1336,9 @@ export default function NoteEditor({
                     disabled={!images.length}
                     className="mt-3.5 flex min-h-[38px] w-full items-center gap-2.5 rounded-[11px] px-3 py-2"
                     style={{
-                      background: images.length && card.cover !== 'none' ? `${look}14` : '#ffffff08',
-                      border: `1px solid ${images.length && card.cover !== 'none' ? `${look}3d` : '#21212b'}`,
-                      color: !images.length ? '#4f4d59' : card.cover !== 'none' ? look : '#a3a1b2',
+                      background: images.length && card.cover !== 'none' ? `${look}14` : 'rgba(var(--edge-hair-rgb),0.03)',
+                      border: `1px solid ${images.length && card.cover !== 'none' ? `${look}3d` : 'var(--edge-line)'}`,
+                      color: !images.length ? 'var(--edge-text4)' : card.cover !== 'none' ? look : 'var(--edge-text2)',
                       cursor: images.length ? 'pointer' : 'not-allowed',
                       transition: 'all .16s',
                     }}
@@ -1352,19 +1352,19 @@ export default function NoteEditor({
                       style={{
                         fontFamily: T.mono,
                         letterSpacing: '0.8px',
-                        background: images.length && card.cover !== 'none' ? `${look}24` : '#ffffff0a',
-                        border: `1px solid ${images.length && card.cover !== 'none' ? `${look}4d` : '#26262f'}`,
-                        color: images.length && card.cover !== 'none' ? look : '#66646f',
+                        background: images.length && card.cover !== 'none' ? `${look}24` : 'rgba(var(--edge-hair-rgb),0.04)',
+                        border: `1px solid ${images.length && card.cover !== 'none' ? `${look}4d` : 'var(--edge-line)'}`,
+                        color: images.length && card.cover !== 'none' ? look : 'var(--edge-text4)',
                       }}
                     >
                       {!images.length ? 'нема' : card.cover !== 'none' ? 'увімк' : 'вимк'}
                     </span>
                   </button>
 
-                  <div className="mt-3.5 border-t pt-3.5" style={{ borderColor: '#22222c' }}>
+                  <div className="mt-3.5 border-t pt-3.5" style={{ borderColor: 'var(--edge-line)' }}>
                     <div className="flex items-baseline justify-between">
                       <PanelLabel>Прев&apos;ю</PanelLabel>
-                      <span className="text-[11px]" style={{ fontFamily: T.sans, color: '#6f6d7d' }}>як у списку папки</span>
+                      <span className="text-[11px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>як у списку папки</span>
                     </div>
 
                     {/* Прев'ю не декоративне: воно єдине показує, що з
@@ -1384,11 +1384,11 @@ export default function NoteEditor({
                         >
                           {card.icon || ''}
                         </span>
-                        <span className="text-[10.5px]" style={{ fontFamily: T.mono, color: '#63616d' }}>02 вер.</span>
+                        <span className="text-[10.5px]" style={{ fontFamily: T.mono, color: 'var(--edge-text4)' }}>02 вер.</span>
                       </div>
                       <div
                         className="mt-2.5 truncate"
-                        style={{ fontFamily: T.display, fontSize: 15, fontWeight: 600, color: '#ffffff', letterSpacing: '-0.3px' }}
+                        style={{ fontFamily: T.display, fontSize: 15, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.3px' }}
                       >
                         {form.title.trim() || 'Без назви'}
                       </div>
@@ -1403,14 +1403,14 @@ export default function NoteEditor({
         {/* ─── дії ─── */}
         <div
           className="flex items-center justify-between gap-5 py-3.5 pl-6 pr-5"
-          style={{ borderTop: '1px solid #1c1c25', background: '#0a0a0e', borderRadius: '0 0 24px 24px' }}
+          style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)', borderRadius: '0 0 24px 24px' }}
         >
           <div className="hidden items-center gap-3.5 sm:flex">
             {[{ k: '⌘↵', t: form.id ? 'зберегти' : 'створити' }, { k: 'esc', t: 'закрити' }].map(({ k, t }) => (
-              <span key={k} className="flex items-center gap-[7px] text-[12.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+              <span key={k} className="flex items-center gap-[7px] text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                 <span
                   className="rounded-md px-1.5 py-[3px]"
-                  style={{ fontFamily: T.mono, background: '#ffffff0d', border: '1px solid #26262f', color: '#a3a1b2' }}
+                  style={{ fontFamily: T.mono, background: 'rgba(var(--edge-hair-rgb),0.05)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)' }}
                 >
                   {k}
                 </span>
@@ -1424,9 +1424,9 @@ export default function NoteEditor({
               type="button"
               onClick={onCancel}
               className="flex h-[42px] items-center rounded-xl px-[18px] text-[14px] font-semibold"
-              style={{ background: '#ffffff08', border: '1px solid #23232e', color: '#c9c7d6', fontFamily: T.sans, transition: 'all .16s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff14'; e.currentTarget.style.color = '#ffffff'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.color = '#b3b1c0'; }}
+              style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', fontFamily: T.sans, transition: 'all .16s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.08)'; e.currentTarget.style.color = 'var(--edge-text)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.03)'; e.currentTarget.style.color = 'var(--edge-text2)'; }}
             >
               Скасувати
             </button>
@@ -1457,21 +1457,21 @@ function SaveBtn({ onClick, disabled, saving, label }) {
       onMouseLeave={() => setHov(false)}
       className="relative flex h-[42px] items-center gap-[9px] overflow-hidden rounded-xl px-5"
       style={{
-        background: `linear-gradient(180deg, ${on ? '#6355ff, #4a3bf5' : '#5546f8, #3f30e8'})`,
+        background: `linear-gradient(180deg, ${on ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
         boxShadow: on
-          ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 #ffffff4d`
-          : `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 #ffffff33`,
+          ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)`
+          : `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
         transform: `translateY(${on ? '-2px' : '0'})`,
         opacity: disabled ? 0.45 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: SPRING,
       }}
     >
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,#ffffff99,transparent)' }} />
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-hair-rgb),0.60),transparent)' }} />
       {saving
         ? <Loader2 size={15} strokeWidth={2.6} className="animate-spin" style={{ color: '#fff' }} />
         : <Check size={15} strokeWidth={2.3} style={{ color: '#fff' }} />}
-      <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: '#ffffff' }}>{label}</span>
+      <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>{label}</span>
     </button>
   );
 }

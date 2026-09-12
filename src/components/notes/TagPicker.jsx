@@ -285,7 +285,7 @@ export default function TagPicker({
         /* Непрозорий фон панелі, а не T.surface: список лежить над
            модалкою, і крізь напівпрозору поверхню читався б текст
            під ним. */
-        background: 'var(--edge-panel, #131316)',
+        background: 'var(--edge-panel, var(--edge-surface))',
         border: `1px solid ${T.lineHi}`,
         boxShadow: 'var(--edge-panel-shadow, 0 28px 64px -20px rgba(0,0,0,0.9))',
       }}

@@ -383,7 +383,7 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
                             border: `1.7px solid ${p.done ? T.ok : T.lineHi}`,
                           }}
                         >
-                          {p.done && <Check size={12} strokeWidth={3.4} style={{ color: 'var(--edge-bg, #0A0A0C)' }} />}
+                          {p.done && <Check size={12} strokeWidth={3.4} style={{ color: 'var(--edge-on-acc, #0A0A0C)' }} />}
                         </span>
 
                         <span

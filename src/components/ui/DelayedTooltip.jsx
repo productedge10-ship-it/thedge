@@ -30,7 +30,7 @@ export default function DelayedTooltip({ children, text }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.9 }}
             transition={{ duration: 0.2, ease: premiumEasing }}
-            className="absolute top-full mt-3 left-1/2 -translate-x-1/2 z-[9999] px-3 py-2 bg-black border border-[var(--edge-hair-strong)] text-[var(--edge-text)] text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-2xl whitespace-nowrap pointer-events-none"
+            className="absolute top-full mt-3 left-1/2 -translate-x-1/2 z-[9999] px-3 py-2 bg-[var(--edge-panel)] border border-[var(--edge-hair-strong)] text-[var(--edge-text)] text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-2xl whitespace-nowrap pointer-events-none"
           >
             {text}
           </motion.div>

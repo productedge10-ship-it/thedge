@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, RotateCcw } from 'lucide-react';
-import { C, F, A, Cat, Glow, useInView, reducedMotion } from './base';
+import { C, F, A, Cat, Glow, useInView, reducedMotion, SHELL } from './base';
 import DemoTransition from './DemoTransition';
 
 /* ==================================================================
@@ -136,13 +136,13 @@ export default function Hero() {
     <section
       id="top"
       ref={ref}
-      style={{ maxWidth: 1240, margin: '0 auto', padding: '64px 32px 72px', position: 'relative' }}
+      style={{ ...SHELL, paddingTop: '64px', paddingBottom: '72px', position: 'relative' }}
     >
       <Glow x={-120} y={-30} size={500} />
 
       <div style={{ display: 'flex', gap: 56, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
         {/* ---------- текст ---------- */}
-        <div style={{ flex: '1 1 400px', minWidth: 320 }}>
+        <div style={{ flex: '1 1 440px', minWidth: 320, maxWidth: 720 }}>
           <div
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 9,
@@ -158,11 +158,14 @@ export default function Hero() {
           <h1
             style={{
               fontFamily: F.display, fontWeight: 700,
-              fontSize: 'clamp(36px,4.1vw,58px)', lineHeight: 1.04,
+              /* Стеля піднята: на 24-дюймовому моніторі заголовок у
+                 58px губився серед порожнечі, тоді як vw уже давав
+                 удвічі більше. */
+              fontSize: 'clamp(36px,3.6vw,72px)', lineHeight: 1.04,
               letterSpacing: '-1.9px', margin: '0 0 24px', color: '#fff', textWrap: 'balance',
             }}
           >
-            Не шукай ідеальну стратегію.
+            Не шукай ідеальну стратегію.{' '}
             <br />
             <span
               style={{
@@ -171,10 +174,23 @@ export default function Hero() {
               }}
             >
               Зрозумій свою.
+            </span>{' '}
+            {/* Описовий рядок у самому <h1>: несе ключі (журнал, угод,
+                MetaTrader, аналітика), яких немає в поетичному заголовку.
+                Дрібніший і приглушений — читається як підзаголовок. */}
+            <span
+              style={{
+                display: 'block', marginTop: 16,
+                fontFamily: F.sans, fontWeight: 600,
+                fontSize: 'clamp(15px,1.15vw,19px)', lineHeight: 1.4,
+                letterSpacing: '-0.2px', color: C.text3, textWrap: 'pretty',
+              }}
+            >
+              Журнал угод з імпортом із MetaTrader 5 і аналітика по сесіях.
             </span>
           </h1>
 
-          <p style={{ fontFamily: F.sans, fontSize: 17.5, lineHeight: 1.5, color: C.text3, margin: '0 0 34px', maxWidth: 480 }}>
+          <p style={{ fontFamily: F.sans, fontSize: 'clamp(16.5px,1.05vw,21px)', lineHeight: 1.5, color: C.text3, margin: '0 0 34px', maxWidth: 560 }}>
             Журнал, який рахує за тебе і каже, де саме ти втрачаєш гроші.
           </p>
 
@@ -224,7 +240,7 @@ export default function Hero() {
         </div>
 
         {/* ---------- журнал ---------- */}
-        <div style={{ flex: '1 1 520px', minWidth: 340, position: 'relative' }}>
+        <div style={{ flex: '1 1 560px', minWidth: 340, position: 'relative' }}>
           <Glow x="calc(100% - 270px)" y={-20} size={320} color={A(0.15)} blur={80} />
 
           <div

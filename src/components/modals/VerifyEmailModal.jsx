@@ -239,7 +239,7 @@ export default function VerifyEmailModal() {
                 style={{
                   fontFamily: T.sans,
                   background: left > 0 ? T.surfaceHi : T.acc,
-                  color: left > 0 ? T.text3 : 'var(--edge-bg, #0A0A0C)',
+                  color: left > 0 ? T.text3 : 'var(--edge-on-acc, #0A0A0C)',
                   boxShadow: left > 0 ? 'none' : `0 12px 30px -12px rgba(${T.accRgb},0.8)`,
                 }}
               >

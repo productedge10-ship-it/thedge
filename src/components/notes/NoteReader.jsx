@@ -65,9 +65,9 @@ function HeadBtn({ icon: Icon, label, onClick, danger }) {
       onMouseLeave={() => setHov(false)}
       className="grid h-9 w-9 shrink-0 place-items-center rounded-[11px]"
       style={{
-        background: hov ? (danger ? '#ff8f8f24' : '#ffffff16') : '#ffffff08',
-        border: `1px solid ${hov ? (danger ? '#ff8f8f66' : '#3d3d4c') : '#23232e'}`,
-        color: hov ? (danger ? '#ff9d9d' : '#ffffff') : '#a5a3b3',
+        background: hov ? (danger ? 'rgba(var(--edge-bad-rgb),0.14)' : 'rgba(var(--edge-hair-rgb),0.09)') : 'rgba(var(--edge-hair-rgb),0.03)',
+        border: `1px solid ${hov ? (danger ? 'rgba(var(--edge-bad-rgb),0.40)' : 'var(--edge-line-hi)') : 'var(--edge-line)'}`,
+        color: hov ? (danger ? 'var(--edge-bad)' : 'var(--edge-text)') : 'var(--edge-text2)',
         transition: 'all .16s',
       }}
     >
@@ -87,20 +87,20 @@ function ActionRow({ icon: Icon, name, kbd, color, onClick, active }) {
       onClick={onClick}
       className="flex h-[38px] w-full items-center gap-2.5 rounded-[11px] px-3"
       style={{
-        background: on ? `${color}14` : '#ffffff06',
-        border: `1px solid ${on ? `${color}4d` : '#1e1e27'}`,
-        color: on ? '#ffffff' : '#b3b1c0',
+        background: on ? `${color}14` : 'rgba(var(--edge-hair-rgb),0.02)',
+        border: `1px solid ${on ? `${color}4d` : 'var(--edge-line)'}`,
+        color: on ? 'var(--edge-text)' : 'var(--edge-text2)',
         transition: 'all .16s',
       }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
-      <Icon size={14} strokeWidth={1.8} style={{ flex: 'none', color: on ? color : '#a3a1b2' }} />
+      <Icon size={14} strokeWidth={1.8} style={{ flex: 'none', color: on ? color : 'var(--edge-text2)' }} />
       <span className="min-w-0 flex-1 text-left text-[13px] font-semibold" style={{ fontFamily: T.sans }}>{name}</span>
       {kbd && (
         <span
           className="shrink-0 rounded-md px-1.5 py-[2px] text-[10px]"
-          style={{ fontFamily: T.mono, background: '#ffffff0d', border: '1px solid #26262f', color: '#8b8998' }}
+          style={{ fontFamily: T.mono, background: 'rgba(var(--edge-hair-rgb),0.05)', border: '1px solid var(--edge-line)', color: 'var(--edge-text3)' }}
         >
           {kbd}
         </span>
@@ -110,7 +110,7 @@ function ActionRow({ icon: Icon, name, kbd, color, onClick, active }) {
 }
 
 const SideLabel = ({ children }) => (
-  <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: '#9a98ab' }}>
+  <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: 'var(--edge-text3)' }}>
     {children}
   </span>
 );
@@ -268,18 +268,18 @@ export default function NoteReader({
           className="relative w-full rounded-[24px]"
           style={{
             maxWidth: 1000,
-            background: `linear-gradient(170deg, ${c}16, #0e0e13 26%, #0b0b10)`,
-            border: '1px solid #23232e',
+            background: `linear-gradient(170deg, ${c}16, var(--edge-sunken) 26%, var(--edge-sunken))`,
+            border: '1px solid var(--edge-line)',
             boxShadow: `0 50px 110px -40px #000, 0 0 0 1px ${c}14`,
           }}
         >
           <span
             className="pointer-events-none absolute inset-x-0 top-0 h-px"
-            style={{ borderRadius: '24px 24px 0 0', background: `linear-gradient(90deg,transparent,${c}cc 30%,#8b7cffcc 70%,transparent)` }}
+            style={{ borderRadius: '24px 24px 0 0', background: `linear-gradient(90deg,transparent,${c}cc 30%,rgba(var(--edge-acc-rgb),0.80) 70%,transparent)` }}
           />
 
           {/* ─── шапка ─── */}
-          <div className="flex items-center justify-between gap-5 py-4 pl-[22px] pr-[18px]" style={{ borderBottom: '1px solid #1c1c25' }}>
+          <div className="flex items-center justify-between gap-5 py-4 pl-[22px] pr-[18px]" style={{ borderBottom: '1px solid var(--edge-line)' }}>
             <div className="flex min-w-0 items-center gap-3">
               <span
                 className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl text-[17px]"
@@ -297,11 +297,11 @@ export default function NoteReader({
                     <span className="h-1.5 w-1.5 rounded-full" style={{ background: c, boxShadow: `0 0 8px 1px ${c}cc` }} />
                     {folder?.name || 'Без папки'}
                   </span>
-                  <span className="text-[10.5px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.2px', color: '#6f6d7d' }}>
+                  <span className="text-[10.5px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.2px', color: 'var(--edge-text3)' }}>
                     {fmtDate(note.created_at)}
                   </span>
                 </div>
-                <div className="mt-1 truncate text-[12px]" style={{ fontFamily: T.sans, color: '#8b8998' }}>
+                <div className="mt-1 truncate text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                   змінено {since(note.updated_at || note.created_at)} · {words} {plural(words, 'слово', 'слова', 'слів')}
                 </div>
               </div>
@@ -312,15 +312,15 @@ export default function NoteReader({
                 onClick={onEdit}
                 className="relative flex h-9 items-center gap-2 overflow-hidden rounded-[11px] px-4"
                 style={{
-                  background: 'linear-gradient(180deg,#5546f8,#3f30e8)',
-                  boxShadow: `0 10px 24px -12px ${A(0.7)}, inset 0 1px 0 #ffffff33`,
+                  background: 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))',
+                  boxShadow: `0 10px 24px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
                   transition: 'all .2s',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'linear-gradient(180deg,#6355ff,#4a3bf5)'; e.currentTarget.style.boxShadow = `0 14px 32px -12px ${A(0.85)}, inset 0 1px 0 #ffffff4d`; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(180deg,#5546f8,#3f30e8)'; e.currentTarget.style.boxShadow = `0 10px 24px -12px ${A(0.7)}, inset 0 1px 0 #ffffff33`; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))'; e.currentTarget.style.boxShadow = `0 14px 32px -12px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)`; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))'; e.currentTarget.style.boxShadow = `0 10px 24px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`; }}
               >
                 <Pencil size={14} strokeWidth={1.9} style={{ color: '#fff' }} />
-                <span className="text-[12.5px] font-bold" style={{ fontFamily: T.sans, color: '#ffffff' }}>Редагувати</span>
+                <span className="text-[12.5px] font-bold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>Редагувати</span>
               </button>
 
               {onArchive && (
@@ -332,7 +332,7 @@ export default function NoteReader({
               )}
               <HeadBtn icon={Trash2} label="Видалити" onClick={onDelete} danger />
 
-              <span className="mx-0.5 h-6 w-px" style={{ background: '#22222c' }} />
+              <span className="mx-0.5 h-6 w-px" style={{ background: 'var(--edge-line)' }} />
               <HeadBtn icon={X} label="Закрити (Esc)" onClick={onClose} />
             </div>
           </div>
@@ -340,10 +340,10 @@ export default function NoteReader({
           <div className="grid" style={{ gridTemplateColumns: '1fr 232px' }}>
 
             {/* ─────────── сам запис ─────────── */}
-            <div className="min-w-0 px-[30px] pb-[26px] pt-7" style={{ borderRight: '1px solid #1c1c25' }}>
+            <div className="min-w-0 px-[30px] pb-[26px] pt-7" style={{ borderRight: '1px solid var(--edge-line)' }}>
               <h1
                 className="text-[30px] font-bold sm:text-[38px]"
-                style={{ fontFamily: T.display, color: '#ffffff', letterSpacing: '-1.6px', lineHeight: 1.06 }}
+                style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-1.6px', lineHeight: 1.06 }}
               >
                 {note.title || 'Без назви'}
               </h1>
@@ -361,27 +361,27 @@ export default function NoteReader({
               <div className="my-5 h-px" style={{ background: `linear-gradient(90deg, ${c}66, transparent 70%)` }} />
 
               <div
-                style={{ fontFamily: T.sans, fontSize: 15, lineHeight: 1.7, color: '#cfcddb', minHeight: 236 }}
+                style={{ fontFamily: T.sans, fontSize: 15, lineHeight: 1.7, color: 'var(--edge-text2)', minHeight: 236 }}
               >
                 {note.description?.trim()
                   ? renderMd(note.description, {
                     accent: c,
-                    text: '#cfcddb',
-                    muted: '#8b8998',
-                    line: '#26262f',
+                    text: 'var(--edge-text2)',
+                    muted: 'var(--edge-text3)',
+                    line: 'var(--edge-line)',
                     /* Галочку ставлять під час читання: чекліст існує
                        саме для того, щоб його проходити. */
                     onToggle: onToggleCheck ? (i) => onToggleCheck(toggleCheck(note.description, i)) : undefined,
                   })
-                  : <span style={{ color: '#6f6d7d' }}>Тут порожньо — сам текст ще не написаний.</span>}
+                  : <span style={{ color: 'var(--edge-text3)' }}>Тут порожньо — сам текст ще не написаний.</span>}
               </div>
 
               {voices.length > 0 && (
                 /* Голосові стоять окремим блоком над вкладеннями: це
                    не файл при нотатці, а її частина — часто єдина,
                    якщо думку записали на ходу. */
-                <div className="mt-6 pt-[18px]" style={{ borderTop: '1px solid #1a1a23' }}>
-                  <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: '#9a98ab' }}>
+                <div className="mt-6 pt-[18px]" style={{ borderTop: '1px solid var(--edge-line)' }}>
+                  <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: 'var(--edge-text3)' }}>
                     Голосові · {voices.length}
                   </span>
 
@@ -400,13 +400,13 @@ export default function NoteReader({
               )}
 
               {(images.length > 0 || note.chart_link) && (
-                <div className="mt-6 pt-[18px]" style={{ borderTop: '1px solid #1a1a23' }}>
+                <div className="mt-6 pt-[18px]" style={{ borderTop: '1px solid var(--edge-line)' }}>
                   <div className="flex items-center gap-2.5">
-                    <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: '#9a98ab' }}>
+                    <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.7px', color: 'var(--edge-text3)' }}>
                       Вкладення{images.length ? ` · ${images.length}` : ''}
                     </span>
 
-                    <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,#1e1e27,transparent)' }} />
+                    <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,var(--edge-line),transparent)' }} />
 
                     {/* Скріни спершу великі: графік у нотатці — це
                         частина думки, а не файл при ній, і роздивитись
@@ -420,13 +420,13 @@ export default function NoteReader({
                         className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-semibold"
                         style={{
                           fontFamily: T.sans,
-                          background: '#ffffff08',
-                          border: '1px solid #22222c',
-                          color: '#a3a1b2',
+                          background: 'rgba(var(--edge-hair-rgb),0.03)',
+                          border: '1px solid var(--edge-line)',
+                          color: 'var(--edge-text2)',
                           transition: 'all .16s',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff12'; e.currentTarget.style.borderColor = '#33333f'; e.currentTarget.style.color = '#ffffff'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#22222c'; e.currentTarget.style.color = '#a3a1b2'; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.07)'; e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; e.currentTarget.style.color = 'var(--edge-text)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.03)'; e.currentTarget.style.borderColor = 'var(--edge-line)'; e.currentTarget.style.color = 'var(--edge-text2)'; }}
                       >
                         {bigShots ? <Minimize2 size={12} strokeWidth={2} /> : <Maximize2 size={12} strokeWidth={2} />}
                         {bigShots ? 'зменшити' : 'збільшити'}
@@ -442,12 +442,12 @@ export default function NoteReader({
                           type="button"
                           onClick={() => onImage(src)}
                           className="group/shot relative block w-full overflow-hidden rounded-2xl"
-                          style={{ border: `1px solid ${c}2b`, background: '#0d0d12', cursor: 'zoom-in' }}
+                          style={{ border: `1px solid ${c}2b`, background: 'var(--edge-sunken)', cursor: 'zoom-in' }}
                         >
                           <img src={src} alt="" className="block w-full" style={{ maxHeight: 460, objectFit: 'contain' }} />
                           <span
                             className="absolute right-2.5 top-2.5 rounded-md px-2 py-1 text-[10.5px] opacity-0 transition-opacity duration-200 group-hover/shot:opacity-100"
-                            style={{ fontFamily: T.mono, background: 'rgba(10,10,12,0.82)', border: '1px solid #23232e', color: '#c2c0ce', backdropFilter: 'blur(8px)' }}
+                            style={{ fontFamily: T.mono, background: 'rgba(10,10,12,0.82)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', backdropFilter: 'blur(8px)' }}
                           >
                             скрін {i + 1} · на весь екран
                           </span>
@@ -462,14 +462,14 @@ export default function NoteReader({
                         key={src}
                         onClick={() => onImage(src)}
                         className="flex items-center gap-2 rounded-[10px] py-1.5 pl-2 pr-3"
-                        style={{ background: '#ffffff08', border: '1px solid #22222c', transition: 'all .16s' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff12'; e.currentTarget.style.borderColor = '#33333f'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#22222c'; }}
+                        style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', transition: 'all .16s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.07)'; e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.03)'; e.currentTarget.style.borderColor = 'var(--edge-line)'; }}
                       >
-                        <span className="grid h-6 w-6 place-items-center overflow-hidden rounded-md" style={{ border: '1px solid #23232e' }}>
+                        <span className="grid h-6 w-6 place-items-center overflow-hidden rounded-md" style={{ border: '1px solid var(--edge-line)' }}>
                           <img src={src} alt="" className="h-full w-full object-cover" />
                         </span>
-                        <span className="text-[12px] font-semibold" style={{ fontFamily: T.sans, color: '#c2c0ce' }}>
+                        <span className="text-[12px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
                           скрін {i + 1}
                         </span>
                       </button>
@@ -481,7 +481,7 @@ export default function NoteReader({
                         target="_blank"
                         rel="noreferrer"
                         className="flex items-center gap-2 rounded-[10px] px-3 py-1.5 text-[12px] font-semibold"
-                        style={{ background: '#ffffff08', border: '1px solid #22222c', color: '#c2c0ce', fontFamily: T.sans }}
+                        style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', fontFamily: T.sans }}
                       >
                         <ExternalLink size={13} strokeWidth={1.9} style={{ color: c }} />
                         джерело
@@ -501,10 +501,10 @@ export default function NoteReader({
                     <div
                       key={k}
                       className="flex items-center justify-between gap-2.5 rounded-[9px] px-2.5 py-2"
-                      style={{ background: i % 2 ? 'transparent' : '#ffffff05' }}
+                      style={{ background: i % 2 ? 'transparent' : 'rgba(var(--edge-hair-rgb),0.02)' }}
                     >
-                      <span className="text-[12px]" style={{ fontFamily: T.sans, color: '#8b8998' }}>{k}</span>
-                      <span className="shrink-0 text-[11.5px]" style={{ fontFamily: T.mono, color: '#c2c0ce' }}>{v}</span>
+                      <span className="text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>{k}</span>
+                      <span className="shrink-0 text-[11.5px]" style={{ fontFamily: T.mono, color: 'var(--edge-text2)' }}>{v}</span>
                     </div>
                   ))}
                 </div>
@@ -558,16 +558,16 @@ export default function NoteReader({
                 {moveOpen && (
                   <div
                     className="absolute left-0 right-0 z-30 mt-2 overflow-auto rounded-[14px] p-1.5"
-                    style={{ top: '100%', maxHeight: 220, background: '#14141b', border: '1px solid #2c2c38', boxShadow: '0 24px 50px -18px #000' }}
+                    style={{ top: '100%', maxHeight: 220, background: 'var(--edge-surface)', border: '1px solid var(--edge-line-hi)', boxShadow: '0 24px 50px -18px #000' }}
                   >
-                    {[{ id: null, name: 'Без папки', color: '#6b6980' }, ...folders].map((f) => {
+                    {[{ id: null, name: 'Без папки', color: 'var(--edge-text3)' }, ...folders].map((f) => {
                       const on = (note.folder_id || null) === f.id;
                       return (
                         <button
                           key={f.id || 'none'}
                           onClick={() => { onMove(f.id); setMoveOpen(false); }}
                           className="flex h-[34px] w-full items-center gap-2.5 rounded-[9px] px-2.5 text-[12.5px] font-semibold"
-                          style={{ fontFamily: T.sans, background: on ? `${f.color}20` : 'transparent', color: on ? '#ffffff' : '#b3b1c0' }}
+                          style={{ fontFamily: T.sans, background: on ? `${f.color}20` : 'transparent', color: on ? 'var(--edge-text)' : 'var(--edge-text2)' }}
                         >
                           <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: f.color }} />
                           <span className="min-w-0 flex-1 truncate text-left">{f.name}</span>
@@ -584,14 +584,14 @@ export default function NoteReader({
           {/* ─── підвал ─── */}
           <div
             className="flex items-center justify-between gap-5 py-3 pl-[22px] pr-[18px]"
-            style={{ borderTop: '1px solid #1c1c25', background: '#0a0a0e', borderRadius: '0 0 24px 24px' }}
+            style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)', borderRadius: '0 0 24px 24px' }}
           >
             <div className="hidden items-center gap-3.5 sm:flex">
               {[{ k: 'E', t: 'редагувати' }, { k: 'esc', t: 'закрити' }].map(({ k, t }) => (
-                <span key={k} className="flex items-center gap-[7px] text-[12px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+                <span key={k} className="flex items-center gap-[7px] text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                   <span
                     className="rounded-md px-1.5 py-[3px]"
-                    style={{ fontFamily: T.mono, background: '#ffffff0d', border: '1px solid #26262f', color: '#a3a1b2' }}
+                    style={{ fontFamily: T.mono, background: 'rgba(var(--edge-hair-rgb),0.05)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)' }}
                   >
                     {k}
                   </span>
@@ -614,18 +614,18 @@ export default function NoteReader({
                   title={side === 'left' ? 'Попередня нотатка (←)' : 'Наступна нотатка (→)'}
                   className="flex h-[34px] items-center gap-[7px] rounded-[10px] px-3"
                   style={{
-                    background: '#ffffff08',
-                    border: '1px solid #23232e',
+                    background: 'rgba(var(--edge-hair-rgb),0.03)',
+                    border: '1px solid var(--edge-line)',
                     opacity: on ? 1 : 0.4,
                     cursor: on ? 'pointer' : 'not-allowed',
                     transition: 'all .16s',
                   }}
-                  onMouseEnter={(e) => { if (on) { e.currentTarget.style.background = '#ffffff14'; e.currentTarget.style.borderColor = '#353542'; } }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#23232e'; }}
+                  onMouseEnter={(e) => { if (on) { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.08)'; e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; } }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.03)'; e.currentTarget.style.borderColor = 'var(--edge-line)'; }}
                 >
-                  {side === 'left' && <Icon size={13} strokeWidth={2} style={{ color: '#a3a1b2' }} />}
-                  <span className="text-[12px] font-semibold" style={{ fontFamily: T.sans, color: '#c2c0ce' }}>{name}</span>
-                  {side === 'right' && <Icon size={13} strokeWidth={2} style={{ color: '#a3a1b2' }} />}
+                  {side === 'left' && <Icon size={13} strokeWidth={2} style={{ color: 'var(--edge-text2)' }} />}
+                  <span className="text-[12px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>{name}</span>
+                  {side === 'right' && <Icon size={13} strokeWidth={2} style={{ color: 'var(--edge-text2)' }} />}
                 </button>
               ))}
             </div>

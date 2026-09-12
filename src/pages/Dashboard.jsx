@@ -86,7 +86,7 @@ const CtaBtn = ({ onClick, children }) => (
 /* ================================================================== */
 
 /* Акцент у темі — CSS-змінна, а не hex. Тому альфу до неї не можна
-   дописати рядком: `var(--edge-acc)8c` браузер просто викидає, і
+   дописати рядком: `rgba(var(--edge-acc-rgb),0.55)` браузер просто викидає, і
    замість напівпрозорого бордера виходить його відсутність. Саме так
    зникав ховер на пошуку й на картці «Нова папка». */
 const A = (a) => `rgba(${T.accRgb}, ${a})`;
@@ -120,8 +120,8 @@ function PanelBtn({ onClick, active, children }) {
       onMouseLeave={() => setHov(false)}
       className="flex h-11 items-center gap-[9px] rounded-[13px] px-[15px]"
       style={{
-        background: active ? A(0.17) : hov ? '#ffffff14' : '#ffffff0a',
-        border: `1px solid ${active ? A(0.5) : hov ? '#33333f' : '#21212b'}`,
+        background: active ? A(0.17) : hov ? 'rgba(var(--edge-hair-rgb),0.08)' : 'rgba(var(--edge-hair-rgb),0.04)',
+        border: `1px solid ${active ? A(0.5) : hov ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
         transition: 'all .16s',
       }}
     >
@@ -140,17 +140,17 @@ function GradientCta({ onClick, children }) {
       onMouseLeave={() => setHov(false)}
       className="relative flex h-11 shrink-0 items-center gap-[9px] overflow-hidden rounded-[13px] px-[21px]"
       style={{
-        background: `linear-gradient(180deg, ${hov ? '#6355ff, #4a3bf5' : '#5546f8, #3f30e8'})`,
+        background: `linear-gradient(180deg, ${hov ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
         boxShadow: hov
-          ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 #ffffff4d`
-          : `0 12px 30px -12px ${A(0.70)}, inset 0 1px 0 #ffffff33`,
+          ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)`
+          : `0 12px 30px -12px ${A(0.70)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
         transform: `translateY(${hov ? '-2px' : '0'})`,
         transition: 'transform .34s cubic-bezier(.22,1.2,.36,1), box-shadow .28s, background .2s',
       }}
     >
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,#ffffff99,transparent)' }} />
-      <Plus size={15} strokeWidth={2.4} style={{ color: '#ffffff' }} />
-      <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: '#ffffff', letterSpacing: '-0.1px' }}>{children}</span>
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-hair-rgb),0.60),transparent)' }} />
+      <Plus size={15} strokeWidth={2.4} style={{ color: 'var(--edge-text)' }} />
+      <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: 'var(--edge-text)', letterSpacing: '-0.1px' }}>{children}</span>
     </button>
   );
 }
@@ -158,12 +158,12 @@ function GradientCta({ onClick, children }) {
 /* Лінійка над секцією: підпис, волосок у нікуди, підказка праворуч. */
 const SectionRule = ({ children, hint, right }) => (
   <div className="flex items-center gap-3.5">
-    <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.2px', color: '#84829a' }}>
+    <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.2px', color: 'var(--edge-text3)' }}>
       {children}
     </span>
-    <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,#24242f,transparent)' }} />
+    <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,var(--edge-line),transparent)' }} />
     {hint && (
-      <span className="flex items-center gap-[7px] text-[12.5px]" style={{ fontFamily: T.sans, color: '#8b8998' }}>
+      <span className="flex items-center gap-[7px] text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
           <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
           <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
@@ -180,7 +180,7 @@ const SectionRule = ({ children, hint, right }) => (
    заголовок і два рядки тексту. Ховер піднімає на три пікселі. */
 function RecentCard({ note, folder, onOpen }) {
   const [hov, setHov] = useState(false);
-  const c = folder?.color || '#8a8a94';
+  const c = folder?.color || 'var(--edge-text3)';
   const d = new Date(note.updated_at || note.created_at || 0);
   const date = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
   /* Було `note.body`, якого в нотатці немає, та ще й груба чистка
@@ -195,13 +195,13 @@ function RecentCard({ note, folder, onOpen }) {
       className="relative cursor-pointer overflow-hidden rounded-[18px]"
       style={{
         padding: '20px 22px 18px',
-        background: 'linear-gradient(165deg,#121218,#0c0c11)',
-        border: `1px solid ${hov ? '#3a3a4a' : '#1e1e28'}`,
+        background: 'linear-gradient(165deg,var(--edge-surface),var(--edge-sunken))',
+        border: `1px solid ${hov ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
         transform: hov ? 'translateY(-3px)' : 'none',
         transition: 'all .2s',
       }}
     >
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,#ffffff1f,transparent)' }} />
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-hair-rgb),0.12),transparent)' }} />
 
       <div className="flex items-center justify-between gap-2.5">
         <span
@@ -210,13 +210,13 @@ function RecentCard({ note, folder, onOpen }) {
         >
           {folder?.name || 'Без папки'}
         </span>
-        <span className="text-[11.5px]" style={{ fontFamily: T.mono, color: '#7d7b8e' }}>{date}</span>
+        <span className="text-[11.5px]" style={{ fontFamily: T.mono, color: 'var(--edge-text3)' }}>{date}</span>
       </div>
 
-      <div className="mt-3.5 text-[16px] font-semibold" style={{ fontFamily: T.display, color: '#ffffff', letterSpacing: '-0.3px' }}>
+      <div className="mt-3.5 text-[16px] font-semibold" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.3px' }}>
         {(note.title || '').trim() || 'Без назви'}
       </div>
-      <div className="mt-2 overflow-hidden text-[13.5px]" style={{ fontFamily: T.sans, color: '#9a98ab', lineHeight: 1.55, maxHeight: 39 }}>
+      <div className="mt-2 overflow-hidden text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.55, maxHeight: 39 }}>
         {text}
       </div>
     </div>
@@ -241,9 +241,9 @@ function CardBtn({ title, onClick, danger, accent, children }) {
       style={{
         cursor: 'pointer',
         transition: 'all .16s',
-        background: hov ? (danger ? '#ff8f8f24' : accent ? A(0.18) : '#ffffff1a') : '#ffffff0d',
-        border: `1px solid ${hov ? (danger ? '#ff8f8f66' : accent ? A(0.5) : '#42424f') : '#2c2c38'}`,
-        color: hov ? (danger ? '#ff9d9d' : accent ? '#c4baff' : '#ffffff') : '#a5a3b3',
+        background: hov ? (danger ? 'rgba(var(--edge-bad-rgb),0.14)' : accent ? A(0.18) : 'rgba(var(--edge-hair-rgb),0.10)') : 'rgba(var(--edge-hair-rgb),0.05)',
+        border: `1px solid ${hov ? (danger ? 'rgba(var(--edge-bad-rgb),0.40)' : accent ? A(0.5) : 'var(--edge-line-hi)') : 'var(--edge-line-hi)'}`,
+        color: hov ? (danger ? 'var(--edge-bad)' : accent ? 'var(--edge-acc)' : 'var(--edge-text)') : 'var(--edge-text2)',
       }}
     >
       {children}
@@ -289,13 +289,13 @@ function NoteTile({ note, color, date, pills, images, voices, icon, cover, tall,
         minHeight: tall ? 444 : 214,
         padding: '16px 18px 15px',
         ...cardBackground(bg, c, hov),
-        border: `1px solid ${hov ? `${c}66` : '#1d1d26'}`,
+        border: `1px solid ${hov ? `${c}66` : 'var(--edge-line)'}`,
         transition: SPRING,
-        boxShadow: hov ? `0 24px 48px -24px ${c}80` : '0 10px 24px -20px #000000cc',
+        boxShadow: hov ? `0 24px 48px -24px ${c}80` : '0 10px 24px -20px var(--edge-panel-glow, rgba(0,0,0,0.80))',
         transform: hov ? 'translateY(-4px)' : 'none',
       }}
     >
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,#ffffff26 40%,#ffffff26 60%,transparent)' }} />
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-hair-rgb),0.15) 40%,rgba(var(--edge-hair-rgb),0.15) 60%,transparent)' }} />
       <span className="pointer-events-none absolute inset-y-0 left-0 w-[3px]" style={{ background: `linear-gradient(180deg, ${c}, ${c}33)`, opacity: hov ? 1 : 0.4, transition: 'opacity .2s' }} />
       <span
         className="pointer-events-none absolute rounded-full"
@@ -329,10 +329,10 @@ function NoteTile({ note, color, date, pills, images, voices, icon, cover, tall,
               {icon}
             </span>
           )}
-          <span style={{ fontFamily: T.mono, fontSize: 11.5, letterSpacing: '0.6px', color: '#8b8998' }}>{date}</span>
+          <span style={{ fontFamily: T.mono, fontSize: 11.5, letterSpacing: '0.6px', color: 'var(--edge-text3)' }}>{date}</span>
           {pinned && <Pin size={11} strokeWidth={2.4} style={{ color: c }} />}
           {images > 0 && (
-            <span className="flex items-center gap-1" style={{ fontFamily: T.mono, fontSize: 11, color: '#7d7b8e' }}>
+            <span className="flex items-center gap-1" style={{ fontFamily: T.mono, fontSize: 11, color: 'var(--edge-text3)' }}>
               <ImageIcon size={11} strokeWidth={2.2} /> {images}
             </span>
           )}
@@ -357,7 +357,7 @@ function NoteTile({ note, color, date, pills, images, voices, icon, cover, tall,
 
       <div
         className="relative mt-3"
-        style={{ fontFamily: T.display, fontSize: 18.5, fontWeight: 600, color: '#ffffff', letterSpacing: '-0.4px', lineHeight: 1.25 }}
+        style={{ fontFamily: T.display, fontSize: 18.5, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.4px', lineHeight: 1.25 }}
       >
         {note.title || 'Без назви'}
       </div>
@@ -367,7 +367,7 @@ function NoteTile({ note, color, date, pills, images, voices, icon, cover, tall,
       {(!cover || tall) && (
         <div
           className="relative mt-[9px] overflow-hidden"
-          style={{ height: tall ? (cover ? 96 : 148) : 42, fontFamily: T.sans, fontSize: 14, color: '#a3a1b2', lineHeight: 1.6, whiteSpace: 'pre-line' }}
+          style={{ height: tall ? (cover ? 96 : 148) : 42, fontFamily: T.sans, fontSize: 14, color: 'var(--edge-text2)', lineHeight: 1.6, whiteSpace: 'pre-line' }}
         >
           {mdPlain(note.description)}
         </div>
@@ -382,7 +382,7 @@ function NoteTile({ note, color, date, pills, images, voices, icon, cover, tall,
             title={`Відкрити бектест: ${trade.name}`}
             onClick={(e) => { e.stopPropagation(); onTrade(trade); }}
             className="inline-flex max-w-full items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold"
-            style={{ fontFamily: T.mono, letterSpacing: '0.4px', background: A(0.14), border: `1px solid ${A(0.4)}`, color: '#b3a8ff', cursor: 'pointer' }}
+            style={{ fontFamily: T.mono, letterSpacing: '0.4px', background: A(0.14), border: `1px solid ${A(0.4)}`, color: 'var(--edge-acc)', cursor: 'pointer' }}
           >
             <LinkIcon size={10} strokeWidth={2.4} />
             {trade.name}
@@ -407,8 +407,8 @@ function NoteLine({ note, color, date, pills, icon, pinned, onOpen, onEdit, onAr
       className="relative flex cursor-pointer items-center gap-[18px] overflow-hidden rounded-[15px]"
       style={{
         padding: '14px 18px',
-        background: `linear-gradient(90deg, ${hov ? '#15141d' : '#101016'}, #0b0b10)`,
-        border: `1px solid ${hov ? `${c}5e` : '#1c1c25'}`,
+        background: `linear-gradient(90deg, ${hov ? 'var(--edge-surface)' : 'var(--edge-panel)'}, var(--edge-sunken))`,
+        border: `1px solid ${hov ? `${c}5e` : 'var(--edge-line)'}`,
         transition: SPRING,
         boxShadow: hov ? `0 16px 34px -22px ${c}99` : 'none',
         transform: hov ? 'translateX(4px)' : 'none',
@@ -423,12 +423,12 @@ function NoteLine({ note, color, date, pills, icon, pinned, onOpen, onEdit, onAr
           {pinned && <Pin size={11} strokeWidth={2.4} style={{ color: c, flex: 'none' }} />}
           <div
             className="truncate"
-            style={{ fontFamily: T.display, fontSize: 15.5, fontWeight: 600, color: '#ffffff', letterSpacing: '-0.3px' }}
+            style={{ fontFamily: T.display, fontSize: 15.5, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.3px' }}
           >
             {note.title || 'Без назви'}
           </div>
         </div>
-        <div className="mt-1 truncate" style={{ fontFamily: T.sans, fontSize: 13, color: '#8f8da0' }}>
+        <div className="mt-1 truncate" style={{ fontFamily: T.sans, fontSize: 13, color: 'var(--edge-text3)' }}>
           {mdPlain(note.description)}
         </div>
       </div>
@@ -437,7 +437,7 @@ function NoteLine({ note, color, date, pills, icon, pinned, onOpen, onEdit, onAr
         {pills.slice(0, 2).map((t) => <TagPill key={t.id} name={t.name} color={t.color} small />)}
       </div>
 
-      <div className="w-24 shrink-0 text-right" style={{ fontFamily: T.mono, fontSize: 11.5, color: '#8b8998' }}>{date}</div>
+      <div className="w-24 shrink-0 text-right" style={{ fontFamily: T.mono, fontSize: 11.5, color: 'var(--edge-text3)' }}>{date}</div>
 
       <div
         className="flex w-[104px] shrink-0 items-center justify-end gap-1.5"
@@ -476,31 +476,31 @@ function QuickNoteBar({ onClick }) {
       className="mt-5 flex h-[46px] w-full items-center gap-3 rounded-[14px] px-3.5 text-left"
       style={{
         cursor: 'text',
-        border: `1.5px dashed ${hov ? A(0.5) : '#24242f'}`,
-        background: hov ? A(0.06) : '#ffffff03',
+        border: `1.5px dashed ${hov ? A(0.5) : 'var(--edge-line)'}`,
+        background: hov ? A(0.06) : 'rgba(var(--edge-hair-rgb),0.01)',
         transition: 'all .18s',
       }}
     >
       <span
         className="grid h-7 w-7 shrink-0 place-items-center rounded-[9px]"
         style={{
-          background: hov ? A(0.17) : '#ffffff0a',
-          border: `1px solid ${hov ? A(0.4) : '#26262f'}`,
-          color: hov ? '#b3a8ff' : '#8b8998',
+          background: hov ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.04)',
+          border: `1px solid ${hov ? A(0.4) : 'var(--edge-line)'}`,
+          color: hov ? 'var(--edge-acc)' : 'var(--edge-text3)',
           transition: 'all .18s',
         }}
       >
         <Pencil size={14} strokeWidth={1.9} />
       </span>
 
-      <span className="min-w-0 flex-1 text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: hov ? '#d9d7e4' : '#a3a1b2' }}>
+      <span className="min-w-0 flex-1 text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: hov ? 'var(--edge-text)' : 'var(--edge-text2)' }}>
         Швидка нотатка
-        <span className="ml-2 font-normal" style={{ color: '#7d7b8e' }}>почни писати — збережеться сюди</span>
+        <span className="ml-2 font-normal" style={{ color: 'var(--edge-text3)' }}>почни писати — збережеться сюди</span>
       </span>
 
       <span
         className="grid h-6 w-6 shrink-0 place-items-center rounded-[7px] text-[11px]"
-        style={{ background: '#ffffff0d', border: '1px solid #2a2a35', fontFamily: T.mono, color: '#8b8998' }}
+        style={{ background: 'rgba(var(--edge-hair-rgb),0.05)', border: '1px solid var(--edge-line)', fontFamily: T.mono, color: 'var(--edge-text3)' }}
       >
         N
       </span>
@@ -511,7 +511,7 @@ function QuickNoteBar({ onClick }) {
 /* Плашка фільтра по тегах.
 
    Дві речі, які тут ламались. Перша: у «Всі» кольором стояв акцент
-   теми, а це CSS-змінна — `var(--edge-acc)2b` браузер викидає, тому
+   теми, а це CSS-змінна — `rgba(var(--edge-acc-rgb),0.17)` браузер викидає, тому
    плашка лишалась зовсім без фону й рамки й виглядала обрізаною.
    Друга: ховера не було взагалі, тож наведення нічого не робило, а
    клік перемикав стан ривком. */
@@ -527,9 +527,9 @@ function FilterPill({ name, count, color, active, onClick }) {
       className="flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold"
       style={{
         fontFamily: T.sans,
-        background: active ? tint({ hex: '2b', rgb: 0.17 }) : hov ? '#ffffff12' : '#ffffff08',
-        border: `1px solid ${active ? tint({ hex: '80', rgb: 0.5 }) : hov ? '#33333f' : '#20202a'}`,
-        color: active ? '#ffffff' : hov ? '#e4e2ec' : '#b3b1c0',
+        background: active ? tint({ hex: '2b', rgb: 0.17 }) : hov ? 'rgba(var(--edge-hair-rgb),0.07)' : 'rgba(var(--edge-hair-rgb),0.03)',
+        border: `1px solid ${active ? tint({ hex: '80', rgb: 0.5 }) : hov ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
+        color: active ? 'var(--edge-text)' : hov ? 'var(--edge-text)' : 'var(--edge-text2)',
         boxShadow: active ? `0 0 20px -8px ${color || A(0.8)}` : 'none',
         transition: 'background .16s, border-color .16s, color .16s, box-shadow .2s',
       }}
@@ -537,7 +537,7 @@ function FilterPill({ name, count, color, active, onClick }) {
       {name}
       <span
         className="text-[12px]"
-        style={{ fontFamily: T.mono, color: active ? (color || '#b3a8ff') : '#7d7b8e' }}
+        style={{ fontFamily: T.mono, color: active ? (color || 'var(--edge-acc)') : 'var(--edge-text3)' }}
       >
         {count}
       </span>
@@ -789,7 +789,7 @@ export default function Notes() {
   const headTitle = scope === 'archive'
     ? 'Архів'
     : openFolder?.name || (openId === NO_FOLDER ? 'Без папки' : 'Записник');
-  const headColor = scope === 'archive' || !openFolder ? '#8a8a94' : openFolder.color;
+  const headColor = scope === 'archive' || !openFolder ? 'var(--edge-text3)' : openFolder.color;
 
   /* Теги рядком — тільки ті, що справді зустрічаються тут, і одразу
      з кількістю. «Всі» попереду скидає фільтр. */
@@ -1071,8 +1071,8 @@ export default function Notes() {
           >
             <div className="min-w-0">
               <div className="flex items-center gap-[9px]">
-                <span className="h-[5px] w-[5px] rounded-full" style={{ background: '#8b7cff', boxShadow: `0 0 12px 2px ${A(0.67)}` }} />
-                <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: '#9b8dff' }}>
+                <span className="h-[5px] w-[5px] rounded-full" style={{ background: 'var(--edge-acc)', boxShadow: `0 0 12px 2px ${A(0.67)}` }} />
+                <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-acc)' }}>
                   Нотатки
                 </span>
               </div>
@@ -1083,7 +1083,7 @@ export default function Notes() {
                   fontFamily: T.display,
                   letterSpacing: '-2.4px',
                   lineHeight: 0.96,
-                  background: 'linear-gradient(170deg,#ffffff 30%,#a9a5bd)',
+                  backgroundImage: 'linear-gradient(170deg, var(--edge-text) 30%, var(--edge-text3))',
                   WebkitBackgroundClip: 'text',
                   backgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -1104,23 +1104,23 @@ export default function Notes() {
               <div
                 className="flex h-11 items-center overflow-hidden rounded-[14px]"
                 style={{
-                  background: 'linear-gradient(180deg,#ffffff0d,#ffffff04)',
-                  border: '1px solid #1f1f29',
-                  boxShadow: 'inset 0 1px 0 #ffffff0d',
+                  background: 'linear-gradient(180deg,rgba(var(--edge-hair-rgb),0.05),rgba(var(--edge-hair-rgb),0.02))',
+                  border: '1px solid var(--edge-line)',
+                  boxShadow: 'inset 0 1px 0 rgba(var(--edge-hair-rgb),0.05)',
                   backdropFilter: 'blur(8px)',
                 }}
               >
                 {[
-                  { v: folders.length, t: plural(folders.length, 'папка', 'папки', 'папок'), c: '#ffffff', icon: FolderIcon },
-                  { v: active.length, t: plural(active.length, 'запис', 'записи', 'записів'), c: '#ffffff', icon: NotebookPen },
-                  { v: `+${weekCount}`, t: 'за тиждень', c: '#8bf5c0', icon: TrendingUp },
+                  { v: folders.length, t: plural(folders.length, 'папка', 'папки', 'папок'), c: 'var(--edge-text)', icon: FolderIcon },
+                  { v: active.length, t: plural(active.length, 'запис', 'записи', 'записів'), c: 'var(--edge-text)', icon: NotebookPen },
+                  { v: `+${weekCount}`, t: 'за тиждень', c: 'var(--edge-ok)', icon: TrendingUp },
                 ].map(({ v, t, c, icon: I }, i) => (
                   <div key={t} className="flex h-full items-center">
-                    {i > 0 && <span className="h-5 w-px" style={{ background: '#1f1f29' }} />}
+                    {i > 0 && <span className="h-5 w-px" style={{ background: 'var(--edge-line)' }} />}
                     <span className="flex items-center gap-2 px-4">
-                      <I size={13} strokeWidth={1.9} style={{ color: c === '#ffffff' ? '#8f8da0' : c, flex: 'none' }} />
+                      <I size={13} strokeWidth={1.9} style={{ color: c === 'var(--edge-text)' ? 'var(--edge-text3)' : c, flex: 'none' }} />
                       <span className="text-[16px] font-bold leading-none" style={{ fontFamily: T.display, color: c }}>{v}</span>
-                      <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: '#8b8998' }}>{t}</span>
+                      <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>{t}</span>
                     </span>
                   </div>
                 ))}
@@ -1135,17 +1135,17 @@ export default function Notes() {
                   /* Ховер — той самий стан, що й фокус, тільки в
                      піввсили: поле має відгукнутись на наближення
                      курсора, але не вдавати, що вже приймає текст. */
-                  background: shelfFocus ? '#ffffff12' : shelfHover ? '#ffffff0f' : '#ffffff0a',
-                  border: `1px solid ${shelfFocus ? `${A(0.55)}` : shelfHover ? '#32323f' : '#21212b'}`,
+                  background: shelfFocus ? 'rgba(var(--edge-hair-rgb),0.07)' : shelfHover ? 'rgba(var(--edge-hair-rgb),0.06)' : 'rgba(var(--edge-hair-rgb),0.04)',
+                  border: `1px solid ${shelfFocus ? `${A(0.55)}` : shelfHover ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
                   boxShadow: shelfFocus
-                    ? `0 0 0 4px ${A(0.13)}, inset 0 1px 0 #ffffff14`
-                    : 'inset 0 1px 0 #ffffff0d',
+                    ? `0 0 0 4px ${A(0.13)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.08)`
+                    : 'inset 0 1px 0 rgba(var(--edge-hair-rgb),0.05)',
                   cursor: 'text',
                   transition: 'all .2s',
                 }}
                 onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
               >
-                <Search size={15} strokeWidth={1.8} style={{ color: '#8b899a', flex: 'none' }} />
+                <Search size={15} strokeWidth={1.8} style={{ color: 'var(--edge-text3)', flex: 'none' }} />
                 <input
                   value={shelfQuery}
                   onChange={(e) => setShelfQuery(e.target.value)}
@@ -1159,7 +1159,7 @@ export default function Notes() {
                   <button
                     onClick={() => setShelfQuery('')}
                     className="grid h-6 w-6 shrink-0 place-items-center rounded-lg"
-                    style={{ color: '#8b899a' }}
+                    style={{ color: 'var(--edge-text3)' }}
                   >
                     <X size={13} strokeWidth={2.6} />
                   </button>
@@ -1170,7 +1170,7 @@ export default function Notes() {
                   збиралась із власних відступів і виходила на три
                   пікселі нижчою — рівно стільки, щоб рядок виглядав
                   зібраним недбало. */}
-              <div className="flex h-11 items-center rounded-[13px] p-[3px]" style={{ background: '#ffffff0a', border: '1px solid #21212b' }}>
+              <div className="flex h-11 items-center rounded-[13px] p-[3px]" style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)' }}>
                 {[{ k: 'grid', I: LayoutGrid, t: 'Плиткою' }, { k: 'list', I: Rows3, t: 'Списком' }].map(({ k, I, t }) => (
                   <button
                     key={k}
@@ -1178,9 +1178,9 @@ export default function Notes() {
                     title={t}
                     className="grid h-full w-[35px] place-items-center rounded-[10px]"
                     style={{
-                      background: shelfView === k ? '#ffffff14' : 'transparent',
-                      boxShadow: shelfView === k ? 'inset 0 1px 0 #ffffff1f' : 'none',
-                      color: shelfView === k ? '#ffffff' : '#7c7a8a',
+                      background: shelfView === k ? 'rgba(var(--edge-hair-rgb),0.08)' : 'transparent',
+                      boxShadow: shelfView === k ? 'inset 0 1px 0 rgba(var(--edge-hair-rgb),0.12)' : 'none',
+                      color: shelfView === k ? 'var(--edge-text)' : 'var(--edge-text3)',
                       transition: 'all .16s',
                     }}
                   >
@@ -1209,9 +1209,9 @@ export default function Notes() {
             <button
               onClick={() => { setOpenId(null); setTag(null); setSearch(''); setScope('active'); }}
               className="inline-flex items-center gap-[7px] text-[13.5px] font-semibold transition-colors"
-              style={{ fontFamily: T.sans, color: '#8a889a' }}
+              style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = T.text2)}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#8a889a')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--edge-text3)')}
             >
               <ChevronLeft size={14} strokeWidth={2} />
               до всіх папок
@@ -1240,8 +1240,8 @@ export default function Notes() {
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-[9px]">
-                      <span className="h-[5px] w-[5px] rounded-full" style={{ background: '#8b7cff', boxShadow: `0 0 12px 2px ${A(0.67)}` }} />
-                      <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.4px', color: '#9b8dff' }}>
+                      <span className="h-[5px] w-[5px] rounded-full" style={{ background: 'var(--edge-acc)', boxShadow: `0 0 12px 2px ${A(0.67)}` }} />
+                      <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.4px', color: 'var(--edge-acc)' }}>
                         {scope === 'archive' ? 'Архів' : 'Папка'}
                       </span>
                     </div>
@@ -1251,7 +1251,7 @@ export default function Notes() {
                         fontFamily: T.display,
                         letterSpacing: '-1.8px',
                         lineHeight: 1,
-                        background: 'linear-gradient(170deg,#ffffff 34%,#a9a5bd)',
+                        backgroundImage: 'linear-gradient(170deg, var(--edge-text) 34%, var(--edge-text3))',
                         WebkitBackgroundClip: 'text',
                         backgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
@@ -1270,10 +1270,10 @@ export default function Notes() {
                     <span
                       key={t}
                       className="flex items-center gap-2 rounded-[11px] py-1.5 pl-2.5 pr-3"
-                      style={{ background: '#ffffff08', border: '1px solid #1f1f29' }}
+                      style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)' }}
                     >
-                      <I size={13} strokeWidth={1.7} style={{ color: '#8b899a' }} />
-                      <span className="text-[13px] font-semibold" style={{ fontFamily: T.sans, color: '#b9b7c6' }}>{t}</span>
+                      <I size={13} strokeWidth={1.7} style={{ color: 'var(--edge-text3)' }} />
+                      <span className="text-[13px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>{t}</span>
                     </span>
                   ))}
                 </div>
@@ -1286,14 +1286,14 @@ export default function Notes() {
                   onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
                   className="flex h-11 w-[262px] items-center gap-2.5 rounded-[13px] py-0 pl-[15px] pr-2"
                   style={{
-                    background: feedFocus ? '#ffffff12' : feedHover ? '#ffffff0f' : '#ffffff0a',
-                    border: `1px solid ${feedFocus ? A(0.55) : feedHover ? '#32323f' : '#21212b'}`,
-                    boxShadow: feedFocus ? `0 0 0 4px ${A(0.13)}, inset 0 1px 0 #ffffff14` : 'inset 0 1px 0 #ffffff0d',
+                    background: feedFocus ? 'rgba(var(--edge-hair-rgb),0.07)' : feedHover ? 'rgba(var(--edge-hair-rgb),0.06)' : 'rgba(var(--edge-hair-rgb),0.04)',
+                    border: `1px solid ${feedFocus ? A(0.55) : feedHover ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
+                    boxShadow: feedFocus ? `0 0 0 4px ${A(0.13)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.08)` : 'inset 0 1px 0 rgba(var(--edge-hair-rgb),0.05)',
                     cursor: 'text',
                     transition: 'all .2s',
                   }}
                 >
-                  <Search size={15} strokeWidth={1.8} style={{ color: '#8b899a', flex: 'none' }} />
+                  <Search size={15} strokeWidth={1.8} style={{ color: 'var(--edge-text3)', flex: 'none' }} />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -1304,15 +1304,15 @@ export default function Notes() {
                     style={{ fontFamily: T.sans, color: T.text }}
                   />
                   {search && (
-                    <button onClick={() => setSearch('')} className="grid h-6 w-6 shrink-0 place-items-center rounded-lg" style={{ color: '#a3a1b2' }}>
+                    <button onClick={() => setSearch('')} className="grid h-6 w-6 shrink-0 place-items-center rounded-lg" style={{ color: 'var(--edge-text2)' }}>
                       <X size={13} strokeWidth={2.6} />
                     </button>
                   )}
                 </div>
 
                 <PanelBtn onClick={() => setSort((v) => (v === 'newest' ? 'oldest' : v === 'oldest' ? 'title' : 'newest'))}>
-                  <ArrowDownUp size={14} strokeWidth={1.8} style={{ color: '#8b899a' }} />
-                  <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: '#c2c0ce' }}>
+                  <ArrowDownUp size={14} strokeWidth={1.8} style={{ color: 'var(--edge-text3)' }} />
+                  <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
                     {sort === 'newest' ? 'нові' : sort === 'oldest' ? 'старі' : 'за назвою'}
                   </span>
                 </PanelBtn>
@@ -1325,14 +1325,14 @@ export default function Notes() {
                     active={scope === 'archive'}
                     onClick={() => { setScope((v) => (v === 'archive' ? 'active' : 'archive')); setTag(null); }}
                   >
-                    <Archive size={14} strokeWidth={1.8} style={{ color: scope === 'archive' ? '#c4baff' : '#8b899a' }} />
-                    <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: scope === 'archive' ? '#ffffff' : '#c2c0ce' }}>
+                    <Archive size={14} strokeWidth={1.8} style={{ color: scope === 'archive' ? 'var(--edge-acc)' : 'var(--edge-text3)' }} />
+                    <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: scope === 'archive' ? 'var(--edge-text)' : 'var(--edge-text2)' }}>
                       {scope === 'archive' ? 'зі стрічки' : `архів ${archived.length}`}
                     </span>
                   </PanelBtn>
                 )}
 
-                <div className="flex h-11 items-center rounded-[13px] p-[3px]" style={{ background: '#ffffff0a', border: '1px solid #21212b' }}>
+                <div className="flex h-11 items-center rounded-[13px] p-[3px]" style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)' }}>
                   {[{ k: 'grid', I: LayoutGrid, t: 'Плиткою' }, { k: 'list', I: Rows3, t: 'Списком' }].map(({ k, I, t }) => (
                     <button
                       key={k}
@@ -1340,9 +1340,9 @@ export default function Notes() {
                       title={t}
                       className="grid h-full w-[35px] place-items-center rounded-[10px]"
                       style={{
-                        background: view === k ? '#ffffff14' : 'transparent',
-                        boxShadow: view === k ? 'inset 0 1px 0 #ffffff1f' : 'none',
-                        color: view === k ? '#ffffff' : '#7c7a8a',
+                        background: view === k ? 'rgba(var(--edge-hair-rgb),0.08)' : 'transparent',
+                        boxShadow: view === k ? 'inset 0 1px 0 rgba(var(--edge-hair-rgb),0.12)' : 'none',
+                        color: view === k ? 'var(--edge-text)' : 'var(--edge-text3)',
                         transition: 'all .16s',
                       }}
                     >
@@ -1366,7 +1366,7 @@ export default function Notes() {
                 папці. */}
             {feedTags.length > 0 && (
               <div className="mt-[30px] flex flex-wrap items-center gap-2.5 pb-0.5">
-                <span className="mr-1 text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2px', color: '#8b8998' }}>
+                <span className="mr-1 text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2px', color: 'var(--edge-text3)' }}>
                   Теги
                 </span>
                 {feedTags.map((t) => (
@@ -1422,9 +1422,9 @@ export default function Notes() {
                       <button
                         onClick={() => setOpenId(NO_FOLDER)}
                         className="text-[13px] font-semibold transition-colors"
-                        style={{ fontFamily: T.sans, color: '#a99cff' }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = '#c4baff')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = '#a99cff')}
+                        style={{ fontFamily: T.sans, color: 'var(--edge-acc)' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--edge-acc)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--edge-acc)')}
                       >
                         Всі записи →
                       </button>
@@ -1464,21 +1464,21 @@ export default function Notes() {
              запит. */
           <div
             className="mt-6 flex flex-col items-center justify-center rounded-[20px] px-6 py-14 text-center"
-            style={{ border: '1.5px dashed #24242f', background: '#ffffff03' }}
+            style={{ border: '1.5px dashed var(--edge-line)', background: 'rgba(var(--edge-hair-rgb),0.01)' }}
           >
             <span
               className="grid h-12 w-12 place-items-center rounded-[15px]"
-              style={{ background: '#ffffff0a', border: '1px solid #26262f', color: '#7c7a8a' }}
+              style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)', color: 'var(--edge-text3)' }}
             >
               {inScope.length > 0 ? <Search size={20} strokeWidth={1.8} /> : <NotebookPen size={20} strokeWidth={1.8} />}
             </span>
 
-            <div className="mt-3.5 text-[15px] font-semibold" style={{ fontFamily: T.display, color: '#b3b1c0' }}>
+            <div className="mt-3.5 text-[15px] font-semibold" style={{ fontFamily: T.display, color: 'var(--edge-text2)' }}>
               {inScope.length > 0
                 ? 'Нічого не знайшлось'
                 : scope === 'archive' ? 'Архів порожній' : 'Тут поки порожньо'}
             </div>
-            <div className="mt-1.5 max-w-[420px] text-[13px]" style={{ fontFamily: T.sans, color: '#7d7b8e', lineHeight: 1.7 }}>
+            <div className="mt-1.5 max-w-[420px] text-[13px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.7 }}>
               {inScope.length > 0
                 ? 'Спробуй інший запит або скинь фільтр по тегах'
                 : scope === 'archive'
@@ -1491,7 +1491,7 @@ export default function Notes() {
                 <button
                   onClick={() => { setTag(null); setSearch(''); }}
                   className="h-10 rounded-xl px-4 text-[13px] font-semibold"
-                  style={{ background: '#ffffff0a', border: '1px solid #2a2a35', color: '#c2c0ce', fontFamily: T.sans }}
+                  style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', fontFamily: T.sans }}
                 >
                   Скинути фільтри
                 </button>
@@ -1560,7 +1560,7 @@ export default function Notes() {
                     fontFamily: T.mono,
                     fontSize: 9,
                     letterSpacing: '1.8px',
-                    color: '#8b8998',
+                    color: 'var(--edge-text3)',
                     textTransform: 'uppercase',
                     fontWeight: 700,
                   }}
@@ -1693,7 +1693,7 @@ export default function Notes() {
                 <button
                   onClick={confirmDelete}
                   className="h-11 flex-1 rounded-xl text-[14px] font-bold transition-transform active:scale-[0.98]"
-                  style={{ background: T.bad, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+                  style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
                   Видалити
                 </button>

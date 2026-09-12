@@ -38,12 +38,12 @@ const A = (a) => `rgba(${T.accRgb}, ${a})`;
 /* Колір групи причин: він же колір обраних чіпів усередині неї —
    так у списку обраних видно, з якої області промах. */
 const GROUP_COLOR = {
-  Main: '#ff7b7b',
-  Entry: '#4da3ff',
-  'Management and exit': '#f0b13c',
-  Risk: '#ff4d6d',
-  Mindset: '#9d8cff',
-  Preparation: '#3ddc97',
+  Main: 'var(--edge-bad)',
+  Entry: 'var(--edge-info)',
+  'Management and exit': 'var(--edge-warn)',
+  Risk: 'var(--edge-bad)',
+  Mindset: 'var(--edge-acc)',
+  Preparation: 'var(--edge-ok)',
 };
 
 const GROUP_TITLE = {
@@ -65,12 +65,12 @@ const Cap = ({ children, hint, tone }) => (
   <div className="flex items-baseline justify-between gap-2.5">
     <span
       className="text-[11.5px] font-bold uppercase"
-      style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: '#b4b2c6' }}
+      style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: 'var(--edge-text2)' }}
     >
       {children}
     </span>
     {hint && (
-      <span className="text-[13px] font-medium" style={{ fontFamily: T.sans, color: tone || '#9d9bb0' }}>
+      <span className="text-[13px] font-medium" style={{ fontFamily: T.sans, color: tone || 'var(--edge-text3)' }}>
         {hint}
       </span>
     )}
@@ -160,17 +160,17 @@ function ShotsField({ shots, setShots, entryId }) {
         onDrop={(e) => { e.preventDefault(); setHov(false); add(e.dataTransfer.files); }}
         className="flex cursor-pointer items-center gap-3 rounded-[14px] p-3"
         style={{
-          border: `1.5px dashed ${hov ? A(0.55) : '#24242f'}`,
-          background: hov ? A(0.07) : '#ffffff03',
+          border: `1.5px dashed ${hov ? A(0.55) : 'var(--edge-line)'}`,
+          background: hov ? A(0.07) : 'rgba(var(--edge-hair-rgb),0.015)',
           transition: 'all .2s',
         }}
       >
         <span
           className="grid h-[38px] w-[38px] flex-none place-items-center rounded-xl"
           style={{
-            background: hov ? A(0.17) : '#ffffff0a',
-            border: `1px solid ${hov ? A(0.44) : '#26262f'}`,
-            color: hov ? '#b3a8ff' : '#8b899a',
+            background: hov ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.04)',
+            border: `1px solid ${hov ? A(0.44) : 'var(--edge-line)'}`,
+            color: hov ? 'var(--edge-acc)' : 'var(--edge-text3)',
             transition: 'all .2s',
           }}
         >
@@ -178,10 +178,10 @@ function ShotsField({ shots, setShots, entryId }) {
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block text-[14.5px] font-semibold" style={{ fontFamily: T.sans, color: '#e8e6f0' }}>
+          <span className="block text-[14.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
             {busy > 0 ? `Завантажую ${busy}…` : shots.length ? 'Додати ще скрін' : 'Скріни графіка'}
           </span>
-          <span className="mt-[3px] block text-[12.5px]" style={{ fontFamily: T.sans, color: '#a5a3b8' }}>
+          <span className="mt-[3px] block text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
             Перетягни, клікни або встав із буфера
           </span>
         </span>
@@ -233,7 +233,7 @@ function ReasonPanel({ value, onChange, invalid }) {
 
   const colorOf = (id) => {
     const g = REASON_GROUPS.find((x) => x.items.some((r) => r.id === id));
-    return g ? (GROUP_COLOR[g.group] || T.acc) : '#3ddc97';
+    return g ? (GROUP_COLOR[g.group] || T.acc) : 'var(--edge-ok)';
   };
 
   return (
@@ -241,7 +241,7 @@ function ReasonPanel({ value, onChange, invalid }) {
       <div className="px-5 pb-3.5 pt-5">
         <Cap
           hint={picked.length ? `обрано ${picked.length}` : 'можна кілька'}
-          tone={invalid ? '#ff9d9d' : undefined}
+          tone={invalid ? 'var(--edge-bad)' : undefined}
         >
           Причина
         </Cap>
@@ -249,13 +249,13 @@ function ReasonPanel({ value, onChange, invalid }) {
         <div
           className="mt-2.5 flex h-10 items-center gap-2.5 rounded-xl pl-3.5 pr-2"
           style={{
-            background: focus ? '#ffffff12' : '#ffffff08',
-            border: `1px solid ${invalid ? '#ff7b7b8c' : focus ? A(0.5) : '#21212b'}`,
+            background: focus ? 'rgba(var(--edge-hair-rgb),0.07)' : 'rgba(var(--edge-hair-rgb),0.03)',
+            border: `1px solid ${invalid ? 'rgba(var(--edge-bad-rgb),0.55)' : focus ? A(0.5) : 'var(--edge-line)'}`,
             boxShadow: focus ? `0 0 0 4px ${A(0.11)}` : 'none',
             transition: 'all .2s',
           }}
         >
-          <Search size={15} strokeWidth={1.8} className="shrink-0" style={{ color: '#a5a3b8' }} />
+          <Search size={15} strokeWidth={1.8} className="shrink-0" style={{ color: 'var(--edge-text2)' }} />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -264,13 +264,13 @@ function ReasonPanel({ value, onChange, invalid }) {
             onKeyDown={(e) => { if (e.key === 'Enter' && canAdd) { e.preventDefault(); addOwn(); } }}
             placeholder="Знайти або написати свою"
             className="w-full border-none bg-transparent text-[14.5px] font-medium outline-none"
-            style={{ fontFamily: T.sans, color: '#ffffff' }}
+            style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
           />
           {canAdd && (
             <button
               onClick={addOwn}
               className="flex flex-none items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-bold"
-              style={{ fontFamily: T.sans, background: A(0.24), border: `1px solid ${A(0.5)}`, color: '#c4baff' }}
+              style={{ fontFamily: T.sans, background: A(0.24), border: `1px solid ${A(0.5)}`, color: 'var(--edge-acc)' }}
             >
               <Plus size={11} strokeWidth={3} />
               додати
@@ -297,9 +297,9 @@ function ReasonPanel({ value, onChange, invalid }) {
             <button
               onClick={() => onChange([])}
               className="px-1.5 py-1 text-[13px] font-semibold"
-              style={{ fontFamily: T.sans, color: '#9d9bb0' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#a99cff'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#6a6878'; }}
+              style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-acc)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--edge-text3)'; }}
             >
               очистити
             </button>
@@ -320,7 +320,7 @@ function ReasonPanel({ value, onChange, invalid }) {
               style={main ? {
                 padding: 14,
                 borderRadius: 16,
-                background: `linear-gradient(165deg, ${g.color}12, #ffffff03)`,
+                background: `linear-gradient(165deg, ${g.color}12, rgba(var(--edge-hair-rgb),0.015))`,
                 border: `1px solid ${g.color}2b`,
               } : undefined}
             >
@@ -331,11 +331,11 @@ function ReasonPanel({ value, onChange, invalid }) {
                 />
                 <span
                   className="whitespace-nowrap text-[11.5px] font-bold uppercase"
-                  style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: main ? `${g.color}ee` : '#8d8b9e' }}
+                  style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: main ? `${g.color}ee` : 'var(--edge-text3)' }}
                 >
                   {GROUP_TITLE[g.group] || g.group}
                 </span>
-                <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,#22222c,transparent)' }} />
+                <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,var(--edge-line),transparent)' }} />
                 {g.taken > 0 && (
                   <span
                     className="flex-none rounded-md px-2 py-[3px] text-[11.5px]"
@@ -357,9 +357,9 @@ function ReasonPanel({ value, onChange, invalid }) {
                       style={{
                         fontFamily: T.sans,
                         lineHeight: 1.2,
-                        background: on ? `${g.color}2b` : '#ffffff08',
-                        border: `1px solid ${on ? `${g.color}8c` : '#21212b'}`,
-                        color: on ? '#ffffff' : '#c2c0d0',
+                        background: on ? `${g.color}2b` : 'rgba(var(--edge-hair-rgb),0.03)',
+                        border: `1px solid ${on ? `${g.color}8c` : 'var(--edge-line)'}`,
+                        color: on ? 'var(--edge-text)' : 'var(--edge-text2)',
                         boxShadow: on ? `0 0 18px -8px ${g.color}cc` : 'none',
                         transition: 'all .16s',
                       }}
@@ -377,14 +377,14 @@ function ReasonPanel({ value, onChange, invalid }) {
         {ownShown.length > 0 && (
           <div className="mt-4">
             <div className="flex items-center gap-2.5">
-              <span className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: '#3ddc97', boxShadow: '0 0 8px 1px #3ddc9799' }} />
+              <span className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: 'var(--edge-ok)', boxShadow: '0 0 8px 1px rgba(var(--edge-ok-rgb),0.60)' }} />
               <span
                 className="whitespace-nowrap text-[11.5px] font-bold uppercase"
-                style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: '#a5a3b8' }}
+                style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: 'var(--edge-text2)' }}
               >
                 Свої
               </span>
-              <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,#22222c,transparent)' }} />
+              <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,var(--edge-line),transparent)' }} />
             </div>
 
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -395,10 +395,10 @@ function ReasonPanel({ value, onChange, invalid }) {
                   className="flex items-center gap-1.5 rounded-full px-3.5 py-[8px] text-[13.5px] font-semibold"
                   style={{
                     fontFamily: T.sans,
-                    background: '#3ddc972b',
-                    border: '1px solid #3ddc978c',
-                    color: '#ffffff',
-                    boxShadow: '0 0 18px -8px #3ddc97cc',
+                    background: 'rgba(var(--edge-ok-rgb),0.17)',
+                    border: '1px solid rgba(var(--edge-ok-rgb),0.55)',
+                    color: 'var(--edge-text)',
+                    boxShadow: '0 0 18px -8px rgba(var(--edge-ok-rgb),0.80)',
                   }}
                 >
                   <Check size={11} strokeWidth={3} className="shrink-0" />
@@ -412,12 +412,12 @@ function ReasonPanel({ value, onChange, invalid }) {
         {!groups.length && !ownShown.length && (
           <div
             className="mt-4 rounded-[14px] px-4 py-6 text-center"
-            style={{ border: '1.5px dashed #24242f', background: '#ffffff03' }}
+            style={{ border: '1.5px dashed var(--edge-line)', background: 'rgba(var(--edge-hair-rgb),0.015)' }}
           >
-            <div className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: '#c9c7d8' }}>
+            <div className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
               Такої причини ще немає
             </div>
-            <div className="mt-1.5 text-[12px]" style={{ fontFamily: T.sans, color: '#9d9bb0' }}>
+            <div className="mt-1.5 text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
               Натисни «додати», щоб зберегти свою
             </div>
           </div>
@@ -502,44 +502,44 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                 maxWidth: 1040,
                 height: 'min(92vh, 760px)',
                 borderRadius: 24,
-                backgroundColor: '#0b0b10',
-                backgroundImage: 'linear-gradient(170deg,#111117,#0b0b10)',
-                border: '1px solid #23232e',
+                backgroundColor: 'var(--edge-sunken)',
+                backgroundImage: 'linear-gradient(170deg,var(--edge-surface),var(--edge-sunken))',
+                border: '1px solid var(--edge-line)',
                 boxShadow: `0 50px 110px -40px #000, 0 0 0 1px ${A(0.08)}`,
               }}
             >
               <span
                 className="pointer-events-none absolute inset-x-0 top-0 h-px"
-                style={{ background: 'linear-gradient(90deg,transparent,#ff7b7bb3 26%,#8b7cffcc 72%,transparent)' }}
+                style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-bad-rgb),0.70) 26%,rgba(var(--edge-acc-rgb),0.80) 72%,transparent)' }}
               />
 
               {/* Плейсхолдери за замовчуванням майже зливаються з
                   фоном — на яскравому екрані їх не видно взагалі. */}
               <style>{`
                 .err-modal input::placeholder,
-                .err-modal textarea::placeholder { color: #7d7b90; opacity: 1; }
+                .err-modal textarea::placeholder { color: var(--edge-text3); opacity: 1; }
               `}</style>
 
               {/* ---------- шапка ---------- */}
               <div
                 className="flex flex-none items-center justify-between gap-5 py-4 pl-[22px] pr-[18px]"
-                style={{ borderBottom: '1px solid #1c1c25' }}
+                style={{ borderBottom: '1px solid var(--edge-line)' }}
               >
                 <div className="flex items-center gap-3">
                   <span
                     className="grid h-[34px] w-[34px] place-items-center rounded-[11px]"
-                    style={{ background: '#ff7b7b1f', border: '1px solid #ff7b7b4d', boxShadow: 'inset 0 1px 0 #ff7b7b55', color: '#ffb3b3' }}
+                    style={{ background: 'rgba(var(--edge-bad-rgb),0.12)', border: '1px solid rgba(var(--edge-bad-rgb),0.30)', boxShadow: 'inset 0 1px 0 rgba(var(--edge-bad-rgb),0.33)', color: 'var(--edge-bad)' }}
                   >
                     <AlertTriangle size={16} strokeWidth={1.9} />
                   </span>
                   <div>
                     <div
                       className="text-[12px] font-bold uppercase"
-                      style={{ fontFamily: T.mono, letterSpacing: '2.2px', color: '#ff9d9d' }}
+                      style={{ fontFamily: T.mono, letterSpacing: '2.2px', color: 'var(--edge-bad)' }}
                     >
                       Зафіксувати помилку
                     </div>
-                    <div className="mt-1 text-[13.5px]" style={{ fontFamily: T.sans, color: '#b4b2c6' }}>
+                    <div className="mt-1 text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
                       Що сталося, чому, і що робити далі
                     </div>
                   </div>
@@ -548,9 +548,9 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                 <button
                   onClick={onClose}
                   className="grid h-[34px] w-[34px] place-items-center rounded-[10px]"
-                  style={{ background: '#ffffff08', border: '1px solid #23232e', color: '#b3b1c0', transition: 'all .16s' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff16'; e.currentTarget.style.borderColor = '#3d3d4c'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#23232e'; }}
+                  style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', transition: 'all .16s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.09)'; e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.03)'; e.currentTarget.style.borderColor = 'var(--edge-line)'; }}
                 >
                   <X size={15} strokeWidth={2} />
                 </button>
@@ -566,31 +566,31 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                 {/* ліворуч: те, що людина пише сама */}
                 <div
                   className="min-w-0 overflow-y-auto px-[22px] pb-[18px] pt-5"
-                  style={{ borderRight: '1px solid #1c1c25' }}
+                  style={{ borderRight: '1px solid var(--edge-line)' }}
                 >
                   <Cap>Пара</Cap>
                   <div
                     onClick={() => setAssetOpen(true)}
                     className="mt-2.5 flex h-[46px] cursor-pointer items-center justify-between gap-2.5 rounded-[13px] px-4"
-                    style={{ background: '#ffffff08', border: '1px solid #21212b', transition: 'all .16s' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#33333f'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#21212b'; }}
+                    style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', transition: 'all .16s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line)'; }}
                   >
                     <span
                       className="min-w-0 truncate"
                       style={form.pair
-                        ? { fontFamily: T.mono, fontSize: 15, letterSpacing: '1px', fontWeight: 700, color: '#ffffff' }
-                        : { fontFamily: T.sans, fontSize: 15, fontWeight: 500, color: '#9d9bb0' }}
+                        ? { fontFamily: T.mono, fontSize: 15, letterSpacing: '1px', fontWeight: 700, color: 'var(--edge-text)' }
+                        : { fontFamily: T.sans, fontSize: 15, fontWeight: 500, color: 'var(--edge-text3)' }}
                     >
                       {form.pair || 'Вибрати актив'}
                     </span>
-                    <Search size={15} strokeWidth={1.8} style={{ color: '#8b899a', flex: 'none' }} />
+                    <Search size={15} strokeWidth={1.8} style={{ color: 'var(--edge-text3)', flex: 'none' }} />
                   </div>
 
                   <div className="mt-5">
                     <Cap
                       hint={bad(missDesc) ? '⚠ без опису запис не піддається розбору' : len ? `${len} символів` : undefined}
-                      tone={bad(missDesc) ? '#ff9d9d' : len > 40 ? '#6fe0b4' : undefined}
+                      tone={bad(missDesc) ? 'var(--edge-bad)' : len > 40 ? 'var(--edge-ok)' : undefined}
                     >
                       Що сталося і що з цього виніс
                     </Cap>
@@ -599,8 +599,8 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                       className="mt-2.5 rounded-[14px] px-4 py-3.5"
                       style={{
                         height: 186,
-                        background: bodyFocus ? '#ffffff0a' : '#ffffff05',
-                        border: `1px solid ${bad(missDesc) ? '#ff7b7b8c' : bodyFocus ? A(0.45) : '#1e1e27'}`,
+                        background: bodyFocus ? 'rgba(var(--edge-hair-rgb),0.04)' : 'rgba(var(--edge-hair-rgb),0.02)',
+                        border: `1px solid ${bad(missDesc) ? 'rgba(var(--edge-bad-rgb),0.55)' : bodyFocus ? A(0.45) : 'var(--edge-line)'}`,
                         boxShadow: bodyFocus ? `0 0 0 4px ${A(0.11)}` : 'none',
                         transition: 'all .2s',
                       }}
@@ -612,7 +612,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                         onBlur={() => setBodyFocus(false)}
                         placeholder="Що зробив, де зламався план, що зробиш інакше наступного разу."
                         className="h-full w-full resize-none border-none bg-transparent p-0 outline-none"
-                        style={{ fontFamily: T.sans, fontSize: 16, lineHeight: 1.68, color: '#f2f1f8' }}
+                        style={{ fontFamily: T.sans, fontSize: 16, lineHeight: 1.68, color: 'var(--edge-text)' }}
                       />
                     </div>
                   </div>
@@ -623,7 +623,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span
                       className="mr-0.5 text-[11.5px] font-bold uppercase"
-                      style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: '#75738a' }}
+                      style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}
                     >
                       Підказки
                     </span>
@@ -632,9 +632,9 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                         key={p.name}
                         onClick={() => addPrompt(p.text)}
                         className="rounded-full px-3.5 py-[7px] text-[13px] font-semibold"
-                        style={{ fontFamily: T.sans, background: '#ffffff08', border: '1px solid #26262f', color: '#c2c0d0', transition: 'all .16s' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.5); e.currentTarget.style.color = '#ffffff'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#21212b'; e.currentTarget.style.color = '#a5a3b3'; }}
+                        style={{ fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', transition: 'all .16s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.5); e.currentTarget.style.color = 'var(--edge-text)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line)'; e.currentTarget.style.color = 'var(--edge-text2)'; }}
                       >
                         {p.name}
                       </button>
@@ -651,7 +651,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                 </div>
 
                 {/* праворуч: те, що людина вибирає */}
-                <div className="flex min-h-0 min-w-0 flex-col overflow-hidden" style={{ background: '#0c0c11' }}>
+                <div className="flex min-h-0 min-w-0 flex-col overflow-hidden" style={{ background: 'var(--edge-sunken)' }}>
                   <ReasonPanel
                     value={form.reasons}
                     onChange={(v) => setForm({ ...form, reasons: v })}
@@ -663,9 +663,9 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
               {/* ---------- підвал ---------- */}
               <div
                 className="flex flex-none flex-wrap items-center justify-between gap-4 py-3.5 pl-[22px] pr-[18px]"
-                style={{ borderTop: '1px solid #1c1c25', background: '#0a0a0e' }}
+                style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)' }}
               >
-                <span className="text-[13.5px] font-medium" style={{ fontFamily: T.sans, color: touched && invalid ? '#ff9d9d' : '#b4b2c6' }}>
+                <span className="text-[13.5px] font-medium" style={{ fontFamily: T.sans, color: touched && invalid ? 'var(--edge-bad)' : 'var(--edge-text2)' }}>
                   {touched && invalid
                     ? (missReason && missDesc ? 'Заповни причину і опис'
                       : missReason ? 'Обери причину' : 'Опиши, що сталось')
@@ -678,9 +678,9 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                   <button
                     onClick={onClose}
                     className="flex h-[44px] items-center rounded-xl px-5 text-[14px] font-semibold"
-                    style={{ fontFamily: T.sans, background: '#ffffff08', border: '1px solid #26262f', color: '#d4d2e0', transition: 'all .16s' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff14'; e.currentTarget.style.borderColor = '#353542'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff08'; e.currentTarget.style.borderColor = '#23232e'; }}
+                    style={{ fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text)', transition: 'all .16s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.08)'; e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.03)'; e.currentTarget.style.borderColor = 'var(--edge-line)'; }}
                   >
                     Скасувати
                   </button>
@@ -692,11 +692,11 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                     className="relative flex h-[44px] items-center gap-2.5 overflow-hidden rounded-xl px-5 text-[14.5px] font-bold"
                     style={{
                       fontFamily: T.sans,
-                      color: '#ffffff',
-                      background: `linear-gradient(180deg, ${ctaHover ? '#6355ff, #4a3bf5' : '#5546f8, #3f30e8'})`,
+                      color: 'var(--edge-text)',
+                      background: `linear-gradient(180deg, ${ctaHover ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
                       boxShadow: ctaHover
-                        ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 #ffffff4d`
-                        : `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 #ffffff33`,
+                        ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-text-rgb),0.3)`
+                        : `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
                       transform: `translateY(${ctaHover ? '-2px' : '0'})`,
                       opacity: touched && invalid ? 0.8 : 1,
                       transition: 'transform .3s cubic-bezier(.22,1.2,.36,1), box-shadow .24s, background .18s',
@@ -704,7 +704,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                   >
                     <span
                       className="pointer-events-none absolute inset-x-0 top-0 h-px"
-                      style={{ background: 'linear-gradient(90deg,transparent,#ffffff99,transparent)' }}
+                      style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-text-rgb),0.6),transparent)' }}
                     />
                     <Check size={15} strokeWidth={2.6} />
                     Зберегти помилку

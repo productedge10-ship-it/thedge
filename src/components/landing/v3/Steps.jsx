@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { C, F, A } from './base';
+import { C, F, A, SHELL } from './base';
 
 /* ==================================================================
    Три кроки.
@@ -33,7 +33,7 @@ export default function Steps() {
   }, []);
 
   return (
-    <section ref={ref} style={{ maxWidth: 1240, margin: '0 auto', padding: '52px 32px 56px' }}>
+    <section ref={ref} style={{ ...SHELL, paddingTop: '52px', paddingBottom: '56px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 30 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
         <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>ТРИ КРОКИ</span>

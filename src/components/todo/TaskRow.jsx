@@ -107,7 +107,7 @@ export default function TaskRow({ task, onToggle, onEdit, onDelete, onFocus, com
               transition={{ type: 'spring', stiffness: 500, damping: 24 }}
               className="flex"
             >
-              <Check size={13} strokeWidth={3.6} style={{ color: 'var(--edge-bg, #0A0A0C)' }} />
+              <Check size={13} strokeWidth={3.6} style={{ color: 'var(--edge-on-acc, #0A0A0C)' }} />
             </motion.span>
           )}
         </AnimatePresence>

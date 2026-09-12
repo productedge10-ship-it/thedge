@@ -214,7 +214,7 @@ export default function QuickTradeBar({
               if (e.key === 'Escape') { e.stopPropagation(); setSetupOpen(false); }
             }}
             placeholder="Сетап або нотатка"
-            className="h-full w-full bg-transparent px-3.5 text-[14px] outline-none placeholder:text-[var(--edge-text3,#7A7A85)]"
+            className="h-full w-full bg-transparent px-3.5 text-[14px] outline-none placeholder:text-[var(--edge-text3,var(--edge-text3))]"
             style={{ fontFamily: T.sans, color: T.text }}
           />
 

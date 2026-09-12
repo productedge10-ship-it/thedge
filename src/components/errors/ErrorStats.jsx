@@ -60,9 +60,9 @@ export default function ErrorStats({ entries }) {
       transition={{ duration: 0.4, ease: EASE }}
       className="relative mb-5 overflow-hidden rounded-[20px] px-7"
       style={{
-        background: 'linear-gradient(140deg,#131320,#0d0d13 54%,#0b0b10)',
-        border: '1px solid #1f1f2b',
-        boxShadow: '0 24px 60px -34px #000',
+        background: 'linear-gradient(140deg, var(--edge-surface-hi), var(--edge-surface) 54%, var(--edge-surface))',
+        border: `1px solid ${T.line}`,
+        boxShadow: `0 24px 60px -34px var(--edge-panel-glow, rgba(0,0,0,0.5))`,
       }}
     >
       <span
@@ -75,18 +75,18 @@ export default function ErrorStats({ entries }) {
         <div className="w-[248px] flex-none py-6 pr-7">
           <div
             className="text-[10.5px] font-bold uppercase"
-            style={{ fontFamily: T.mono, letterSpacing: '2px', color: '#8d8b9e' }}
+            style={{ fontFamily: T.mono, letterSpacing: '2px', color: 'var(--edge-text3)' }}
           >
             Всього записів
           </div>
 
           <div className="mt-3 flex items-baseline gap-2.5">
             <span
-              style={{ fontFamily: T.display, fontSize: 56, fontWeight: 700, letterSpacing: '-2.4px', lineHeight: 1, color: '#ffffff' }}
+              style={{ fontFamily: T.display, fontSize: 56, fontWeight: 700, letterSpacing: '-2.4px', lineHeight: 1, color: 'var(--edge-text)' }}
             >
               {list.length}
             </span>
-            <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+            <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
               {plural(list.length).split(' ')[1]}
             </span>
           </div>
@@ -96,9 +96,9 @@ export default function ErrorStats({ entries }) {
               className="flex items-center gap-1.5 rounded-full px-2.5 py-[5px] text-[12px] font-bold"
               style={{
                 fontFamily: T.sans,
-                background: trendGood ? '#2fbf8f1f' : '#ff7b7b1f',
-                border: `1px solid ${trendGood ? '#2fbf8f4d' : '#ff7b7b4d'}`,
-                color: trendGood ? '#6fe0b4' : '#ff9d9d',
+                background: trendGood ? 'rgba(var(--edge-ok-rgb),0.12)' : 'rgba(var(--edge-bad-rgb),0.12)',
+                border: `1px solid ${trendGood ? 'rgba(var(--edge-ok-rgb),0.30)' : 'rgba(var(--edge-bad-rgb),0.30)'}`,
+                color: trendGood ? 'var(--edge-ok)' : 'var(--edge-bad)',
               }}
             >
               {trendGood
@@ -106,7 +106,7 @@ export default function ErrorStats({ entries }) {
                 : <TrendingUp size={12} strokeWidth={2.4} />}
               {trendLabel}
             </span>
-            <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+            <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
               цього місяця
             </span>
           </div>
@@ -114,7 +114,7 @@ export default function ErrorStats({ entries }) {
 
         <div
           className="my-5 w-px flex-none"
-          style={{ background: 'linear-gradient(180deg,transparent,#ffffff1c 22%,#ffffff1c 78%,transparent)' }}
+          style={{ background: 'linear-gradient(180deg,transparent,rgba(var(--edge-hair-rgb),0.11) 22%,rgba(var(--edge-hair-rgb),0.11) 78%,transparent)' }}
         />
 
         {/* ─── що повторюється ─── */}
@@ -122,11 +122,11 @@ export default function ErrorStats({ entries }) {
           <div className="flex items-baseline justify-between gap-3">
             <div
               className="text-[10.5px] font-bold uppercase"
-              style={{ fontFamily: T.mono, letterSpacing: '2px', color: '#8d8b9e' }}
+              style={{ fontFamily: T.mono, letterSpacing: '2px', color: 'var(--edge-text3)' }}
             >
               Що повторюється
             </div>
-            <div className="text-[12.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e' }}>
+            <div className="text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
               {repeated
                 ? `${repeated} ${repeated === 1 ? 'категорія повторюється' : 'категорії повторюються'}`
                 : 'поки без повторів'}
@@ -139,14 +139,14 @@ export default function ErrorStats({ entries }) {
                 <div key={b.id} className="flex items-center gap-3.5">
                   <div
                     className="w-[140px] flex-none truncate text-[13.5px] font-semibold"
-                    style={{ fontFamily: T.sans, color: '#d4d2e0' }}
+                    style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
                   >
                     {b.label}
                   </div>
 
                   <div
                     className="h-[7px] min-w-[40px] flex-1 overflow-hidden rounded-full"
-                    style={{ background: '#17171f', boxShadow: 'inset 0 1px 2px #00000099' }}
+                    style={{ background: "var(--edge-sunken)", boxShadow: 'inset 0 1px 2px var(--edge-panel-glow, rgba(0,0,0,0.35))' }}
                   >
                     <div
                       className="h-full rounded-full"
@@ -160,7 +160,7 @@ export default function ErrorStats({ entries }) {
 
                   <div
                     className="w-6 flex-none text-right"
-                    style={{ fontFamily: T.display, fontSize: 16, fontWeight: 700, color: '#ffffff' }}
+                    style={{ fontFamily: T.display, fontSize: 16, fontWeight: 700, color: 'var(--edge-text)' }}
                   >
                     {b.count}
                   </div>
@@ -174,7 +174,7 @@ export default function ErrorStats({ entries }) {
               ))}
             </div>
           ) : (
-            <p className="mt-4 text-[13.5px]" style={{ fontFamily: T.sans, color: '#7d7b8e', lineHeight: 1.6 }}>
+            <p className="mt-4 text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.6 }}>
               Розклад зʼявиться, щойно накопичиться перша пара записів.
             </p>
           )}

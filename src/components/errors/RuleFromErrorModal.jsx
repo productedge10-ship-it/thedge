@@ -110,9 +110,9 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                 pointerEvents: 'auto',
                 maxWidth: 520,
                 borderRadius: 20,
-                backgroundColor: '#0b0b10',
-                backgroundImage: 'linear-gradient(170deg,#111117,#0b0b10)',
-                border: '1px solid #23232e',
+                backgroundColor: 'var(--edge-sunken)',
+                backgroundImage: 'linear-gradient(170deg,var(--edge-surface),var(--edge-sunken))',
+                border: '1px solid var(--edge-line)',
                 boxShadow: '0 40px 90px -34px #000',
               }}
             >
@@ -121,20 +121,20 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                 style={{ background: `linear-gradient(90deg,transparent,${color || T.acc}cc 40%,transparent)` }}
               />
 
-              <div className="flex items-center justify-between gap-4 px-5 py-4" style={{ borderBottom: '1px solid #1c1c25' }}>
+              <div className="flex items-center justify-between gap-4 px-5 py-4" style={{ borderBottom: '1px solid var(--edge-line)' }}>
                 <div className="flex items-center gap-3">
                   <span
                     className="grid h-9 w-9 place-items-center rounded-xl"
-                    style={{ background: A(0.16), border: `1px solid ${A(0.4)}`, color: '#c4baff' }}
+                    style={{ background: A(0.16), border: `1px solid ${A(0.4)}`, color: 'var(--edge-acc)' }}
                   >
                     <ListChecks size={16} strokeWidth={1.9} />
                   </span>
                   <div>
-                    <div className="text-[14.5px] font-bold" style={{ fontFamily: T.display, color: '#ffffff', letterSpacing: '-0.3px' }}>
+                    <div className="text-[14.5px] font-bold" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.3px' }}>
                       Правило з цієї помилки
                     </div>
                     {firstReason && (
-                      <div className="mt-[3px] text-[12.5px]" style={{ fontFamily: T.sans, color: '#8f8da0' }}>
+                      <div className="mt-[3px] text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                         {firstReason}
                       </div>
                     )}
@@ -144,7 +144,7 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                 <button
                   onClick={onClose}
                   className="grid h-8 w-8 place-items-center rounded-[10px]"
-                  style={{ background: '#ffffff08', border: '1px solid #23232e', color: '#b3b1c0' }}
+                  style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)' }}
                 >
                   <X size={14} strokeWidth={2} />
                 </button>
@@ -153,7 +153,7 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
               <div className="px-5 py-5">
                 <span
                   className="text-[10.5px] font-bold uppercase"
-                  style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: '#a5a3b8' }}
+                  style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: 'var(--edge-text2)' }}
                 >
                   Що робити наступного разу
                 </span>
@@ -165,15 +165,15 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                   placeholder="Обʼєм рахую до входу, а не після того, як побачив рух."
                   className="mt-2.5 w-full resize-none rounded-[13px] px-4 py-3 outline-none"
                   style={{
-                    fontFamily: T.sans, fontSize: 14.5, lineHeight: 1.6, color: '#f0eff6',
-                    background: '#ffffff05', border: '1px solid #1e1e27',
+                    fontFamily: T.sans, fontSize: 14.5, lineHeight: 1.6, color: 'var(--edge-text)',
+                    background: 'rgba(var(--edge-hair-rgb),0.02)', border: '1px solid var(--edge-line)',
                   }}
                 />
 
                 <div className="mt-4">
                   <span
                     className="text-[10.5px] font-bold uppercase"
-                    style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: '#a5a3b8' }}
+                    style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: 'var(--edge-text2)' }}
                   >
                     Куди покласти
                   </span>
@@ -188,9 +188,9 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                           className="rounded-[10px] px-3.5 py-2 text-[13px] font-semibold"
                           style={{
                             fontFamily: T.sans,
-                            background: on ? A(0.2) : '#ffffff08',
-                            border: `1px solid ${on ? A(0.55) : '#26262f'}`,
-                            color: on ? '#ffffff' : '#c2c0d0',
+                            background: on ? A(0.2) : 'rgba(var(--edge-hair-rgb),0.03)',
+                            border: `1px solid ${on ? A(0.55) : 'var(--edge-line)'}`,
+                            color: on ? 'var(--edge-text)' : 'var(--edge-text2)',
                             transition: 'all .16s',
                           }}
                         >
@@ -208,27 +208,27 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                   onClick={() => setCritical((v) => !v)}
                   className="mt-4 flex w-full items-center gap-2.5 rounded-[12px] px-3.5 py-3 text-left"
                   style={{
-                    background: critical ? '#ff7b7b14' : '#ffffff05',
-                    border: `1px solid ${critical ? '#ff7b7b4d' : '#1e1e27'}`,
+                    background: critical ? 'rgba(var(--edge-bad-rgb),0.08)' : 'rgba(var(--edge-hair-rgb),0.02)',
+                    border: `1px solid ${critical ? 'rgba(var(--edge-bad-rgb),0.30)' : 'var(--edge-line)'}`,
                     transition: 'all .16s',
                   }}
                 >
                   <span
                     className="grid h-5 w-5 flex-none place-items-center rounded-md"
                     style={{
-                      background: critical ? '#ff7b7b' : 'transparent',
-                      border: `1px solid ${critical ? '#ff7b7b' : '#33333f'}`,
-                      color: '#140a0a',
+                      background: critical ? 'var(--edge-bad)' : 'transparent',
+                      border: `1px solid ${critical ? 'var(--edge-bad)' : 'var(--edge-line-hi)'}`,
+                      color: 'var(--edge-sunken)',
                     }}
                   >
                     {critical && <Check size={12} strokeWidth={3.2} />}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2 text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: '#e2e0ec' }}>
-                      <Flame size={13} strokeWidth={2} style={{ color: critical ? '#ff9d9d' : '#8f8da0' }} />
+                    <span className="flex items-center gap-2 text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
+                      <Flame size={13} strokeWidth={2} style={{ color: critical ? 'var(--edge-bad)' : 'var(--edge-text3)' }} />
                       Критичне
                     </span>
-                    <span className="mt-1 block text-[12px]" style={{ fontFamily: T.sans, color: '#8f8da0' }}>
+                    <span className="mt-1 block text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                       Без цього пункту чекліст не дасть зеленого вердикту
                     </span>
                   </span>
@@ -237,9 +237,9 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
 
               <div
                 className="flex items-center justify-between gap-4 px-5 py-3.5"
-                style={{ borderTop: '1px solid #1c1c25', background: '#0a0a0e' }}
+                style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)' }}
               >
-                <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: '#8f8da0' }}>
+                <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                   Зʼявиться в «Перед входом»
                 </span>
 
@@ -247,7 +247,7 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                   <button
                     onClick={onClose}
                     className="flex h-10 items-center rounded-xl px-4 text-[13px] font-semibold"
-                    style={{ fontFamily: T.sans, background: '#ffffff08', border: '1px solid #26262f', color: '#d4d2e0' }}
+                    style={{ fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text)' }}
                   >
                     Скасувати
                   </button>
@@ -256,9 +256,9 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                     className="flex h-10 items-center gap-2 rounded-xl px-4 text-[13.5px] font-bold"
                     style={{
                       fontFamily: T.sans,
-                      background: 'linear-gradient(180deg,#5546f8,#3f30e8)',
-                      color: '#ffffff',
-                      boxShadow: `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 #ffffff33`,
+                      background: 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))',
+                      color: 'var(--edge-text)',
+                      boxShadow: `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
                       opacity: text.trim().length < 4 ? 0.6 : 1,
                     }}
                   >

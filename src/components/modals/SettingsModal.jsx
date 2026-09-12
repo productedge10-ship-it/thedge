@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, RotateCcw, Eye, EyeOff, Moon, Sun, ZapOff,
   User, Target, BookOpen, Palette, Sparkles, LayoutGrid,
-  MailCheck, MailWarning, KeyRound, Loader2, Check,
+  MailCheck, MailWarning, KeyRound, Loader2, Check, Send,
 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
@@ -315,6 +315,33 @@ export default function SettingsModal() {
               </div>
 
               <div className="flex-1" />
+
+              {/* Той самий контакт, що на /faq: щось не працює — пиши
+                  в Telegram. */}
+              <a
+                href="https://t.me/h1f3stt"
+                target="_blank"
+                rel="noreferrer"
+                className="group mb-2.5 flex items-center justify-center text-white"
+                style={{
+                  fontFamily: T.sans,
+                  gap: 9,
+                  height: 48,
+                  borderRadius: 13,
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  letterSpacing: '1.4px',
+                  textTransform: 'uppercase',
+                  background: 'linear-gradient(140deg, #4db8f5 0%, #25A3E9 50%, #1273ab 100%)',
+                  boxShadow: '0 14px 30px -14px rgba(37,163,233,0.6), inset 0 1px 0 rgba(255,255,255,0.25)',
+                  transition: 'filter .18s, transform .18s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.06)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <Send size={14} strokeWidth={2.2} />
+                Message on Telegram
+              </a>
 
               <button
                 onClick={s.reset}

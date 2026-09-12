@@ -30,7 +30,7 @@ import { generateTrades, DEMO_SIZES } from '../../lib/demoTrades';
 const fmtR = (v) => `${v > 0 ? '+' : ''}${v.toFixed(1)}R`;
 
 const axis = {
-  stroke: 'var(--edge-text4, #4A4A52)',
+  stroke: 'var(--edge-text4, var(--edge-text4))',
   fontSize: 10,
   tickLine: false,
   axisLine: false,
@@ -386,10 +386,10 @@ export default function WhatIf({ trades: real, onCarry }) {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--edge-surface-hi, #18181C)" />
               <XAxis dataKey="i" {...axis} minTickGap={32} />
               <YAxis {...axis} />
-              <RTooltip content={<Tip />} cursor={{ stroke: 'var(--edge-line-hi, #33333A)' }} />
-              <ReferenceLine y={0} stroke="var(--edge-line-hi, #33333A)" />
+              <RTooltip content={<Tip />} cursor={{ stroke: 'var(--edge-line-hi, var(--edge-line-hi))' }} />
+              <ReferenceLine y={0} stroke="var(--edge-line-hi, var(--edge-line-hi))" />
               <Line
-                type="monotone" dataKey="було" stroke="var(--edge-text4, #4A4A52)"
+                type="monotone" dataKey="було" stroke="var(--edge-text4, var(--edge-text4))"
                 strokeWidth={1.6} dot={false} isAnimationActive={false}
               />
               {touched && (

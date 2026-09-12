@@ -276,7 +276,7 @@ export default function PomodoroScreen({
                 >
                   <motion.span
                     className="absolute top-1 h-4 w-4 rounded-full"
-                    style={{ background: settings.autoNext ? 'var(--edge-bg, #0A0A0C)' : T.text3 }}
+                    style={{ background: settings.autoNext ? 'var(--edge-on-acc, #0A0A0C)' : T.text3 }}
                     initial={false}
                     animate={{ left: settings.autoNext ? 26 : 4 }}
                     transition={{ type: 'spring', stiffness: 480, damping: 30 }}
@@ -423,7 +423,7 @@ export default function PomodoroScreen({
             className="flex h-14 w-[142px] items-center justify-center gap-2.5 rounded-2xl text-[15px] font-bold transition-shadow duration-200 sm:h-16 sm:w-[168px] sm:text-[16px]"
             style={{
               background: M.color,
-              color: 'var(--edge-bg, #0A0A0C)',
+              color: 'var(--edge-on-acc, #0A0A0C)',
               fontFamily: T.sans,
               boxShadow: `0 10px 30px -12px ${M.color}`,
             }}

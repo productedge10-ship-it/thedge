@@ -61,10 +61,10 @@ export default function ResultsBoard({
         onMouseMove={move}
         className="group relative overflow-hidden rounded-2xl"
         style={{
-          background: 'rgba(18,18,22,0.94)',
+          background: 'var(--edge-surface-hi, rgba(18,18,22,0.94))',
           backdropFilter: 'blur(16px)',
           border: `1px solid ${ready ? T.lineAcc : T.line}`,
-          boxShadow: '0 20px 48px -30px rgba(0,0,0,0.95)',
+          boxShadow: '0 20px 48px -30px var(--edge-panel-glow, rgba(0,0,0,0.5))',
         }}
       >
         <motion.div
@@ -106,7 +106,7 @@ export default function ResultsBoard({
                     textToCopy={lotSize}
                     size={22}
                     className="rounded-lg p-1.5 transition-colors"
-                    style={{ background: 'rgba(255,255,255,0.05)', color: T.text3 }}
+                    style={{ background: 'rgba(var(--edge-hair-rgb),0.05)', color: T.text3 }}
                   />
                 )}
               </div>
@@ -156,7 +156,7 @@ export default function ResultsBoard({
                       цифр вона читалась як головний елемент картки,
                       хоч це лише пропорція. Пʼять достатньо, щоб
                       побачити співвідношення. */}
-                  <div className="flex h-[5px] overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <div className="flex h-[5px] overflow-hidden rounded-full" style={{ background: 'rgba(var(--edge-hair-rgb),0.06)' }}>
                     <motion.div
                       className="h-full"
                       initial={false}

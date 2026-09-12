@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Check, Crosshair, LayoutGrid, LineChart, CalendarDays, History, Table2, Share2,
 } from 'lucide-react';
-import { C, F, A } from './base';
+import { C, F, A, SHELL } from './base';
 
 /* ==================================================================
    Що всередині.
@@ -367,15 +367,15 @@ export default function Product() {
   const item = NAV[nav];
 
   return (
-    <section id="product" style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 72px' }}>
+    <section id="product" style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <style>{SCREEN_CSS}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
         <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>ЩО ВСЕРЕДИНІ</span>
       </div>
 
-      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,3.2vw,42px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 30px', color: '#fff' }}>
-        Ти заповнюєш журнал.
+      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 30px', color: '#fff' }}>
+        Ти заповнюєш журнал.{' '}
         <br />
         Він думає за тебе.
       </h2>

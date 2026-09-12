@@ -28,9 +28,11 @@ import SavingOverlay from '../components/modals/SavingOverlay';
 import AssetSearchModal from '../components/modals/AssetSearchModal';
 import PlanTabs, { SECTIONS, useScrollSpy, BackToTop } from '../components/trading/PlanTabs';
 import AssetSwitcher, { pushRecentAsset } from '../components/trading/AssetSwitcher';
-import { Card, SectionHead, SectionAnchor, WriteBlock } from '../components/trading/PlanPrimitives';
+import { Section, SectionAnchor, WriteBlock } from '../components/trading/PlanPrimitives';
+import WeeklyPlanView from '../components/trading/WeeklyPlanView';
 import { T, EASE, useEdgeFonts } from '../components/trading/planTheme';
 import useTerminalSkin from '../hooks/useTerminalSkin';
+import { WEEK_PAIR, mondayOf, weekRangeLabel, emptyWeekPlan, emptyAsset, checkIsWeekPlanEmpty } from '../lib/weekPlan';
 
 const SECTION_IDS = SECTIONS.map((s) => s.id);
 
@@ -74,6 +76,14 @@ export default function DailyPlan() {
   const targetId = location.state?.id;
 
   const { active: activeSection, scrollTo, scrollToTop, scrolled } = useScrollSpy(SECTION_IDS);
+
+  /* Навігація з лівої рейки: спершу просимо секції фази розгорнутись,
+     потім скролимо до якоря (з невеликою затримкою, щоб розкриття
+     встигло змінити висоту до розрахунку позиції). */
+  const navigateToSection = useCallback((id) => {
+    window.dispatchEvent(new CustomEvent('edge:plan-jump', { detail: { group: id } }));
+    requestAnimationFrame(() => scrollTo(id));
+  }, [scrollTo]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSwitching, setIsSwitching] = useState(false);
   const isFirstLoadRef = useRef(true);
@@ -139,6 +149,114 @@ export default function DailyPlan() {
       return next;
     });
   }, []);
+
+  /* ==================================================================
+     Тижневий план — окремий, свідомо простіший контур збереження.
+
+     Плутати його з денним автозбереженням (рефи, черга, флаш на
+     видимість вкладки — усе вище) означало б тягнути в один код дві
+     різні моделі даних і ризикувати денним планом заради фічі, яку
+     тільки-но додали. Тут дешевший, ізольований шлях: дебаунс на
+     зміну, і якщо збій — видно помилку, а не втрачені дані, бо
+     `weekData` живе в звичайному стані, не тільки в рефі. */
+  /* Перехід із «Аналізів» на конкретний тижневий план приходить сюди
+     через router state — так само, як id денного плану. URL лишається
+     тим самим /plan, тому масштаб і тиждень мають десь пережити
+     перший рендер, а не тільки клік по перемикачу. */
+  const [mode, setMode] = useState(() => (location.state?.mode === 'weekly' ? 'weekly' : 'daily'));
+  const [weekMonday, setWeekMonday] = useState(() => location.state?.weekMonday || mondayOf(todayLocal()));
+  const [weekData, setWeekData] = useState(() => emptyWeekPlan(weekMonday));
+  const [isWeekLoading, setIsWeekLoading] = useState(false);
+  const [isWeekSaving, setIsWeekSaving] = useState(false);
+  const [weekHasUnsaved, setWeekHasUnsaved] = useState(false);
+  const [weekLastSaved, setWeekLastSaved] = useState(null);
+  const weekPlanIdRef = useRef(null);
+  const latestWeekDataRef = useRef(weekData);
+  latestWeekDataRef.current = weekData;
+
+  const updateWeekData = useCallback((next) => {
+    setWeekData(next);
+    setWeekHasUnsaved(true);
+  }, []);
+
+  useEffect(() => {
+    if (mode !== 'weekly' || !user?.id) return undefined;
+    let alive = true;
+    setIsWeekLoading(true);
+
+    (async () => {
+      const { data, error } = await supabase.from('trading_plans')
+        .select('id, plan_data')
+        .eq('user_id', user.id).eq('date', weekMonday).eq('pair', WEEK_PAIR).eq('plan_type', 'weekly')
+        .order('created_at', { ascending: false }).limit(1);
+      if (!alive) return;
+
+      if (error) {
+        console.error('load weekly plan', error);
+        notify.error('Не вдалось відкрити тижневий план', error.message || 'Помилка бази.');
+        setIsWeekLoading(false);
+        return;
+      }
+
+      const row = data?.[0];
+      weekPlanIdRef.current = row?.id || null;
+      setWeekData({ ...emptyWeekPlan(weekMonday), ...(row?.plan_data || {}) });
+      setWeekHasUnsaved(false);
+      setIsWeekLoading(false);
+    })();
+
+    return () => { alive = false; };
+  }, [mode, weekMonday, user?.id]);
+
+  const performSaveWeek = useCallback(async () => {
+    if (!user?.id) return;
+    const raw = latestWeekDataRef.current;
+    if (checkIsWeekPlanEmpty(raw)) return;
+
+    setIsWeekSaving(true);
+    try {
+      const row = { date: weekMonday, pair: WEEK_PAIR, plan_type: 'weekly', narrative: raw.narrative || '', plan_data: raw };
+      let id = weekPlanIdRef.current;
+
+      if (id) {
+        const { error } = await supabase.from('trading_plans').update(row).eq('id', id);
+        if (error) throw error;
+      } else {
+        const { data: created, error } = await supabase.from('trading_plans')
+          .insert([{ user_id: user.id, ...row }]).select('id');
+
+        if (error?.code === '23505') {
+          const { data: found } = await supabase.from('trading_plans').select('id')
+            .eq('user_id', user.id).eq('date', weekMonday).eq('pair', WEEK_PAIR).eq('plan_type', 'weekly').limit(1);
+          id = found?.[0]?.id || null;
+          if (id) { const { error: upErr } = await supabase.from('trading_plans').update(row).eq('id', id); if (upErr) throw upErr; }
+        } else if (error) {
+          throw error;
+        } else {
+          id = created?.[0]?.id || null;
+        }
+        if (id) weekPlanIdRef.current = id;
+      }
+      setWeekHasUnsaved(false);
+      setWeekLastSaved(new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }));
+    } catch (err) {
+      console.error('save weekly plan', err);
+      notify.error('Не вдалось зберегти тижневий план', err.message || 'Помилка бази.');
+    } finally {
+      setIsWeekSaving(false);
+    }
+  }, [user?.id, weekMonday]);
+
+  useEffect(() => {
+    if (mode !== 'weekly' || !user?.id || isWeekLoading) return undefined;
+    const timer = setTimeout(() => { performSaveWeek(); }, 1500);
+    return () => clearTimeout(timer);
+  }, [weekData, mode, isWeekLoading, user?.id, performSaveWeek]);
+
+  /* Тижневий план завжди про поточний тиждень — жодного гортання назад
+     чи вперед. Єдиний вихід на "той самий" тиждень — кнопка "New week"
+     у хедері, яка повертає сюди після перегляду минулого через Аналізи. */
+  const goThisWeek = useCallback(() => setWeekMonday(mondayOf(todayLocal())), []);
 
   /* ---------- Прогрес по вкладках ---------- */
   const progress = useMemo(() => {
@@ -345,7 +463,12 @@ export default function DailyPlan() {
       setPlanId(null);
       currentPlanIdRef.current = null;
     } finally {
-      setTimeout(() => { setIsInitialLoading(false); setIsSwitching(false); }, 250);
+      /* Пауза згладжує мережеве тремтіння при переході між планами.
+         У пісочниці мережі немає — дані вже тут, тож і чекати нема
+         навіщо: інакше «Завантаження даних з хмари…» висить дарма. */
+      const smooth = (typeof window !== 'undefined'
+        && window.location.pathname.startsWith('/demo')) ? 0 : 250;
+      setTimeout(() => { setIsInitialLoading(false); setIsSwitching(false); }, smooth);
     }
   }, [user?.id]);
 
@@ -584,6 +707,17 @@ export default function DailyPlan() {
     setTimeout(() => setAssetSearch(''), 300);
   };
 
+  /* Тижневий вибір активів — та сама модалка, але клік не закриває її
+     й не заміняє вибір, а додає/прибирає символ зі списку тижня. */
+  const toggleWeekAsset = useCallback((asset) => {
+    const symbol = asset.symbol;
+    const exists = weekData.assets.some((a) => a.pair === symbol);
+    const nextAssets = exists
+      ? weekData.assets.filter((a) => a.pair !== symbol)
+      : [...weekData.assets, emptyAsset(symbol)];
+    updateWeekData({ ...weekData, assets: nextAssets });
+  }, [weekData, updateWeekData]);
+
   /* Стабільні посилання — інакше memo на блоках марна: нова функція
      на кожен рендер змушує перемальовувати всі картки з картинками */
   const saveInto = useCallback((key) => (id, data) =>
@@ -603,11 +737,12 @@ export default function DailyPlan() {
 
       <div className="relative z-10 mx-auto w-full max-w-[2200px] px-4 pb-32 pt-5 sm:px-6 lg:w-[92%] lg:px-0 lg:pb-40 lg:pt-6">
         <PlanHeader
-          title={planData.title}
-          pair={planData.pair}
-          onNewPlan={handleNewPlan}
+          title={mode === 'weekly' ? weekRangeLabel(weekMonday) : planData.title}
+          pair={mode === 'weekly' ? '' : planData.pair}
+          mode={mode}
+          onModeChange={setMode}
+          onNewPlan={mode === 'weekly' ? goThisWeek : handleNewPlan}
           onShare={handleShare}
-          onDownload={() => window.print()}
           onOpenQuiz={() => setIsQuizModalOpen(true)}
           isQuizFullyCompleted={quizDone}
           quizCompletedCount={quizCount}
@@ -615,6 +750,20 @@ export default function DailyPlan() {
           onOpenTgAlert={() => setIsTgModalOpen(true)}
         />
 
+        {mode === 'weekly' && (
+          <WeeklyPlanView
+            data={weekData}
+            onChange={updateWeekData}
+            activeSection={activeSection}
+            onNavigateSection={navigateToSection}
+            onOpenAssetModal={() => !isLoadingAssets && setIsAssetModalOpen(true)}
+            isLoadingAssets={isLoadingAssets}
+            onRemoveAsset={(pair) => toggleWeekAsset({ symbol: pair })}
+          />
+        )}
+
+        {mode === 'daily' && (
+        <>
         <PlanMetadata
           date={planData.date}
           onDateChange={(v) => handleRouteChange(v, planData.pair)}
@@ -623,13 +772,12 @@ export default function DailyPlan() {
           isLoadingAssets={isLoadingAssets}
           narrative={planData.narrative}
           onNarrativeChange={(v) => setPlan((p) => ({ ...p, narrative: v }))}
-          onSwitchAsset={(a) => handleRouteChange(planData.date, a)}
         />
 
         <div className="mt-6">
           <PlanTabs
             active={activeSection}
-            onNavigate={scrollTo}
+            onNavigate={navigateToSection}
             progress={progress}
             overall={overall}
             assetSwitcher={
@@ -659,31 +807,33 @@ export default function DailyPlan() {
           />
 
           <div className="flex flex-col gap-5">
-            <Card>
-              <SectionHead
-                icon={Layers}
-                title="Top-down аналіз"
-                hint="Структура від старших ТФ до молодших"
-                done={planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length >= 2}
-                right={
-                  <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
-                        style={{ fontFamily: T.sans, color: T.text4 }}>
-                    {planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length}/4
-                  </span>
-                }
-              />
+            <Section
+              icon={Layers}
+              storageKey="tda"
+              group="plan"
+              title="Top-down аналіз"
+              hint="Структура від старших ТФ до молодших"
+              done={planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length >= 2}
+              right={
+                <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
+                      style={{ fontFamily: T.sans, color: T.text4 }}>
+                  {planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length}/4
+                </span>
+              }
+            >
               <div className="p-5 sm:p-6">
                 <TdaGrid blocks={planData.tdaBlocks} onSave={saveTda} />
               </div>
-            </Card>
+            </Section>
 
-            <Card>
-              <SectionHead
-                icon={Crosshair}
-                title="Стратегія та точки входу"
-                hint="Тригери, стоп, інвалідація"
-                done={!!planData.planText?.trim()}
-              />
+            <Section
+              icon={Crosshair}
+              storageKey="strategy"
+              group="plan"
+              title="Стратегія та точки входу"
+              hint="Тригери, стоп, інвалідація"
+              done={!!planData.planText?.trim()}
+            >
               <WriteBlock
                 value={planData.planText}
                 onChange={(v) => setPlan((p) => ({ ...p, planText: v }))}
@@ -691,7 +841,7 @@ export default function DailyPlan() {
                 hint="Опиши логіку так, щоб завтра зрозумів себе"
                 minRows={8}
               />
-            </Card>
+            </Section>
           </div>
 
           {/* ═══════════════ LIVE ═══════════════ */}
@@ -702,13 +852,14 @@ export default function DailyPlan() {
             progress={progress.live}
           />
 
-          <Card>
-            <SectionHead
-              icon={Radio}
-              title="Апдейти по ходу сесії"
-              hint="Що змінилось відносно плану"
-              done={progress.live >= 1 && planData.updates.length > 0}
-            />
+          <Section
+            icon={Radio}
+            storageKey="updates"
+            group="live"
+            title="Апдейти по ходу сесії"
+            hint="Що змінилось відносно плану"
+            done={progress.live >= 1 && planData.updates.length > 0}
+          >
             <div className="p-5 sm:p-6">
               <UpdatesList
                 updates={planData.updates}
@@ -725,7 +876,7 @@ export default function DailyPlan() {
                 onSave={saveUpdate}
               />
             </div>
-          </Card>
+          </Section>
 
           {/* ═══════════════ REVIEW ═══════════════ */}
           <SectionAnchor
@@ -736,49 +887,52 @@ export default function DailyPlan() {
           />
 
           <div className="flex flex-col gap-5">
-            <Card>
-              <SectionHead
-                icon={LineChart}
-                title="Розбір після сесії"
-                hint="Як усе виглядало по факту"
-                done={planData.reviewBlocks.some((b) => b.image || b.text?.trim())}
-                right={
-                  <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
-                        style={{ fontFamily: T.sans, color: T.text4 }}>
-                    {planData.reviewBlocks.filter((b) => b.image || b.text?.trim()).length}/2
-                  </span>
-                }
-              />
+            <Section
+              icon={LineChart}
+              storageKey="review"
+              group="review"
+              title="Розбір після сесії"
+              hint="Як усе виглядало по факту"
+              done={planData.reviewBlocks.some((b) => b.image || b.text?.trim())}
+              right={
+                <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
+                      style={{ fontFamily: T.sans, color: T.text4 }}>
+                  {planData.reviewBlocks.filter((b) => b.image || b.text?.trim()).length}/2
+                </span>
+              }
+            >
               <div className="p-5 sm:p-6">
                 <TdaGrid blocks={planData.reviewBlocks} onSave={saveReview} />
               </div>
-            </Card>
+            </Section>
 
-            <Card>
-              <SectionHead
-                icon={Stethoscope}
-                title="Діагностика"
-                hint="Три перевірки перед висновками"
-                done={
-                  !!planData.actualNarrative &&
-                  planData.sessionRating > 0 &&
-                  planData.analysisMistake !== null
-                }
-              />
+            <Section
+              icon={Stethoscope}
+              storageKey="diagnostics"
+              group="review"
+              title="Діагностика"
+              hint="Три перевірки перед висновками"
+              done={
+                !!planData.actualNarrative &&
+                planData.sessionRating > 0 &&
+                planData.analysisMistake !== null
+              }
+            >
               <PostSessionDiagnostics
                 planData={planData}
                 planId={planId}
                 updatePlanData={(u) => setPlan((p) => ({ ...p, ...u }))}
               />
-            </Card>
+            </Section>
 
-            <Card>
-              <SectionHead
-                icon={NotebookPen}
-                title="Висновки"
-                hint="Головний урок дня"
-                done={!!planData.conclusionsText?.trim()}
-              />
+            <Section
+              icon={NotebookPen}
+              storageKey="conclusions"
+              group="review"
+              title="Висновки"
+              hint="Головний урок дня"
+              done={!!planData.conclusionsText?.trim()}
+            >
               <WriteBlock
                 value={planData.conclusionsText}
                 onChange={(v) => setPlan((p) => ({ ...p, conclusionsText: v }))}
@@ -786,21 +940,36 @@ export default function DailyPlan() {
                 hint="Один чіткий висновок вартий десяти розмитих"
                 minRows={8}
               />
-            </Card>
+            </Section>
           </div>
         </motion.div>
+        </>
+        )}
       </div>
 
-      <FloatingActionButtons
-        onAddTrade={() => setIsTradeModalOpen(true)}
-        onSave={() => { if (!isSaving && canSaveToCloud) performSave(); }}
-        isSaving={isSaving}
-        canSaveToCloud={canSaveToCloud}
-        hasUnsavedChanges={hasUnsavedChanges}
-        lastSaved={lastSaved}
-        lastAction={lastAction}
-        backToTop={<BackToTop visible={scrolled} onClick={scrollToTop} />}
-      />
+      {mode === 'weekly' ? (
+        <FloatingActionButtons
+          hideTrade
+          onSave={() => { if (!isWeekSaving) performSaveWeek(); }}
+          isSaving={isWeekSaving}
+          canSaveToCloud={!checkIsWeekPlanEmpty(weekData)}
+          hasUnsavedChanges={weekHasUnsaved}
+          lastSaved={weekLastSaved}
+          lastAction="Збережено"
+          backToTop={<BackToTop visible={scrolled} onClick={scrollToTop} />}
+        />
+      ) : (
+        <FloatingActionButtons
+          onAddTrade={() => setIsTradeModalOpen(true)}
+          onSave={() => { if (!isSaving && canSaveToCloud) performSave(); }}
+          isSaving={isSaving}
+          canSaveToCloud={canSaveToCloud}
+          hasUnsavedChanges={hasUnsavedChanges}
+          lastSaved={lastSaved}
+          lastAction={lastAction}
+          backToTop={<BackToTop visible={scrolled} onClick={scrollToTop} />}
+        />
+      )}
 
       <PreSessionQuiz
         isOpen={isQuizModalOpen}
@@ -817,8 +986,8 @@ export default function DailyPlan() {
       <TradeModal
         isOpen={isTradeModalOpen}
         onClose={() => setIsTradeModalOpen(false)}
-        planDate={planData.date}
-        planPair={planData.pair}
+        planDate={mode === 'weekly' ? undefined : planData.date}
+        planPair={mode === 'weekly' ? undefined : planData.pair}
       />
 
       <AnimatePresence>
@@ -835,10 +1004,11 @@ export default function DailyPlan() {
             displayCategories={displayCategories}
             expandedCategories={expandedCategories}
             toggleCategory={toggleCategory}
-            handleAssetSelect={handleAssetSelectModal}
             handleToggleFavorite={handleToggleFavorite}
-            assetPair={planData.pair}
             favorites={favorites}
+            {...(mode === 'weekly'
+              ? { multiple: true, selectedPairs: weekData.assets.map((a) => a.pair).filter(Boolean), handleAssetSelect: toggleWeekAsset }
+              : { handleAssetSelect: handleAssetSelectModal, assetPair: planData.pair })}
           />
         )}
       </AnimatePresence>

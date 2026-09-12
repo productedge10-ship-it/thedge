@@ -139,7 +139,7 @@ export default function AssetPicker({
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && canAdd) { e.preventDefault(); addAsset(); } }}
                 placeholder="Пошук або новий актив…"
-                className="w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:text-[var(--edge-text3,#7A7A85)]"
+                className="w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:text-[var(--edge-text3,var(--edge-text3))]"
                 style={{ fontFamily: T.sans, color: T.text }}
               />
             </div>

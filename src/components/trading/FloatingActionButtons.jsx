@@ -8,7 +8,7 @@ import { T, SPRING } from './planTheme';
 ================================================================== */
 
 export default function FloatingActionButtons({
-  onAddTrade, onSave, isSaving, canSaveToCloud, hasUnsavedChanges, lastSaved, lastAction, backToTop,
+  onAddTrade, onSave, isSaving, canSaveToCloud, hasUnsavedChanges, lastSaved, lastAction, backToTop, hideTrade,
 }) {
   const state = !canSaveToCloud ? 'blocked'
     : isSaving ? 'saving'
@@ -29,24 +29,26 @@ export default function FloatingActionButtons({
     <div className="no-print fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2.5 sm:bottom-8 sm:right-8">
       {backToTop}
 
-      <motion.button
-        onClick={onAddTrade}
-        whileHover={{ y: -2 }}
-        whileTap={{ scale: 0.96 }}
-        transition={SPRING}
-        className="flex items-center gap-2.5 rounded-full px-4 py-2.5 text-[14px] font-semibold"
-        style={{
-          background: T.surface,
-          border: `1px solid rgba(${T.okRgb},0.28)`,
-          color: T.ok,
-          fontFamily: T.sans,
-          boxShadow: '0 12px 32px -12px rgba(0,0,0,0.9)',
-          backdropFilter: 'blur(16px)',
-        }}
-      >
-        <Briefcase size={14} strokeWidth={2.4} />
-        Трейд
-      </motion.button>
+      {!hideTrade && (
+        <motion.button
+          onClick={onAddTrade}
+          whileHover={{ y: -2 }}
+          whileTap={{ scale: 0.96 }}
+          transition={SPRING}
+          className="flex items-center gap-2.5 rounded-full px-4 py-2.5 text-[14px] font-semibold"
+          style={{
+            background: T.surface,
+            border: `1px solid rgba(${T.okRgb},0.28)`,
+            color: T.ok,
+            fontFamily: T.sans,
+            boxShadow: '0 12px 32px -12px rgba(0,0,0,0.9)',
+            backdropFilter: 'blur(16px)',
+          }}
+        >
+          <Briefcase size={14} strokeWidth={2.4} />
+          Трейд
+        </motion.button>
+      )}
 
       <motion.button
         onClick={onSave}

@@ -2,10 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion';
 import TextareaAutosize from 'react-textarea-autosize';
-import {
-  Plus, GripVertical, Trash2, ChevronRight, Check, Info, AlertTriangle,
-  ShieldCheck, Lightbulb,
-} from 'lucide-react';
+import { Trash2, ChevronRight } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { emptyBlock, uid } from '../../lib/systemDoc';
 import SlashMenu from './SlashMenu';
@@ -13,25 +10,35 @@ import ImageBlock from './blocks/ImageBlock';
 import TableBlock from './blocks/TableBlock';
 
 /* ==================================================================
-   Блоковий редактор.
+   Блоковий редактор (макет «System Section v2»).
    Enter — новий блок, Backspace на порожньому — прибрати й піти
-   вгору, «/» — меню типів. Зліва від блока при наведенні зʼявляються
-   ручка перетягування і плюс; сам текст нічим не обведений, щоб
-   сторінка читалась як документ, а не як форма.
+   вгору, «/» — меню типів. Ліворуч у 40-піксельному жолобі при
+   наведенні зʼявляється ручка перетягування; текст читається як
+   документ, з високим контрастом.
 ================================================================== */
 
+/* Тон виноски: акцент — фіолетовий застосунку, решта — семантика. */
 const TONES = {
-  acc:  { color: T.acc,  rgb: T.accRgb,  icon: Info },
-  ok:   { color: T.ok,   rgb: T.okRgb,   icon: ShieldCheck },
-  warn: { color: T.warn, rgb: T.warnRgb, icon: Lightbulb },
-  bad:  { color: T.bad,  rgb: T.badRgb,  icon: AlertTriangle },
+  acc:  { rgb: T.accRgb,  glyph: 'i' },
+  ok:   { rgb: T.okRgb,   glyph: '✓' },
+  warn: { rgb: T.warnRgb, glyph: '!' },
+  bad:  { rgb: T.badRgb,  glyph: '✕' },
 };
 
-const FONT = {
-  h1: { fontSize: 30, fontWeight: 700, family: 'display', mt: 22, mb: 4, lh: 1.25 },
-  h2: { fontSize: 23, fontWeight: 700, family: 'display', mt: 18, mb: 2, lh: 1.3 },
-  h3: { fontSize: 18, fontWeight: 700, family: 'display', mt: 14, mb: 2, lh: 1.35 },
-  text: { fontSize: 16, fontWeight: 400, family: 'sans', mt: 0, mb: 0, lh: 1.75 },
+/* Вертикальний ритм між блоками. */
+const GAP = {
+  h1: { mt: 52, mb: 26 },
+  h2: { mt: 40, mb: 18 },
+  h3: { mt: 34, mb: 16 },
+  text: { mt: 0, mb: 30 },
+  bullet: { mt: 0, mb: 14 },
+  number: { mt: 0, mb: 10 },
+  todo: { mt: 0, mb: 6 },
+  quote: { mt: 8, mb: 42 },
+  callout: { mt: 0, mb: 12 },
+  toggle: { mt: 0, mb: 30 },
+  image: { mt: 8, mb: 42 },
+  divider: { mt: 20, mb: 34 },
 };
 
 const PLACEHOLDER = {
@@ -43,17 +50,15 @@ const PLACEHOLDER = {
 
 /* ---------- один блок ---------- */
 function Block({
-  block, index, total, onChange, onEnter, onBackspace, onDelete, onType,
-  focusId, setFocusId, onFullscreen, depth = 0,
+  block, index, headIndex, total, onChange, onEnter, onBackspace, onDelete, onType,
+  focusId, setFocusId, onFullscreen, depth = 0, tint = T.accRgb, compact = false,
 }) {
   const controls = useDragControls();
-  const [slash, setSlash] = useState(null);      // рядок після «/»
-  const [menuPos, setMenuPos] = useState(null);  // координати меню в порталі
+  const [slash, setSlash] = useState(null);
+  const [menuPos, setMenuPos] = useState(null);
   const ref = useRef(null);
   const rowRef = useRef(null);
 
-  /* Меню малюємо в body: усередині блока його ховали сусідні блоки
-     й контейнери з overflow. */
   useLayoutEffect(() => {
     if (slash === null) { setMenuPos(null); return; }
     const place = () => {
@@ -82,12 +87,8 @@ function Block({
     }
   }, [focusId, block.id]);
 
-  const f = FONT[block.type] || FONT.text;
-  const isHeading = ['h1', 'h2', 'h3'].includes(block.type);
-
   const keyDown = (e) => {
     if (slash !== null && ['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(e.key)) return;
-
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       const carry = ['bullet', 'number', 'todo'].includes(block.type) ? block.type : 'text';
@@ -108,12 +109,9 @@ function Block({
     onChange({ text: v });
   };
 
-  const pickType = (type) => {
-    setSlash(null);
-    onType(type);
-  };
+  const pickType = (type) => { setSlash(null); onType(type); };
 
-  /* текстове поле, спільне для всіх текстових типів */
+  /* Спільне поле для всіх текстових типів. */
   const field = (extraStyle = {}, placeholder) => (
     <TextareaAutosize
       ref={ref}
@@ -123,84 +121,130 @@ function Block({
       onFocus={() => setFocusId(block.id)}
       placeholder={placeholder ?? PLACEHOLDER[block.type] ?? ''}
       spellCheck={false}
-      className="w-full resize-none border-none bg-transparent outline-none placeholder:opacity-40"
+      className="w-full resize-none border-none bg-transparent outline-none placeholder:opacity-30"
       style={{
-        fontFamily: f.family === 'display' ? T.display : T.sans,
-        fontSize: f.fontSize,
-        fontWeight: f.fontWeight,
-        lineHeight: f.lh,
+        fontFamily: T.sans,
+        fontSize: 17,
+        fontWeight: 400,
+        lineHeight: 1.78,
         color: T.text,
-        letterSpacing: isHeading ? '-0.02em' : '0',
         ...extraStyle,
       }}
     />
   );
 
   const body = () => {
+    /* ── Заголовки ── */
+    if (block.type === 'h1') {
+      return (
+        <div id={`h-${block.id}`} style={{ scrollMarginTop: 100 }}>
+          <div className="text-[10.5px]" style={{ fontFamily: T.mono, letterSpacing: '0.24em', color: `rgb(${tint})` }}>
+            {String(headIndex || 1).padStart(2, '0')}
+          </div>
+          {field({
+            marginTop: 12, fontFamily: T.display, fontSize: 36, fontWeight: 900,
+            letterSpacing: '-0.032em', lineHeight: 1.1, color: T.text,
+          })}
+          <div className="mt-[22px] h-px w-full" style={{ background: T.line }} />
+        </div>
+      );
+    }
+    if (block.type === 'h2') {
+      return (
+        <div id={`h-${block.id}`} style={{ scrollMarginTop: 100 }}>
+          {field({
+            fontFamily: T.display, fontSize: 22, fontWeight: 700,
+            letterSpacing: '-0.022em', lineHeight: 1.3, color: T.text,
+          })}
+        </div>
+      );
+    }
+    if (block.type === 'h3') {
+      return field({
+        fontFamily: T.mono, fontSize: 11, fontWeight: 500,
+        letterSpacing: '0.22em', textTransform: 'uppercase', lineHeight: 1.5, color: T.text2,
+      });
+    }
+
     switch (block.type) {
       case 'divider':
-        return <div className="my-3 h-px w-full" style={{ background: T.line }} />;
+        return (
+          <div className="flex items-center gap-3.5">
+            <span className="h-px flex-1" style={{ background: T.line }} />
+            <span className="h-[3px] w-[3px] rounded-full" style={{ background: T.lineHi }} />
+            <span className="h-px flex-1" style={{ background: T.line }} />
+          </div>
+        );
 
       case 'image':
         return <ImageBlock block={block} onChange={onChange} onFullscreen={onFullscreen} />;
 
       case 'table':
-        return <TableBlock block={block} onChange={onChange} />;
+        return <TableBlock block={block} onChange={onChange} tint={tint} />;
 
       case 'todo':
         return (
-          <div className="flex items-start gap-2.5">
+          <div className="flex items-center gap-3.5">
             <button
               onClick={() => onChange({ checked: !block.checked })}
-              className="mt-[5px] grid h-[18px] w-[18px] shrink-0 place-items-center rounded-md transition-colors duration-200"
+              className="grid h-[19px] w-[19px] shrink-0 place-items-center rounded-md text-[10px] font-bold transition-colors duration-150"
               style={{
-                background: block.checked ? T.ok : 'transparent',
-                border: `1.5px solid ${block.checked ? T.ok : T.lineHi}`,
+                background: block.checked ? `rgb(${tint})` : 'transparent',
+                border: `1px solid ${block.checked ? `rgb(${tint})` : T.lineHi}`,
+                color: block.checked ? 'var(--edge-on-acc, #0A0A0C)' : 'transparent',
               }}
             >
-              {block.checked && <Check size={11} strokeWidth={3.6} style={{ color: 'var(--edge-bg, #0A0A0C)' }} />}
+              ✓
             </button>
             {field({
+              fontSize: 16, lineHeight: 1.5,
               color: block.checked ? T.text4 : T.text,
               textDecoration: block.checked ? 'line-through' : 'none',
-              textDecorationColor: `rgba(${T.okRgb},0.5)`,
             })}
           </div>
         );
 
       case 'bullet':
         return (
-          <div className="flex items-start gap-2.5">
-            <span className="mt-[11px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: T.text3 }} />
-            {field()}
+          <div className="flex items-start gap-4">
+            <span className="mt-[14px] h-px w-4 shrink-0" style={{ background: `rgb(${tint})`, opacity: 0.8 }} />
+            {field({ fontSize: 16.5, lineHeight: 1.7, color: T.text })}
           </div>
         );
 
       case 'number':
         return (
-          <div className="flex items-start gap-2.5">
-            <span className="mt-[2px] shrink-0 text-[15px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text3 }}>
-              {index + 1}.
+          <div className="flex items-start gap-[18px]">
+            <span
+              className="mt-[2px] grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px]"
+              style={{ fontFamily: T.mono, border: `1px solid rgba(${tint},0.35)`, color: `rgb(${tint})` }}
+            >
+              {index + 1}
             </span>
-            {field()}
+            {field({ fontSize: 16.5, lineHeight: 1.7, color: T.text })}
           </div>
         );
 
       case 'quote':
-        return (
-          <div className="flex items-stretch gap-3.5">
-            <span className="w-[3px] shrink-0 rounded-full" style={{ background: T.lineHi }} />
-            {field({ fontStyle: 'italic', color: T.text2 })}
-          </div>
-        );
+        return field({
+          paddingLeft: 26,
+          borderLeft: `1px solid rgb(${tint})`,
+          fontSize: 23,
+          fontWeight: 400,
+          lineHeight: 1.5,
+          letterSpacing: '-0.02em',
+          color: T.text,
+        });
 
       case 'callout': {
         const tone = TONES[block.tone || 'acc'];
-        const Icon = tone.icon;
         return (
           <div
-            className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
-            style={{ background: `rgba(${tone.rgb},0.06)`, border: `1px solid rgba(${tone.rgb},0.22)` }}
+            className="flex items-start gap-[15px] rounded-[14px] px-5 py-[17px]"
+            style={{
+              border: `1px solid rgba(${tone.rgb},0.2)`,
+              background: `linear-gradient(100deg, rgba(${tone.rgb},0.09), rgba(${tone.rgb},0.02))`,
+            }}
           >
             <button
               onClick={() => {
@@ -209,30 +253,31 @@ function Block({
                 onChange({ tone: next });
               }}
               title="Змінити колір"
-              className="mt-[3px] shrink-0"
+              className="mt-[1px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[7px] text-[12px] leading-none"
+              style={{ fontFamily: T.mono, background: `rgba(${tone.rgb},0.16)`, color: `rgb(${tone.rgb})` }}
             >
-              <Icon size={16} strokeWidth={2.3} style={{ color: tone.color }} />
+              {tone.glyph}
             </button>
-            {field({ fontSize: 15, color: T.text2 })}
+            {field({ fontSize: 15.5, lineHeight: 1.6, color: T.text })}
           </div>
         );
       }
 
       case 'toggle':
         return (
-          <div>
-            <div className="flex items-start gap-2">
-              <button
-                onClick={() => onChange({ open: !block.open })}
-                className="mt-[5px] grid h-5 w-5 shrink-0 place-items-center rounded-md transition-colors duration-200"
-                style={{ color: T.text3 }}
-              >
-                <motion.span animate={{ rotate: block.open ? 90 : 0 }} transition={{ duration: 0.18, ease: EASE }} className="flex">
-                  <ChevronRight size={15} strokeWidth={2.6} />
-                </motion.span>
-              </button>
-              {field({ fontWeight: 600 })}
-            </div>
+          <div style={{ borderTop: `1px solid ${T.line}`, borderBottom: `1px solid ${T.line}` }}>
+            <button
+              onClick={() => onChange({ open: !block.open })}
+              className="flex w-full items-center gap-3.5 py-[18px] text-left"
+              style={{ color: T.text }}
+            >
+              <motion.span animate={{ rotate: block.open ? 90 : 0 }} transition={{ duration: 0.18, ease: EASE }} className="grid h-5 w-5 place-items-center" style={{ color: T.text3 }}>
+                <ChevronRight size={15} strokeWidth={2.6} />
+              </motion.span>
+              <span className="min-w-0 flex-1">
+                {field({ fontFamily: T.sans, fontSize: 16.5, fontWeight: 500, lineHeight: 1.4, letterSpacing: '-0.01em', color: T.text })}
+              </span>
+            </button>
 
             <AnimatePresence initial={false}>
               {block.open && (
@@ -243,9 +288,10 @@ function Block({
                   transition={{ duration: 0.22, ease: EASE }}
                   className="overflow-hidden"
                 >
-                  <div className="ml-[27px] mt-1 border-l pl-4" style={{ borderColor: T.line }}>
+                  <div className="pb-[22px] pl-[34px]">
                     <BlockEditor
                       blocks={block.children || []}
+                      tint={tint}
                       onChange={(children) => onChange({ children })}
                       onFullscreen={onFullscreen}
                       depth={depth + 1}
@@ -263,6 +309,8 @@ function Block({
     }
   };
 
+  const gap = GAP[block.type] || GAP.text;
+
   return (
     <Reorder.Item
       ref={rowRef}
@@ -270,38 +318,30 @@ function Block({
       dragListener={false}
       dragControls={controls}
       className="group/block relative"
-      style={{ marginTop: f.mt, marginBottom: f.mb }}
+      style={{ marginTop: gap.mt, marginBottom: gap.mb, paddingLeft: compact ? 0 : 40 }}
     >
-      {/* ручки зліва */}
-      <div className="absolute -left-[30px] top-1 z-10 flex items-center gap-0.5 opacity-60 transition-opacity duration-200 no-print xl:-left-[52px] xl:opacity-0 xl:group-hover/block:opacity-100">
-        <button
-          onClick={() => onEnter('text')}
-          title="Додати блок нижче"
-          className="hidden h-6 w-6 place-items-center rounded-md transition-colors duration-200 xl:grid"
-          style={{ color: T.text4 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
-        >
-          <Plus size={14} strokeWidth={2.6} />
-        </button>
-        <button
-          onPointerDown={(e) => controls.start(e)}
-          title="Перетягнути"
-          className="grid h-6 w-6 cursor-grab place-items-center rounded-md transition-colors duration-200 active:cursor-grabbing"
-          style={{ color: T.text4 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
-        >
-          <GripVertical size={14} strokeWidth={2.2} />
-        </button>
-      </div>
+      {/* жолоб з ручкою — з'являється при наведенні на блок */}
+      {!compact && (
+        <div className="absolute left-0 top-0 flex items-center gap-1 opacity-0 transition-opacity duration-150 no-print group-hover/block:opacity-100">
+          <button
+            onPointerDown={(e) => controls.start(e)}
+            title="Перетягнути"
+            className="grid h-6 w-6 cursor-grab place-items-center rounded-[7px] text-[11px] transition-colors duration-150 active:cursor-grabbing"
+            style={{ background: 'rgba(var(--edge-text-rgb),0.04)', border: `1px solid ${T.line}`, color: T.text4 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = T.text2; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
+          >
+            ⠿
+          </button>
+        </div>
+      )}
 
-      {/* кошик справа */}
-      {total > 1 && (
+      {/* видалити блок */}
+      {total > 1 && !compact && (
         <button
           onClick={onDelete}
           title="Видалити блок"
-          className="absolute -right-6 top-1 z-10 grid h-6 w-6 place-items-center rounded-md opacity-60 transition-all duration-200 no-print xl:-right-8 xl:opacity-0 xl:group-hover/block:opacity-100"
+          className="absolute -right-8 top-0 z-10 grid h-6 w-6 place-items-center rounded-[7px] opacity-0 transition-all duration-150 no-print group-hover/block:opacity-100"
           style={{ color: T.text4 }}
           onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
@@ -312,7 +352,6 @@ function Block({
 
       {body()}
 
-      {/* меню блоків — у порталі, щоб нічим не перекривалось */}
       {slash !== null && menuPos && createPortal(
         <AnimatePresence>
           <SlashMenu
@@ -329,7 +368,7 @@ function Block({
 }
 
 /* ---------- список блоків ---------- */
-export default function BlockEditor({ blocks, onChange, onFullscreen, depth = 0, compact }) {
+export default function BlockEditor({ blocks, onChange, onFullscreen, depth = 0, compact, tint = T.accRgb }) {
   const [focusId, setFocusId] = useState(null);
 
   const setBlock = (id, patch) =>
@@ -369,15 +408,18 @@ export default function BlockEditor({ blocks, onChange, onFullscreen, depth = 0,
   };
 
   return (
-    <div className={compact ? '' : 'pb-24'}>
+    <div className={compact ? '' : ''}>
       <Reorder.Group axis="y" values={blocks} onReorder={onChange} className="list-none">
         {blocks.map((block, i) => (
           <Block
             key={block.id}
             block={block}
             index={blocks.filter((b, x) => b.type === 'number' && x <= i).length - 1}
+            headIndex={blocks.filter((b, x) => b.type === 'h1' && x <= i).length}
             total={blocks.length}
             depth={depth}
+            tint={tint}
+            compact={compact}
             focusId={focusId}
             setFocusId={setFocusId}
             onFullscreen={onFullscreen}
@@ -393,12 +435,13 @@ export default function BlockEditor({ blocks, onChange, onFullscreen, depth = 0,
       {!compact && (
         <button
           onClick={addAtEnd}
-          className="mt-4 w-full rounded-xl py-3 text-left text-[14px] transition-colors duration-200 no-print"
-          style={{ fontFamily: T.sans, color: T.text4 }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = T.text3)}
-          onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
+          className="mt-[10px] flex w-full items-center justify-center gap-2.5 rounded-[12px] py-4 text-[13.5px] transition-all duration-150 no-print"
+          style={{ fontFamily: T.sans, fontWeight: 400, color: T.text4, border: `1px solid ${T.line}`, background: 'transparent', marginLeft: 40, width: 'calc(100% - 40px)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.4)`; e.currentTarget.style.background = `rgba(${T.accRgb},0.04)`; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; e.currentTarget.style.background = 'transparent'; }}
         >
-          Клікни, щоб додати блок — або тисни «/» у тексті
+          <span className="text-[15px] leading-none">+</span>
+          Додати блок — або тисни «/» у тексті
         </button>
       )}
     </div>

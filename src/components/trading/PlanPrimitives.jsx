@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import useDeferredField from '../../hooks/useDeferredField';
 import { motion, AnimatePresence } from 'framer-motion';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Maximize2, Minimize2, Check } from 'lucide-react';
+import { Maximize2, Minimize2, Check, ChevronDown } from 'lucide-react';
 import { T, EASE, SPRING } from './planTheme';
 import { Spotlight } from '../ui/Hovers';
 
@@ -77,12 +77,30 @@ export function Card({ children, className = '', style, glow, ...rest }) {
   );
 }
 
-/* ---------- Шапка секції ---------- */
-export function SectionHead({ icon: Icon, title, hint, accent = T.acc, right, done }) {
+/* ---------- Шапка секції ----------
+   collapsible: уся шапка стає кнопкою згортання. Нижня межа лишається
+   тільки коли секція розкрита — згорнута картка виглядає як цілісний
+   рядок, а не як обрізаний блок. */
+export function SectionHead({
+  icon: Icon, title, hint, accent = T.acc, right, done,
+  collapsible = false, open = true, onToggle,
+}) {
+  const Tag = collapsible ? 'button' : 'div';
   return (
-    <div
-      className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6"
-      style={{ borderBottom: `1px solid ${T.line}` }}
+    <Tag
+      type={collapsible ? 'button' : undefined}
+      onClick={collapsible ? onToggle : undefined}
+      aria-expanded={collapsible ? open : undefined}
+      className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-left sm:px-6 ${
+        collapsible ? 'transition-colors duration-200' : ''
+      }`}
+      style={{
+        borderBottom: `1px solid ${open ? T.line : 'transparent'}`,
+        transition: 'border-color .25s ease, background .2s ease',
+        background: 'transparent',
+      }}
+      onMouseEnter={collapsible ? (e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.04)`; } : undefined}
+      onMouseLeave={collapsible ? (e) => { e.currentTarget.style.background = 'transparent'; } : undefined}
     >
       <div className="flex min-w-0 items-center gap-3.5">
         <div
@@ -132,8 +150,89 @@ export function SectionHead({ icon: Icon, title, hint, accent = T.acc, right, do
         </div>
       </div>
 
-      {right && <div className="shrink-0">{right}</div>}
-    </div>
+      <div className="flex shrink-0 items-center gap-3">
+        {right && <div className="shrink-0">{right}</div>}
+        {collapsible && (
+          <motion.span
+            aria-hidden
+            className="grid h-6 w-6 place-items-center rounded-lg"
+            style={{ color: T.text3, border: `1px solid ${T.line}` }}
+            animate={{ rotate: open ? 0 : -90 }}
+            transition={{ duration: 0.28, ease: EASE }}
+          >
+            <ChevronDown size={14} strokeWidth={2.4} />
+          </motion.span>
+        )}
+      </div>
+    </Tag>
+  );
+}
+
+/* ---------- Секція, що згортається ----------
+   Card + шапка-кнопка + тіло з анімацією висоти. Стан «розгорнуто»
+   памʼятається в localStorage окремо для кожної секції, тому
+   перезавантаження сторінки не скидає те, що людина вже склала. */
+export function Section({
+  icon, title, hint, accent, right, done,
+  storageKey, defaultOpen = true, group, children,
+}) {
+  const key = storageKey ? `edge.plan.section.${storageKey}` : null;
+  const [open, setOpen] = useState(() => {
+    if (!key) return defaultOpen;
+    try {
+      const v = localStorage.getItem(key);
+      return v === null ? defaultOpen : v === '1';
+    } catch { return defaultOpen; }
+  });
+
+  const setOpenPersist = (next) => {
+    try { if (key) localStorage.setItem(key, next ? '1' : '0'); } catch { /* приватний режим — просто не памʼятаємо */ }
+    setOpen(next);
+  };
+
+  const toggle = () => setOpenPersist(!open);
+
+  /* Клік по іконці фази в лівій рейці не тільки прокручує до якоря —
+     він ще й розгортає згорнуті секції цієї фази, інакше людина
+     потрапляє на порожню шапку. */
+  useEffect(() => {
+    if (!group) return undefined;
+    const onJump = (e) => {
+      if (e.detail?.group === group) setOpenPersist(true);
+    };
+    window.addEventListener('edge:plan-jump', onJump);
+    return () => window.removeEventListener('edge:plan-jump', onJump);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group, key]);
+
+  return (
+    <Card>
+      <SectionHead
+        icon={icon}
+        title={title}
+        hint={hint}
+        accent={accent}
+        right={right}
+        done={done}
+        collapsible
+        open={open}
+        onToggle={toggle}
+      />
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: EASE }}
+            style={{ overflow: 'hidden' }}
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Card>
   );
 }
 

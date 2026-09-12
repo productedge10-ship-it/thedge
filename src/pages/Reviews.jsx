@@ -381,7 +381,7 @@ export default function Reviews() {
                   className="edge-add-btn inline-flex h-[42px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold"
                   style={{ color: '#fff', fontFamily: T.sans }}
                 >
-                  <Plus size={15} strokeWidth={3} className="shrink-0" style={{ color: T.acc }} />
+                  <Plus size={15} strokeWidth={3} className="shrink-0" />
                   Новий розбір
                 </button>
           </div>
@@ -424,7 +424,7 @@ export default function Reviews() {
                   <button
                     onClick={() => (reviews.length === 0 ? startCreate() : resetFilters())}
                     className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-bold transition-transform duration-200 active:scale-[0.98]"
-                    style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+                    style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                   >
                     {reviews.length === 0 ? <><Plus size={15} strokeWidth={3} /> Зробити перший</> : 'Скинути фільтри'}
                   </button>

@@ -33,15 +33,15 @@ import { getCat } from './utils';
 const CARD_CSS = `
 .err-card{
   --ac: var(--edge-acc-rgb, 139,123,255);
-  background-color:#0a0a0f;
-  background-image:linear-gradient(168deg, rgba(var(--ac),.03), #0d0d13 42%, #0a0a0f);
-  border:1px solid #1e1e28;
-  box-shadow:0 12px 28px -22px #000000d9, inset 0 1px 0 #ffffff0a;
+  background-color:var(--edge-sunken);
+  background-image:linear-gradient(168deg, rgba(var(--ac),.03), var(--edge-sunken) 42%, var(--edge-sunken));
+  border:1px solid var(--edge-line);
+  box-shadow:0 12px 28px -22px var(--edge-panel-glow, rgba(0,0,0,0.85)), inset 0 1px 0 rgba(var(--edge-hair-rgb),0.04);
   transition:transform .28s cubic-bezier(.22,1.2,.36,1), border-color .18s,
              background-image .2s, box-shadow .26s;
 }
 .err-card:hover{
-  background-image:linear-gradient(168deg, rgba(var(--ac),.09), #0d0d13 42%, #0a0a0f);
+  background-image:linear-gradient(168deg, rgba(var(--ac),.09), var(--edge-sunken) 42%, var(--edge-sunken));
   border-color:rgba(var(--ac),.8);
   box-shadow:0 28px 54px -26px rgba(var(--ac),.6),
              inset 0 1px 0 rgba(var(--ac),.17),
@@ -50,12 +50,12 @@ const CARD_CSS = `
 }
 .err-card .err-glow{opacity:.07;transition:opacity .26s}
 .err-card:hover .err-glow{opacity:.18}
-.err-card .err-text{color:#a8a6b8;transition:color .18s}
-.err-card:hover .err-text{color:#dedce9}
-.err-card .err-foot{border-top:1px solid #1c1c25;transition:border-color .2s}
+.err-card .err-text{color:var(--edge-text2);transition:color .18s}
+.err-card:hover .err-text{color:var(--edge-text)}
+.err-card .err-foot{border-top:1px solid var(--edge-line);transition:border-color .2s}
 .err-card:hover .err-foot{border-top-color:rgba(var(--ac),.28)}
 .err-card .err-arrow{
-  background:#ffffff08;border:1px solid #23232e;color:#75738a;
+  background:rgba(var(--edge-hair-rgb),0.03);border:1px solid var(--edge-line);color:var(--edge-text3);
   transition:background .2s, border-color .2s, color .2s, transform .2s;
 }
 .err-card:hover .err-arrow{
@@ -92,13 +92,13 @@ function Card({ entry, onOpen }) {
             <div
               className="inline-flex h-[26px] items-center rounded-[7px] px-2.5"
               style={{
-                background: '#ffffff0d',
-                border: '1px solid #2c2c38',
+                background: 'rgba(var(--edge-hair-rgb),0.05)',
+                border: '1px solid var(--edge-line-hi)',
                 fontFamily: T.mono,
                 fontSize: 12,
                 letterSpacing: '1.1px',
                 fontWeight: 700,
-                color: '#e6e4ee',
+                color: 'var(--edge-text)',
               }}
             >
               {entry.pair}
@@ -110,7 +110,7 @@ function Card({ entry, onOpen }) {
               відрізнити сусідні записи один від одного. */}
           <div
             className="mt-2.5 tabular-nums"
-            style={{ fontFamily: T.mono, fontSize: 13, letterSpacing: '0.6px', color: '#8b899a' }}
+            style={{ fontFamily: T.mono, fontSize: 13, letterSpacing: '0.6px', color: 'var(--edge-text3)' }}
           >
             {bad
               ? '—'
@@ -122,16 +122,16 @@ function Card({ entry, onOpen }) {
           className="flex flex-none items-center gap-2 rounded-full px-3 py-[6px] text-[12px] font-bold"
           style={{
             fontFamily: T.sans,
-            background: entry.resolved ? '#2fbf8f1f' : `rgba(${T.accRgb},0.16)`,
-            border: `1px solid ${entry.resolved ? '#2fbf8f4d' : `rgba(${T.accRgb},0.5)`}`,
-            color: entry.resolved ? '#6fe0b4' : '#c4baff',
+            background: entry.resolved ? 'rgba(var(--edge-ok-rgb),0.12)' : `rgba(${T.accRgb},0.16)`,
+            border: `1px solid ${entry.resolved ? 'rgba(var(--edge-ok-rgb),0.30)' : `rgba(${T.accRgb},0.5)`}`,
+            color: entry.resolved ? 'var(--edge-ok)' : 'var(--edge-acc)',
           }}
         >
           <span
             className="h-[5px] w-[5px] rounded-full"
             style={{
-              background: entry.resolved ? '#6fe0b4' : '#a99cff',
-              boxShadow: `0 0 8px 1px ${entry.resolved ? '#2fbf8fcc' : `rgba(${T.accRgb},0.8)`}`,
+              background: entry.resolved ? 'var(--edge-ok)' : 'var(--edge-acc)',
+              boxShadow: `0 0 8px 1px ${entry.resolved ? 'rgba(var(--edge-ok-rgb),0.80)' : `rgba(${T.accRgb},0.8)`}`,
             }}
           />
           <span className="whitespace-nowrap">{entry.resolved ? 'Розібрано' : 'Не розібрано'}</span>
@@ -169,7 +169,7 @@ function Card({ entry, onOpen }) {
           })}
 
           {cats.length > 2 && (
-            <span className="text-[11.5px] font-semibold" style={{ fontFamily: T.mono, color: '#75738a' }}>
+            <span className="text-[11.5px] font-semibold" style={{ fontFamily: T.mono, color: 'var(--edge-text3)' }}>
               +{cats.length - 2}
             </span>
           )}
@@ -178,10 +178,10 @@ function Card({ entry, onOpen }) {
             <span
               title="Поза планом"
               className="flex items-center gap-1.5 rounded-full px-2.5 py-[5px]"
-              style={{ background: '#f5a33b1c', border: '1px solid #f5a33b45' }}
+              style={{ background: 'rgba(var(--edge-warn-rgb),0.11)', border: '1px solid rgba(var(--edge-warn-rgb),0.27)' }}
             >
-              <AlertTriangle size={11} strokeWidth={2.2} style={{ color: '#f5c07b' }} />
-              <span className="whitespace-nowrap text-[11.5px] font-bold" style={{ fontFamily: T.sans, color: '#f5c07b' }}>
+              <AlertTriangle size={11} strokeWidth={2.2} style={{ color: 'var(--edge-warn)' }} />
+              <span className="whitespace-nowrap text-[11.5px] font-bold" style={{ fontFamily: T.sans, color: 'var(--edge-warn)' }}>
                 Поза планом
               </span>
             </span>
@@ -212,17 +212,17 @@ export default function ErrorGrid({ groups, onOpenCard }) {
           <div className="flex items-center gap-3.5">
             <h2
               className="whitespace-nowrap"
-              style={{ fontFamily: T.display, fontSize: 19, fontWeight: 600, color: '#ffffff', letterSpacing: '-0.4px' }}
+              style={{ fontFamily: T.display, fontSize: 19, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.4px' }}
             >
               {g.label}
             </h2>
             <span
               className="whitespace-nowrap text-[12px] uppercase"
-              style={{ fontFamily: T.mono, letterSpacing: '1.4px', color: '#75738a' }}
+              style={{ fontFamily: T.mono, letterSpacing: '1.4px', color: 'var(--edge-text3)' }}
             >
               {g.items.length} {g.items.length === 1 ? 'запис' : g.items.length % 10 >= 2 && g.items.length % 10 <= 4 && (g.items.length % 100 < 10 || g.items.length % 100 >= 20) ? 'записи' : 'записів'}
             </span>
-            <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,#22222c,transparent)' }} />
+            <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,var(--edge-line),transparent)' }} />
           </div>
 
           <div

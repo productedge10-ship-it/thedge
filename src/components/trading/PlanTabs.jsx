@@ -95,7 +95,7 @@ function Ring({ value, active }) {
   const done = value >= 1;
   return (
     <svg width="40" height="40" viewBox="0 0 40 40" className="-rotate-90">
-      <circle cx="20" cy="20" r={R} fill="none" stroke={T.line} strokeWidth="2" />
+      <circle cx="20" cy="20" r={R} fill="none" stroke={T.lineHi} strokeWidth="2" />
       <motion.circle
         cx="20" cy="20" r={R} fill="none"
         stroke={done ? T.ok : T.acc}
@@ -152,14 +152,14 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
   return (
     <div
       className="fixed top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center xl:flex no-print"
-      style={{ left, filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))', transition: 'left 0.42s cubic-bezier(0.22,1,0.36,1)' }}
+      style={{ left, filter: 'drop-shadow(0 20px 40px var(--edge-panel-glow, rgba(0,0,0,0.3)))', transition: 'left 0.42s cubic-bezier(0.22,1,0.36,1)' }}
     >
       {/* Перемикач активів — окремою капсулою над навігацією */}
       {assetSwitcher && (
         <div
           className="mb-2.5 rounded-2xl p-2"
           style={{
-            background: 'rgba(13,13,16,0.90)',
+            background: 'var(--edge-panel, rgba(13,13,16,0.90))',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             border: `1px solid ${T.line}`,
@@ -172,7 +172,7 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
       <div
         className="flex flex-col items-center gap-1 rounded-2xl p-2.5"
         style={{
-          background: 'rgba(13,13,16,0.90)',
+          background: 'var(--edge-panel, rgba(13,13,16,0.90))',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: `1px solid ${T.line}`,
@@ -206,7 +206,7 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
                     size={14}
                     strokeWidth={2.4}
                     className="absolute transition-colors duration-300"
-                    style={{ color: isActive ? T.acc : T.text3 }}
+                    style={{ color: isActive ? T.acc : T.text2 }}
                   />
                 </span>
 
@@ -217,7 +217,7 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
                     transform: 'translateY(-50%) translateX(-4px)',
                     background: T.surface,
                     border: `1px solid ${T.lineHi}`,
-                    boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+                    boxShadow: '0 12px 30px var(--edge-panel-glow, rgba(0,0,0,0.6))',
                   }}
                 >
                   <span className="flex items-center gap-2">
@@ -250,7 +250,7 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
       {/* загальний прогрес — вертикальна смуга під кільцями */}
       <div
         className="mt-2.5 flex flex-col items-center gap-2 rounded-xl px-2 py-2.5"
-        style={{ background: 'rgba(13,13,16,0.90)', backdropFilter: 'blur(20px)', border: `1px solid ${T.line}` }}
+        style={{ background: 'var(--edge-panel, rgba(13,13,16,0.90))', backdropFilter: 'blur(20px)', border: `1px solid ${T.line}` }}
       >
         <div className="h-14 w-1 overflow-hidden rounded-full" style={{ background: T.line }}>
           <motion.div
@@ -263,7 +263,7 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
         </div>
         <span
           className="text-[12px] font-semibold tabular-nums"
-          style={{ fontFamily: T.sans, color: overall >= 1 ? T.ok : T.text3, writingMode: 'vertical-rl' }}
+          style={{ fontFamily: T.sans, color: overall >= 1 ? T.ok : T.text2, writingMode: 'vertical-rl' }}
         >
           {Math.round(overall * 100)}%
         </span>
@@ -282,10 +282,10 @@ function MobileDock({ active, onNavigate, progress, overall }) {
       <div
         className="pointer-events-auto flex items-center gap-1 rounded-2xl p-1.5"
         style={{
-          background: 'rgba(13,13,16,0.90)',
+          background: 'var(--edge-panel, rgba(13,13,16,0.90))',
           backdropFilter: 'blur(20px)',
           border: `1px solid ${T.line}`,
-          boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+          boxShadow: '0 16px 40px var(--edge-panel-glow, rgba(0,0,0,0.6))',
         }}
       >
         {SECTIONS.map((s) => {
@@ -309,9 +309,9 @@ function MobileDock({ active, onNavigate, progress, overall }) {
               <span className="relative z-10 flex items-center gap-2">
                 <span className="relative grid h-7 w-7 place-items-center">
                   <Ring value={value} active={isActive} />
-                  <Icon size={12} strokeWidth={2.4} className="absolute" style={{ color: isActive ? T.acc : T.text3 }} />
+                  <Icon size={12} strokeWidth={2.4} className="absolute" style={{ color: isActive ? T.acc : T.text2 }} />
                 </span>
-                <span className="text-[14px] font-semibold" style={{ fontFamily: T.display, color: isActive ? T.text : T.text3 }}>
+                <span className="text-[14px] font-semibold" style={{ fontFamily: T.display, color: isActive ? T.text : T.text2 }}>
                   {s.label}
                 </span>
               </span>
@@ -355,10 +355,10 @@ export function BackToTop({ visible, onClick }) {
           title="Нагору"
           className="no-print group grid h-11 w-11 place-items-center rounded-full"
           style={{
-            background: 'rgba(19,19,22,0.92)',
+            background: 'var(--edge-panel, rgba(19,19,22,0.92))',
             backdropFilter: 'blur(16px)',
             border: `1px solid ${T.line}`,
-            boxShadow: '0 12px 32px -12px rgba(0,0,0,0.9)',
+            boxShadow: '0 12px 32px -12px var(--edge-panel-glow, rgba(0,0,0,0.35))',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
           onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}

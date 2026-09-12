@@ -724,7 +724,7 @@ export default function TwentyTrades() {
           <button
             onClick={() => setAbout(false)}
             className="h-11 w-full rounded-xl text-[14px] font-bold transition-transform duration-200 active:scale-[0.99]"
-            style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+            style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
           >
             Зрозуміло
           </button>
@@ -753,7 +753,7 @@ export default function TwentyTrades() {
           <button
             onClick={() => setInfo(null)}
             className="h-11 w-full rounded-xl text-[14px] font-bold transition-transform duration-200 active:scale-[0.99]"
-            style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+            style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
           >
             Зрозумів
           </button>
@@ -781,7 +781,7 @@ export default function TwentyTrades() {
             <button
               onClick={reset}
               className="h-11 flex-1 rounded-xl text-[14px] font-bold transition-transform duration-200 active:scale-[0.99]"
-              style={{ background: T.bad, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+              style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
             >
               Скинути
             </button>

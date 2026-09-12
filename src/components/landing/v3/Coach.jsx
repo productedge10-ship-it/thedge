@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
-import { C, F, A, Cat, useInView, reducedMotion } from './base';
+import { C, F, A, Cat, useInView, reducedMotion, SHELL } from './base';
 
 /* ==================================================================
    Коуч.
@@ -148,13 +148,13 @@ export default function Coach() {
   );
 
   return (
-    <section id="coach" ref={ref} style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 72px' }}>
+    <section id="coach" ref={ref} style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
         <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>ТВІЙ КОУЧ</span>
       </div>
 
-      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,3.2vw,42px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 12px', color: '#fff' }}>
+      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 12px', color: '#fff' }}>
         Кіт прочитав кожну твою угоду.
       </h2>
       <p style={{ fontFamily: F.sans, fontSize: 16.5, lineHeight: 1.5, color: '#8a8a9c', margin: '0 0 32px', maxWidth: 660 }}>

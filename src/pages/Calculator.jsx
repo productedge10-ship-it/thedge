@@ -597,7 +597,7 @@ export default function Calculator() {
                 </div>
                 {/* Режим — тихий перемикач, а не два великі прямокутники:
                     його чіпають раз на місяць. */}
-                <div className="flex gap-1 rounded-lg p-1" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                <div className="flex gap-1 rounded-lg p-1" style={{ background: 'rgba(var(--edge-hair-rgb),0.04)' }}>
                   {[
                     { id: false, label: 'за ціною' },
                     { id: true, label: 'у пунктах' },
@@ -612,7 +612,7 @@ export default function Calculator() {
                         style={{
                           fontFamily: T.sans,
                           color: on ? T.text : T.text3,
-                          background: on ? 'rgba(255,255,255,0.09)' : 'transparent',
+                          background: on ? 'rgba(var(--edge-hair-rgb),0.09)' : 'transparent',
                         }}
                       >
                         {m.label}
@@ -672,10 +672,10 @@ export default function Calculator() {
                             style={{
                               fontFamily: T.mono,
                               color: on ? T.acc : T.text2,
-                              background: on ? `rgba(${T.accRgb},0.12)` : 'rgba(255,255,255,0.04)',
+                              background: on ? `rgba(${T.accRgb},0.12)` : 'rgba(var(--edge-hair-rgb),0.04)',
                             }}
-                            onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; }}
-                            onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                            onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.09)'; }}
+                            onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.04)'; }}
                           >
                             <AssetIcon symbol={a.symbol} category={a.category} />
                             {a.symbol}

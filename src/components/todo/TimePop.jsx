@@ -46,7 +46,7 @@ function Column({ items, value, onPick, label }) {
               className="h-8 shrink-0 rounded-lg text-[14px] font-bold tabular-nums transition-colors duration-150"
               style={{
                 fontFamily: T.mono,
-                color: on ? 'var(--edge-bg, #0A0A0C)' : T.text2,
+                color: on ? 'var(--edge-on-acc, #0A0A0C)' : T.text2,
                 background: on ? T.acc : 'transparent',
               }}
               onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.surfaceHi; }}
@@ -150,7 +150,7 @@ export default function TimePop({ value, onChange, align = 'left' }) {
             <button
               onClick={close}
               className="h-9 flex-1 rounded-lg text-[13px] font-bold transition-transform duration-200 active:scale-[0.98]"
-              style={{ background: T.acc, color: 'var(--edge-bg, #0A0A0C)', fontFamily: T.sans }}
+              style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
             >
               Готово
             </button>

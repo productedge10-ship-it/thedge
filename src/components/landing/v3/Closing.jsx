@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowRight, Ban, Check, ChevronDown, TriangleAlert } from 'lucide-react';
-import { C, F, A, reducedMotion } from './base';
+import { C, F, A, reducedMotion, SHELL } from './base';
 
 /* ==================================================================
    Хвіст сторінки: ритм дня, чого ми не робимо, ціни, питання, футер.
@@ -29,13 +29,13 @@ const RHYTHM = [
 
 export function Rhythm() {
   return (
-    <section style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 72px' }}>
+    <section style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
         <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>РИТМ</span>
       </div>
 
-      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(26px,2.8vw,36px)', letterSpacing: '-1.6px', lineHeight: 1.1, margin: '0 0 12px', color: '#fff' }}>
+      <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(26px,2.3vw,44px)', letterSpacing: '-1.6px', lineHeight: 1.1, margin: '0 0 12px', color: '#fff' }}>
         Три дотики за день.
       </h2>
       <p style={{ fontFamily: F.sans, fontSize: 16.5, lineHeight: 1.5, color: '#8a8a9c', margin: '0 0 30px', maxWidth: 680 }}>
@@ -83,7 +83,7 @@ const NOT_DOING = ['Не даємо сигналів', 'Не керуємо тв
 
 export function NotDoing() {
   return (
-    <section style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 72px' }}>
+    <section style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ position: 'relative', background: 'linear-gradient(150deg,rgba(245,163,59,.11),rgba(245,163,59,.03) 55%,transparent)', border: '1px solid rgba(245,163,59,.3)', borderRadius: 24, padding: 30, overflow: 'hidden' }}>
         <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,#f5a33b,rgba(245,163,59,.2),transparent)' }} />
         <span aria-hidden style={{ position: 'absolute', top: -90, right: -40, width: 320, height: 320, background: 'radial-gradient(circle,rgba(245,163,59,.16),transparent 70%)', filter: 'blur(60px)', pointerEvents: 'none' }} />
@@ -95,7 +95,7 @@ export function NotDoing() {
               <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.4px', color: C.warn }}>ЧИТАЙ ПЕРЕД РЕЄСТРАЦІЄЮ</span>
             </div>
 
-            <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(26px,2.8vw,36px)', letterSpacing: '-1.6px', lineHeight: 1.1, margin: '0 0 12px', color: '#fff' }}>
+            <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(26px,2.3vw,44px)', letterSpacing: '-1.6px', lineHeight: 1.1, margin: '0 0 12px', color: '#fff' }}>
               Чого ми не робимо.
             </h2>
             <p style={{ fontFamily: F.sans, fontSize: 15, lineHeight: 1.6, color: '#c4a882', margin: 0, maxWidth: 380 }}>
@@ -159,14 +159,14 @@ export function Pricing() {
   );
 
   return (
-    <section id="pricing" style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 72px' }}>
+    <section id="pricing" style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 28, flexWrap: 'wrap', marginBottom: 30 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
             <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>ЦІНИ</span>
           </div>
-          <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,3.2vw,42px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 10px', color: '#fff' }}>
+          <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 10px', color: '#fff' }}>
             Дешевше за одну погану угоду.
           </h2>
           <p style={{ fontFamily: F.sans, fontSize: 16.5, color: '#8a8a9c', margin: 0 }}>Почни безкоштовно і залиш журнал назавжди.</p>
@@ -277,7 +277,7 @@ export function FinalFaq() {
   const reduced = reducedMotion();
 
   return (
-    <section id="faq" style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 76px' }}>
+    <section id="faq" style={{ ...SHELL, paddingTop: '0', paddingBottom: '76px' }}>
       <div style={{ display: 'flex', gap: 52, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div style={{ flex: '1 1 380px', minWidth: 300, position: 'relative' }}>
           <span
@@ -290,7 +290,7 @@ export function FinalFaq() {
           />
 
           <div style={{ position: 'relative' }}>
-            <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,3.2vw,42px)', letterSpacing: '-1.9px', lineHeight: 1.07, margin: '0 0 16px', color: '#fff', textWrap: 'balance' }}>
+            <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.07, margin: '0 0 16px', color: '#fff', textWrap: 'balance' }}>
               Стратегія в тебе вже є. Бракує доказів, що вона працює.
             </h2>
             <p style={{ fontFamily: F.sans, fontSize: 16.5, lineHeight: 1.55, color: '#8a8a9c', margin: '0 0 28px', maxWidth: 420 }}>

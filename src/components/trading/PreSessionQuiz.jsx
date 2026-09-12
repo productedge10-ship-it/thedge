@@ -239,7 +239,7 @@ export default function PreSessionQuiz({
                 style={{
                   background: done ? tone : T.surface,
                   border: `1px solid ${done ? 'transparent' : T.line}`,
-                  color: done ? 'var(--edge-bg, #0A0A0C)' : T.text2,
+                  color: done ? 'var(--edge-on-acc, #0A0A0C)' : T.text2,
                   fontFamily: T.sans,
                   boxShadow: done ? `0 8px 22px -10px ${tone}` : 'none',
                 }}

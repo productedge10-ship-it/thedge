@@ -3,8 +3,8 @@ import { ChevronDown, TrendingUp, TrendingDown, Minus, Coffee, Check } from 'luc
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ACC = '139,123,255';
-const LINE = 'var(--edge-line, #232328)';
-const LINE_HI = 'var(--edge-line-hi, #33333A)';
+const LINE = 'var(--edge-line, var(--edge-line))';
+const LINE_HI = 'var(--edge-line-hi, var(--edge-line-hi))';
 const SUNKEN = 'var(--edge-sunken, #0D0D10)';
 const SURFACE = 'var(--edge-surface, #131316)';
 const SURFACE_HI = 'var(--edge-surface-hi, #18181C)';
@@ -13,7 +13,7 @@ const SANS = "'Roboto', system-ui, -apple-system, sans-serif";
 const OPTIONS = [
   { label: 'Bullish', rgb: '52,211,153',  color: 'var(--edge-ok)', icon: TrendingUp },
   { label: 'Bearish', rgb: '248,113,113', color: 'var(--edge-bad)', icon: TrendingDown },
-  { label: 'Neutral', rgb: '180,180,189', color: 'var(--edge-text2, #B4B4BD)', icon: Minus },
+  { label: 'Neutral', rgb: '180,180,189', color: 'var(--edge-text2, var(--edge-text2))', icon: Minus },
   { label: 'Day off', rgb: '96,165,250',  color: 'var(--edge-info)', icon: Coffee },
 ];
 
@@ -49,7 +49,7 @@ export default function NarrativeSelect({ value, onChange }) {
               ? (selected ? `rgba(${selected.rgb},0.45)` : `rgba(${ACC},0.35)`)
               : (selected ? `rgba(${selected.rgb},0.26)` : LINE)
           }`,
-          color: selected ? selected.color : 'var(--edge-text4, #4A4A52)',
+          color: selected ? selected.color : 'var(--edge-text4, var(--edge-text4))',
           fontFamily: SANS,
         }}
         onMouseEnter={(e) => {
@@ -66,7 +66,7 @@ export default function NarrativeSelect({ value, onChange }) {
           <span className="truncate">{selected ? selected.label : 'Вибрати bias...'}</span>
         </span>
         <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }} className="flex shrink-0">
-          <ChevronDown size={14} strokeWidth={2.2} style={{ color: selected ? selected.color : 'var(--edge-text4, #4A4A52)', opacity: selected ? 0.7 : 1 }} />
+          <ChevronDown size={14} strokeWidth={2.2} style={{ color: selected ? selected.color : 'var(--edge-text4, var(--edge-text4))', opacity: selected ? 0.7 : 1 }} />
         </motion.span>
       </button>
 

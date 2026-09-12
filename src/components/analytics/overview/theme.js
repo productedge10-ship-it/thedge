@@ -13,33 +13,38 @@ import { T } from '../../../lib/theme';
    сторінка, у якій людина сидить щодня, — навпаки, не заважати.
 ================================================================== */
 
+/* Палітра через токени теми — дошка світлішає разом із застосунком.
+   Раніше значення були намертво темні (#121218 і т.п.), і у світлій
+   темі вся аналітика лишалась чорною. Форму («ледь помітні рамки,
+   картка з градієнтом, волосок світла зверху») зберігаємо — міняються
+   лише самі кольори. */
 export const P = {
   /* поверхні */
-  card: 'linear-gradient(165deg,#121218,#0c0c11)',
-  cardHi: 'linear-gradient(165deg,#16161e,#101016)',
-  sunken: '#0b0b10',
-  panel: '#101016',
+  card: 'linear-gradient(165deg, var(--edge-surface), var(--edge-surface))',
+  cardHi: 'linear-gradient(165deg, var(--edge-surface-hi), var(--edge-surface))',
+  sunken: 'var(--edge-sunken)',
+  panel: 'var(--edge-panel)',
 
   /* рамки — навмисно майже невидимі */
-  line: '#1e1e28',
-  lineHover: '#33333f',
-  lineSoft: '#16161d',
+  line: 'var(--edge-line)',
+  lineHover: 'var(--edge-line-hi)',
+  lineSoft: 'var(--edge-line)',
 
   /* текст */
-  text: '#ffffff',
-  text2: '#c2c0ce',
-  text3: '#9a98ab',
-  text4: '#84829a',
-  text5: '#7d7b8e',
-  dim: '#5c5a6b',
+  text: 'var(--edge-text)',
+  text2: 'var(--edge-text2)',
+  text3: 'var(--edge-text3)',
+  text4: 'var(--edge-text3)',
+  text5: 'var(--edge-text3)',
+  dim: 'var(--edge-text4)',
 
   /* акцент і семантика */
-  acc: '#8b7cff',
-  accSoft: '#b3a8ff',
-  accDeep: '#4a3bf5',
-  ok: '#2fbf8f',
-  bad: '#ff7b7b',
-  warn: '#f5a33b',
+  acc: 'var(--edge-acc)',
+  accSoft: 'var(--edge-acc)',
+  accDeep: 'var(--edge-acc)',
+  ok: 'var(--edge-ok)',
+  bad: 'var(--edge-bad)',
+  warn: 'var(--edge-warn)',
 };
 
 export const F = { display: T.display, sans: T.sans, mono: T.mono };
@@ -168,5 +173,5 @@ export const lightLayer = (tone, on, size = 280) => ({
 /* Волосок світла вздовж верхнього краю картки. */
 export const hairline = (strong = false) => ({
   position: 'absolute', insetInline: 18, top: 0, height: 1, pointerEvents: 'none',
-  background: `linear-gradient(90deg,transparent,${strong ? A(0.55) : '#ffffff1f'},transparent)`,
+  background: `linear-gradient(90deg,transparent,${strong ? A(0.55) : 'rgba(var(--edge-hair-rgb),0.12)'},transparent)`,
 });

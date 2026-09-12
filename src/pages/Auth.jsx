@@ -16,7 +16,7 @@ import { armReveal } from '../components/core/CandleReveal';
 /* ------------------------------------------------------------------ */
 /*  THE EDGE — theme tokens                                            */
 /* ------------------------------------------------------------------ */
-const ACCENT_HEX = '#8b7bff';
+const ACCENT_HEX = 'var(--edge-acc)';
 const ACCENT = '139,123,255'; // r,g,b — used by canvas + rgba()
 
 const SEED_TICKER = [

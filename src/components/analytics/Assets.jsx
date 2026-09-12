@@ -74,7 +74,7 @@ function StaticAssetPie({ data }) {
         >
           <div className="flex items-center gap-2 bg-[var(--edge-surface-hi)] border border-[var(--edge-hair-strong)] px-2.5 py-1 rounded-[6px] shadow-sm select-none hover:bg-[var(--edge-hair)] transition-colors cursor-default">
             <div className={`w-1.5 h-1.5 rounded-full ${isProfit ? 'bg-[#34d399]' : 'bg-[#f87171]'}`} />
-            <b className="text-[10px] font-black uppercase text-[#FAFAFA] tracking-wider">{name}</b>
+            <b className="text-[10px] font-black uppercase text-[var(--edge-text)] tracking-wider">{name}</b>
             <span className={`text-[10px] font-bold ${isProfit ? 'text-[#34d399]' : 'text-[#f87171]'}`}>{signed(net, 1)}R</span>
           </div>
         </motion.div>
@@ -97,9 +97,9 @@ function StaticAssetPie({ data }) {
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute flex flex-col items-center justify-center pointer-events-none w-[90px] h-[90px] rounded-full border border-[var(--edge-hair)] bg-[#08080A]/60 backdrop-blur-md">
-          <Activity size={18} className="text-[#7A7A85] mb-0.5 opacity-60" />
-          <span className="text-[16px] font-black text-[#FAFAFA]">{data.length}</span>
-          <span className="text-[8px] tracking-[0.2em] text-[#7A7A85] uppercase font-bold mt-1">Активів</span>
+          <Activity size={18} className="text-[var(--edge-text3)] mb-0.5 opacity-60" />
+          <span className="text-[16px] font-black text-[var(--edge-text)]">{data.length}</span>
+          <span className="text-[8px] tracking-[0.2em] text-[var(--edge-text3)] uppercase font-bold mt-1">Активів</span>
         </div>
       </div>
     </div>
@@ -112,12 +112,12 @@ const AssetTooltip = ({ active, payload }) => {
     const isProfit = data.net >= 0;
     return (
       <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.15, ease: 'easeOut' }}
-        className="bg-[var(--edge-sunken)]/95 backdrop-blur-md border border-[#232328] p-3 rounded-[12px] shadow-xl max-w-[200px] z-50 pointer-events-none"
+        className="bg-[var(--edge-sunken)]/95 backdrop-blur-md border border-[var(--edge-line)] p-3 rounded-[12px] shadow-xl max-w-[200px] z-50 pointer-events-none"
       >
-        <p className="text-[11px] text-[#7A7A85] uppercase font-bold tracking-wider mb-2 border-b border-[var(--edge-hair)] pb-2">{data.asset || data.name}</p>
+        <p className="text-[11px] text-[var(--edge-text3)] uppercase font-bold tracking-wider mb-2 border-b border-[var(--edge-hair)] pb-2">{data.asset || data.name}</p>
         <div className="flex flex-col gap-1 text-[12.5px]">
-          <div className="flex justify-between items-center gap-4"><span className="text-[#B4B4BD]">Чистий R:</span><b className={isProfit ? 'text-[#34d399]' : 'text-[#f87171]'}>{signed(data.net, 2)}R</b></div>
-          {data.trades && <div className="flex justify-between items-center gap-4"><span className="text-[#B4B4BD]">Угод:</span><b className="text-[var(--edge-text)]">{data.trades}</b></div>}
+          <div className="flex justify-between items-center gap-4"><span className="text-[var(--edge-text2)]">Чистий R:</span><b className={isProfit ? 'text-[#34d399]' : 'text-[#f87171]'}>{signed(data.net, 2)}R</b></div>
+          {data.trades && <div className="flex justify-between items-center gap-4"><span className="text-[var(--edge-text2)]">Угод:</span><b className="text-[var(--edge-text)]">{data.trades}</b></div>}
         </div>
       </motion.div>
     );
@@ -142,7 +142,7 @@ function SingleSetupModal({ setup, s, onClose }) {
 
   const trades = s.trades.filter(t => t.setup === setup.key);
   const isProfit = setup.net >= 0;
-  const color = isProfit ? 'var(--edge-acc, #8b7bff)' : '#f87171';
+  const color = isProfit ? 'var(--edge-acc, var(--edge-acc))' : '#f87171';
   
   let lTrades = 0, sTrades = 0, lNet = 0, sNet = 0;
   trades.forEach(t => {
@@ -180,13 +180,13 @@ function SingleSetupModal({ setup, s, onClose }) {
       >
         <div className="shrink-0 relative px-6 md:px-8 py-6 border-b border-[var(--edge-hair)] bg-[var(--edge-hair)]">
           <div className="absolute inset-0 opacity-[0.15] pointer-events-none" style={{ background: `radial-gradient(600px circle at 0% 0%, ${color}, transparent 70%)` }} />
-          <button onClick={onClose} className="absolute top-6 right-6 z-20 text-[#7A7A85] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]"><X size={18} /></button>
+          <button onClick={onClose} className="absolute top-6 right-6 z-20 text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]"><X size={18} /></button>
           <div className="relative z-10 flex items-center gap-4">
             <div className="w-14 h-14 rounded-[18px] flex items-center justify-center border shrink-0" style={{ background: `${color}14`, borderColor: `${color}33` }}>
               <Layers size={28} style={{ color }} />
             </div>
             <div>
-              <span className="block text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-black mb-1">Аналітика сетапу</span>
+              <span className="block text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black mb-1">Аналітика сетапу</span>
               <div className="flex items-baseline gap-3">
                 <h3 className="text-[var(--edge-text)] text-[28px] leading-none font-normal m-0 font-['Instrument_Serif',serif] tracking-wide">{setup.key}</h3>
                 <b className="text-[20px] font-black" style={{ color: isProfit ? '#34d399' : '#f87171' }}>{signed(setup.net, 2)}R</b>
@@ -196,56 +196,56 @@ function SingleSetupModal({ setup, s, onClose }) {
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 flex flex-col gap-6">
-          <div className="p-4 rounded-[16px] border border-[#8b7bff]/20 bg-[#8b7bff]/[0.07] flex items-start gap-3">
-            <Sparkles size={18} className="text-[#8b7bff] mt-0.5 shrink-0" />
-            <p className="text-[13px] text-[#FAFAFA] leading-[1.6] m-0"><b className="text-[#8b7bff]">Вердикт системи:</b> {verdict}</p>
+          <div className="p-4 rounded-[16px] border border-[var(--edge-acc)]/20 bg-[var(--edge-acc)]/[0.07] flex items-start gap-3">
+            <Sparkles size={18} className="text-[var(--edge-acc)] mt-0.5 shrink-0" />
+            <p className="text-[13px] text-[var(--edge-text)] leading-[1.6] m-0"><b className="text-[var(--edge-acc)]">Вердикт системи:</b> {verdict}</p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-4 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[14px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[#7A7A85] font-black mb-1">Угод</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-1">Угод</span>
               <b className="text-[20px] text-[var(--edge-text)] font-black">{setup.trades}</b>
             </div>
             <div className="p-4 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[14px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[#7A7A85] font-black mb-1">Вінрейт</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-1">Вінрейт</span>
               <b className="text-[20px] text-[var(--edge-text)] font-black">{setup.wr}%</b>
             </div>
             <div className="p-4 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[14px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[#7A7A85] font-black mb-1">Сер. R</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-1">Сер. R</span>
               <b className="text-[20px] font-black" style={{ color: setup.avg >= 0 ? '#34d399' : '#f87171' }}>{signed(setup.avg, 2)}</b>
             </div>
             <div className="p-4 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[14px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[#7A7A85] font-black mb-1">Long / Short</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-1">Long / Short</span>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[13px] font-bold text-[#34d399]">{lTrades}</span>
-                <span className="text-[#4A4A52]">/</span>
-                <span className="text-[13px] font-bold text-[#8b7bff]">{sTrades}</span>
+                <span className="text-[var(--edge-text4)]">/</span>
+                <span className="text-[13px] font-bold text-[var(--edge-acc)]">{sTrades}</span>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-5 bg-[var(--edge-hair)] border border-[var(--edge-hair)] rounded-[16px]">
-              <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] mb-4 flex items-center gap-2"><Crosshair size={14}/> Напрямок</h4>
+              <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-4 flex items-center gap-2"><Crosshair size={14}/> Напрямок</h4>
               <div className="flex flex-col gap-3">
                 <div>
-                  <div className="flex justify-between items-center mb-1 text-[12.5px]"><span className="text-[#B4B4BD]">LONG ({lTrades})</span><b className={lNet>=0?'text-[#34d399]':'text-[#f87171]'}>{signed(lNet,2)}R</b></div>
-                  <div className="w-full h-[4px] bg-[#232328] rounded-full"><div className="h-full bg-[#34d399] rounded-full" style={{width: `${Math.min(100, (lTrades/setup.trades)*100)}%`}}/></div>
+                  <div className="flex justify-between items-center mb-1 text-[12.5px]"><span className="text-[var(--edge-text2)]">LONG ({lTrades})</span><b className={lNet>=0?'text-[#34d399]':'text-[#f87171]'}>{signed(lNet,2)}R</b></div>
+                  <div className="w-full h-[4px] bg-[var(--edge-line)] rounded-full"><div className="h-full bg-[#34d399] rounded-full" style={{width: `${Math.min(100, (lTrades/setup.trades)*100)}%`}}/></div>
                 </div>
                 <div>
-                  <div className="flex justify-between items-center mb-1 text-[12.5px]"><span className="text-[#B4B4BD]">SHORT ({sTrades})</span><b className={sNet>=0?'text-[#8b7bff]':'text-[#f87171]'}>{signed(sNet,2)}R</b></div>
-                  <div className="w-full h-[4px] bg-[#232328] rounded-full"><div className="h-full bg-[#8b7bff] rounded-full" style={{width: `${Math.min(100, (sTrades/setup.trades)*100)}%`}}/></div>
+                  <div className="flex justify-between items-center mb-1 text-[12.5px]"><span className="text-[var(--edge-text2)]">SHORT ({sTrades})</span><b className={sNet>=0?'text-[var(--edge-acc)]':'text-[#f87171]'}>{signed(sNet,2)}R</b></div>
+                  <div className="w-full h-[4px] bg-[var(--edge-line)] rounded-full"><div className="h-full bg-[var(--edge-acc)] rounded-full" style={{width: `${Math.min(100, (sTrades/setup.trades)*100)}%`}}/></div>
                 </div>
               </div>
             </div>
 
             <div className="p-5 bg-[var(--edge-hair)] border border-[var(--edge-hair)] rounded-[16px]">
-              <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] mb-4 flex items-center gap-2"><Clock size={14}/> Сесії (PnL)</h4>
+              <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-4 flex items-center gap-2"><Clock size={14}/> Сесії (PnL)</h4>
               <div className="flex justify-between items-center h-[40px] px-2">
                 {Object.entries(sessMap).map(([k, v]) => (
                   <div key={k} className="flex flex-col items-center gap-1">
                     <b className={`text-[15px] ${v >= 0 ? 'text-[#34d399]' : 'text-[#f87171]'}`}>{signed(v,1)}</b>
-                    <span className="text-[10px] text-[#7A7A85] uppercase font-bold">{k}</span>
+                    <span className="text-[10px] text-[var(--edge-text3)] uppercase font-bold">{k}</span>
                   </div>
                 ))}
               </div>
@@ -254,7 +254,7 @@ function SingleSetupModal({ setup, s, onClose }) {
 
           {sortedAssets.length > 0 && (
             <div>
-              <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] mb-3">Де працює найкраще</h4>
+              <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-3">Де працює найкраще</h4>
               <div className="flex gap-3 flex-wrap">
                 {bestAsset && (
                   <div className="flex-1 p-3.5 bg-[#34d399]/5 border border-[#34d399]/20 rounded-[12px] flex justify-between items-center">
@@ -264,7 +264,7 @@ function SingleSetupModal({ setup, s, onClose }) {
                     </div>
                     <div className="text-right">
                       <b className="text-[15px] text-[#34d399] block">{signed(bestAsset.net, 2)}R</b>
-                      <span className="text-[10px] text-[#7A7A85]">{bestAsset.trades} угод</span>
+                      <span className="text-[10px] text-[var(--edge-text3)]">{bestAsset.trades} угод</span>
                     </div>
                   </div>
                 )}
@@ -276,7 +276,7 @@ function SingleSetupModal({ setup, s, onClose }) {
                     </div>
                     <div className="text-right">
                       <b className="text-[15px] text-[#f87171] block">{signed(worstAsset.net, 2)}R</b>
-                      <span className="text-[10px] text-[#7A7A85]">{worstAsset.trades} угод</span>
+                      <span className="text-[10px] text-[var(--edge-text3)]">{worstAsset.trades} угод</span>
                     </div>
                   </div>
                 )}
@@ -316,27 +316,27 @@ function AllSetupsModal({ s, onClose }) {
         className="relative z-10 w-full max-w-[1000px] max-h-[90vh] flex flex-col rounded-[24px] border border-[var(--edge-hair-strong)] bg-[var(--edge-sunken)]/95 backdrop-blur-3xl shadow-[0_40px_120px_rgba(0,0,0,0.8)] overflow-hidden"
       >
         <div className="shrink-0 relative px-6 md:px-8 py-6 border-b border-[var(--edge-hair)] bg-[var(--edge-hair)]">
-          <button onClick={onClose} className="absolute top-6 right-6 z-20 text-[#7A7A85] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]"><X size={18} /></button>
+          <button onClick={onClose} className="absolute top-6 right-6 z-20 text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]"><X size={18} /></button>
           <div className="relative z-10">
             <h3 className="text-[var(--edge-text)] text-[28px] leading-none font-normal m-0 font-['Instrument_Serif',serif] tracking-wide flex items-center gap-3">
-              <Layers className="text-[#8b7bff]" size={28}/> Усі сетапи (Детальна аналітика)
+              <Layers className="text-[var(--edge-acc)]" size={28}/> Усі сетапи (Детальна аналітика)
             </h3>
-            <p className="text-[13px] text-[#7A7A85] mt-2 m-0">Порівняння ефективності всіх патернів, які ти торгуєш.</p>
+            <p className="text-[13px] text-[var(--edge-text3)] mt-2 m-0">Порівняння ефективності всіх патернів, які ти торгуєш.</p>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="p-5 bg-[var(--edge-hair)] border border-[var(--edge-hair)] rounded-[16px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[#7A7A85] font-black mb-4">PnL за сетапами</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-4">PnL за сетапами</span>
               <div className="flex flex-col gap-3">
                 {s.bySetup.map(x => {
                   const isProfit = x.net >= 0;
-                  const c = isProfit ? 'var(--edge-acc, #8b7bff)' : '#f87171';
+                  const c = isProfit ? 'var(--edge-acc, var(--edge-acc))' : '#f87171';
                   const w = (Math.abs(x.net) / maxNet) * 100;
                   return (
                     <div key={x.key} className="flex items-center gap-3">
-                      <span className="text-[11.5px] font-bold text-[#FAFAFA] w-[60px] truncate">{x.key}</span>
+                      <span className="text-[11.5px] font-bold text-[var(--edge-text)] w-[60px] truncate">{x.key}</span>
                       <div className="flex-1 h-[14px] bg-[var(--edge-surface-hi)] rounded-md relative flex items-center border border-[var(--edge-hair)]">
                         <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/10 z-0" />
                         <motion.div className="absolute top-0 bottom-0 rounded-md z-10"
@@ -344,7 +344,7 @@ function AllSetupsModal({ s, onClose }) {
                           initial={{ width: 0 }} animate={{ width: `${w / 2}%`, boxShadow: `0 0 10px ${c}40` }} transition={{ duration: 1, ease: premiumEasing }}
                         />
                       </div>
-                      <b className={`text-[12.5px] w-[50px] text-right ${isProfit?'text-[#8b7bff]':'text-[#f87171]'}`}>{signed(x.net,1)}R</b>
+                      <b className={`text-[12.5px] w-[50px] text-right ${isProfit?'text-[var(--edge-acc)]':'text-[#f87171]'}`}>{signed(x.net,1)}R</b>
                     </div>
                   );
                 })}
@@ -352,14 +352,14 @@ function AllSetupsModal({ s, onClose }) {
             </div>
             
             <div className="p-5 bg-[var(--edge-hair)] border border-[var(--edge-hair)] rounded-[16px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[#7A7A85] font-black mb-4">Вінрейт vs Кількість угод</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-4">Вінрейт vs Кількість угод</span>
               <div className="flex flex-col gap-3">
                 {s.bySetup.map(x => (
                   <div key={x.key} className="flex items-center justify-between gap-3">
-                    <span className="text-[11.5px] font-bold text-[#FAFAFA] w-[60px] truncate">{x.key}</span>
+                    <span className="text-[11.5px] font-bold text-[var(--edge-text)] w-[60px] truncate">{x.key}</span>
                     <div className="flex-1 flex items-center gap-2">
-                      <div className="w-[40px] text-[11.5px] text-[#7A7A85] text-right">{x.trades} уг.</div>
-                      <div className="flex-1 bg-[#232328] h-[6px] rounded-full overflow-hidden">
+                      <div className="w-[40px] text-[11.5px] text-[var(--edge-text3)] text-right">{x.trades} уг.</div>
+                      <div className="flex-1 bg-[var(--edge-line)] h-[6px] rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all" style={{width: `${x.wr}%`, background: x.wr >= 50 ? '#34d399' : '#fbbf24'}}/>
                       </div>
                       <b className="text-[12.5px] text-[var(--edge-text)] w-[40px]">{x.wr}%</b>
@@ -374,22 +374,22 @@ function AllSetupsModal({ s, onClose }) {
             <table className="w-full border-collapse text-[13px] whitespace-nowrap min-w-[700px]">
               <thead>
                 <tr>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-black text-left p-[0_12px_12px] border-b border-[var(--edge-hair)]">Сетап</th>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-black text-center p-[0_12px_12px] border-b border-[var(--edge-hair)]">Угод</th>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-black text-center p-[0_12px_12px] border-b border-[var(--edge-hair)]">Вінрейт</th>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-black text-right p-[0_12px_12px] border-b border-[var(--edge-hair)]">Net PnL</th>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-black text-right p-[0_12px_12px] border-b border-[var(--edge-hair)]">Сер. R</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-left p-[0_12px_12px] border-b border-[var(--edge-hair)]">Сетап</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_12px_12px] border-b border-[var(--edge-hair)]">Угод</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_12px_12px] border-b border-[var(--edge-hair)]">Вінрейт</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-right p-[0_12px_12px] border-b border-[var(--edge-hair)]">Net PnL</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-right p-[0_12px_12px] border-b border-[var(--edge-hair)]">Сер. R</th>
                 </tr>
               </thead>
               <tbody>
                 {s.bySetup.map(x => (
                   <tr key={x.key} className="hover:bg-[var(--edge-hair)] transition-colors border-b border-[var(--edge-hair)] last:border-0">
-                    <td className="text-left p-[14px_12px] font-bold text-[#FAFAFA]">{x.key}</td>
-                    <td className="text-center p-[14px_12px] text-[#B4B4BD]">{x.trades}</td>
+                    <td className="text-left p-[14px_12px] font-bold text-[var(--edge-text)]">{x.key}</td>
+                    <td className="text-center p-[14px_12px] text-[var(--edge-text2)]">{x.trades}</td>
                     <td className="text-center p-[14px_12px]">
-                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${x.wr >= 50 ? 'bg-[#34d399]/10 text-[#34d399]' : 'bg-[var(--edge-hair)] text-[#7A7A85]'}`}>{x.wr}%</span>
+                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${x.wr >= 50 ? 'bg-[#34d399]/10 text-[#34d399]' : 'bg-[var(--edge-hair)] text-[var(--edge-text3)]'}`}>{x.wr}%</span>
                     </td>
-                    <td className="text-right p-[14px_12px]"><b className={x.net >= 0 ? 'text-[#8b7bff]' : 'text-[#f87171]'}>{signed(x.net, 2)}R</b></td>
+                    <td className="text-right p-[14px_12px]"><b className={x.net >= 0 ? 'text-[var(--edge-acc)]' : 'text-[#f87171]'}>{signed(x.net, 2)}R</b></td>
                     <td className="text-right p-[14px_12px]"><b className={x.avg >= 0 ? 'text-[#34d399]' : 'text-[#f87171]'}>{signed(x.avg, 2)}R</b></td>
                   </tr>
                 ))}
@@ -430,8 +430,8 @@ export default function Assets({ s }) {
     const top = rankedAssets.filter(a => a.net >= 1).map(a => a.key);
     const bad = rankedAssets.filter(a => a.net <= -1).map(a => a.key);
     return (
-      <div className="text-[12.5px] text-[#B4B4BD] leading-[1.6]">
-        <b className="text-[#FAFAFA] block mb-1">Вердикт системи:</b>
+      <div className="text-[12.5px] text-[var(--edge-text2)] leading-[1.6]">
+        <b className="text-[var(--edge-text)] block mb-1">Вердикт системи:</b>
         {top.length > 0 ? <span>Найкраще зараз торгувати <b className="text-[#34d399]">{top.join(', ')}</b> — вони дають основний профіт. </span> : "Поки що немає стабільно прибуткових активів з великим R. "}
         {bad.length > 0 && <span>Від активів <b className="text-[#f87171]">{bad.join(', ')}</b> краще переключитись на інші або тимчасово призупинити торгівлю ними — зараз вони тягнуть депозит вниз.</span>}
       </div>
@@ -454,8 +454,8 @@ export default function Assets({ s }) {
     };
   }, [s.matrix]);
 
-  const lsPieData = [{ name: 'LONG', value: lsStats.lt, fill: '#34d399' }, { name: 'SHORT', value: lsStats.st, fill: 'var(--edge-acc, #8b7bff)' }];
-  const lsBarData = [{ name: 'LONG', net: lsStats.ln, color: '#34d399' }, { name: 'SHORT', net: lsStats.sn, color: 'var(--edge-acc, #8b7bff)' }];
+  const lsPieData = [{ name: 'LONG', value: lsStats.lt, fill: '#34d399' }, { name: 'SHORT', value: lsStats.st, fill: 'var(--edge-acc, var(--edge-acc))' }];
+  const lsBarData = [{ name: 'LONG', net: lsStats.ln, color: '#34d399' }, { name: 'SHORT', net: lsStats.sn, color: 'var(--edge-acc, var(--edge-acc))' }];
 
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="flex flex-col gap-4 relative" onMouseMove={handleGlobalMouseMove}>
@@ -468,7 +468,7 @@ export default function Assets({ s }) {
 
       <motion.div variants={fadeUpVariant} className="flex items-baseline gap-4 relative z-10 mb-2">
         <h2 className="font-['Instrument_Serif',serif] text-[30px] font-normal m-0 tracking-[0.2px] text-[var(--edge-text)]">Активи та Сетапи</h2>
-        <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-bold">
+        <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">
           {s.byAsset.length} активів в роботі · {s.bySetup.length} сетапів
         </span>
       </motion.div>
@@ -479,8 +479,8 @@ export default function Assets({ s }) {
             <Panel title={<><TrendingUp size={13} /> Ефективність активів</>} 
               right={
                 <div className="flex bg-[var(--edge-surface-hi)] border border-[var(--edge-hair-strong)] rounded-lg p-0.5">
-                  <button onClick={() => setViewMode('chart')} className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold flex items-center gap-1.5 ${viewMode === 'chart' ? 'bg-[#33333A] text-[var(--edge-text)] shadow-sm' : 'text-[#7A7A85] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}><BarChart2 size={13} /> Графік</button>
-                  <button onClick={() => setViewMode('pie')} className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold flex items-center gap-1.5 ${viewMode === 'pie' ? 'bg-[#33333A] text-[var(--edge-text)] shadow-sm' : 'text-[#7A7A85] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}><PieIcon size={13} /> Діаграма</button>
+                  <button onClick={() => setViewMode('chart')} className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold flex items-center gap-1.5 ${viewMode === 'chart' ? 'bg-[var(--edge-line-hi)] text-[var(--edge-text)] shadow-sm' : 'text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}><BarChart2 size={13} /> Графік</button>
+                  <button onClick={() => setViewMode('pie')} className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold flex items-center gap-1.5 ${viewMode === 'pie' ? 'bg-[var(--edge-line-hi)] text-[var(--edge-text)] shadow-sm' : 'text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}><PieIcon size={13} /> Діаграма</button>
                 </div>
               }
             >
@@ -490,8 +490,8 @@ export default function Assets({ s }) {
                     <div className="p-3.5 bg-[var(--edge-surface-hi)]/60 border border-[#34d399]/10 rounded-[12px] transition-colors hover:border-[#34d399]/30 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#34d399]/10 flex items-center justify-center border border-[#34d399]/20 shrink-0"><Trophy size={18} className="text-[#34d399]" /></div>
                       <div>
-                        <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Топ актив</span>
-                        <b className="block text-[16px] font-extrabold mt-0.5 text-[#FAFAFA]">{bestAsset.key} <span className="text-[#34d399] ml-1">{signed(bestAsset.net)}R</span></b>
+                        <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Топ актив</span>
+                        <b className="block text-[16px] font-extrabold mt-0.5 text-[var(--edge-text)]">{bestAsset.key} <span className="text-[#34d399] ml-1">{signed(bestAsset.net)}R</span></b>
                       </div>
                     </div>
                   </SpotlightCard>
@@ -501,8 +501,8 @@ export default function Assets({ s }) {
                     <div className="p-3.5 bg-[var(--edge-surface-hi)]/60 border border-[#f87171]/10 rounded-[12px] transition-colors hover:border-[#f87171]/30 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#f87171]/10 flex items-center justify-center border border-[#f87171]/20 shrink-0"><AlertTriangle size={18} className="text-[#f87171]" /></div>
                       <div>
-                        <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Тягне вниз</span>
-                        <b className="block text-[16px] font-extrabold mt-0.5 text-[#FAFAFA]">{worstAsset.key} <span className="text-[#f87171] ml-1">{signed(worstAsset.net)}R</span></b>
+                        <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Тягне вниз</span>
+                        <b className="block text-[16px] font-extrabold mt-0.5 text-[var(--edge-text)]">{worstAsset.key} <span className="text-[#f87171] ml-1">{signed(worstAsset.net)}R</span></b>
                       </div>
                     </div>
                   </SpotlightCard>
@@ -519,11 +519,11 @@ export default function Assets({ s }) {
                             <linearGradient id="assetWin" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#34d399" stopOpacity={0.8}/><stop offset="100%" stopColor="#34d399" stopOpacity={0.3}/></linearGradient>
                             <linearGradient id="assetLoss" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#f87171" stopOpacity={0.3}/><stop offset="100%" stopColor="#f87171" stopOpacity={0.8}/></linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--edge-line, #232328)" />
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--edge-line, var(--edge-line))" />
                           <XAxis type="number" {...axis} />
-                          <YAxis dataKey="asset" type="category" {...axis} width={70} tick={{ fontSize: 12, fill: 'var(--edge-text2, #B4B4BD)', fontWeight: 'bold' }} />
+                          <YAxis dataKey="asset" type="category" {...axis} width={70} tick={{ fontSize: 12, fill: 'var(--edge-text2, var(--edge-text2))', fontWeight: 'bold' }} />
                           <RTooltip content={<AssetTooltip />} isAnimationActive={false} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-                          <ReferenceLine x={0} stroke="var(--edge-line-hi, #33333A)" strokeWidth={2} />
+                          <ReferenceLine x={0} stroke="var(--edge-line-hi, var(--edge-line-hi))" strokeWidth={2} />
                           <Bar dataKey="net" radius={[0, 4, 4, 0]} barSize={22} isAnimationActive={true} animationDuration={600} animationEasing="ease-out">
                             {s.byAsset.map((a, i) => <Cell key={i} fill={a.net >= 0 ? 'url(#assetWin)' : 'url(#assetLoss)'} style={{ outline: 'none' }} />)}
                           </Bar>
@@ -539,7 +539,7 @@ export default function Assets({ s }) {
               </div>
 
               <div className="mt-4 p-4 bg-gradient-to-r from-[#18181C] to-[#18181C]/40 border border-[var(--edge-hair)] rounded-[12px] flex items-start gap-3">
-                <Lightbulb size={18} className="text-[#8b7bff] mt-0.5 shrink-0" />
+                <Lightbulb size={18} className="text-[var(--edge-acc)] mt-0.5 shrink-0" />
                 {verdict}
               </div>
             </Panel>
@@ -556,15 +556,15 @@ export default function Assets({ s }) {
                   <SpotlightCard key={a.key} glowColor={`${color}20`} className="rounded-[14px]">
                     <div className="bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[14px] p-4 transition-colors hover:border-[var(--edge-hair-strong)] cursor-default">
                       <div className="flex justify-between items-center mb-3">
-                        <b className="text-[14px] text-[#FAFAFA]">{a.key}</b>
+                        <b className="text-[14px] text-[var(--edge-text)]">{a.key}</b>
                         <b className={`text-[15px] ${isProfit ? 'text-[#34d399]' : 'text-[#f87171]'}`}>{signed(a.net, 2)}R</b>
                       </div>
-                      <div className="w-full bg-[#232328] h-[6px] rounded-full overflow-hidden mb-3 relative">
+                      <div className="w-full bg-[var(--edge-line)] h-[6px] rounded-full overflow-hidden mb-3 relative">
                         <motion.div className="absolute left-0 top-0 h-full rounded-full" style={{ background: color, boxShadow: `0 0 10px ${color}80` }} initial={{ width: 0 }} animate={{ width: `${a.wr}%` }} transition={{ duration: 1, ease: premiumEasing }} />
                       </div>
-                      <div className="flex justify-between items-end text-[11px] text-[#7A7A85] tracking-wide">
-                        <span className="flex flex-col gap-0.5"><span className="text-[9px] uppercase font-black">Вінрейт</span><b className="text-[#FAFAFA] text-[13px]">{a.wr}%</b></span>
-                        <span className="flex flex-col gap-0.5 text-center"><span className="text-[9px] uppercase font-black">Угод</span><b className="text-[#FAFAFA] text-[13px]">{a.trades}</b></span>
+                      <div className="flex justify-between items-end text-[11px] text-[var(--edge-text3)] tracking-wide">
+                        <span className="flex flex-col gap-0.5"><span className="text-[9px] uppercase font-black">Вінрейт</span><b className="text-[var(--edge-text)] text-[13px]">{a.wr}%</b></span>
+                        <span className="flex flex-col gap-0.5 text-center"><span className="text-[9px] uppercase font-black">Угод</span><b className="text-[var(--edge-text)] text-[13px]">{a.trades}</b></span>
                         <span className={`flex flex-col gap-0.5 text-right ${a.mistakes ? 'text-[#f87171]' : 'text-[#34d399]'}`}><span className="text-[9px] uppercase font-black">Помилок</span><b className="text-[13px]">{a.mistakes}</b></span>
                       </div>
                     </div>
@@ -590,27 +590,27 @@ export default function Assets({ s }) {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-transform group-hover:scale-105">
-                    <span className="text-[17px] font-black text-[#FAFAFA] drop-shadow-md">{lsStats.total}</span>
-                    <span className="text-[8px] tracking-[0.2em] text-[#7A7A85] uppercase font-bold mt-0.5">Угод</span>
+                    <span className="text-[17px] font-black text-[var(--edge-text)] drop-shadow-md">{lsStats.total}</span>
+                    <span className="text-[8px] tracking-[0.2em] text-[var(--edge-text3)] uppercase font-bold mt-0.5">Угод</span>
                   </div>
                 </div>
                 <div className="flex-1 flex flex-col gap-3 min-w-0">
                   <div className="group/item cursor-default">
                     <div className="flex justify-between items-center mb-1.5"><span className="text-[#34d399] font-black text-[11px] uppercase tracking-wider flex items-center gap-1 group-hover/item:brightness-125 transition-all"><ArrowUpRight size={13} /> Long</span><b className="text-[var(--edge-text)] text-[14px]">{lsStats.lPct}%</b></div>
-                    <div className="w-full h-[4px] bg-[#232328] rounded-full overflow-hidden shadow-inner"><motion.div initial={{ width: 0 }} animate={{ width: `${lsStats.lPct}%` }} transition={{ duration: 1, ease: premiumEasing }} className="h-full bg-[#34d399] rounded-full shadow-[0_0_8px_#34d39980]" /></div>
-                    <span className="text-[10.5px] text-[#7A7A85] mt-1.5 block group-hover/item:text-[#B4B4BD] transition-colors">{lsStats.lt} угод · WR {lsStats.lWr}%</span>
+                    <div className="w-full h-[4px] bg-[var(--edge-line)] rounded-full overflow-hidden shadow-inner"><motion.div initial={{ width: 0 }} animate={{ width: `${lsStats.lPct}%` }} transition={{ duration: 1, ease: premiumEasing }} className="h-full bg-[#34d399] rounded-full shadow-[0_0_8px_#34d39980]" /></div>
+                    <span className="text-[10.5px] text-[var(--edge-text3)] mt-1.5 block group-hover/item:text-[var(--edge-text2)] transition-colors">{lsStats.lt} угод · WR {lsStats.lWr}%</span>
                   </div>
                   <div className="group/item cursor-default">
-                    <div className="flex justify-between items-center mb-1.5"><span className="text-[#8b7bff] font-black text-[11px] uppercase tracking-wider flex items-center gap-1 group-hover/item:brightness-125 transition-all">Short <ArrowDownRight size={13} /></span><b className="text-[var(--edge-text)] text-[14px]">{lsStats.sPct}%</b></div>
-                    <div className="w-full h-[4px] bg-[#232328] rounded-full overflow-hidden shadow-inner"><motion.div initial={{ width: 0 }} animate={{ width: `${lsStats.sPct}%` }} transition={{ duration: 1, ease: premiumEasing }} className="h-full bg-[#8b7bff] rounded-full shadow-[0_0_8px_#8b7bff80]" /></div>
-                    <span className="text-[10.5px] text-[#7A7A85] mt-1.5 block group-hover/item:text-[#B4B4BD] transition-colors">{lsStats.st} угод · WR {lsStats.sWr}%</span>
+                    <div className="flex justify-between items-center mb-1.5"><span className="text-[var(--edge-acc)] font-black text-[11px] uppercase tracking-wider flex items-center gap-1 group-hover/item:brightness-125 transition-all">Short <ArrowDownRight size={13} /></span><b className="text-[var(--edge-text)] text-[14px]">{lsStats.sPct}%</b></div>
+                    <div className="w-full h-[4px] bg-[var(--edge-line)] rounded-full overflow-hidden shadow-inner"><motion.div initial={{ width: 0 }} animate={{ width: `${lsStats.sPct}%` }} transition={{ duration: 1, ease: premiumEasing }} className="h-full bg-[var(--edge-acc)] rounded-full shadow-[0_0_8px_rgba(var(--edge-acc-rgb),0.50)]" /></div>
+                    <span className="text-[10.5px] text-[var(--edge-text3)] mt-1.5 block group-hover/item:text-[var(--edge-text2)] transition-colors">{lsStats.st} угод · WR {lsStats.sWr}%</span>
                   </div>
                 </div>
               </div>
             </SpotlightCard>
             <SpotlightCard glowColor="rgba(255,255,255,0.08)" className="rounded-[12px]">
               <div className="h-full p-5 bg-[var(--edge-surface-hi)]/40 border border-[var(--edge-hair)] rounded-[12px] flex flex-col justify-center gap-5 transition-colors hover:border-[var(--edge-hair-strong)]">
-                <span className="block text-[10px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Баланс PnL за напрямками</span>
+                <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Баланс PnL за напрямками</span>
                 <div className="flex flex-col gap-4">
                   {lsBarData.map((d) => {
                     const maxNet = Math.max(0.1, Math.abs(lsStats.ln), Math.abs(lsStats.sn));
@@ -621,8 +621,8 @@ export default function Assets({ s }) {
                     return (
                       <div key={d.name} className="flex flex-col gap-1.5 group cursor-default">
                         <div className="flex justify-between items-end px-1">
-                          <span className="text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1.5 text-[#7A7A85] group-hover:text-[#FAFAFA] transition-colors">
-                            {d.name === 'LONG' ? <ArrowUpRight size={13} className={isProfit ? "text-[#34d399]" : "text-[#f87171]"}/> : <ArrowDownRight size={13} className={isProfit ? "text-[#8b7bff]" : "text-[#f87171]"}/>}
+                          <span className="text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1.5 text-[var(--edge-text3)] group-hover:text-[var(--edge-text)] transition-colors">
+                            {d.name === 'LONG' ? <ArrowUpRight size={13} className={isProfit ? "text-[#34d399]" : "text-[#f87171]"}/> : <ArrowDownRight size={13} className={isProfit ? "text-[var(--edge-acc)]" : "text-[#f87171]"}/>}
                             {d.name}
                           </span>
                           <span className={`text-[13.5px] font-black transition-all duration-300 ${isProfit ? 'text-[var(--edge-text)] group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'text-[#f87171] group-hover:drop-shadow-[0_0_8px_rgba(248,113,113,0.6)] group-hover:text-[#f87171]'}`}>{signed(d.net, 2)}R</span>
@@ -645,18 +645,18 @@ export default function Assets({ s }) {
             <table className="w-full border-collapse text-[13px] whitespace-nowrap min-w-[700px]">
               <thead>
                 <tr>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-black text-left p-[0_12px_12px]">Актив</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-left p-[0_12px_12px]">Актив</th>
                   <th className="text-[10px] tracking-[0.14em] uppercase text-[#34d399] font-black text-center p-[0_12px_12px]" colSpan={2}><div className="flex items-center justify-center gap-1.5"><ArrowUpRight size={13} /> LONG</div></th>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-black text-center p-[0_12px_12px] w-[120px]">Баланс PnL</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_12px_12px] w-[120px]">Баланс PnL</th>
                   <th className="text-[10px] tracking-[0.14em] uppercase text-[#f87171] font-black text-center p-[0_12px_12px]" colSpan={2}><div className="flex items-center justify-center gap-1.5">SHORT <ArrowDownRight size={13} /></div></th>
                 </tr>
                 <tr>
                   <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)]" />
-                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[#7A7A85] font-bold uppercase tracking-wider text-center">Угод (WR)</th>
-                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[#7A7A85] font-bold uppercase tracking-wider text-right">PnL</th>
+                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[var(--edge-text3)] font-bold uppercase tracking-wider text-center">Угод (WR)</th>
+                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[var(--edge-text3)] font-bold uppercase tracking-wider text-right">PnL</th>
                   <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)]" />
-                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[#7A7A85] font-bold uppercase tracking-wider text-left pl-6">PnL</th>
-                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[#7A7A85] font-bold uppercase tracking-wider text-center">Угод (WR)</th>
+                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[var(--edge-text3)] font-bold uppercase tracking-wider text-left pl-6">PnL</th>
+                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[var(--edge-text3)] font-bold uppercase tracking-wider text-center">Угод (WR)</th>
                 </tr>
               </thead>
               <tbody>
@@ -667,35 +667,35 @@ export default function Assets({ s }) {
                   const lPct = totalAbsNet === 0 ? 50 : (Math.abs(lNet) / totalAbsNet) * 100;
                   const sPct = totalAbsNet === 0 ? 50 : (Math.abs(sNet) / totalAbsNet) * 100;
                   return (
-                    <tr key={row.asset} className="hover:bg-[#232328]/80 transition-colors duration-300 group relative cursor-default border-b border-transparent hover:border-[var(--edge-hair)]">
-                      <td className="text-left p-[14px_12px] font-bold text-[#FAFAFA] group-hover:text-[var(--edge-text)] transition-colors">{row.asset}</td>
+                    <tr key={row.asset} className="hover:bg-[var(--edge-line)]/80 transition-colors duration-300 group relative cursor-default border-b border-transparent hover:border-[var(--edge-hair)]">
+                      <td className="text-left p-[14px_12px] font-bold text-[var(--edge-text)] group-hover:text-[var(--edge-text)] transition-colors">{row.asset}</td>
                       <td className="text-center p-[14px_12px]">
                         {row.l ? (
                           <div className="flex items-center justify-center gap-2">
-                            <span className="text-[#B4B4BD] group-hover:text-[var(--edge-text)] transition-colors">{row.l.trades}</span>
-                            <span className={`text-[10.5px] px-2 py-0.5 rounded-md font-bold transition-all ${row.l.wr >= 50 ? 'bg-[#34d399]/10 text-[#34d399] group-hover:bg-[#34d399]/20' : 'bg-[var(--edge-hair)] text-[#7A7A85] group-hover:bg-white/10 group-hover:text-[#B4B4BD]'}`}>{row.l.wr}%</span>
+                            <span className="text-[var(--edge-text2)] group-hover:text-[var(--edge-text)] transition-colors">{row.l.trades}</span>
+                            <span className={`text-[10.5px] px-2 py-0.5 rounded-md font-bold transition-all ${row.l.wr >= 50 ? 'bg-[#34d399]/10 text-[#34d399] group-hover:bg-[#34d399]/20' : 'bg-[var(--edge-hair)] text-[var(--edge-text3)] group-hover:bg-white/10 group-hover:text-[var(--edge-text2)]'}`}>{row.l.wr}%</span>
                           </div>
-                        ) : <span className="text-[#4A4A52]">—</span>}
+                        ) : <span className="text-[var(--edge-text4)]">—</span>}
                       </td>
                       <td className="text-right p-[14px_12px]">
-                        {row.l ? <b className={`transition-all ${lNet >= 0 ? 'text-[#34d399] group-hover:drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-[#f87171] group-hover:drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]'}`}>{signed(lNet, 2)}R</b> : <span className="text-[#4A4A52]">—</span>}
+                        {row.l ? <b className={`transition-all ${lNet >= 0 ? 'text-[#34d399] group-hover:drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-[#f87171] group-hover:drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]'}`}>{signed(lNet, 2)}R</b> : <span className="text-[var(--edge-text4)]">—</span>}
                       </td>
                       <td className="text-center p-[14px_12px] w-[140px] align-middle">
                         <div className="w-full h-[6px] flex bg-[var(--edge-bg)] rounded-full overflow-hidden opacity-70 group-hover:opacity-100 transition-all duration-300 shadow-inner border border-[var(--edge-hair)]">
                           {row.l && <div className="transition-all duration-500 group-hover:brightness-125 group-hover:shadow-[0_0_8px_currentColor]" style={{ width: `${lPct}%`, background: lNet >= 0 ? '#34d399' : '#f87171' }} />}
-                          {row.s && <div className="transition-all duration-500 group-hover:brightness-125 group-hover:shadow-[0_0_8px_currentColor]" style={{ width: `${sPct}%`, background: sNet >= 0 ? 'var(--edge-acc, #8b7bff)' : '#f87171' }} />}
+                          {row.s && <div className="transition-all duration-500 group-hover:brightness-125 group-hover:shadow-[0_0_8px_currentColor]" style={{ width: `${sPct}%`, background: sNet >= 0 ? 'var(--edge-acc, var(--edge-acc))' : '#f87171' }} />}
                         </div>
                       </td>
                       <td className="text-left p-[14px_12px] pl-6">
-                        {row.s ? <b className={`transition-all ${sNet >= 0 ? 'text-[#8b7bff] group-hover:drop-shadow-[0_0_8px_rgba(139,123,255,0.5)]' : 'text-[#f87171] group-hover:drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]'}`}>{signed(sNet, 2)}R</b> : <span className="text-[#4A4A52]">—</span>}
+                        {row.s ? <b className={`transition-all ${sNet >= 0 ? 'text-[var(--edge-acc)] group-hover:drop-shadow-[0_0_8px_rgba(139,123,255,0.5)]' : 'text-[#f87171] group-hover:drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]'}`}>{signed(sNet, 2)}R</b> : <span className="text-[var(--edge-text4)]">—</span>}
                       </td>
                       <td className="text-center p-[14px_12px]">
                         {row.s ? (
                           <div className="flex items-center justify-center gap-2">
-                            <span className={`text-[10.5px] px-2 py-0.5 rounded-md font-bold transition-all ${row.s.wr >= 50 ? 'bg-[#8b7bff]/10 text-[#8b7bff] group-hover:bg-[#8b7bff]/20' : 'bg-[var(--edge-hair)] text-[#7A7A85] group-hover:bg-white/10 group-hover:text-[#B4B4BD]'}`}>{row.s.wr}%</span>
-                            <span className="text-[#B4B4BD] group-hover:text-[var(--edge-text)] transition-colors">{row.s.trades}</span>
+                            <span className={`text-[10.5px] px-2 py-0.5 rounded-md font-bold transition-all ${row.s.wr >= 50 ? 'bg-[var(--edge-acc)]/10 text-[var(--edge-acc)] group-hover:bg-[var(--edge-acc)]/20' : 'bg-[var(--edge-hair)] text-[var(--edge-text3)] group-hover:bg-white/10 group-hover:text-[var(--edge-text2)]'}`}>{row.s.wr}%</span>
+                            <span className="text-[var(--edge-text2)] group-hover:text-[var(--edge-text)] transition-colors">{row.s.trades}</span>
                           </div>
-                        ) : <span className="text-[#4A4A52]">—</span>}
+                        ) : <span className="text-[var(--edge-text4)]">—</span>}
                       </td>
                     </tr>
                   );
@@ -704,8 +704,8 @@ export default function Assets({ s }) {
             </table>
           </div>
           <div className="mt-4 p-3 bg-[var(--edge-surface-hi)]/50 border border-[var(--edge-hair)] rounded-[12px] flex items-start gap-3">
-            <Activity size={16} className="text-[#8b7bff] mt-0.5 shrink-0" />
-            <p className="text-[12px] text-[#B4B4BD] leading-[1.5] m-0">Асиметрія напрямків важливіша за загальний вінрейт. Якщо один бік (наприклад, Short) стабільно мінусує, поки Long в плюсі — це проблема не ринку, а твого фільтра входу в конкретних фазах.</p>
+            <Activity size={16} className="text-[var(--edge-acc)] mt-0.5 shrink-0" />
+            <p className="text-[12px] text-[var(--edge-text2)] leading-[1.5] m-0">Асиметрія напрямків важливіша за загальний вінрейт. Якщо один бік (наприклад, Short) стабільно мінусує, поки Long в плюсі — це проблема не ринку, а твого фільтра входу в конкретних фазах.</p>
           </div>
         </Panel>
       </motion.div>
@@ -716,7 +716,7 @@ export default function Assets({ s }) {
             title={<><Layers size={13} /> Ефективність сетапів</>} 
             className="h-full"
             right={
-              <button onClick={() => setIsAllSetupsOpen(true)} className="flex items-center gap-1.5 text-[10px] tracking-[0.14em] uppercase font-bold text-[#7A7A85] hover:text-[var(--edge-text)] transition-colors group">
+              <button onClick={() => setIsAllSetupsOpen(true)} className="flex items-center gap-1.5 text-[10px] tracking-[0.14em] uppercase font-bold text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors group">
                 Всі сетапи
                 <div className="p-1 bg-[var(--edge-hair)] rounded-md group-hover:bg-white/10 transition-colors"><Maximize2 size={12} /></div>
               </button>
@@ -725,7 +725,7 @@ export default function Assets({ s }) {
             <div className="flex flex-col gap-2 mt-2">
               {s.bySetup.map((x, i) => {
                 const isProfit = x.net >= 0;
-                const color = isProfit ? 'var(--edge-acc, #8b7bff)' : '#f87171';
+                const color = isProfit ? 'var(--edge-acc, var(--edge-acc))' : '#f87171';
                 const share = (Math.abs(x.net) / maxSetupNet) * 100;
                 return (
                   <SpotlightCard key={x.key} glowColor={`${color}20`} className="rounded-[12px]">
@@ -735,19 +735,19 @@ export default function Assets({ s }) {
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] font-black text-[#7A7A85] w-[14px]">{i + 1}</span>
-                          <b className="text-[#FAFAFA] text-[13.5px] group-hover:text-[var(--edge-text)] transition-colors">{x.key}</b>
+                          <span className="text-[10px] font-black text-[var(--edge-text3)] w-[14px]">{i + 1}</span>
+                          <b className="text-[var(--edge-text)] text-[13.5px] group-hover:text-[var(--edge-text)] transition-colors">{x.key}</b>
                         </div>
                         <b className={`text-[14.5px] font-black ${isProfit ? 'text-[#34d399]' : 'text-[#f87171]'}`}>{signed(x.net, 2)}R</b>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-[#232328] h-[4px] rounded-full overflow-hidden">
+                        <div className="flex-1 bg-[var(--edge-line)] h-[4px] rounded-full overflow-hidden">
                           <motion.div className="h-full rounded-full" style={{ background: color }} initial={{ width: 0 }} animate={{ width: `${share}%` }} transition={{ duration: 0.9, ease: premiumEasing }} />
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 text-[11px] text-[#7A7A85]">
+                      <div className="flex items-center gap-4 text-[11px] text-[var(--edge-text3)]">
                         <span>{x.trades} угод</span>
-                        <span className="flex items-center gap-1.5">WR <b className="text-[#FAFAFA] group-hover:text-[var(--edge-text)]">{x.wr}%</b></span>
+                        <span className="flex items-center gap-1.5">WR <b className="text-[var(--edge-text)] group-hover:text-[var(--edge-text)]">{x.wr}%</b></span>
                         <span>Сер. <b style={{ color: x.avg >= 0 ? '#34d399' : '#f87171' }}>{signed(x.avg, 2)}R</b></span>
                       </div>
                     </button>
@@ -764,15 +764,15 @@ export default function Assets({ s }) {
               <table className="w-full border-separate border-spacing-y-2 border-spacing-x-2 text-[13px] whitespace-nowrap min-w-[500px]">
                 <thead>
                   <tr>
-                    <th className="text-[9.5px] tracking-[0.14em] uppercase text-[#7A7A85] font-black text-left p-[0_4px_8px] w-[80px]">Актив</th>
-                    {['Asia', 'London', 'New York'].map((x) => <th key={x} className="text-[9.5px] tracking-[0.14em] uppercase text-[#7A7A85] font-black text-center p-[0_4px_8px]">{x}</th>)}
+                    <th className="text-[9.5px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-left p-[0_4px_8px] w-[80px]">Актив</th>
+                    {['Asia', 'London', 'New York'].map((x) => <th key={x} className="text-[9.5px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_4px_8px]">{x}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {ASSETS.map((a) => (
                     /* ЗМІНА: Використовуємо group/row замість group, щоб не вмикати всі 3 картки одразу */
                     <tr key={a} className="group/row cursor-default">
-                      <td className="text-left p-[0_12px_0_4px] font-bold text-[#FAFAFA] text-[12.5px] group-hover/row:text-[var(--edge-text)] transition-colors align-middle">
+                      <td className="text-left p-[0_12px_0_4px] font-bold text-[var(--edge-text)] text-[12.5px] group-hover/row:text-[var(--edge-text)] transition-colors align-middle">
                         <span className="flex items-center gap-2">
                           <div className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover/row:bg-white/30 transition-colors" />
                           {a}
@@ -803,7 +803,7 @@ export default function Assets({ s }) {
                                   >
                                     {signed(v, 1)}R
                                   </b>
-                                  <div className="relative z-10 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-[#B4B4BD] group-hover/cell:text-[var(--edge-text)] transition-colors duration-300">
+                                  <div className="relative z-10 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-[var(--edge-text2)] group-hover/cell:text-[var(--edge-text)] transition-colors duration-300">
                                     <span>{list.length} уг.</span>
                                     <span className="w-1 h-1 rounded-full bg-white/20 group-hover/cell:bg-white/50 transition-colors" />
                                     <span>{wr}% WR</span>
@@ -821,7 +821,7 @@ export default function Assets({ s }) {
                                   background: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.015) 4px, rgba(255,255,255,0.015) 8px)'
                                 }}
                               >
-                                <span className="text-[9.5px] text-[#4A4A52] font-black tracking-[0.15em] uppercase group-hover/empty:text-[#7A7A85] transition-colors relative z-10">0 угод</span>
+                                <span className="text-[9.5px] text-[var(--edge-text4)] font-black tracking-[0.15em] uppercase group-hover/empty:text-[var(--edge-text3)] transition-colors relative z-10">0 угод</span>
                               </div>
                             </td>
                           );
@@ -832,7 +832,7 @@ export default function Assets({ s }) {
                 </tbody>
               </table>
             </div>
-            <div className="mt-5 flex items-center justify-center gap-6 text-[10.5px] text-[#7A7A85] font-medium tracking-wide">
+            <div className="mt-5 flex items-center justify-center gap-6 text-[10.5px] text-[var(--edge-text3)] font-medium tracking-wide">
               <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-[4px] bg-[#f87171]/20 border border-[#f87171]/50" />Збиток</div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-[4px] border border-dashed border-white/20" style={{ background: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)' }} />

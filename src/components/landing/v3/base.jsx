@@ -34,6 +34,24 @@ export const C = {
 
 export const F = { display: T.display, sans: T.sans, mono: T.mono };
 
+/* Ширина сторінки.
+
+   Фіксовані 1240px гарно лягали на ноутбук і розсипались на
+   зовнішньому моніторі: контент збирався вузькою колонкою посеред
+   екрана, а половина ширини стояла порожня.
+
+   Тепер смуга тягнеться до 1680px і дихає у відсотках, а бічні
+   відступи ростуть разом із вікном. Рядки тексту при цьому не
+   стають нечитабельно довгими — за це відповідають окремі
+   обмеження на самих текстових колонках. */
+export const SHELL = {
+  width: '100%',
+  maxWidth: 1680,
+  margin: '0 auto',
+  paddingLeft: 'clamp(20px, 3.4vw, 64px)',
+  paddingRight: 'clamp(20px, 3.4vw, 64px)',
+};
+
 export const A = (a) => `rgba(139,123,255,${a})`;
 
 /* Анімації тримаються в одному місці: кожен блок посилається на них
@@ -100,7 +118,7 @@ export const H2 = ({ children, style }) => (
   <h2
     style={{
       fontFamily: F.display, fontWeight: 700,
-      fontSize: 'clamp(28px,3vw,42px)', lineHeight: 1.08,
+      fontSize: 'clamp(28px,2.7vw,52px)', lineHeight: 1.08,
       letterSpacing: '-1.6px', color: '#fff', margin: '18px 0 0',
       textWrap: 'balance', ...style,
     }}
@@ -119,7 +137,7 @@ export const Section = ({ id, children, style, innerRef }) => (
   <section
     id={id}
     ref={innerRef}
-    style={{ maxWidth: 1240, margin: '0 auto', padding: '84px 32px', position: 'relative', ...style }}
+    style={{ ...SHELL, paddingTop: 84, paddingBottom: 84, position: 'relative', ...style }}
   >
     {children}
   </section>
