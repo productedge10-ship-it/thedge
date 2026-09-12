@@ -14,9 +14,12 @@ import {
 import {
   BookOpen, Plus, TrendingUp, TrendingDown, Minus, AlertTriangle, X,
   Filter, Calendar, ChevronDown, Check, Search, ShieldAlert, AlertOctagon, Zap,
+  DownloadCloud, Loader2,
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
+import { notify } from "../utils/notify";
+import { pullMt5Trades } from "../lib/mt5Store";
 import useEmailGate from "../hooks/useEmailGate";
 import { getTradeProfit } from "../utils/journalUtils";
 import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
@@ -300,6 +303,10 @@ const QUICK_RESULT = [
   { id: "win",  label: "Take", icon: TrendingUp,   c: T.ok,   rgb: T.okRgb,   test: (t) => t.result?.trim().toLowerCase() === "win" },
   { id: "lose", label: "Stop", icon: TrendingDown, c: T.bad,  rgb: T.badRgb,  test: (t) => t.result?.trim().toLowerCase() === "lose" },
   { id: "be",   label: "BE",   icon: Minus,        c: T.warn, rgb: T.warnRgb, test: (t) => t.result?.trim().toLowerCase() === "be" },
+  /* Закрився там же, де зайшов. Окремий фільтр потрібен, бо такі
+     угоди найцікавіше дивитись пачкою: зазвичай за ними стоїть одна
+     й та сама причина, і видно її тільки поруч. */
+  { id: "scratch", label: "Scratch", icon: Minus, c: T.info, rgb: T.infoRgb, test: (t) => t.result?.trim().toLowerCase() === "scratch" },
 ];
 const QUICK_DISCIPLINE = [
   { id: "offplan", label: "Off plan", icon: ShieldAlert,  c: T.bad,  rgb: T.badRgb,  test: (t) => !t.followed_plan },
@@ -568,6 +575,8 @@ export default function TradingJournal() {
 
   const [tradeToDelete, setTradeToDelete] = useState(null);
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
+
+  const [pulling, setPulling] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [pairCategories, setPairCategories] = useState({});
 
@@ -692,6 +701,45 @@ export default function TradingJournal() {
     [applyFilters, filterPair, dateFrom, dateTo]
   );
 
+  /* Ручний імпорт із терміналу.
+
+     Кнопка нічого не тягне з MT5 сама — доступ до термінала має лише
+     VPS. Вона проштовхує рахунок повз чергу, чекає на воркера і
+     перечитує список: те, що він поклав, зʼявляється в таблиці без
+     перезавантаження сторінки.
+
+     Оголошена саме тут, після fetchTradesList: у списку залежностей
+     ці функції мають уже існувати, інакше React читає їх до
+     ініціалізації і компонент падає ще на рендері. */
+  const pullFromMt5 = useCallback(async () => {
+    if (pulling) return;
+    setPulling(true);
+
+    try {
+      const { trades: rows, synced } = await pullMt5Trades();
+
+      /* Після синхронізації застарів увесь кеш сторінок, а не лише
+         поточна: нові угоди могли лягти в будь-яку з них. */
+      tradesCache.current = {};
+      await Promise.all([fetchTradesList(page, { force: true }), fetchGlobalData()]);
+
+      if (!rows.length) {
+        notify.success('Nothing to import', 'No closed trades on the connected account yet.');
+      } else {
+        notify.success(
+          `${rows.length} trades from MT5`,
+          synced
+            ? 'Freshly synced from the terminal.'
+            : 'From the last sync — the worker is still busy.',
+        );
+      }
+    } catch (e) {
+      notify.error('Couldn’t pull', e?.message || 'Try again in a minute.');
+    } finally {
+      setPulling(false);
+    }
+  }, [pulling, page, fetchTradesList, fetchGlobalData]);
+
   /* Зміна фільтрів завжди повертає на першу сторінку — інакше
      можна опинитись на сторінці 8, якої після фільтра вже нема. */
   useEffect(() => {
@@ -784,7 +832,7 @@ export default function TradingJournal() {
      давав порожній список). Решта прапорців (не за планом, з
      помилкою, поспіх) — незалежні один від одного, тому лишаються
      на І: угода має відповідати кожному з них. */
-  const RESULT_QUICK_IDS = ["win", "lose", "be"];
+  const RESULT_QUICK_IDS = ["win", "lose", "be", "scratch"];
   const visibleTrades = useMemo(() => {
     if (!quick.length) return trades;
     const resultIds = quick.filter((id) => RESULT_QUICK_IDS.includes(id));
@@ -865,6 +913,29 @@ export default function TradingJournal() {
               onChange={setFilterPair}
             />
             <PeriodSelect value={period} onChange={setPeriod} />
+
+            <button
+              type="button"
+              onClick={pullFromMt5}
+              disabled={pulling}
+              className="inline-flex h-[54px] shrink-0 items-center gap-2.5 rounded-2xl px-5 text-[14px] font-semibold transition-colors duration-200"
+              style={{
+                fontFamily: T.sans,
+                border: `1px solid ${T.line}`,
+                background: T.surface,
+                color: pulling ? T.text3 : T.text2,
+                cursor: pulling ? 'default' : 'pointer',
+              }}
+              onMouseEnter={(e) => { if (!pulling) { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; } }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = pulling ? T.text3 : T.text2; }}
+            >
+              {pulling
+                ? <Loader2 size={16} strokeWidth={2.4} className="animate-spin" />
+                : <DownloadCloud size={16} strokeWidth={2.2} />}
+              <span className="whitespace-nowrap">
+                {pulling ? 'Pulling…' : 'Pull from MT5'}
+              </span>
+            </button>
 
             <Magnetic
               onClick={guard(() => setIsTradeModalOpen(true))}

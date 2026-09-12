@@ -15,10 +15,22 @@ import { T, SPRING, EASE } from '../../lib/theme';
    — дисципліна читається як три чіткі стани, а не три сірі іконки
 ================================================================== */
 
+/* Чотири стани, а не три.
+
+   «Scratch» — угода, що закрилась там же, де відкрилась: пара сотих
+   R в той чи інший бік. Це не стоп і не тейк, і мішати її зі стопами
+   шкідливо двічі — псується і винрейт, і середній програш, бо в
+   середньому програші зʼявляються нулі, яких там бути не повинно.
+
+   `loss` лежить поруч із `lose` як синонім: так писав імпорт з MT5 у
+   перших версіях, і рядки з тим написом можуть ще лишатись у базі.
+   Дешевше тримати синонім, ніж ловити «Not set» у таблиці. */
 const RESULT = {
-  win:  { label: 'Take', c: T.ok,   rgb: T.okRgb },
-  lose: { label: 'Stop', c: T.bad,  rgb: T.badRgb },
-  be:   { label: 'BE',   c: T.warn, rgb: T.warnRgb },
+  win:     { label: 'Take',    c: T.ok,   rgb: T.okRgb },
+  lose:    { label: 'Stop',    c: T.bad,  rgb: T.badRgb },
+  loss:    { label: 'Stop',    c: T.bad,  rgb: T.badRgb },
+  be:      { label: 'BE',      c: T.warn, rgb: T.warnRgb },
+  scratch: { label: 'Scratch', c: T.info, rgb: T.infoRgb },
 };
 
 const COLUMNS = [
@@ -323,6 +335,24 @@ export default function TradesTable({
                       >
                         {t.plan_pair}
                       </span>
+
+                      {/* Угода приїхала з терміналу, а не введена руками.
+                          Мітка потрібна не для краси: у такої угоди ще
+                          немає ні психології, ні розбору — видно одразу,
+                          що з нею лишилось попрацювати. */}
+                      {t.source === 'mt5' && (
+                        <span
+                          className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold tracking-[0.06em]"
+                          style={{
+                            fontFamily: T.sans,
+                            color: T.acc,
+                            background: `rgba(${T.accRgb},0.12)`,
+                            border: `1px solid rgba(${T.accRgb},0.22)`,
+                          }}
+                        >
+                          MT5
+                        </span>
+                      )}
                     </span>
                   </td>
 
