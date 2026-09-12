@@ -258,6 +258,7 @@ export default function Analytics() {
                 return (
                   <button
                     key={id}
+                    data-tour={`analytics-tab-${id}`}
                     onClick={() => setTab(id)}
                     className="relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-[10px] px-3.5 pb-3 pt-2 text-[13.5px] transition-colors duration-150"
                     style={{ color: on ? T.text : T.text3, fontWeight: on ? 600 : 450 }}

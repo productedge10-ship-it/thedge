@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Plus, Share2, ClipboardCheck, Briefcase, Send, Check } from 'lucide-react';
 import { T, SPRING } from './planTheme';
+import PlanTypeToggle from '../ui/PlanTypeToggle';
 
 /* ==================================================================
    Хедер плану. Раніше 6 різнокольорових кнопок кричали однаково
@@ -53,6 +54,8 @@ function TextBtn({ icon: Icon, children, onClick, tone, softBg, softLine }) {
 export default function PlanHeader({
   title,
   pair,
+  mode = 'daily',
+  onModeChange,
   onNewPlan,
   onShare,
   onOpenQuiz,
@@ -61,16 +64,23 @@ export default function PlanHeader({
   onAddTrade,
   onOpenTgAlert,
 }) {
+  const weekly = mode === 'weekly';
   return (
     <div className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
       {/* Заголовок */}
       <div className="min-w-0">
-        <div
-          className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]"
-          style={{ fontFamily: T.sans, color: T.acc }}
-        >
-          Daily plan
-        </div>
+        {onModeChange ? (
+          <div className="mb-3">
+            <PlanTypeToggle mode={mode} onChange={onModeChange} layoutId="plan-type-toggle-header" />
+          </div>
+        ) : (
+          <div
+            className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]"
+            style={{ fontFamily: T.sans, color: T.acc }}
+          >
+            Daily plan
+          </div>
+        )}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h1
             className="text-[28px] font-bold capitalize leading-none sm:text-[38px] lg:text-[46px]"
@@ -97,7 +107,9 @@ export default function PlanHeader({
         </div>
       </div>
 
-      {/* Дії */}
+      {/* Дії. Diagnostics-квіз про «сьогодні», а не про конкретний план,
+          тому лишається однаковим і на денному, і на тижневому масштабі —
+          «все те саме» навмисно, щоб хедер не міняв форму при перемиканні. */}
       <div className="flex flex-wrap items-center gap-2 no-print">
         <TextBtn
           icon={Briefcase}
@@ -151,7 +163,7 @@ export default function PlanHeader({
           onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 8px 22px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))')}
         >
           <Plus size={15} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
-          New plan
+          {weekly ? 'New week' : 'New plan'}
         </button>
       </div>
     </div>

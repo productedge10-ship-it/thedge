@@ -29,8 +29,10 @@ import AssetSearchModal from '../components/modals/AssetSearchModal';
 import PlanTabs, { SECTIONS, useScrollSpy, BackToTop } from '../components/trading/PlanTabs';
 import AssetSwitcher, { pushRecentAsset } from '../components/trading/AssetSwitcher';
 import { Section, SectionAnchor, WriteBlock } from '../components/trading/PlanPrimitives';
+import WeeklyPlanView from '../components/trading/WeeklyPlanView';
 import { T, EASE, useEdgeFonts } from '../components/trading/planTheme';
 import useTerminalSkin from '../hooks/useTerminalSkin';
+import { WEEK_PAIR, mondayOf, weekRangeLabel, emptyWeekPlan, emptyAsset, checkIsWeekPlanEmpty } from '../lib/weekPlan';
 
 const SECTION_IDS = SECTIONS.map((s) => s.id);
 
@@ -147,6 +149,114 @@ export default function DailyPlan() {
       return next;
     });
   }, []);
+
+  /* ==================================================================
+     Тижневий план — окремий, свідомо простіший контур збереження.
+
+     Плутати його з денним автозбереженням (рефи, черга, флаш на
+     видимість вкладки — усе вище) означало б тягнути в один код дві
+     різні моделі даних і ризикувати денним планом заради фічі, яку
+     тільки-но додали. Тут дешевший, ізольований шлях: дебаунс на
+     зміну, і якщо збій — видно помилку, а не втрачені дані, бо
+     `weekData` живе в звичайному стані, не тільки в рефі. */
+  /* Перехід із «Аналізів» на конкретний тижневий план приходить сюди
+     через router state — так само, як id денного плану. URL лишається
+     тим самим /plan, тому масштаб і тиждень мають десь пережити
+     перший рендер, а не тільки клік по перемикачу. */
+  const [mode, setMode] = useState(() => (location.state?.mode === 'weekly' ? 'weekly' : 'daily'));
+  const [weekMonday, setWeekMonday] = useState(() => location.state?.weekMonday || mondayOf(todayLocal()));
+  const [weekData, setWeekData] = useState(() => emptyWeekPlan(weekMonday));
+  const [isWeekLoading, setIsWeekLoading] = useState(false);
+  const [isWeekSaving, setIsWeekSaving] = useState(false);
+  const [weekHasUnsaved, setWeekHasUnsaved] = useState(false);
+  const [weekLastSaved, setWeekLastSaved] = useState(null);
+  const weekPlanIdRef = useRef(null);
+  const latestWeekDataRef = useRef(weekData);
+  latestWeekDataRef.current = weekData;
+
+  const updateWeekData = useCallback((next) => {
+    setWeekData(next);
+    setWeekHasUnsaved(true);
+  }, []);
+
+  useEffect(() => {
+    if (mode !== 'weekly' || !user?.id) return undefined;
+    let alive = true;
+    setIsWeekLoading(true);
+
+    (async () => {
+      const { data, error } = await supabase.from('trading_plans')
+        .select('id, plan_data')
+        .eq('user_id', user.id).eq('date', weekMonday).eq('pair', WEEK_PAIR).eq('plan_type', 'weekly')
+        .order('created_at', { ascending: false }).limit(1);
+      if (!alive) return;
+
+      if (error) {
+        console.error('load weekly plan', error);
+        notify.error('Не вдалось відкрити тижневий план', error.message || 'Помилка бази.');
+        setIsWeekLoading(false);
+        return;
+      }
+
+      const row = data?.[0];
+      weekPlanIdRef.current = row?.id || null;
+      setWeekData({ ...emptyWeekPlan(weekMonday), ...(row?.plan_data || {}) });
+      setWeekHasUnsaved(false);
+      setIsWeekLoading(false);
+    })();
+
+    return () => { alive = false; };
+  }, [mode, weekMonday, user?.id]);
+
+  const performSaveWeek = useCallback(async () => {
+    if (!user?.id) return;
+    const raw = latestWeekDataRef.current;
+    if (checkIsWeekPlanEmpty(raw)) return;
+
+    setIsWeekSaving(true);
+    try {
+      const row = { date: weekMonday, pair: WEEK_PAIR, plan_type: 'weekly', narrative: raw.narrative || '', plan_data: raw };
+      let id = weekPlanIdRef.current;
+
+      if (id) {
+        const { error } = await supabase.from('trading_plans').update(row).eq('id', id);
+        if (error) throw error;
+      } else {
+        const { data: created, error } = await supabase.from('trading_plans')
+          .insert([{ user_id: user.id, ...row }]).select('id');
+
+        if (error?.code === '23505') {
+          const { data: found } = await supabase.from('trading_plans').select('id')
+            .eq('user_id', user.id).eq('date', weekMonday).eq('pair', WEEK_PAIR).eq('plan_type', 'weekly').limit(1);
+          id = found?.[0]?.id || null;
+          if (id) { const { error: upErr } = await supabase.from('trading_plans').update(row).eq('id', id); if (upErr) throw upErr; }
+        } else if (error) {
+          throw error;
+        } else {
+          id = created?.[0]?.id || null;
+        }
+        if (id) weekPlanIdRef.current = id;
+      }
+      setWeekHasUnsaved(false);
+      setWeekLastSaved(new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }));
+    } catch (err) {
+      console.error('save weekly plan', err);
+      notify.error('Не вдалось зберегти тижневий план', err.message || 'Помилка бази.');
+    } finally {
+      setIsWeekSaving(false);
+    }
+  }, [user?.id, weekMonday]);
+
+  useEffect(() => {
+    if (mode !== 'weekly' || !user?.id || isWeekLoading) return undefined;
+    const timer = setTimeout(() => { performSaveWeek(); }, 1500);
+    return () => clearTimeout(timer);
+  }, [weekData, mode, isWeekLoading, user?.id, performSaveWeek]);
+
+  /* Тижневий план завжди про поточний тиждень — жодного гортання назад
+     чи вперед. Єдиний вихід на "той самий" тиждень — кнопка "New week"
+     у хедері, яка повертає сюди після перегляду минулого через Аналізи. */
+  const goThisWeek = useCallback(() => setWeekMonday(mondayOf(todayLocal())), []);
 
   /* ---------- Прогрес по вкладках ---------- */
   const progress = useMemo(() => {
@@ -597,6 +707,17 @@ export default function DailyPlan() {
     setTimeout(() => setAssetSearch(''), 300);
   };
 
+  /* Тижневий вибір активів — та сама модалка, але клік не закриває її
+     й не заміняє вибір, а додає/прибирає символ зі списку тижня. */
+  const toggleWeekAsset = useCallback((asset) => {
+    const symbol = asset.symbol;
+    const exists = weekData.assets.some((a) => a.pair === symbol);
+    const nextAssets = exists
+      ? weekData.assets.filter((a) => a.pair !== symbol)
+      : [...weekData.assets, emptyAsset(symbol)];
+    updateWeekData({ ...weekData, assets: nextAssets });
+  }, [weekData, updateWeekData]);
+
   /* Стабільні посилання — інакше memo на блоках марна: нова функція
      на кожен рендер змушує перемальовувати всі картки з картинками */
   const saveInto = useCallback((key) => (id, data) =>
@@ -616,9 +737,11 @@ export default function DailyPlan() {
 
       <div className="relative z-10 mx-auto w-full max-w-[2200px] px-4 pb-32 pt-5 sm:px-6 lg:w-[92%] lg:px-0 lg:pb-40 lg:pt-6">
         <PlanHeader
-          title={planData.title}
-          pair={planData.pair}
-          onNewPlan={handleNewPlan}
+          title={mode === 'weekly' ? weekRangeLabel(weekMonday) : planData.title}
+          pair={mode === 'weekly' ? '' : planData.pair}
+          mode={mode}
+          onModeChange={setMode}
+          onNewPlan={mode === 'weekly' ? goThisWeek : handleNewPlan}
           onShare={handleShare}
           onOpenQuiz={() => setIsQuizModalOpen(true)}
           isQuizFullyCompleted={quizDone}
@@ -627,6 +750,20 @@ export default function DailyPlan() {
           onOpenTgAlert={() => setIsTgModalOpen(true)}
         />
 
+        {mode === 'weekly' && (
+          <WeeklyPlanView
+            data={weekData}
+            onChange={updateWeekData}
+            activeSection={activeSection}
+            onNavigateSection={navigateToSection}
+            onOpenAssetModal={() => !isLoadingAssets && setIsAssetModalOpen(true)}
+            isLoadingAssets={isLoadingAssets}
+            onRemoveAsset={(pair) => toggleWeekAsset({ symbol: pair })}
+          />
+        )}
+
+        {mode === 'daily' && (
+        <>
         <PlanMetadata
           date={planData.date}
           onDateChange={(v) => handleRouteChange(v, planData.pair)}
@@ -806,18 +943,33 @@ export default function DailyPlan() {
             </Section>
           </div>
         </motion.div>
+        </>
+        )}
       </div>
 
-      <FloatingActionButtons
-        onAddTrade={() => setIsTradeModalOpen(true)}
-        onSave={() => { if (!isSaving && canSaveToCloud) performSave(); }}
-        isSaving={isSaving}
-        canSaveToCloud={canSaveToCloud}
-        hasUnsavedChanges={hasUnsavedChanges}
-        lastSaved={lastSaved}
-        lastAction={lastAction}
-        backToTop={<BackToTop visible={scrolled} onClick={scrollToTop} />}
-      />
+      {mode === 'weekly' ? (
+        <FloatingActionButtons
+          hideTrade
+          onSave={() => { if (!isWeekSaving) performSaveWeek(); }}
+          isSaving={isWeekSaving}
+          canSaveToCloud={!checkIsWeekPlanEmpty(weekData)}
+          hasUnsavedChanges={weekHasUnsaved}
+          lastSaved={weekLastSaved}
+          lastAction="Збережено"
+          backToTop={<BackToTop visible={scrolled} onClick={scrollToTop} />}
+        />
+      ) : (
+        <FloatingActionButtons
+          onAddTrade={() => setIsTradeModalOpen(true)}
+          onSave={() => { if (!isSaving && canSaveToCloud) performSave(); }}
+          isSaving={isSaving}
+          canSaveToCloud={canSaveToCloud}
+          hasUnsavedChanges={hasUnsavedChanges}
+          lastSaved={lastSaved}
+          lastAction={lastAction}
+          backToTop={<BackToTop visible={scrolled} onClick={scrollToTop} />}
+        />
+      )}
 
       <PreSessionQuiz
         isOpen={isQuizModalOpen}
@@ -834,8 +986,8 @@ export default function DailyPlan() {
       <TradeModal
         isOpen={isTradeModalOpen}
         onClose={() => setIsTradeModalOpen(false)}
-        planDate={planData.date}
-        planPair={planData.pair}
+        planDate={mode === 'weekly' ? undefined : planData.date}
+        planPair={mode === 'weekly' ? undefined : planData.pair}
       />
 
       <AnimatePresence>
@@ -852,10 +1004,11 @@ export default function DailyPlan() {
             displayCategories={displayCategories}
             expandedCategories={expandedCategories}
             toggleCategory={toggleCategory}
-            handleAssetSelect={handleAssetSelectModal}
             handleToggleFavorite={handleToggleFavorite}
-            assetPair={planData.pair}
             favorites={favorites}
+            {...(mode === 'weekly'
+              ? { multiple: true, selectedPairs: weekData.assets.map((a) => a.pair).filter(Boolean), handleAssetSelect: toggleWeekAsset }
+              : { handleAssetSelect: handleAssetSelectModal, assetPair: planData.pair })}
           />
         )}
       </AnimatePresence>

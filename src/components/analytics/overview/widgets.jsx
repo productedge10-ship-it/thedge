@@ -542,7 +542,10 @@ export const WIDGETS = {
     group: 'Числа',
     tone: 'var(--edge-info)',
     shape: 'streak',
-    defaultW: 1, defaultH: 1,
+    /* Три рядки не влазять у одну клітинку (звідси й minH): без
+       нього дошка дозволяла зберегти h:1, і плитку доводилось
+       читати обрізаною по обидва краї. */
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {},
     render: ({ s }) => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 122, justifyContent: 'center' }}>
@@ -773,7 +776,9 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-info)',
     shape: 'rows',
-    defaultW: 1, defaultH: 1,
+    /* За замовчуванням тут 6 рядків — у клітинку h:1 влазить два-три,
+       решта обрізалась би. */
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       count: countOption('6'),
       order: { label: 'Порядок', choices: [['best', 'Спершу найкращі'], ['worst', 'Спершу найгірші']], def: 'best' },
@@ -824,7 +829,9 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-acc)',
     shape: 'rows',
-    defaultW: 1, defaultH: 1,
+    /* Емоційних станів до чотирьох, і кожен — свій рядок: h:1 тісний
+       вже на трьох. */
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       metric: { label: 'Показник', choices: [['avg', 'Середня угода'], ['net', 'Сума R'], ['wr', 'Вінрейт']], def: 'avg' },
       note: { label: 'Висновок', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
@@ -879,7 +886,7 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-bad)',
     shape: 'rows',
-    defaultW: 1, defaultH: 1,
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       count: countOption('5'),
       metric: { label: 'Сортувати за', choices: [['cost', 'Ціною'], ['count', 'Частотою']], def: 'cost' },
@@ -916,7 +923,7 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-ok)',
     shape: 'rows',
-    defaultW: 1, defaultH: 1,
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       count: countOption('5'),
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'net' },
@@ -954,7 +961,7 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-warn)',
     shape: 'rows',
-    defaultW: 1, defaultH: 1,
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       count: countOption('5'),
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'net' },
@@ -1038,10 +1045,10 @@ export const DEFAULT_LAYOUT = [
   { id: 'pf', h: 1, w: 1 },
   { id: 'tilt', h: 1, w: 1 },
   { id: 'equity', h: 2, w: 3 },
-  { id: 'sources', h: 1, w: 1 },
+  { id: 'sources', h: 2, w: 1 },
   { id: 'plan', h: 1, w: 1 },
-  { id: 'emotions', h: 1, w: 1 },
-  { id: 'mistakes', h: 1, w: 1 },
+  { id: 'emotions', h: 2, w: 1 },
+  { id: 'mistakes', h: 2, w: 1 },
 ];
 
 /* Значення опції за замовчуванням — з реєстру, а не з розкладки: так

@@ -9,8 +9,10 @@ import { T, EASE } from '../lib/theme';
 import AssetSelect from '../components/trading/AssetSelect';
 import DateRangePicker from '../components/trading/DateRangePicker';
 import DelayedTooltip from '../components/ui/DelayedTooltip';
+import PlanTypeToggle from '../components/ui/PlanTypeToggle';
 import { Spotlight } from '../components/ui/Hovers';
 import AnalysisCard, { biasResult } from '../components/analyses/AnalysisCard';
+import WeeklyAnalysisCard from '../components/analyses/WeeklyAnalysisCard';
 import PremiumAnalysisHover from '../components/analyses/PremiumAnalysisHover';
 
 const MONTHS_UA = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
@@ -60,6 +62,11 @@ export default function Analyses() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedPair, setSelectedPair] = useState('All');
+  /* Daily/Weekly — окремі за суттю: тижневий рядок не про один
+     актив, і його «bias справдився» рахується інакше. За замовчуванням
+     Daily — щоб для тих, хто ще не торкався тижневих, нічого не
+     змінилось. */
+  const [planType, setPlanType] = useState('daily');
   const [sortOrder, setSortOrder] = useState('desc');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -103,13 +110,16 @@ export default function Analyses() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    /* Список активів для фільтра стосується тільки денних планів —
+       у тижневих pair завжди сентинел 'ALL', і додавати його в
+       випадайку означало б пропонувати фільтр, що нічого не фільтрує. */
+    if (!user || planType !== 'daily') return;
     const fetchPairs = async () => {
-      const { data } = await supabase.from('trading_plans').select('pair').eq('user_id', user.id);
+      const { data } = await supabase.from('trading_plans').select('pair').eq('user_id', user.id).eq('plan_type', 'daily');
       if (data) setUniquePairs(['All', ...new Set(data.map(d => d.pair).filter(Boolean))]);
     };
     fetchPairs();
-  }, [user]);
+  }, [user, planType]);
 
   const fetchPlans = useCallback(async (isLoadMore = false) => {
     if (!user) return;
@@ -138,6 +148,7 @@ export default function Analyses() {
 
         let q = supabase.from('trading_plans').select('*')
           .eq('user_id', user.id)
+          .eq('plan_type', planType)
           .in('id', [...rank.keys()]);
         if (selectedPair !== 'All') q = q.eq('pair', selectedPair);
         if (dateFrom) q = q.gte('date', dateFrom);
@@ -153,8 +164,9 @@ export default function Analyses() {
         return;
       }
 
-      let query = supabase.from('trading_plans').select('*', { count: 'exact' }).eq('user_id', user.id);
-      
+      let query = supabase.from('trading_plans').select('*', { count: 'exact' })
+        .eq('user_id', user.id).eq('plan_type', planType);
+
       if (selectedPair !== 'All') query = query.eq('pair', selectedPair);
       if (dateFrom) query = query.gte('date', dateFrom);
       if (dateTo) query = query.lte('date', dateTo);
@@ -178,7 +190,7 @@ export default function Analyses() {
         // При наступних змінах фільтрів/сортування — пускаємо плавну хвилю.
        
         
-        if (!debouncedSearch && selectedPair === 'All' && !dateFrom && !dateTo && sortOrder === 'desc') {
+        if (!debouncedSearch && selectedPair === 'All' && !dateFrom && !dateTo && sortOrder === 'desc' && planType === 'daily') {
           localStorage.setItem('analyses_cache_v2', JSON.stringify(data));
         }
       }
@@ -192,7 +204,7 @@ export default function Analyses() {
       setLoadingMore(false);
       setIndexing(false);
     }
-  }, [user, debouncedSearch, selectedPair, dateFrom, dateTo, sortOrder]);
+  }, [user, debouncedSearch, selectedPair, dateFrom, dateTo, sortOrder, planType]);
 
   useEffect(() => {
     fetchPlans(false);
@@ -245,7 +257,12 @@ export default function Analyses() {
      через localStorage, щоб він не лежав відкритим на диску. */
   const openPlan = (plan) => {
     localStorage.setItem('last_edited_plan_id', plan.id);
-    if (plan.date && plan.pair) {
+    if (plan.plan_type === 'weekly') {
+      /* URL лишається тим самим /plan — масштаб і тиждень їдуть через
+         router state, бо в адресі денного плану нема місця для «яким
+         тижнем відкрити». */
+      navigate(toPlan('/plan'), { state: { mode: 'weekly', weekMonday: plan.date, id: plan.id } });
+    } else if (plan.date && plan.pair) {
       navigate(toPlan(`/plan/${plan.date}/${encodeURIComponent(plan.pair)}`), { state: { date: plan.date, pair: plan.pair, id: plan.id } });
     } else {
       navigate(toPlan('/plan'), { state: { id: plan.id } });
@@ -254,27 +271,54 @@ export default function Analyses() {
 
   const createNewPlan = () => {
     localStorage.removeItem('last_edited_plan_id');
-    navigate(toPlan('/plan'));
+    navigate(toPlan('/plan'), planType === 'weekly' ? { state: { mode: 'weekly' } } : undefined);
   };
 
-  /* Зведення по завантажених планах: скільки їх, скільки цього місяця,
-     як часто план справджувався і яка середня оцінка сесії. */
+  /* Зведення по завантажених планах.
+     Для тижневих рахуємо інакше: «справдився» — по кожному активу зі
+     списку (bias vs actualBias), а не по одній парі план/факт на весь
+     рядок, і «без активу» тут означає тиждень без жодної ідеї, а не
+     помилку заповнення. */
   const summary = useMemo(() => {
     const now = new Date();
     const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const thisMonth = plans.filter((p) => String(p.date || '').startsWith(ym)).length;
+
+    if (planType === 'weekly') {
+      /* Плановий bias — один на весь тиждень, тому факт по кожному
+         активу звіряється саме з ним, а не з окремою тезою на актив. */
+      const reviewed = plans.flatMap((p) => {
+        const weekBias = p.narrative || p.plan_data?.narrative;
+        return (p.plan_data?.assets || [])
+          .filter((a) => a.actualBias)
+          .map((a) => ({ hit: weekBias ? a.actualBias === weekBias : false }));
+      });
+      const hits = reviewed.filter((r) => r.hit).length;
+      const rated = plans.map((p) => p.plan_data?.weekRating || 0).filter((r) => r > 0);
+
+      return {
+        total: plans.length,
+        thisMonth,
+        accuracy: reviewed.length ? Math.round((hits / reviewed.length) * 100) : null,
+        checked: reviewed.length,
+        rating: rated.length ? (rated.reduce((a, b) => a + b, 0) / rated.length) : null,
+        mistakes: plans.filter((p) => !(p.plan_data?.assets || []).length).length,
+      };
+    }
+
     const withResult = plans.map(biasResult).filter((r) => r !== null);
     const hits = withResult.filter(Boolean).length;
     const rated = plans.map((p) => p.plan_data?.sessionRating || 0).filter((r) => r > 0);
 
     return {
       total: plans.length,
-      thisMonth: plans.filter((p) => String(p.date || '').startsWith(ym)).length,
+      thisMonth,
       accuracy: withResult.length ? Math.round((hits / withResult.length) * 100) : null,
       checked: withResult.length,
       rating: rated.length ? (rated.reduce((a, b) => a + b, 0) / rated.length) : null,
       mistakes: plans.filter((p) => p.plan_data?.analysisMistake).length,
     };
-  }, [plans]);
+  }, [plans, planType]);
 
   /* Плани, згруповані по місяцях — стрічка замість плаского списку */
   const months = useMemo(() => {
@@ -288,16 +332,26 @@ export default function Analyses() {
     return Array.from(map.entries()).map(([key, list]) => {
       const [y, m] = key.split('-');
       const label = m ? `${MONTHS_UA[Number(m) - 1]} ${y}` : 'Без дати';
-      const withResult = list.map(biasResult).filter((r) => r !== null);
-      const hits = withResult.filter(Boolean).length;
-      return {
-        key,
-        label,
-        list,
-        accuracy: withResult.length ? Math.round((hits / withResult.length) * 100) : null,
-      };
+
+      let accuracy = null;
+      if (planType === 'weekly') {
+        const reviewed = list.flatMap((p) => {
+          const weekBias = p.narrative || p.plan_data?.narrative;
+          return (p.plan_data?.assets || [])
+            .filter((a) => a.actualBias)
+            .map((a) => ({ hit: weekBias ? a.actualBias === weekBias : false }));
+        });
+        const hits = reviewed.filter((r) => r.hit).length;
+        accuracy = reviewed.length ? Math.round((hits / reviewed.length) * 100) : null;
+      } else {
+        const withResult = list.map(biasResult).filter((r) => r !== null);
+        const hits = withResult.filter(Boolean).length;
+        accuracy = withResult.length ? Math.round((hits / withResult.length) * 100) : null;
+      }
+
+      return { key, label, list, accuracy };
     });
-  }, [plans]);
+  }, [plans, planType]);
 
   const toggleSortOrder = () => {
     if (isAnimating) return; // Захист від спаму
@@ -343,8 +397,21 @@ export default function Analyses() {
                 Журнал планів
               </h1>
               <p className="mt-2.5 text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                Кожен план — гіпотеза. Тут видно, скільки з них ринок підтвердив.
+                {planType === 'weekly'
+                  ? 'Кожен тиждень — список того, за чим стежиш. Тут видно, що з цього вийшло.'
+                  : 'Кожен план — гіпотеза. Тут видно, скільки з них ринок підтвердив.'}
               </p>
+
+              {/* Daily/Weekly — та сама пара, що й на самій сторінці плану.
+                  Актив-фільтр стосується тільки денних, тому при перемиканні
+                  скидаємо його, щоб він не ховав усі тижневі рядки мовчки. */}
+              <div className="mt-3.5">
+                <PlanTypeToggle
+                  mode={planType}
+                  onChange={(id) => { setPlanType(id); setSelectedPair('All'); }}
+                  layoutId="plan-type-toggle-analyses"
+                />
+              </div>
             </div>
 
             <button
@@ -358,7 +425,7 @@ export default function Analyses() {
               onMouseLeave={(e) => (e.currentTarget.style.boxShadow = `0 6px 18px -8px rgba(${T.accRgb},0.6)`)}
             >
               <Plus size={17} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
-              Новий аналіз
+              {planType === 'weekly' ? 'Новий тиждень' : 'Новий аналіз'}
             </button>
           </div>
 
@@ -367,30 +434,32 @@ export default function Analyses() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 {
-                  label: 'Планів', value: summary.total, icon: Layers,
+                  label: planType === 'weekly' ? 'Тижнів' : 'Планів', value: summary.total, icon: Layers,
                   hint: summary.thisMonth ? `${summary.thisMonth} цього місяця` : 'за фільтром',
                   color: T.acc,
                   progress: null,
                 },
                 {
-                  label: 'План справдився', icon: Crosshair,
+                  label: planType === 'weekly' ? 'Bias справдився' : 'План справдився', icon: Crosshair,
                   value: summary.accuracy === null ? '—' : `${summary.accuracy}%`,
-                  hint: summary.checked ? `перевірено ${summary.checked}` : 'постав фактичний біас',
+                  hint: summary.checked
+                    ? `перевірено ${summary.checked}`
+                    : planType === 'weekly' ? 'постав фактичний bias по активу' : 'постав фактичний біас',
                   color: summary.accuracy === null ? T.text3 : summary.accuracy >= 60 ? T.ok : summary.accuracy >= 40 ? T.warn : T.bad,
                   progress: summary.accuracy === null ? null : summary.accuracy / 100,
                 },
                 {
                   label: 'Середня оцінка', icon: Star,
                   value: summary.rating === null ? '—' : summary.rating.toFixed(1),
-                  hint: 'із 5 за виконання',
+                  hint: planType === 'weekly' ? 'із 5 за тиждень' : 'із 5 за виконання',
                   color: summary.rating === null ? T.text3 : summary.rating >= 4 ? T.ok : summary.rating >= 3 ? T.warn : T.bad,
                   progress: summary.rating === null ? null : summary.rating / 5,
                 },
                 {
-                  label: 'З помилкою', icon: AlertTriangle,
+                  label: planType === 'weekly' ? 'Без активів' : 'З помилкою', icon: AlertTriangle,
                   value: summary.mistakes,
-                  hint: 'позначено в аналізі',
-                  color: summary.mistakes ? T.warn : T.ok,
+                  hint: planType === 'weekly' ? 'тиждень без ідеї' : 'позначено в аналізі',
+                  color: planType === 'weekly' ? T.text3 : (summary.mistakes ? T.warn : T.ok),
                   progress: summary.total ? summary.mistakes / summary.total : null,
                 },
               ].map((s, i) => {
@@ -535,10 +604,12 @@ export default function Analyses() {
               </span>
             </div>
             
-            <div className="w-full sm:w-40 z-[90]">
-              <AssetSelect value={selectedPair} onChange={setSelectedPair} options={uniquePairs} />
-            </div>
-            
+            {planType === 'daily' && (
+              <div className="w-full sm:w-40 z-[90]">
+                <AssetSelect value={selectedPair} onChange={setSelectedPair} options={uniquePairs} />
+              </div>
+            )}
+
             <div className="w-full sm:w-auto z-[100]">
                <DateRangePicker dateFrom={dateFrom} dateTo={dateTo} onChange={(from, to) => { setDateFrom(from); setDateTo(to); }} />
             </div>
@@ -658,7 +729,7 @@ export default function Analyses() {
                  не змінився. Тепер список чесно збирається наново, а
                  кожна картка проявляється сама. */
               <div
-                key={`${sortOrder}|${selectedPair}|${debouncedSearch}|${dateFrom}|${dateTo}`}
+                key={`${planType}|${sortOrder}|${selectedPair}|${debouncedSearch}|${dateFrom}|${dateTo}`}
                 className="relative w-full"
               >
                 {/* стрічка по місяцях: зліва тонка лінія з вузлами */}
@@ -684,7 +755,9 @@ export default function Analyses() {
                           {month.label}
                         </h2>
                         <span className="text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
-                          {month.list.length} {month.list.length === 1 ? 'план' : 'планів'}
+                          {planType === 'weekly'
+                            ? `${month.list.length} ${month.list.length === 1 ? 'тиждень' : month.list.length < 5 ? 'тижні' : 'тижнів'}`
+                            : `${month.list.length} ${month.list.length === 1 ? 'план' : 'планів'}`}
                         </span>
 
                         {month.accuracy !== null && (
@@ -697,7 +770,7 @@ export default function Analyses() {
                                 ? `rgba(${T.okRgb},0.10)`
                                 : month.accuracy >= 40 ? `rgba(${T.warnRgb},0.10)` : `rgba(${T.badRgb},0.10)`,
                             }}
-                            title="Скільки планів справдилось цього місяця"
+                            title={planType === 'weekly' ? 'Скільки активів справдилось цього місяця' : 'Скільки планів справдилось цього місяця'}
                           >
                             {month.accuracy}% влучань
                           </span>
@@ -719,9 +792,13 @@ export default function Analyses() {
                             }}
                             className="relative z-10 h-full hover:z-[100]"
                           >
-                            <PremiumAnalysisHover planData={plan}>
-                              <AnalysisCard plan={plan} onClick={openPlan} onDelete={handleDeleteClick} />
-                            </PremiumAnalysisHover>
+                            {plan.plan_type === 'weekly' ? (
+                              <WeeklyAnalysisCard plan={plan} onClick={openPlan} onDelete={handleDeleteClick} />
+                            ) : (
+                              <PremiumAnalysisHover planData={plan}>
+                                <AnalysisCard plan={plan} onClick={openPlan} onDelete={handleDeleteClick} />
+                              </PremiumAnalysisHover>
+                            )}
                           </motion.div>
                         ))}
                       </div>

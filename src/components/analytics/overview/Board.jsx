@@ -188,7 +188,7 @@ function WidthPicker({ value, tone, onPick }) {
 
 /* Той самий вигляд, що у вибору ширини, і це навмисно: два розміри
    однієї плитки мають читатись як пара, а не як дві різні настройки. */
-function HeightPicker({ value, tone, onPick }) {
+function HeightPicker({ value, tone, min = 1, onPick }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -204,17 +204,23 @@ function HeightPicker({ value, tone, onPick }) {
       <div style={{ display: 'flex', gap: 4 }}>
         {[1, 2, 3, 4].map((n) => {
           const on = n <= value;
+          /* Нижче за minH клітинка не влазить власний вміст, тому ці
+             сходинки просто вимкнені, а не приховані — видно, що вони
+             були б менші, і чому їх не можна вибрати. */
+          const disabled = n < min;
           return (
             <button
               key={n}
               type="button"
               aria-label={`Height ${HEIGHT_LABEL[n]}`}
+              disabled={disabled}
               data-state={n === value ? 'active' : on ? 'filled' : 'idle'}
-              onClick={() => onPick(n)}
+              onClick={() => !disabled && onPick(n)}
               style={{
-                flex: 1, height: 24, borderRadius: 7, cursor: 'pointer',
+                flex: 1, height: 24, borderRadius: 7, cursor: disabled ? 'not-allowed' : 'pointer',
                 background: on ? `${tone}2e` : '#ffffff08',
                 border: `1px solid ${n === value ? `${tone}8c` : on ? `${tone}3d` : 'transparent'}`,
+                opacity: disabled ? 0.35 : 1,
                 transition: 'all .18s',
               }}
             />
@@ -285,7 +291,7 @@ function SettingsPanel({ id, item, onChange, onClose }) {
       </div>
 
       <WidthPicker value={item.w} tone={tone} onPick={(n) => set({ w: n })} />
-      <HeightPicker value={item.h} tone={tone} onPick={(n) => set({ h: n })} />
+      <HeightPicker value={item.h} tone={tone} min={spec.minH || 1} onPick={(n) => set({ h: n })} />
 
       <Choice
         label="Period" index={2} tone={tone}
@@ -935,7 +941,7 @@ export default function Board({
                 item={{
                   ...item,
                   w: Math.min(Math.max(item.w || 1, 1), 4),
-                  h: Math.min(Math.max(item.h || registry[item.id]?.defaultH || 2, 1), 4),
+                  h: Math.min(Math.max(item.h || registry[item.id]?.defaultH || 2, registry[item.id]?.minH || 1), 4),
                 }}
                 stats={statsFor(item.p)}
                 edit={edit}

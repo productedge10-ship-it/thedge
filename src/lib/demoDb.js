@@ -15,9 +15,11 @@
    демо-дані з чужими угодами неможливо.
 ================================================================== */
 
+import { WEEK_PAIR } from './weekPlan';
+
 /* Версія в ключі — щоб зміна насіння підхопилась у всіх, хто вже
    відкривав демо: старий кеш під іншим ключем просто ігнорується. */
-const KEY = 'edge.demo.db.v5';
+const KEY = 'edge.demo.db.v9';
 
 export const DEMO_USER_ID = 'demo-user-0000-0000-000000000001';
 
@@ -41,6 +43,14 @@ const uid = () => (globalThis.crypto?.randomUUID
   ? crypto.randomUUID()
   : `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`);
 
+const monday = (shiftWeeks = 0) => {
+  const d = new Date();
+  const day = d.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diffToMonday + shiftWeeks * 7);
+  return d.toISOString().slice(0, 10);
+};
+
 /* ---------- насіння ----------
 
    Дані підібрані так, щоб сторінки мали що показати з першої
@@ -57,7 +67,7 @@ const seed = () => ({
   trading_plans: [
     {
       id: uid(), user_id: DEMO_USER_ID, date: today(-2), pair: 'XAUUSD',
-      narrative: 'Bullish', is_public: false,
+      narrative: 'Bullish', is_public: false, plan_type: 'daily',
       plan_data: {
         date: today(-2), pair: 'XAUUSD', narrative: 'Bullish',
         actualNarrative: 'Bullish',
@@ -74,7 +84,7 @@ const seed = () => ({
     },
     {
       id: uid(), user_id: DEMO_USER_ID, date: today(-4), pair: 'GER40',
-      narrative: 'Bearish', is_public: false,
+      narrative: 'Bearish', is_public: false, plan_type: 'daily',
       plan_data: {
         date: today(-4), pair: 'GER40', narrative: 'Bearish',
         actualNarrative: 'Bearish',
@@ -90,7 +100,7 @@ const seed = () => ({
     },
     {
       id: uid(), user_id: DEMO_USER_ID, date: today(-6), pair: 'EURUSD',
-      narrative: 'Bullish', is_public: false,
+      narrative: 'Bullish', is_public: false, plan_type: 'daily',
       plan_data: {
         date: today(-6), pair: 'EURUSD', narrative: 'Bullish',
         actualNarrative: 'Bearish',
@@ -105,7 +115,7 @@ const seed = () => ({
     },
     {
       id: uid(), user_id: DEMO_USER_ID, date: today(-9), pair: 'NAS100',
-      narrative: 'Neutral', is_public: false,
+      narrative: 'Neutral', is_public: false, plan_type: 'daily',
       plan_data: {
         date: today(-9), pair: 'NAS100', narrative: 'Neutral',
         actualNarrative: 'Neutral',
@@ -123,7 +133,7 @@ const seed = () => ({
     },
     {
       id: uid(), user_id: DEMO_USER_ID, date: today(-16), pair: 'BTCUSD',
-      narrative: 'Bearish', is_public: false,
+      narrative: 'Bearish', is_public: false, plan_type: 'daily',
       plan_data: {
         date: today(-16), pair: 'BTCUSD', narrative: 'Bearish',
         actualNarrative: 'Bullish',
@@ -140,7 +150,7 @@ const seed = () => ({
     },
     {
       id: uid(), user_id: DEMO_USER_ID, date: today(-24), pair: 'US100',
-      narrative: 'Bullish', is_public: false,
+      narrative: 'Bullish', is_public: false, plan_type: 'daily',
       plan_data: {
         date: today(-24), pair: 'US100', narrative: 'Bullish',
         actualNarrative: 'Bullish',
@@ -157,7 +167,7 @@ const seed = () => ({
     },
     {
       id: uid(), user_id: DEMO_USER_ID, date: today(-33), pair: 'XAUUSD',
-      narrative: 'Day off', is_public: false,
+      narrative: 'Day off', is_public: false, plan_type: 'daily',
       plan_data: {
         date: today(-33), pair: 'XAUUSD', narrative: 'Day off',
         actualNarrative: '',
@@ -167,6 +177,60 @@ const seed = () => ({
         tdaBlocks: [], reviewBlocks: [],
       },
       created_at: iso(-33, 9, 0), updated_at: iso(-33, 9, 0),
+    },
+
+    /* Тижневі плани: той самий рядок, інший plan_type. `date` —
+       завжди понеділок, `pair` — сентинел WEEK_PAIR (список активів
+       живе всередині plan_data.assets). Один тиждень уже пройшов і
+       розібраний повністю, другий — поточний, ще в процесі. */
+    {
+      id: uid(), user_id: DEMO_USER_ID, date: monday(-1), pair: WEEK_PAIR,
+      narrative: 'Bullish', is_public: false, plan_type: 'weekly',
+      plan_data: {
+        date: monday(-1), pair: WEEK_PAIR, narrative: 'Bullish',
+        tdaBlocks: [
+          { id: 1, tf: '1W', image: null, text: 'Тижневий DXY у низхідному каналі третій тиждень поспіль, свіжого імпульсу вниз поки нема.' },
+          { id: 2, tf: '1D', image: null, text: 'Ризикові індекси тримаються вище денної EMA50 — тренд угору не зламаний.' },
+          { id: 3, tf: '', image: null, text: '' },
+          { id: 4, tf: '', image: null, text: '' },
+        ],
+        planText: 'Ринок після FOMC — очікую продовження ризик-апетиту, поки долар слабкий. Головна теза ламається, якщо DXY повертається вище тижневого хаю.',
+        assets: [
+          { id: 'wa1', pair: 'XAUUSD', actualBias: 'Bullish', outcome: 'Дійшло до 2658, закрив 3R у середу.' },
+          { id: 'wa2', pair: 'NAS100', actualBias: 'Bullish', outcome: 'Пробив і закріпився, взяв 2R на ретесті.' },
+          { id: 'wa3', pair: 'GBPUSD', actualBias: 'Bearish', outcome: 'Не спрацювало — фунт пішов проти тижневої тези, угоду не відкривав.' },
+        ],
+        updates: [
+          { id: 1, date: 'Ср, 09:30', tf: '', image: null, text: 'Теза на золото і насдак підтверджується, долар слабкий по всій дошці.' },
+          { id: 2, date: 'Пт, 17:00', tf: '', image: null, text: 'Фунт зламав тезу — забираю з наступного тижня, недостатньо чіткий сетап.' },
+        ],
+        conclusionsText: 'Дві сильні ідеї з трьох — непоганий тиждень. GBPUSD більше не братиму без чіткого рівня, самого «відчуття слабкості» замало.',
+        weekRating: 4,
+      },
+      created_at: iso(-9, 9, 0), updated_at: iso(-5, 18, 30),
+    },
+    {
+      id: uid(), user_id: DEMO_USER_ID, date: monday(0), pair: WEEK_PAIR,
+      narrative: 'Neutral', is_public: false, plan_type: 'weekly',
+      plan_data: {
+        date: monday(0), pair: WEEK_PAIR, narrative: 'Neutral',
+        tdaBlocks: [
+          { id: 1, tf: '1W', image: null, text: 'Тиждень даних — тижнева свічка, скоріш за все, закриється доджем до виходу CPI.' },
+          { id: 2, tf: '', image: null, text: '' },
+          { id: 3, tf: '', image: null, text: '' },
+          { id: 4, tf: '', image: null, text: '' },
+        ],
+        planText: 'Тиждень даних (CPI у четвер) — до звіту очікую вузький діапазон майже по всій дошці. Активно шукаю сетапи тільки після виходу цифри.',
+        assets: [
+          { id: 'wa4', pair: 'XAUUSD', actualBias: '', outcome: '' },
+        ],
+        updates: [
+          { id: 1, date: 'Пн, 10:15', tf: '', image: null, text: 'Діапазон тримається, як і очікував — поки поза ринком.' },
+        ],
+        conclusionsText: '',
+        weekRating: 0,
+      },
+      created_at: iso(-2, 8, 30), updated_at: iso(-1, 12, 0),
     },
   ],
 
@@ -185,6 +249,25 @@ const seed = () => ({
     { pair: 'EURUSD', setup: 'Подвоїв обсяг', rr: -1.4, res: 'Lose', ses: 'Нью-Йорк', plan: false, mood: { psy_revenge: true }, d: -6, h: 16 },
     { pair: 'XAUUSD', setup: 'Свінг + FVG', rr: 3.1, res: 'Win', ses: 'Лондон', plan: true, mood: {}, d: -7, h: 10 },
     { pair: 'GER40', setup: 'Ретест OB', rr: -1, res: 'Lose', ses: 'Франкфурт', plan: true, mood: {}, d: -8, h: 11 },
+    /* Далі — глибша історія: без неї місячна розбивка в аналітиці й
+       календар за минулі місяці стоять порожні, а графік по днях —
+       двома точками замість кривої. */
+    { pair: 'XAUUSD', setup: 'Пробій рівня', rr: 1.5, res: 'Win', ses: 'Лондон', plan: true, mood: {}, d: -10, h: 9 },
+    { pair: 'GBPUSD', setup: 'Ретест OB', rr: -1, res: 'Lose', ses: 'Лондон', plan: true, mood: {}, d: -11, h: 10 },
+    { pair: 'NAS100', setup: 'Ретест OB', rr: 2.0, res: 'Win', ses: 'Нью-Йорк', plan: true, mood: {}, d: -13, h: 15 },
+    { pair: 'EURUSD', setup: 'Флет-скальп', rr: 0.8, res: 'Win', ses: 'Франкфурт', plan: true, mood: {}, d: -14, h: 8 },
+    { pair: 'XAUUSD', setup: 'Новинний імпульс', rr: -1.8, res: 'Lose', ses: 'Нью-Йорк', plan: false, mood: { psy_fear: true }, d: -16, h: 14 },
+    { pair: 'BTCUSD', setup: 'Азійський діапазон', rr: 1.7, res: 'Win', ses: 'Азія', plan: true, mood: {}, d: -17, h: 8 },
+    { pair: 'GER40', setup: 'Judas swing', rr: 2.6, res: 'Win', ses: 'Франкфурт', plan: true, mood: {}, d: -19, h: 11 },
+    { pair: 'US100', setup: 'Свіп лоу + FVG', rr: -1, res: 'Lose', ses: 'Нью-Йорк', plan: true, mood: {}, d: -21, h: 16 },
+    { pair: 'XAUUSD', setup: 'Свінг + FVG', rr: 2.1, res: 'Win', ses: 'Лондон', plan: true, mood: {}, d: -23, h: 10 },
+    { pair: 'EURUSD', setup: 'Подвоїв обсяг', rr: -2.2, res: 'Lose', ses: 'Нью-Йорк', plan: false, mood: { psy_revenge: true }, d: -25, h: 15 },
+    { pair: 'NAS100', setup: 'Пробій рівня', rr: 1.4, res: 'Win', ses: 'Нью-Йорк', plan: true, mood: {}, d: -28, h: 14 },
+    { pair: 'GBPUSD', setup: 'Ретест OB', rr: 1.9, res: 'Win', ses: 'Лондон', plan: true, mood: {}, d: -32, h: 9 },
+    { pair: 'XAUUSD', setup: 'Свінг + FVG', rr: -1, res: 'Lose', ses: 'Лондон', plan: true, mood: {}, d: -36, h: 10 },
+    { pair: 'GER40', setup: 'Ретест OB', rr: 1.6, res: 'Win', ses: 'Франкфурт', plan: true, mood: {}, d: -41, h: 11 },
+    { pair: 'BTCUSD', setup: 'Азійський діапазон', rr: 2.3, res: 'Win', ses: 'Азія', plan: true, mood: {}, d: -47, h: 8 },
+    { pair: 'EURUSD', setup: 'Без сетапу', rr: -1, res: 'Lose', ses: 'Нью-Йорк', plan: false, mood: { psy_repeat: true }, d: -55, h: 13 },
   ].map((t) => ({
     id: uid(), user_id: DEMO_USER_ID,
     plan_date: today(t.d), plan_pair: t.pair, account_name: 'Основний',

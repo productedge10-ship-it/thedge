@@ -47,7 +47,12 @@ const HUE = {
    а за відчуттям: плитка має доїхати за один погляд і зупинитись без
    гойдання. Тому висока жорсткість, майже критичне гасіння і легка
    «вага» — рух виглядає коротким, але не різким. */
-const SPRING = { type: 'spring', stiffness: 420, damping: 38, mass: 0.7 };
+const SPRING = { type: 'spring', stiffness: 210, damping: 30, mass: 1.1 };
+
+/* Підняття плитки в руку — окрема, жвавіша пружина: це миттєва
+   реакція на дотик, а не подорож через сітку, тому чекати на неї
+   стільки ж, скільки на переліт, було б дивно. */
+const LIFT_SPRING = { type: 'spring', stiffness: 380, damping: 28, mass: 0.5 };
 
 /* ==================================================================
    Геометрія сітки.
@@ -147,6 +152,17 @@ function Slot({ slot, dragging, drag, bounds, onStart, onMove, onEnd, children }
       onDragStart={onStart}
       onDrag={onMove}
       onDragEnd={onEnd}
+      /* Підняття в руку й повернення на місце — плавні переходи, а не
+         перемикач filter: none/value. Плитка трохи підростає й
+         відкидає м'яку тінь, поки її тримають, і так само м'яко
+         осідає назад, щойно відпустили. */
+      animate={{
+        scale: dragging ? 1.035 : 1,
+        boxShadow: dragging
+          ? '0 32px 64px -16px rgba(0,0,0,0.55), 0 12px 26px -10px rgba(0,0,0,0.4)'
+          : '0 0px 0px rgba(0,0,0,0)',
+      }}
+      transition={dragging ? LIFT_SPRING : { ...LIFT_SPRING, boxShadow: { duration: 0.35, ease: EASE } }}
       style={{
         position: 'absolute',
         top: 0,
@@ -156,7 +172,7 @@ function Slot({ slot, dragging, drag, bounds, onStart, onMove, onEnd, children }
         width: w,
         height: ROW,
         zIndex: dragging ? 30 : 1,
-        filter: dragging ? 'drop-shadow(0 22px 44px rgba(0,0,0,0.55))' : 'none',
+        borderRadius: 16,
       }}
     >
       {children}
@@ -316,34 +332,69 @@ function Tile({ item, state, index, onGo, edit, onHide, size, onSize }) {
     el.style.setProperty('--my', `${el.offsetHeight / 2}px`);
   };
 
-  /* У режимі налаштування плитка перестає бути кнопкою: всередині
-     зʼявляється своя кнопка «сховати», а кнопка в кнопці ламає і
-     розмітку, і навігацію з клавіатури. */
-  const Root = edit ? motion.div : motion.button;
+  /* Кнопка в кнопці ламає і розмітку, і навігацію з клавіатури, тому
+     в режимі налаштування всередині зʼявляється своя кнопка «сховати».
+     Раніше через це сам корінь плитки міняв ТИП елемента —
+     motion.button ↔ motion.div. Для Framer Motion зміна типу означає
+     повний перемонтаж: усі плитки одночасно губили внутрішній стан і
+     перегравали появу з нуля (opacity 0 → 1, розмиття), а це й
+     виглядало як «різана» анімація щоразу на вході в розкладку чи
+     виході з неї. Тепер корінь завжди той самий motion.div, а роль
+     кнопки й клавіатурна навігація — через role/tabIndex/onKeyDown,
+     без зміни типу компонента. */
+  const clickable = !edit;
+  const reduceMotion = typeof window !== 'undefined'
+    && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   return (
-    <Root
-      {...(edit ? {} : { onClick: () => onGo(item.to) })}
+    <motion.div
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? () => onGo(item.to) : undefined}
+      onKeyDown={clickable ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(item.to); }
+      } : undefined}
       onPointerEnter={center}
       onPointerMove={track}
-      initial={{ opacity: 0, filter: 'blur(6px)' }}
-      animate={{ opacity: 1, filter: 'blur(0px)' }}
-      transition={{ duration: 0.5, delay: Math.min(index, 10) * 0.03, ease: EASE }}
-      whileTap={edit ? undefined : { scale: 0.994 }}
+      initial={{ opacity: 0, y: 10, filter: 'blur(10px)' }}
+      animate={{
+        opacity: 1, y: 0, filter: 'blur(0px)',
+        /* Тремтіння в режимі розкладки — тепер власна властивість
+           Framer, а не окрема CSS-анімація на тому самому елементі:
+           дві системи, що пишуть у transform одного вузла, рано чи
+           пізно виривають кадр одна в одної. Амплітуда крихітна —
+           жест має читатись боковим зором, а не смикати текст. */
+        rotate: edit && !reduceMotion ? [-0.16, 0.16, -0.16] : 0,
+      }}
+      transition={{
+        /* Поява трохи неспішна й із затримкою по черзі — плитки
+           виступають одна за одною, а не спалахують усі разом. */
+        default: { duration: 0.7, delay: Math.min(index, 10) * 0.045, ease: EASE },
+        /* Своя фаза на плитку: дюжина однакових коливань в такт
+           виглядає як збій кадрів, а не як живий інтерфейс. */
+        rotate: edit && !reduceMotion
+          ? {
+            duration: 0.85 + ((index * 13) % 9) / 100,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: -((index * 37) % 55) / 100,
+          }
+          : { duration: 0.2 },
+        /* Натискання має відповідати миттєво, без затримки й без
+           тривалості появи — інакше «default» вище зробив би дотик
+           повільним і забаганим. */
+        scale: { duration: 0.15, ease: EASE },
+      }}
+      whileTap={clickable ? { scale: 0.978 } : undefined}
       className={`hub-tile group relative flex h-full w-full flex-col overflow-hidden p-5 text-left ${
-        edit ? 'hub-jiggle cursor-grab active:cursor-grabbing' : ''
+        clickable ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
       }`}
       style={{
         '--hue': hue,
         background: T.surface,
         border: `1px solid ${T.line}`,
         borderRadius: 16,
-        /* своя фаза тремтіння: дюжина плиток, що коливаються в такт,
-           виглядає як збій, а не як живий інтерфейс */
-        ...(edit ? {
-          animationDelay: `-${((index * 37) % 55) / 100}s`,
-          animationDuration: `${0.58 + ((index * 13) % 9) / 100}s`,
-        } : null),
+        transformOrigin: '50% 50%',
       }}
     >
       {/* Керування розкладкою. Живе поверх усього, зʼявляється тільки
@@ -468,7 +519,7 @@ function Tile({ item, state, index, onGo, edit, onHide, size, onSize }) {
         className="hub-arrow absolute bottom-5 right-5"
         style={{ color: `rgb(${hue})` }}
       />
-    </Root>
+    </motion.div>
   );
 }
 
@@ -686,11 +737,31 @@ export default function Hub() {
   useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return undefined;
-    const read = () => setWidth(el.clientWidth);
-    read();
-    const ro = new ResizeObserver(read);
+
+    /* Ніколи не приймаємо нульову ширину: під час живого ресайзу —
+       тягнуть край вікна, згортають бічну панель, спрацьовує
+       DevTools — спостерігач інколи репортує проміжний кадр з
+       clientWidth: 0 ще до того, як розмір усівся. Розкладка,
+       порахована під такий кадр, ховає всі плитки в одну точку. */
+    const apply = () => {
+      const w = el.clientWidth;
+      if (w > 0) setWidth(w);
+    };
+    apply();
+
+    /* Поки розмір ще змінюється, спостерігач сипле сповіщеннями
+       десятками на секунду — і кожне тягне за собою перепакування й
+       нову ціль для пружини в кожній плитці. Саме ця черга з
+       переривань і читається як «різана» анімація. Тому рахуємо
+       розкладку заново не на кожен проміжний кадр, а один раз, коли
+       розмір справді зупинився. */
+    let timer = 0;
+    const ro = new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(apply, 80);
+    });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => { ro.disconnect(); clearTimeout(timer); };
   }, []);
 
   const cols = colsFor(width || 1200);
@@ -826,25 +897,9 @@ export default function Hub() {
           transition: background-color .45s ease, box-shadow .45s ease;
         }
 
-        /* Тремтіння в режимі розкладки. Амплітуда навмисно крихітна:
-           жест має читатись боковим зором як «зараз можна тягнути», а
-           не смикати текст. Кожна плитка отримує свою фазу, інакше
-           дюжина однакових коливань виглядає як брак кадрів. */
-        @keyframes hub-jiggle {
-          0%   { transform: rotate(-0.16deg); }
-          50%  { transform: rotate(0.16deg); }
-          100% { transform: rotate(-0.16deg); }
-        }
-        .hub-jiggle {
-          animation: hub-jiggle .62s ease-in-out infinite;
-          transform-origin: 50% 50%;
-          will-change: transform;
-        }
-
-        /* Тремтіння — прикраса. Кому воно шкодить, той його не бачить. */
-        @media (prefers-reduced-motion: reduce) {
-          .hub-jiggle { animation: none; }
-        }
+        /* Тремтіння в режимі розкладки тепер живе у Framer Motion
+           (властивість rotate у Tile), не в CSS — щоб два різні
+           механізми не писали в transform того самого вузла одразу. */
         .hub-tile:hover {
           background-color: ${T.surfaceHi} !important;
           box-shadow:

@@ -74,7 +74,7 @@ const router = createBrowserRouter([
       { path: 'plan', element: <DailyPlan /> },
       { path: 'plan/:date/:pair', element: <DailyPlan /> },
       { path: 'journal', element: <TradingJournal /> },
-      { path: 'analyses', element: <Analyses /> },
+      { path: 'analytics', element: <Analytics /> },
       { path: 'accounts', element: <Accounts /> },
     ],
   },
