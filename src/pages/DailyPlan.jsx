@@ -190,17 +190,16 @@ export default function DailyPlan() {
   /* ==================================================================
      Вибір типу плану: денний чи тижневий.
 
-     Два незалежні входи в ту саму модалку. «auto» — пн-вт пропонують
-     явний вибір замість тихого дефолту на денний, і лише перемикають
-     režим (жодних скидань — кожен масштаб сам вантажить свої дані).
-     «new» — свідомий клік на «New plan»: як і денний скид нижче, це
-     чистий старт, тому вибір тижневого тут заводить порожній тижневий
-     план, а не продовжує те, що вже було. */
+     Єдиний вхід у тижневий режим тепер, коли перемикача в хедері
+     нема: і пн-вт автопоказ, і клік на «New plan» ведуть сюди. Вибір
+     тижневого — не скидання, а просто перехід на секцію, де тижневий
+     план і так живе (свій чи порожній — довантажить ефект нижче, той
+     самий, що й для «New week»). Скидати треба лише денний — там
+     кнопка й раніше означала «почати заново», і це не змінилось. */
   const [isPlanTypeModalOpen, setIsPlanTypeModalOpen] = useState(false);
   const [planTypeModalContext, setPlanTypeModalContext] = useState('auto');
   const isPlanTypeModalOpenRef = useRef(false);
   isPlanTypeModalOpenRef.current = isPlanTypeModalOpen;
-  const skipNextWeekLoadRef = useRef(false);
 
   useEffect(() => {
     if (isInitialLoading || location.state?.mode) return;
@@ -220,32 +219,17 @@ export default function DailyPlan() {
 
   const handleChoosePlanType = useCallback(async (type) => {
     setIsPlanTypeModalOpen(false);
-    if (planTypeModalContext === 'auto') { setMode(type); return; }
-
-    if (type === 'daily') { await handleNewPlan(); return; }
-
-    /* «New plan» → тижневий: свідомо порожній тиждень, а не продовження
-       того, що вже лежить у weekData, — той самий принцип, що й у
-       handleNewPlan для денного. emptyWeekPlan сама заводить ОДИН новий
-       tdaAnalyses-розбір, тому нового блоку ніколи не буде «всередині»
-       вже існуючого. */
-    if (mode === 'daily' && canSaveToCloud && hasUnsavedChanges && !isSaving) await performSave();
-    const monday = mondayOf(todayLocal());
-    skipNextWeekLoadRef.current = true;
-    weekPlanIdRef.current = null;
-    setWeekMonday(monday);
-    setWeekData(emptyWeekPlan(monday));
-    setWeekHasUnsaved(false);
-    setWeekLastSaved(null);
-    setMode('weekly');
+    if (type === 'weekly') {
+      setMode('weekly');
+      setWeekMonday(mondayOf(todayLocal()));
+      return;
+    }
+    if (planTypeModalContext === 'new') await handleNewPlan();
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [planTypeModalContext, mode, canSaveToCloud, hasUnsavedChanges, isSaving]);
+  }, [planTypeModalContext]);
 
   useEffect(() => {
     if (mode !== 'weekly' || !user?.id) return undefined;
-    /* «New plan» щойно завів свій порожній тиждень локально — не тягнемо
-       поверх нього те, що лежить у хмарі, інакше скидання й не було. */
-    if (skipNextWeekLoadRef.current) { skipNextWeekLoadRef.current = false; return undefined; }
     let alive = true;
     setIsWeekLoading(true);
 
@@ -325,6 +309,15 @@ export default function DailyPlan() {
      чи вперед. Єдиний вихід на "той самий" тиждень — кнопка "New week"
      у хедері, яка повертає сюди після перегляду минулого через Аналізи. */
   const goThisWeek = useCallback(() => setWeekMonday(mondayOf(todayLocal())), []);
+
+  /* Єдиний вихід назад із тижневого режиму — раніше єдиним способом
+     було перезавантажити сторінку. Просте перемикання, як і в auto-
+     контексті вибору плану, але спершу дописуємо тижневий дебаунс, що
+     ще не встиг спрацювати — інакше свіжий текст губився без сліду. */
+  const backToDaily = useCallback(async () => {
+    if (weekHasUnsaved && !isWeekSaving && !checkIsWeekPlanEmpty(weekData)) await performSaveWeek();
+    setMode('daily');
+  }, [weekHasUnsaved, isWeekSaving, weekData, performSaveWeek]);
 
   /* ---------- Прогрес по вкладках ---------- */
   const progress = useMemo(() => {
@@ -816,7 +809,7 @@ export default function DailyPlan() {
           title={mode === 'weekly' ? weekRangeLabel(weekMonday) : planData.title}
           pair={mode === 'weekly' ? '' : planData.pair}
           mode={mode}
-          onModeChange={setMode}
+          onBackToDaily={backToDaily}
           onNewPlan={mode === 'weekly' ? goThisWeek : openPlanTypeModalForNewPlan}
           onShare={handleShare}
           onOpenQuiz={() => setIsQuizModalOpen(true)}

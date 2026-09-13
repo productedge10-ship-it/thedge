@@ -161,7 +161,7 @@ const revengeCost = (trades) => {
   return { n, cost: +cost.toFixed(1) };
 };
 
-export const PSYCH_WIDGETS = {
+const ALL_PSYCH_WIDGETS = {
   neuro: {
     title: 'Нейропрофіль',
     hint: 'Пʼять осей психіки, зібраних із твоїх угод',
@@ -618,7 +618,7 @@ export const PSYCH_WIDGETS = {
   verdict: {
     title: 'Вердикт по дисципліні',
     hint: 'Різниця між тим, що є, і тим, що вже могло бути',
-    icon: Gauge, group: 'Психологія', tone: '#8b7bff', shape: 'bars', defaultW: 2, defaultH: 3,
+    icon: Gauge, group: 'Психологія', tone: '#8b7bff', shape: 'bars', defaultW: 4, defaultH: 3,
     options: {
     },
     render: ({ s }) => {
@@ -697,7 +697,7 @@ export const PSYCH_WIDGETS = {
   checklist: {
     title: 'Чек-лист перед входом',
     hint: 'Як часто ти реально дотримувався кожного правила',
-    icon: Target, group: 'Психологія', tone: '#34d399', shape: 'rows', defaultW: 2, defaultH: 3,
+    icon: Target, group: 'Психологія', tone: '#34d399', shape: 'rows', defaultW: 4, defaultH: 3,
     options: {
     },
     render: ({ s }) => {
@@ -962,14 +962,24 @@ export const PSYCH_WIDGETS = {
   },
 };
 
-/* Розкладка за замовчуванням — порядок старої, фіксованої сторінки:
-   нейропрофіль на всю ширину зверху (це портрет цілком), далі ліва
-   колонка старого дизайну (тільт → емоції → стани → помилки → план і
-   ризик), потім права (AI-психолог → вердикт → чек-лист). Пʼять
-   розрізів, яких у старому дизайні не було (streaks, revenge,
-   cleancurve, dowmood, hourrisk), лишаються в реєстрі — додати їх
-   можна з бібліотеки, — але не займають місце за замовчуванням. */
-export const PSYCH_DEFAULT = [
+/* Стара сторінка стояла на двох нерівних колонках — широкій зліва й
+   вужчій, приклеєній справа (AI-психолог → вердикт → чек-лист), а не
+   на одній спільній сітці. Дошку це не вміє: одна сітка — один
+   реєстр. Тому дошки тепер дві, кожна зі своєю розкладкою й
+   бібліотекою — по суті два «Огляди» поруч, — а 2fr/1fr-колонки й
+   sticky для правої малює вже сама Psychology.jsx. Ліва лишається
+   тим самим реєстром, що й був: сім блоків старого дизайну плюс пʼять
+   розрізів, яких там не було (streaks, revenge, cleancurve, dowmood,
+   hourrisk) — вони лишаються в бібліотеці, не в дефолтних слотах. */
+const MAIN_IDS = ['neuro', 'tilt', 'emotions', 'states', 'mistakes', 'plan', 'risk', 'streaks', 'revenge', 'cleancurve', 'dowmood', 'hourrisk'];
+const SIDE_IDS = ['aicoach', 'verdict', 'checklist'];
+
+const pickWidgets = (ids) => Object.fromEntries(ids.map((id) => [id, ALL_PSYCH_WIDGETS[id]]));
+
+export const PSYCH_MAIN_WIDGETS = pickWidgets(MAIN_IDS);
+export const PSYCH_SIDE_WIDGETS = pickWidgets(SIDE_IDS);
+
+export const PSYCH_MAIN_DEFAULT = [
   { id: 'neuro', h: 3, w: 4, p: 'inherit', o: {} },
   { id: 'tilt', h: 2, w: 2, p: 'inherit', o: {} },
   { id: 'emotions', h: 2, w: 2, p: 'inherit', o: {} },
@@ -977,7 +987,13 @@ export const PSYCH_DEFAULT = [
   { id: 'mistakes', h: 2, w: 2, p: 'inherit', o: {} },
   { id: 'plan', h: 2, w: 2, p: 'inherit', o: {} },
   { id: 'risk', h: 3, w: 2, p: 'inherit', o: {} },
+];
+
+/* Права колонка: кожен блок на всю її ширину (w:4 — «на всю ширину
+   ЦІЄЇ дошки», яка сама вужча за ліву), тож вони стають одне під
+   одним, як і в старому дизайні, а не діляться навпіл. */
+export const PSYCH_SIDE_DEFAULT = [
   { id: 'aicoach', h: 1, w: 4, p: 'inherit', o: {} },
-  { id: 'verdict', h: 3, w: 2, p: 'inherit', o: {} },
-  { id: 'checklist', h: 3, w: 2, p: 'inherit', o: {} },
+  { id: 'verdict', h: 3, w: 4, p: 'inherit', o: {} },
+  { id: 'checklist', h: 3, w: 4, p: 'inherit', o: {} },
 ];

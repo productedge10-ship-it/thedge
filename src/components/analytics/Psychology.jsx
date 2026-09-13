@@ -2,51 +2,57 @@ import { useCallback, useMemo } from 'react';
 import useCloudState from '../../hooks/useCloudState';
 import { useStats } from './data';
 import Board from './overview/Board';
-import { PSYCH_DEFAULT, PSYCH_WIDGETS } from './psych/widgets';
+import {
+  PSYCH_MAIN_WIDGETS, PSYCH_MAIN_DEFAULT, PSYCH_SIDE_WIDGETS, PSYCH_SIDE_DEFAULT,
+} from './psych/widgets';
 
 /* ==================================================================
    Психологія.
 
-   Була найдовшою сторінкою застосунку: дві нерівні колонки, у лівій
-   сім панелей одна під одною, у правій ще три, і жодну з них не можна
-   було ні прибрати, ні переставити. Людина, якій цікавий тільки
-   ланцюг тільта, прокручувала повз усе інше щоразу.
-
-   Тепер це та сама дошка, що в «Огляді» й «Перформансі»: свій реєстр
-   віджетів, своя збережена розкладка, ті самі перетягування,
-   налаштування й ширина на віджет. Уся верстка живе в psych/ — тут
-   лише дані.
+   Стара сторінка стояла на двох нерівних колонках — широкій зліва
+   (нейропрофіль, тільт, емоції, стани, помилки, план і ризик) і
+   вужчій, приклеєній справа (AI-психолог, вердикт, чек-лист), яка не
+   гортається разом з рештою. Дошка з «Огляду» цього не вміє: одна
+   сітка на весь реєстр. Тому тут не одна дошка, а дві — кожна зі
+   своєю збереженою розкладкою й бібліотекою, — а 2fr/1fr-верстку й
+   sticky для правої малює сам цей файл, не Board.
 ================================================================== */
 
 const DAY = 86400000;
 const since = (days) => new Date(Date.now() - days * DAY).toISOString().slice(0, 10);
 
-const normalize = (v) => {
-  if (!Array.isArray(v)) return PSYCH_DEFAULT;
+/* Одна й та сама перевірка збереженої розкладки для обох дощок —
+   різниться лише реєстр і дефолт, з яких вона звіряє id та висоту. */
+const makeNormalize = (WIDGETS, DEFAULT) => (v) => {
+  if (!Array.isArray(v)) return DEFAULT;
   const clean = v
-    .filter((x) => x && typeof x.id === 'string' && PSYCH_WIDGETS[x.id])
+    .filter((x) => x && typeof x.id === 'string' && WIDGETS[x.id])
     .map((x) => ({
       id: x.id,
       w: Math.min(4, Math.max(1, Number(x.w) || 1)),
       /* Висота теж належить розкладці, а не вмісту. Стара збережена
          дошка про неї не знає, тому підставляємо ту, з якою віджет
          задумувався. */
-      h: Math.min(4, Math.max(1, Number(x.h) || PSYCH_WIDGETS[x.id].defaultH || 2)),
+      h: Math.min(4, Math.max(1, Number(x.h) || WIDGETS[x.id].defaultH || 2)),
       p: typeof x.p === 'string' ? x.p : 'inherit',
       o: x.o && typeof x.o === 'object' ? x.o : {},
     }));
-  return v.length && !clean.length ? PSYCH_DEFAULT : clean;
+  return v.length && !clean.length ? DEFAULT : clean;
 };
 
+const normalizeMain = makeNormalize(PSYCH_MAIN_WIDGETS, PSYCH_MAIN_DEFAULT);
+const normalizeSide = makeNormalize(PSYCH_SIDE_WIDGETS, PSYCH_SIDE_DEFAULT);
+
 export default function Psychology({ s, rows = [] }) {
-  const [layout, setLayout, { saving }] = useCloudState(
-    /* v2 — набір за замовчуванням звузили назад до блоків старого
-       дизайну (streaks/revenge/cleancurve/dowmood/hourrisk більше не
-       в дефолтних слотах), тож стара збережена дошка з ними на видноті
-       не повинна лишатись мовчки. */
-    'analytics_psychology_v2',
-    PSYCH_DEFAULT,
-    { normalize },
+  const [mainLayout, setMainLayout, { saving: savingMain }] = useCloudState(
+    'analytics_psychology_main_v1',
+    PSYCH_MAIN_DEFAULT,
+    { normalize: normalizeMain },
+  );
+  const [sideLayout, setSideLayout, { saving: savingSide }] = useCloudState(
+    'analytics_psychology_side_v1',
+    PSYCH_SIDE_DEFAULT,
+    { normalize: normalizeSide },
   );
 
   const d7 = useMemo(() => { const b = since(7); return rows.filter((t) => t.date >= b); }, [rows]);
@@ -69,13 +75,26 @@ export default function Psychology({ s, rows = [] }) {
   }, [s, s7, s30, s90, sAll]);
 
   return (
-    <Board
-      layout={layout}
-      setLayout={setLayout}
-      statsFor={statsFor}
-      saving={saving}
-      registry={PSYCH_WIDGETS}
-      defaults={PSYCH_DEFAULT}
-    />
+    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+      <Board
+        layout={mainLayout}
+        setLayout={setMainLayout}
+        statsFor={statsFor}
+        saving={savingMain}
+        registry={PSYCH_MAIN_WIDGETS}
+        defaults={PSYCH_MAIN_DEFAULT}
+      />
+
+      <div className="xl:sticky xl:top-5">
+        <Board
+          layout={sideLayout}
+          setLayout={setSideLayout}
+          statsFor={statsFor}
+          saving={savingSide}
+          registry={PSYCH_SIDE_WIDGETS}
+          defaults={PSYCH_SIDE_DEFAULT}
+        />
+      </div>
+    </div>
   );
 }

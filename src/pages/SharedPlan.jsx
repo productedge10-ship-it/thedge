@@ -262,7 +262,8 @@ export default function SharedPlan() {
   const d = plan.plan_data || {};
   const bias = BIAS[plan.narrative] || null;
   const BiasIcon = bias?.icon;
-  const tda = (d.tdaBlocks || []).filter((b) => b.image || b.text?.trim());
+  const tda = (d.tdaAnalyses ? d.tdaAnalyses.flatMap((t) => t.blocks || []) : (d.tdaBlocks || []))
+    .filter((b) => b.image || b.text?.trim());
   const updates = (d.updates || []).filter((b) => b.image || b.text?.trim());
   const review = (d.reviewBlocks || []).filter((b) => b.image || b.text?.trim());
 

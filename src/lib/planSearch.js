@@ -22,6 +22,7 @@ const TEXT_FIELDS = [
   'actual:plan_data->>actualNarrative',
   'mistake:plan_data->>analysisMistakeText',
   'psyNotes:plan_data->>psyNotes',
+  /* Денний план тримає один спільний tdaBlocks на 4 ТФ. */
   't0:plan_data->tdaBlocks->0->>text',
   't1:plan_data->tdaBlocks->1->>text',
   't2:plan_data->tdaBlocks->2->>text',
@@ -30,6 +31,28 @@ const TEXT_FIELDS = [
   'tf1:plan_data->tdaBlocks->1->>tf',
   'tf2:plan_data->tdaBlocks->2->>tf',
   'tf3:plan_data->tdaBlocks->3->>tf',
+  /* Тижневий — розборів у tdaAnalyses може бути кілька, по одному на
+     актив. Індексуємо перші два (найчастіший випадок: основний актив
+     і, іноді, один кореляційний) — глибші розбори пошук просто не
+     зачепить, це м'яка деградація, а не втрата даних. */
+  'a0:plan_data->tdaAnalyses->0->>pair',
+  'a1:plan_data->tdaAnalyses->1->>pair',
+  't00:plan_data->tdaAnalyses->0->blocks->0->>text',
+  't01:plan_data->tdaAnalyses->0->blocks->1->>text',
+  't02:plan_data->tdaAnalyses->0->blocks->2->>text',
+  't03:plan_data->tdaAnalyses->0->blocks->3->>text',
+  't10:plan_data->tdaAnalyses->1->blocks->0->>text',
+  't11:plan_data->tdaAnalyses->1->blocks->1->>text',
+  't12:plan_data->tdaAnalyses->1->blocks->2->>text',
+  't13:plan_data->tdaAnalyses->1->blocks->3->>text',
+  'tf00:plan_data->tdaAnalyses->0->blocks->0->>tf',
+  'tf01:plan_data->tdaAnalyses->0->blocks->1->>tf',
+  'tf02:plan_data->tdaAnalyses->0->blocks->2->>tf',
+  'tf03:plan_data->tdaAnalyses->0->blocks->3->>tf',
+  'tf10:plan_data->tdaAnalyses->1->blocks->0->>tf',
+  'tf11:plan_data->tdaAnalyses->1->blocks->1->>tf',
+  'tf12:plan_data->tdaAnalyses->1->blocks->2->>tf',
+  'tf13:plan_data->tdaAnalyses->1->blocks->3->>tf',
   'r0:plan_data->reviewBlocks->0->>text',
   'r1:plan_data->reviewBlocks->1->>text',
 ].join(',');
@@ -54,9 +77,13 @@ export async function loadSearchIndex(userId, limit = 1000) {
        дешевше, ніж тримати десяток окремих ключів */
     body: [
       r.planText, r.conclusions, r.actual, r.mistake, r.psyNotes,
-      r.t0, r.t1, r.t2, r.t3, r.r0, r.r1,
+      r.t0, r.t1, r.t2, r.t3,
+      r.a0, r.a1, r.t00, r.t01, r.t02, r.t03, r.t10, r.t11, r.t12, r.t13, r.r0, r.r1,
     ].filter(Boolean).join('\n'),
-    tf: [r.tf0, r.tf1, r.tf2, r.tf3].filter(Boolean).join(' '),
+    tf: [
+      r.tf0, r.tf1, r.tf2, r.tf3,
+      r.tf00, r.tf01, r.tf02, r.tf03, r.tf10, r.tf11, r.tf12, r.tf13,
+    ].filter(Boolean).join(' '),
   }));
 }
 

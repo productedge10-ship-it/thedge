@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
-import { Plus, Share2, ClipboardCheck, Briefcase, Send, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Share2, ClipboardCheck, Briefcase, Send, Check } from 'lucide-react';
 import { T, SPRING } from './planTheme';
-import PlanTypeToggle from '../ui/PlanTypeToggle';
 
 /* ==================================================================
    Хедер плану. Раніше 6 різнокольорових кнопок кричали однаково
@@ -55,7 +54,7 @@ export default function PlanHeader({
   title,
   pair,
   mode = 'daily',
-  onModeChange,
+  onBackToDaily,
   onNewPlan,
   onShare,
   onOpenQuiz,
@@ -73,8 +72,23 @@ export default function PlanHeader({
           Тепер це один рядок службових елементів, а заголовок унизу
           отримує весь рядок і звучить голосніше сам по собі. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {onModeChange ? (
-          <PlanTypeToggle mode={mode} onChange={onModeChange} layoutId="plan-type-toggle-header" />
+        {weekly ? (
+          /* Єдиний вихід назад на денний план — раніше його не було
+             взагалі, і повернутись можна було тільки перезавантаживши
+             сторінку. Стрілка замість самої лише мітки: одразу видно,
+             що це дія, а не просто підпис поточного режиму. */
+          <button
+            type="button"
+            onClick={onBackToDaily}
+            title="Повернутись до денного плану"
+            className="group flex items-center gap-2 rounded-xl py-2 pl-2.5 pr-3.5 text-[12px] font-bold uppercase tracking-[0.22em] transition-all duration-200"
+            style={{ fontFamily: T.sans, color: T.info, background: 'transparent', border: '1px solid transparent' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.infoRgb},0.08)`; e.currentTarget.style.borderColor = `rgba(${T.infoRgb},0.22)`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+          >
+            <ArrowLeft size={13} strokeWidth={2.6} className="shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
+            Weekly plan
+          </button>
         ) : (
           <div
             className="text-[12px] font-bold uppercase tracking-[0.22em]"

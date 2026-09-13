@@ -1,13 +1,11 @@
 import { useMemo } from 'react';
-import {
-  Compass, Layers, Radio, LineChart, NotebookPen,
-  Link as LinkIcon, Search as SearchIcon, Loader2, Plus, Trash2,
-} from 'lucide-react';
+import { Compass, Radio, LineChart, NotebookPen, Layers, Trash2 } from 'lucide-react';
 import NarrativeSelect from '../ui/NarrativeSelect';
 import UpdatesList from './UpdatesList';
-import TdaGrid from './TdaGrid';
 import PlanTabs from './PlanTabs';
+import TdaGrid from './TdaGrid';
 import { Section, SectionAnchor, FieldLabel, WriteBlock } from './PlanPrimitives';
+import { TdaAnalysisFields, AddTdaButton } from './TdaAnalysisCard';
 import { T } from './planTheme';
 import { weekPlanProgress, emptyTdaAnalysis } from '../../lib/weekPlan';
 
@@ -30,83 +28,6 @@ const RATING = [
   { label: 'Добре', color: '#a3e635', rgb: '163,230,53' },
   { label: 'Відмінно', color: T.ok, rgb: T.okRgb },
 ];
-
-/* ---------- один top-down розбір: актив, bias і власна сітка ТФ ---------- */
-function TdaAnalysisCard({ analysis, onOpenAssetModal, isLoadingAssets, onChange, onRemove, canRemove }) {
-  const patch = (p) => onChange({ ...analysis, ...p });
-  const saveBlock = (id, d) => patch({ blocks: analysis.blocks.map((b) => (b.id === id ? { ...b, ...d } : b)) });
-  const filled = analysis.blocks.filter((b) => b.image || b.text?.trim()).length;
-
-  return (
-    <div className="overflow-hidden rounded-2xl" style={{ background: T.surface, border: `1px solid ${T.line}` }}>
-      <div className="flex flex-wrap items-center gap-3.5 p-4" style={{ background: T.sunken, borderBottom: `1px solid ${T.line}` }}>
-        <div className="flex min-w-[140px] flex-1 flex-col gap-1.5 sm:max-w-[210px]">
-          <FieldLabel icon={LinkIcon} required filled={!!analysis.pair}>Актив</FieldLabel>
-          <button
-            onClick={() => onOpenAssetModal(analysis.id)}
-            disabled={isLoadingAssets}
-            className="flex h-[42px] w-full items-center justify-between rounded-xl px-3.5 text-[15px] font-semibold transition-all duration-200"
-            style={{
-              background: T.sunken,
-              border: `1px solid ${analysis.pair ? T.lineAcc : `rgba(${T.warnRgb},0.28)`}`,
-              color: analysis.pair ? T.text : T.text4,
-              fontFamily: analysis.pair ? T.mono : T.sans,
-              cursor: isLoadingAssets ? 'wait' : 'pointer',
-            }}
-          >
-            <span className="truncate">{analysis.pair || 'Вибрати...'}</span>
-            {isLoadingAssets
-              ? <Loader2 size={14} className="animate-spin shrink-0" style={{ color: T.text4 }} />
-              : <SearchIcon size={14} strokeWidth={2.2} className="shrink-0" style={{ color: analysis.pair ? T.acc : T.warn }} />}
-          </button>
-        </div>
-
-        <div className="flex min-w-[160px] flex-1 flex-col gap-1.5 sm:max-w-[220px]">
-          <FieldLabel icon={Compass} filled={!!analysis.narrative}>Плановий bias</FieldLabel>
-          <NarrativeSelect value={analysis.narrative} onChange={(v) => patch({ narrative: v })} />
-        </div>
-
-        <span className="flex-1" />
-
-        <span className="text-[12px] font-bold uppercase tracking-[0.14em] tabular-nums" style={{ fontFamily: T.sans, color: T.text4 }}>
-          {filled}/4
-        </span>
-
-        {canRemove && (
-          <button
-            onClick={onRemove}
-            title="Прибрати цей розбір"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors duration-150"
-            style={{ color: T.text4 }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
-          >
-            <Trash2 size={14} strokeWidth={2.2} />
-          </button>
-        )}
-      </div>
-
-      <div className="p-5 sm:p-6">
-        <TdaGrid blocks={analysis.blocks} onSave={saveBlock} />
-      </div>
-    </div>
-  );
-}
-
-function AddTdaButton({ onAdd }) {
-  return (
-    <button
-      onClick={onAdd}
-      className="group flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[14px] font-semibold transition-all duration-200"
-      style={{ background: 'transparent', border: `1px dashed ${T.line}`, color: T.text4, fontFamily: T.sans }}
-      onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.4)`; e.currentTarget.style.background = `rgba(${T.accRgb},0.04)`; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; e.currentTarget.style.background = 'transparent'; }}
-    >
-      <Plus size={14} strokeWidth={2.6} className="transition-transform duration-300 group-hover:rotate-90" />
-      Ще один розбір
-    </button>
-  );
-}
 
 /* ---------- один актив у розборі "Що вийшло" ---------- */
 const FIELD = 'w-full rounded-lg bg-transparent text-[14px] outline-none transition-colors duration-150';
@@ -244,8 +165,6 @@ export default function WeeklyPlanView({
   const saveTdaAnalysis = (id, next) => setTdaAnalyses(tdaAnalyses.map((t) => (t.id === id ? next : t)));
   const addTdaAnalysis = () => setTdaAnalyses([...tdaAnalyses, emptyTdaAnalysis()]);
   const removeTdaAnalysis = (id) => setTdaAnalyses(tdaAnalyses.filter((t) => t.id !== id));
-  const allTdaBlocks = tdaAnalyses.flatMap((t) => t.blocks || []);
-  const tdaFilled = allTdaBlocks.filter((b) => b.image || b.text?.trim()).length;
 
   const namedAnalyses = tdaAnalyses.filter((t) => t.pair);
   const reviewedCount = namedAnalyses.filter((t) => t.actualBias || t.outcome?.trim()).length;
@@ -264,34 +183,58 @@ export default function WeeklyPlanView({
         <SectionAnchor id="plan" first label="Plan" sub="Before" icon={Compass} progress={progress.plan} />
 
         <div className="flex flex-col gap-5">
-          <Section
-            icon={Layers}
-            storageKey="week-tda"
-            group="plan"
-            title="Top-down аналіз"
-            hint="Актив, плановий bias і сітка ТФ — окремо на кожен розбір"
-            done={tdaFilled >= 2}
-            right={
-              <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums" style={{ fontFamily: T.sans, color: T.text4 }}>
-                {tdaFilled}/{allTdaBlocks.length || 4}
-              </span>
-            }
-          >
-            <div className="flex flex-col gap-4 p-5 sm:p-6">
-              {tdaAnalyses.map((t) => (
-                <TdaAnalysisCard
-                  key={t.id}
-                  analysis={t}
-                  onOpenAssetModal={onOpenAssetModal}
-                  isLoadingAssets={isLoadingAssets}
-                  onChange={(next) => saveTdaAnalysis(t.id, next)}
-                  onRemove={() => removeTdaAnalysis(t.id)}
-                  canRemove={tdaAnalyses.length > 1}
-                />
-              ))}
-              <AddTdaButton onAdd={addTdaAnalysis} />
-            </div>
-          </Section>
+          {/* Один розбір — своя окрема секція, а не картка всередині
+              спільної: кожен актив згортається окремо, і видно, який
+              він, ще до розгортання (заголовок = сам актив). Кнопка
+              додати новий розбір — поза секціями, на їхньому рівні. */}
+          {tdaAnalyses.map((t) => {
+            const filled = t.blocks.filter((b) => b.image || b.text?.trim()).length;
+            return (
+              <Section
+                key={t.id}
+                icon={Layers}
+                storageKey={`tda-${t.id}`}
+                group="plan"
+                title={t.pair || 'Top-down аналіз'}
+                hint={t.pair ? 'Top-down аналіз' : 'Актив, плановий bias і сітка ТФ'}
+                done={filled >= 2}
+                right={
+                  <div className="flex items-center gap-3">
+                    <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
+                          style={{ fontFamily: T.sans, color: T.text4 }}>
+                      {filled}/4
+                    </span>
+                    {tdaAnalyses.length > 1 && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        title="Прибрати цей розбір"
+                        onClick={(e) => { e.stopPropagation(); removeTdaAnalysis(t.id); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); removeTdaAnalysis(t.id); } }}
+                        className="grid h-6 w-6 shrink-0 place-items-center rounded-lg transition-colors duration-150"
+                        style={{ color: T.text4 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <Trash2 size={13} strokeWidth={2.2} />
+                      </span>
+                    )}
+                  </div>
+                }
+              >
+                <div className="flex flex-col gap-4 p-5 sm:p-6">
+                  <TdaAnalysisFields
+                    analysis={t}
+                    onOpenAssetModal={onOpenAssetModal}
+                    isLoadingAssets={isLoadingAssets}
+                    onChange={(next) => saveTdaAnalysis(t.id, next)}
+                  />
+                  <TdaGrid blocks={t.blocks} onSave={(id, d) => saveTdaAnalysis(t.id, { ...t, blocks: t.blocks.map((b) => (b.id === id ? { ...b, ...d } : b)) })} />
+                </div>
+              </Section>
+            );
+          })}
+          <AddTdaButton onAdd={addTdaAnalysis} />
 
           <Section
             icon={Compass}
