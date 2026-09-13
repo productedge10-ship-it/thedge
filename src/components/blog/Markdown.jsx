@@ -23,6 +23,7 @@ function Inline({ text }) {
         if (tok.t === 'b') return <strong key={i}>{tok.text}</strong>;
         if (tok.t === 'i') return <em key={i}>{tok.text}</em>;
         if (tok.t === 'code') return <code key={i}>{tok.text}</code>;
+        if (tok.t === 'mark') return <mark key={i} className="bl-mark">{tok.text}</mark>;
         if (tok.t === 'a') {
           /* Зовнішні посилання відкриваються поруч і без передачі
              реферера: стаття не має права забирати вкладку, у якій

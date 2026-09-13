@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import {
+  motion, AnimatePresence, useMotionValue, useSpring,
+} from 'framer-motion';
 import {
   X, RotateCcw, Eye, EyeOff, Moon, Sun, ZapOff,
   User, Target, BookOpen, Palette, Sparkles, LayoutGrid,
   MailCheck, MailWarning, KeyRound, Loader2, Check, Send,
+  Plug, HelpCircle, ArrowRight, ChevronDown,
 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
@@ -14,6 +17,7 @@ import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { openVerifyEmail } from '../../lib/emailGate';
 import { NAV, MOTION, FX, PSY, HIDEABLE, GOALS, goalById, OPEN_EVENT } from '../../lib/settings';
+import { connectMt5, watchMt5Account, readMt5Status, listMt5Accounts } from '../../lib/mt5Store';
 import { THEMES } from '../../lib/themes';
 
 /* ==================================================================
@@ -38,6 +42,7 @@ const TABS = [
   { id: 'profile', label: 'Profile', icon: User, eyebrow: 'PERSONAL', hint: 'What we should call you' },
   { id: 'goal', label: 'Weekly goal', icon: Target, eyebrow: 'RHYTHM', hint: 'What the “Week” tile on the Launchpad shows' },
   { id: 'journal', label: 'Journal', icon: BookOpen, eyebrow: 'PRACTICE', hint: 'How many questions to ask after every trade' },
+  { id: 'connect', label: 'Connections', icon: Plug, eyebrow: 'SYNC', hint: 'Connect your trading account — the trades will sync automatically' },
   { id: 'look', label: 'Theme', icon: Palette, eyebrow: 'APPEARANCE', hint: 'Light or dark — with a diagonal sweep' },
   { id: 'motion', label: 'Motion & glow', icon: Sparkles, eyebrow: 'APPEARANCE', hint: 'How much movement you can stand over six hours at a screen' },
   { id: 'menu', label: 'Sections', icon: LayoutGrid, eyebrow: 'NAVIGATION', hint: 'Hide what you don’t use — the data stays' },
@@ -322,24 +327,33 @@ export default function SettingsModal() {
                 href="https://t.me/h1f3stt"
                 target="_blank"
                 rel="noreferrer"
-                className="group mb-2.5 flex items-center justify-center text-white"
+                className="group mb-2.5 flex items-center justify-center"
                 style={{
                   fontFamily: T.sans,
                   gap: 9,
                   height: 48,
                   borderRadius: 13,
-                  fontSize: 11.5,
-                  fontWeight: 700,
-                  letterSpacing: '1.4px',
-                  textTransform: 'uppercase',
-                  background: 'linear-gradient(140deg, #4db8f5 0%, #25A3E9 50%, #1273ab 100%)',
-                  boxShadow: '0 14px 30px -14px rgba(37,163,233,0.6), inset 0 1px 0 rgba(255,255,255,0.25)',
-                  transition: 'filter .18s, transform .18s',
+                  fontSize: 13.5,
+                  fontWeight: 600,
+                  color: T.text2,
+                  background: T.sunken,
+                  border: `1px solid ${T.line}`,
+                  transition: 'background .18s, border-color .18s, color .18s, transform .18s',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.06)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.transform = 'none'; }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = T.surfaceHi;
+                  e.currentTarget.style.borderColor = T.lineHi;
+                  e.currentTarget.style.color = T.text;
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = T.sunken;
+                  e.currentTarget.style.borderColor = T.line;
+                  e.currentTarget.style.color = T.text2;
+                  e.currentTarget.style.transform = 'none';
+                }}
               >
-                <Send size={14} strokeWidth={2.2} />
+                <Send size={14} strokeWidth={2.2} style={{ color: T.acc }} />
                 Message on Telegram
               </a>
 
@@ -698,6 +712,9 @@ export default function SettingsModal() {
                     </div>
                   </div>
                 )}
+
+                {/* ================= Підключення ================= */}
+                {tab === 'connect' && <ConnectTab />}
 
                 {/* ================= Тема ================= */}
                 {tab === 'look' && (
@@ -1337,5 +1354,1280 @@ function Toggle({ label, hint, on, disabled, onClick }) {
         />
       </div>
     </div>
+  );
+}
+
+/* ==================================================================
+   Підключення торгового рахунку.
+
+   Платформи дві, робоча поки одна. cTrader лишили на видноті
+   навмисно: якщо прибрати картку зовсім, перше питання в підтримку
+   буде саме про нього — а так видно, що про нього памʼятають.
+
+   Картка MT5 не відкриває вікно поверх вікна, а розгортається на
+   місці. Три поля не варті окремої модалки, а коли вони виростають
+   із самої картки, видно, що це те саме, на що щойно натиснув.
+
+   Сцена зібрана в логіці сторінки 404: прожектор за курсором, сітка
+   з крапок під ним і нахил картки в бік миші. Це єдине місце в
+   налаштуваннях, де людина буває раз — тут видовище доречне, на
+   відміну від списків, куди заходять щодня.
+
+   Картка при цьому лишається на місці: нахил іде навколо її власного
+   центру, без зсуву й без стрибка сусідів. Рухома під мишею верстка
+   втомлює, нахил — ні.
+
+   Усе святкове живе під прапорцем «повний рух» із налаштувань. У
+   режимах calm/off лишаються тільки статичні кольори.
+================================================================== */
+
+/* Висота картки задана числом, а не вмістом.
+
+   Через вміст вона рахувалась по-різному: у MT5 знизу таблетка,
+   у cTrader — рядок тексту, і картки виходили різної висоти. Гірше
+   те, що при закритті форми MT5 на мить лишався без нижнього блока,
+   просідав і відростав назад — саме це й читалось як стрибок. Число
+   знімає обидва випадки разом. */
+const CARD_H = 260;
+
+const TILT_SPRING = { stiffness: 170, damping: 15, mass: 0.5 };
+const HOVER_SPRING = { type: 'spring', stiffness: 260, damping: 24, mass: 0.6 };
+
+/* Знак платформи.
+
+   Файли лежать у public/platforms і підключаються адресою, а не
+   import'ом: якщо котрогось немає, збірка не падає — просто
+   вмикається запасна геометрія нижче. Це важливо, бо логотипи
+   докладає людина, а не репозиторій.
+
+   Тільки svg: png-версії логотипів ідуть із білою підкладкою, і на
+   темній плитці це читається як білий квадрат, а не як знак. */
+const MARK_SRC = {
+  mt5: '/platforms/mt5.svg',
+  ctrader: '/platforms/ctrader.svg',
+};
+
+function PlatformMark({ kind, hot, big }) {
+  const [broken, setBroken] = useState(false);
+  const src = broken ? null : MARK_SRC[kind];
+  const size = big ? 64 : 56;
+
+  return (
+    <motion.span
+      className="relative grid shrink-0 place-items-center overflow-hidden"
+      animate={{ scale: hot ? 1.07 : 1, rotate: hot ? -3 : 0 }}
+      transition={HOVER_SPRING}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 18,
+        background: T.sunken,
+        border: `1px solid ${hot ? T.lineHi : T.line}`,
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+        transition: 'border-color .25s ease',
+      }}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          onError={() => setBroken(true)}
+          style={{ width: size - 22, height: size - 22, display: 'block', objectFit: 'contain' }}
+        />
+      ) : (
+        /* Запасний знак: узагальнена графіка ринку, поки файл не
+           поклали в public/platforms. */
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ color: T.text3 }}>
+          <rect x="4" y="15" width="4.6" height="8" rx="1.6" fill="currentColor" opacity="0.45" />
+          <rect x="11.7" y="10" width="4.6" height="13" rx="1.6" fill="currentColor" opacity="0.72" />
+          <rect x="19.4" y="5" width="4.6" height="18" rx="1.6" fill="currentColor" />
+        </svg>
+      )}
+    </motion.span>
+  );
+}
+
+/* Рамка, що обертається. Живе тільки поки курсор на картці — інакше
+   у вікні налаштувань постійно крутився б requestAnimationFrame. */
+function GlowRing({ rgb }) {
+  return (
+    <motion.span
+      className="pointer-events-none absolute"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35 }}
+      style={{ inset: -1, borderRadius: 19, overflow: 'hidden' }}
+    >
+      <motion.span
+        className="absolute"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
+        style={{
+          left: '50%',
+          top: '50%',
+          width: '190%',
+          aspectRatio: '1 / 1',
+          translateX: '-50%',
+          translateY: '-50%',
+          background: `conic-gradient(from 0deg, transparent 0deg, rgba(${rgb},0.85) 40deg, rgba(${T.accRgb},0.55) 80deg, transparent 150deg, transparent 360deg)`,
+        }}
+      />
+    </motion.span>
+  );
+}
+
+/* Поле форми.
+
+   Підпис стоїть над рамкою, а не плейсхолдером усередині:
+   плейсхолдер зникає з першим символом, і людина, яка відволіклась
+   на кабінет пропа, повертається до трьох однакових рядків і не
+   памʼятає, який з них який. */
+const FIELD = {
+  fontFamily: T.sans,
+  height: 50,
+  width: '100%',
+  borderRadius: 14,
+  border: `1px solid ${T.line}`,
+  background: T.sunken,
+  color: T.text,
+  fontSize: 14.5,
+  transition: 'border-color .18s, box-shadow .18s',
+};
+
+const fieldOn = (e) => {
+  e.currentTarget.style.borderColor = T.acc;
+  e.currentTarget.style.boxShadow = `0 0 0 3px rgba(${T.accRgb},0.12)`;
+};
+
+const fieldOff = (e) => {
+  e.currentTarget.style.borderColor = T.line;
+  e.currentTarget.style.boxShadow = 'none';
+};
+
+/* Автозаповнення тут шкідливе: браузер пхає пошту й пароль від
+   самого застосунку в поля, куди треба чужі дані від терміналу.
+   Одного autoComplete="off" мало — Chrome його ігнорує на полях,
+   схожих на логін, тому глушимо ще й менеджери паролів. */
+const NO_FILL = {
+  autoComplete: 'off',
+  autoCorrect: 'off',
+  autoCapitalize: 'off',
+  spellCheck: false,
+  'data-lpignore': 'true',
+  'data-1p-ignore': '',
+  'data-form-type': 'other',
+};
+
+/* Кнопка в Telegram.
+
+   У спокої це кружечок з літачком — синій знак месенджера впізнають
+   без підпису, а капсом набраний рядок «MESSAGE ON TELEGRAM» ламав
+   типографіку всієї форми. Підпис виїжджає на ховері: хто не впізнав
+   іконку — прочитає, хто впізнав — не бачить зайвого тексту. */
+/* Напис завжди на місці, а не зʼявляється на ховері.
+
+   Це кнопка всередині вже розкритої панелі допомоги — людина розкрила
+   її саме тому, що застрягла, і читати намір з наведення миші тут
+   зайве: на телефоні наведення взагалі не існує, і напис мав би не
+   зʼявитися ніколи. Тому це звичайна кнопка з текстом, а жвавість —
+   у легкому підйомі й тіні на ховері, не в тому, що ховається текст.
+
+   Колір — темний, на токенах картки, а не фірмовий синій Telegram:
+   яскрава пляма посеред приглушеної форми зчитувалась як реклама,
+   а не як спокійний вихід «написати нам». Впізнати дію можна і без
+   бренд-кольору — іконка літака вже все каже. */
+function TelegramButton({ label = 'Message us on Telegram' }) {
+  const [hot, setHot] = useState(false);
+
+  return (
+    <a
+      href="https://t.me/h1f3stt"
+      target="_blank"
+      rel="noreferrer"
+      onMouseEnter={() => setHot(true)}
+      onMouseLeave={() => setHot(false)}
+      className="inline-flex items-center"
+      style={{
+        gap: 10,
+        height: 42,
+        padding: '0 18px 0 8px',
+        borderRadius: 999,
+        background: hot ? T.surfaceHi : T.sunken,
+        border: `1px solid ${hot ? T.lineHi : T.line}`,
+        color: hot ? T.text : T.text2,
+        transform: hot ? 'translateY(-1px)' : 'none',
+        transition: 'background .25s ease, border-color .25s ease, color .25s ease, transform .25s ease',
+      }}
+    >
+      <span
+        className="grid shrink-0 place-items-center"
+        style={{
+          width: 30,
+          height: 30,
+          borderRadius: 999,
+          background: `rgba(${T.accRgb},0.14)`,
+          color: T.acc,
+        }}
+      >
+        <Send size={14} strokeWidth={2.3} />
+      </span>
+      <span
+        className="whitespace-nowrap"
+        style={{ fontFamily: T.sans, fontSize: 13.5, fontWeight: 700, letterSpacing: '-.01em' }}
+      >
+        {label}
+      </span>
+    </a>
+  );
+}
+
+/* Результат перевірки підключення.
+
+   Весь сенс цієї панелі — не змушувати людину гадати. Рядок у базі
+   перевіряє VPS, і поки він мовчить, у формі має бути видно, що
+   процес іде; коли відповів — що саме сталось, людською мовою, а не
+   «status: error». Текст помилки приходить з термінала як є: «invalid
+   account», «no connection» — це найкорисніше, що можна показати. */
+const SYNC_STATE = {
+  checking: {
+    rgb: () => T.accRgb,
+    title: 'Checking the connection…',
+    text: 'Logging into the terminal. Usually a few seconds.',
+  },
+  slow: {
+    rgb: () => T.warnRgb,
+    title: 'Still checking',
+    text: 'Taking longer than usual. You can close this — the result will be here when you come back.',
+  },
+  ok: {
+    rgb: () => T.okRgb,
+    title: 'Connected',
+    text: 'Your trades will start arriving with the next sync.',
+  },
+  fail: {
+    rgb: () => T.badRgb,
+    title: 'Couldn’t connect',
+    text: null,
+  },
+};
+
+function SyncStatus({ phase, msg, onRetry, onDone }) {
+  const v = SYNC_STATE[phase] || SYNC_STATE.checking;
+  const rgb = v.rgb();
+  const waiting = phase === 'checking' || phase === 'slow';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: EASE }}
+      className="flex items-start"
+      style={{
+        gap: 13,
+        marginTop: 4,
+        padding: 18,
+        borderRadius: 16,
+        border: `1px solid rgba(${rgb},0.28)`,
+        background: `rgba(${rgb},0.07)`,
+      }}
+    >
+      <span
+        className="grid shrink-0 place-items-center"
+        style={{ width: 34, height: 34, borderRadius: 11, background: `rgba(${rgb},0.14)`, color: `rgb(${rgb})` }}
+      >
+        {waiting && <Loader2 size={16} className="animate-spin" />}
+        {phase === 'ok' && <Check size={16} strokeWidth={2.6} />}
+        {phase === 'fail' && <X size={16} strokeWidth={2.6} />}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <div style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 700, color: T.text }}>
+          {v.title}
+        </div>
+        <p
+          style={{
+            fontFamily: T.sans,
+            marginTop: 5,
+            fontSize: 13,
+            lineHeight: '19px',
+            color: T.text3,
+            wordBreak: 'break-word',
+          }}
+        >
+          {v.text || msg}
+        </p>
+
+        {(phase === 'fail' || phase === 'ok') && (
+          <button
+            type="button"
+            onClick={phase === 'fail' ? onRetry : onDone}
+            style={{
+              marginTop: 12,
+              height: 36,
+              padding: '0 16px',
+              borderRadius: 11,
+              fontFamily: T.sans,
+              fontSize: 13,
+              fontWeight: 600,
+              border: `1px solid ${T.line}`,
+              background: T.sunken,
+              color: T.text2,
+              transition: 'all .18s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
+          >
+            {phase === 'fail' ? 'Try again' : 'Done'}
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function FormField({ label, hint, children }) {
+  return (
+    <label className="relative block">
+      <span
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          gap: 10,
+          marginBottom: 8,
+          fontFamily: T.sans,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: '.09em',
+          textTransform: 'uppercase',
+          color: T.text4,
+        }}
+      >
+        {label}
+        {hint && (
+          <span style={{ fontSize: 11.5, fontWeight: 500, letterSpacing: 0, textTransform: 'none', color: T.text4 }}>
+            {hint}
+          </span>
+        )}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+/* Проп-фірми.
+
+   Список потрібен не для краси: у кожного пропа своя збірка терміналу,
+   і тільки вона знає адреси його серверів. Загальний MetaTrader 5 з
+   сайту розробника про «FTMO-Server5» не чув узагалі. Тому вибір пропа
+   тут — це насправді вибір терміналу, який воркер підніме на VPS.
+
+   `tint` — не фірмовий колір, а наша підкладка під монограму, поки
+   логотип не поклали у public/props. Самі логотипи докладає людина:
+   лежать вони як /props/<id>.svg і підтягуються адресою, тож брак
+   файлу нічого не ламає — вмикається монограма. */
+const BROKERS = [
+  { id: 'ftmo',        name: 'FTMO',             tint: '#2f6fdb' },
+  { id: 'fundingpips', name: 'FundingPips',      tint: '#1f9d6b' },
+  { id: 'fundednext',  name: 'FundedNext',       tint: '#e0803a' },
+  { id: 'the5ers',     name: 'The5ers',          tint: '#4a7de0' },
+  { id: 'e8',          name: 'E8 Markets',       tint: '#c9a23f' },
+  { id: 'goat',        name: 'Goat Funded Trader', tint: '#8f5ad6' },
+  { id: 'brightfunded', name: 'BrightFunded',    tint: '#3fb9a8' },
+  { id: 'alphacapital', name: 'Alpha Capital',   tint: '#c2504e' },
+  { id: 'fxify',       name: 'FXIFY',            tint: '#5b73e8' },
+  { id: 'dnafunded',   name: 'DNA Funded',       tint: '#3f9dc9' },
+  { id: 'aquafunded',  name: 'AquaFunded',       tint: '#2f97c4' },
+  { id: 'atlasfunded', name: 'Atlas Funded',     tint: '#b98a4a' },
+  { id: 'other',       name: 'Another firm',     tint: '#6b6b78' },
+];
+
+const brokerById = (id) => BROKERS.find((b) => b.id === id) || BROKERS[BROKERS.length - 1];
+
+/* Знак пропа. Файл або монограма — третього не дано, і саме тому
+   картинка ніколи не залишає порожню дірку в рядку списку. */
+function BrokerMark({ broker, size = 26 }) {
+  const [broken, setBroken] = useState(false);
+
+  /* Скидаємо помилку при зміні пропа: інакше один відсутній логотип
+     назавжди вимикав би картинку для всіх наступних. */
+  useEffect(() => setBroken(false), [broker.id]);
+
+  return (
+    <span
+      className="grid shrink-0 place-items-center overflow-hidden"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size * 0.3,
+        background: broken ? `${broker.tint}22` : T.sunken,
+        border: `1px solid ${broken ? `${broker.tint}55` : T.line}`,
+      }}
+    >
+      {broken ? (
+        <span
+          style={{
+            fontFamily: T.sans,
+            fontSize: size * 0.42,
+            fontWeight: 800,
+            letterSpacing: '-.02em',
+            color: broker.tint,
+          }}
+        >
+          {broker.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase()}
+        </span>
+      ) : (
+        <img
+          src={`/props/${broker.id}.svg`}
+          alt=""
+          onError={() => setBroken(true)}
+          style={{ width: size - 8, height: size - 8, objectFit: 'contain', display: 'block' }}
+        />
+      )}
+    </span>
+  );
+}
+
+/* Вибір пропа.
+
+   Свій список, а не <select>: нативний випадний список у Windows
+   малює сама система, темну тему ігнорує і картинки в рядках не
+   вміє — а тут вони половина сенсу. */
+function BrokerPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+  const current = brokerById(value);
+
+  /* Клік повз список має його закривати. Слухаємо документ, а не
+     onBlur кнопки: onBlur спрацьовує раніше за клік по рядку, і вибір
+     не встигав би зареєструватись. */
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!boxRef.current?.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+
+  return (
+    <div ref={boxRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center outline-none"
+        style={{
+          ...FIELD,
+          gap: 11,
+          padding: '0 14px',
+          borderColor: open ? T.acc : T.line,
+          boxShadow: open ? `0 0 0 3px rgba(${T.accRgb},0.12)` : 'none',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <BrokerMark broker={current} />
+        <span className="min-w-0 flex-1 truncate" style={{ color: T.text }}>
+          {current.name}
+        </span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.22, ease: EASE }}
+          style={{ color: T.text4, display: 'grid' }}
+        >
+          <ChevronDown size={16} strokeWidth={2.4} />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.985 }}
+            transition={{ duration: 0.18, ease: EASE }}
+            className="absolute left-0 right-0 z-30 overflow-y-auto"
+            style={{
+              top: 'calc(100% + 8px)',
+              maxHeight: 244,
+              padding: 6,
+              borderRadius: 16,
+              border: `1px solid ${T.lineHi}`,
+              background: T.surfaceHi,
+              boxShadow: '0 24px 60px -20px rgba(0,0,0,0.75)',
+              transformOrigin: 'top',
+            }}
+          >
+            {BROKERS.map((b) => {
+              const on = b.id === value;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => { onChange(b.id); setOpen(false); }}
+                  className="flex w-full items-center"
+                  style={{
+                    gap: 11,
+                    padding: '9px 10px',
+                    borderRadius: 11,
+                    fontFamily: T.sans,
+                    fontSize: 14,
+                    color: on ? T.text : T.text2,
+                    background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
+                    textAlign: 'left',
+                    transition: 'background .15s, color .15s',
+                  }}
+                  onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.sunken; }}
+                  onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <BrokerMark broker={b} size={24} />
+                  <span className="min-w-0 flex-1 truncate">{b.name}</span>
+                  {on && <Check size={15} strokeWidth={2.6} style={{ color: T.acc, flexShrink: 0 }} />}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* Уже підключені рахунки.
+
+   Вузький рядок під карткою, а не окремий розділ зі списком: людині
+   треба знати, що рахунок на місці й котрий саме, і на цьому все.
+   Керування підключенням живе у формі вище. */
+const LINK_STATE = {
+  active:  { c: T.ok,   label: 'connected' },
+  pending: { c: T.warn, label: 'checking' },
+  error:   { c: T.bad,  label: 'failed' },
+};
+
+function LinkedAccounts({ tick }) {
+  const [rows, setRows] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    listMt5Accounts()
+      .then((data) => { if (alive) setRows(data.filter((r) => r.platform === 'mt5')); })
+      /* Мовчки: це довідкова смужка, і якщо база не відповіла, краще
+         її не показати, ніж лякати людину помилкою в налаштуваннях. */
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [tick]);
+
+  if (!rows.length) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: EASE }}
+      className="flex flex-col"
+      style={{ gap: 6 }}
+    >
+      {rows.map((r) => <LinkedRow key={r.id} row={r} />)}
+    </motion.div>
+  );
+}
+
+function LinkedRow({ row }) {
+  const [hot, setHot] = useState(false);
+  const ref = useRef(null);
+  const st = LINK_STATE[row.status] || LINK_STATE.pending;
+  const broker = brokerById(row.broker);
+
+  /* Світло йде за курсором, сам рядок лишається на місці. Рух дрібного
+     елемента у списку читається як збій верстки, а не як відповідь на
+     наведення — тому реагує тільки підсвітка. */
+  const onMove = (e) => {
+    const el = ref.current;
+    if (!el) return;
+    const b = el.getBoundingClientRect();
+    el.style.setProperty('--mx', `${e.clientX - b.left}px`);
+    el.style.setProperty('--my', `${e.clientY - b.top}px`);
+  };
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={onMove}
+      onMouseEnter={() => setHot(true)}
+      onMouseLeave={() => setHot(false)}
+      className="relative flex items-center overflow-hidden"
+      style={{
+        gap: 9,
+        padding: '9px 13px',
+        borderRadius: 12,
+        border: `1px solid ${hot ? T.lineHi : T.line}`,
+        background: T.sunken,
+        transition: 'border-color .25s ease',
+      }}
+    >
+      <span
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: `radial-gradient(190px circle at var(--mx, 50%) var(--my, 50%), rgba(${T.accRgb},0.10), transparent 68%)`,
+          opacity: hot ? 1 : 0,
+          transition: 'opacity .3s ease',
+        }}
+      />
+
+      <BrokerMark broker={broker} size={20} />
+
+      <span
+        className="relative shrink-0 tabular-nums"
+        style={{ fontFamily: T.mono, fontSize: 12.5, color: hot ? T.text : T.text2, transition: 'color .25s' }}
+      >
+        {row.login}
+      </span>
+      <span className="relative" style={{ color: T.text4, fontSize: 12 }}>·</span>
+      <span
+        className="relative min-w-0 flex-1 truncate"
+        style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text3 }}
+      >
+        {row.server}
+      </span>
+
+      <span
+        className="relative flex shrink-0 items-center"
+        style={{ gap: 6 }}
+      >
+        <motion.span
+          className="rounded-full"
+          style={{ width: 6, height: 6, background: st.c }}
+          /* Пульс лише поки триває перевірка: анімація, що не
+             закінчується, перестає щось означати. */
+          animate={row.status === 'pending'
+            ? { opacity: [1, 0.35, 1], scale: [1, 0.82, 1] }
+            : { opacity: 1, scale: 1 }}
+          transition={row.status === 'pending'
+            ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
+            : { duration: 0.2 }}
+        />
+        <span
+          style={{
+            fontFamily: T.sans,
+            fontSize: 10.5,
+            fontWeight: 700,
+            letterSpacing: '.07em',
+            textTransform: 'uppercase',
+            color: st.c,
+          }}
+        >
+          {st.label}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function ConnectTab() {
+  const s = useSettings();
+  const fancy = (s.motion || 'full') === 'full';
+  const [open, setOpen] = useState(false);
+
+  /* Ховер тримаємо тут, а не в картці: сусідка має відступити на
+     задній план, а для цього їй треба знати, що наведено не на неї. */
+  const [hover, setHover] = useState(null);
+
+  /* Лічильник перечитування списку. Смужка під карткою має оновитись
+     рівно тоді, коли воркер підтвердив рахунок, — не раніше. */
+  const [tick, setTick] = useState(0);
+
+  /* alignItems: start, а не розтягування на висоту рядка.
+
+     Інакше при закритті форми виходить таке: MT5 ще згортається і
+     рядок сітки поки високий, cTrader у цю мить монтується назад і
+     слухняно тягнеться на всю його висоту — а через мить падає до
+     своєї. Збоку це читається як стрибок. Коли кожна картка тримає
+     власну висоту, стрибати нема чому. */
+  return (
+    <div
+      className={`grid grid-cols-1 ${open ? '' : 'sm:grid-cols-2'}`}
+      style={{ gap: 18, alignItems: 'start' }}
+    >
+      <div className="flex flex-col" style={{ gap: 10 }}>
+        <Mt5Card
+          fancy={fancy}
+          open={open}
+          faded={hover === 'ct'}
+          onHover={setHover}
+          onOpen={() => setOpen(true)}
+          onClose={() => setOpen(false)}
+          onSaved={() => setTick((n) => n + 1)}
+        />
+        <LinkedAccounts tick={tick} />
+      </div>
+      <AnimatePresence initial={false}>
+        {!open && (
+          <SoonCard key="ctrader" faded={hover === 'mt5'} onHover={setHover} />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved }) {
+  const [broker, setBroker] = useState('ftmo');
+  const [server, setServer] = useState('');
+  const [login, setLogin] = useState('');
+  const [pass, setPass] = useState('');
+  const [help, setHelp] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [hot, setHot] = useState(false);
+
+  /* form → checking → ok | fail | slow.
+
+     «slow» — це не помилка, а чесне «ще перевіряємо». Воно зʼявляється,
+     коли за 45 секунд відповіді немає: краще сказати людині, що можна
+     піти, ніж крутити спінер, який нічого не означає. */
+  const [phase, setPhase] = useState('form');
+  const [failMsg, setFailMsg] = useState('');
+
+  const watchRef = useRef(null);
+  const timerRef = useRef(null);
+
+  const stopWatch = () => {
+    if (watchRef.current) { watchRef.current(); watchRef.current = null; }
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+  };
+
+  /* Закрили вікно посеред перевірки — канал і таймер мають піти
+     разом з ним. */
+  useEffect(() => stopWatch, []);
+
+  /* Нахил рахуємо від локальних координат курсора в картці. Кут
+     навмисно маленький: на 9° картка читається як предмет, на 20° —
+     як атракціон. */
+  const rx = useMotionValue(0);
+  const ry = useMotionValue(0);
+  const srx = useSpring(rx, TILT_SPRING);
+  const sry = useSpring(ry, TILT_SPRING);
+
+  const onMove = (e) => {
+    if (!fancy || open) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    rx.set(-((e.clientY - r.top) / r.height - 0.5) * 9);
+    ry.set(((e.clientX - r.left) / r.width - 0.5) * 12);
+  };
+
+  const enter = () => { if (!open) { setHot(true); onHover('mt5'); } };
+  const rest = () => { rx.set(0); ry.set(0); setHot(false); onHover(null); };
+
+  /* Розкрили форму — нахил зняти. Інакше кут, у якому курсор застав
+     картку на кліку, лишається назавжди, і поля вводу стоять косо.
+
+     Згорнули — прибрати за собою: канал Realtime закрити, а форму
+     повернути в початковий стан, щоб наступного разу вона не
+     відкрилась зі старим «Connected» чи чужою помилкою. */
+  useEffect(() => {
+    if (open) {
+      rx.set(0);
+      ry.set(0);
+      setHot(false);
+    } else {
+      stopWatch();
+      setPhase('form');
+      setFailMsg('');
+    }
+  }, [open, rx, ry]);
+
+  const ready = server.trim().length > 1 && login.trim().length > 2 && pass.length > 3;
+
+  /* Прийшла відповідь від воркера. */
+  const settle = (row) => {
+    if (row.status === 'active') {
+      /* Пароль більше не потрібен — прибираємо зі стану. Раніше він
+         чистився одразу після збереження, але тоді людина з невірною
+         назвою сервера мусила передруковувати його при кожній спробі. */
+      setPass('');
+      setPhase('ok');
+      stopWatch();
+      onSaved?.();
+    } else if (row.status === 'error') {
+      setFailMsg(row.last_error || 'Couldn’t log in with these details.');
+      setPhase('fail');
+      stopWatch();
+    }
+  };
+
+  /* Пароль шифрується публічним ключем ще в браузері — у базу йде
+     тільки шифротекст. Далі чекаємо на вердикт VPS. */
+  const connect = async () => {
+    if (!ready || busy) return;
+    setBusy(true);
+    setFailMsg('');
+
+    try {
+      const id = await connectMt5({ broker, server, login, password: pass });
+      setPhase('checking');
+      stopWatch();
+      watchRef.current = watchMt5Account(id, settle);
+
+      timerRef.current = setTimeout(async () => {
+        try {
+          const row = await readMt5Status(id);
+          if (row.status === 'pending') setPhase('slow');
+          else settle(row);
+        } catch {
+          setPhase('slow');
+        }
+      }, 45000);
+    } catch (e) {
+      setFailMsg(e?.message || 'Couldn’t save it.');
+      setPhase('fail');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const retry = () => {
+    stopWatch();
+    setFailMsg('');
+    setPhase('form');
+  };
+
+  return (
+    <motion.div
+      layout
+      transition={{ duration: 0.42, ease: EASE }}
+      style={{ borderRadius: 20 }}
+    >
+      {/* Зовнішній шар відповідає тільки за розкладку, внутрішній —
+          за ховер. Якби layout і scale жили на одному елементі, вони
+          билися б за transform, і картка сіпалась би при відкритті. */}
+      <motion.div
+        onClick={open ? undefined : onOpen}
+        onMouseMove={onMove}
+        onMouseEnter={enter}
+        onMouseLeave={rest}
+        className="group relative"
+        animate={{
+          scale: hot ? 1.025 : faded ? 0.975 : 1,
+          opacity: faded ? 0.5 : 1,
+        }}
+        transition={HOVER_SPRING}
+        style={{
+          borderRadius: 20,
+          cursor: open ? 'default' : 'pointer',
+          rotateX: srx,
+          rotateY: sry,
+          transformPerspective: 1100,
+          transformStyle: 'preserve-3d',
+        }}
+      >
+        <AnimatePresence>{hot && fancy && <GlowRing key="ring" rgb={T.infoRgb} />}</AnimatePresence>
+
+      <div
+        className="relative flex flex-col overflow-hidden"
+        style={{
+          borderRadius: 20,
+          border: `1px solid ${open || hot ? T.lineHi : T.line}`,
+          background: `linear-gradient(165deg, ${T.surfaceHi} 0%, ${T.surface} 100%)`,
+          padding: 26,
+          height: open ? 'auto' : CARD_H,
+          transition: 'border-color .25s ease',
+          transformStyle: 'preserve-3d',
+        }}
+      >
+        <motion.div layout="position" className="relative" style={{ transform: 'translateZ(26px)' }}>
+          <div className="flex items-start justify-between" style={{ gap: 14 }}>
+            <PlatformMark kind="mt5" hot={hot} big />
+
+            {open && (
+              <button
+                onClick={onClose}
+                className="grid shrink-0 place-items-center"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  border: `1px solid ${T.line}`,
+                  color: T.text3,
+                  transition: 'all .18s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
+              >
+                <X size={15} strokeWidth={2.4} />
+              </button>
+            )}
+          </div>
+
+          <motion.div
+            animate={{ x: hot ? 4 : 0 }}
+            transition={HOVER_SPRING}
+            style={{ marginTop: 22 }}
+          >
+            <div
+              style={{
+                fontFamily: T.display,
+                fontSize: 22,
+                fontWeight: 700,
+                letterSpacing: '-.02em',
+                color: T.text,
+              }}
+            >
+              MetaTrader 5
+            </div>
+            <div style={{ fontFamily: T.sans, marginTop: 5, fontSize: 13.5, color: T.text3 }}>
+              Login, password and server
+            </div>
+          </motion.div>
+        </motion.div>
+
+      <AnimatePresence initial={false} mode="wait">
+        {open ? (
+          <motion.div
+            key="form"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.28, ease: EASE, delay: 0.06 }}
+            className="relative flex flex-col"
+            style={{ gap: 14, marginTop: 22 }}
+          >
+            {/* Знак терміналу великим планом у кутку форми: видно, до
+                чого саме підключаєшся, навіть коли шапка з логотипом
+                вже поїхала вгору під час прокрутки. */}
+            <img
+              src="/platforms/mt5.svg"
+              alt=""
+              aria-hidden
+              className="pointer-events-none absolute"
+              style={{ right: -24, bottom: -26, width: 170, opacity: 0.05 }}
+            />
+
+            <span style={{ height: 1, background: T.line, marginBottom: 2 }} />
+
+            {/* Проп стоїть найпершим, бо від нього залежить усе інше:
+                кожна фірма має власну збірку терміналу, і сервери вона
+                знає тільки свої. Помилитись тут — значить отримати
+                «сервер не знайдено» з правильно введеною назвою. */}
+            <FormField label="Prop firm">
+              <BrokerPicker value={broker} onChange={setBroker} />
+            </FormField>
+
+            <FormField label="Server">
+              <input
+                {...NO_FILL}
+                name="edge-mt5-server"
+                value={server}
+                onChange={(e) => setServer(e.target.value)}
+                className="edge-field outline-none"
+                style={{ ...FIELD, padding: '0 16px' }}
+                onFocus={fieldOn}
+                onBlur={fieldOff}
+              />
+            </FormField>
+
+            {/* Знак питання — окремим рядком під полями, а не всередині
+                інпута: там він читався як частина поля вводу, а не як
+                питання про форму в цілому. Одна кнопка на всі три
+                причини застрягти, бо людина в цей момент ще не знає,
+                котра саме її причина. */}
+            <button
+              type="button"
+              onClick={() => setHelp((v) => !v)}
+              className="flex items-center self-start"
+              style={{
+                gap: 7,
+                marginTop: -2,
+                fontFamily: T.sans,
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: help ? T.acc : T.text4,
+                transition: 'color .18s',
+              }}
+            >
+              <HelpCircle size={14} strokeWidth={2.3} />
+              Something not working?
+            </button>
+
+            <AnimatePresence initial={false}>
+              {help && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3, ease: EASE }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div
+                    className="flex items-start"
+                    style={{
+                      gap: 13,
+                      padding: 18,
+                      borderRadius: 16,
+                      border: `1px solid ${T.line}`,
+                      background: T.sunken,
+                    }}
+                  >
+                    <span
+                      className="grid shrink-0 place-items-center"
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 11,
+                        background: `rgba(${T.accRgb},0.12)`,
+                        border: `1px solid ${T.accLine}`,
+                        color: T.acc,
+                      }}
+                    >
+                      <HelpCircle size={16} strokeWidth={2.3} />
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 700, color: T.text }}>
+                        Need a hand?
+                      </div>
+                      <p
+                        style={{
+                          fontFamily: T.sans,
+                          marginTop: 6,
+                          fontSize: 13,
+                          lineHeight: '20px',
+                          color: T.text3,
+                        }}
+                      >
+                        Don’t see your prop firm, the connection won’t go through, or the server
+                        isn’t found — message us and we’ll sort it out, usually the same day.
+                      </p>
+
+                      <div className="mt-3.5">
+                        <TelegramButton />
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <FormField label="Login" hint="account number">
+              <input
+                {...NO_FILL}
+                name="edge-mt5-login"
+                inputMode="numeric"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                className="edge-field outline-none"
+                style={{ ...FIELD, padding: '0 16px' }}
+                onFocus={fieldOn}
+                onBlur={fieldOff}
+              />
+            </FormField>
+
+            <FormField label="Investor password" hint="read-only">
+              <input
+                {...NO_FILL}
+                autoComplete="new-password"
+                name="edge-mt5-secret"
+                type="password"
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
+                className="edge-field outline-none"
+                style={{ ...FIELD, padding: '0 16px' }}
+                onFocus={fieldOn}
+                onBlur={fieldOff}
+              />
+            </FormField>
+
+            {/* Саме інвесторський, а не основний: він лише читає. Це
+                варто сказати до того, як людина введе не той. */}
+            <div className="flex items-start" style={{ gap: 10 }}>
+              <KeyRound size={14} strokeWidth={2.2} style={{ color: T.text4, marginTop: 2, flexShrink: 0 }} />
+              <p style={{ fontFamily: T.sans, fontSize: 12.5, lineHeight: '19px', color: T.text4 }}>
+                The investor password is read-only — nobody can place a trade with it, us included.
+              </p>
+            </div>
+
+            {phase === 'form' ? (
+              <button
+                type="button"
+                onClick={connect}
+                disabled={!ready || busy}
+                className="flex items-center justify-center"
+                style={{
+                  marginTop: 4,
+                  gap: 9,
+                  height: 50,
+                  borderRadius: 14,
+                  fontFamily: T.sans,
+                  fontSize: 14.5,
+                  fontWeight: 700,
+                  background: ready
+                    ? `linear-gradient(135deg, rgba(${T.accRgb},1) 0%, rgba(${T.accRgb},0.78) 100%)`
+                    : T.sunken,
+                  border: `1px solid ${ready ? 'transparent' : T.line}`,
+                  color: ready ? 'var(--edge-on-acc, #0A0A0C)' : T.text4,
+                  boxShadow: ready ? `0 16px 34px -18px rgba(${T.accRgb},0.9)` : 'none',
+                  cursor: ready && !busy ? 'pointer' : 'default',
+                  transition: 'all .22s',
+                }}
+              >
+                {busy && <Loader2 size={15} className="animate-spin" />}
+                {busy ? 'Saving…' : 'Connect account'}
+              </button>
+            ) : (
+              <SyncStatus phase={phase} msg={failMsg} onRetry={retry} onDone={onClose} />
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="cta"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="relative"
+            style={{ marginTop: 'auto', paddingTop: 22, transform: 'translateZ(18px)' }}
+          >
+            {/* Не гола стрілка з підписом, а таблетка: видно межі
+                дії ще до наведення, і стан «наведено» показує сама
+                кнопка, а не текст, що зʼявляється нізвідки. */}
+            <span
+              className="inline-flex items-center"
+              style={{
+                gap: 10,
+                height: 40,
+                padding: '0 7px 0 17px',
+                borderRadius: 999,
+                fontFamily: T.sans,
+                fontSize: 13.5,
+                fontWeight: 600,
+                color: hot ? T.text : T.text2,
+                background: hot ? `rgba(${T.infoRgb},0.12)` : T.sunken,
+                border: `1px solid ${hot ? `rgba(${T.infoRgb},0.42)` : T.line}`,
+                transition: 'background .28s ease, border-color .28s ease, color .28s ease',
+              }}
+            >
+              Set it up
+              <motion.span
+                className="grid place-items-center"
+                animate={{ x: hot ? 2 : 0 }}
+                transition={HOVER_SPRING}
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 999,
+                  background: hot ? T.info : T.line,
+                  color: hot ? '#08080c' : T.text3,
+                  transition: 'background .28s ease, color .28s ease',
+                }}
+              >
+                <ArrowRight size={14} strokeWidth={2.6} />
+              </motion.span>
+            </span>
+          </motion.div>
+        )}
+        </AnimatePresence>
+      </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* cTrader. Картка навмисно неклікабельна й пунктирна: вимкнений
+   елемент, який виглядає як робочий, — це обіцянка, якої інтерфейс
+   не виконає. Нічого періодичного тут не блимає: смуга світла, що
+   сама собою пробігає раз на кілька секунд, у вікні налаштувань
+   читається як дефект, а не як прикраса. */
+function SoonCard({ faded, onHover }) {
+  const [hot, setHot] = useState(false);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{
+        opacity: faded ? 0.45 : 1,
+        scale: hot ? 1.015 : faded ? 0.975 : 1,
+      }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      transition={HOVER_SPRING}
+      onMouseEnter={() => { setHot(true); onHover('ct'); }}
+      onMouseLeave={() => { setHot(false); onHover(null); }}
+      className="relative flex flex-col overflow-hidden"
+      style={{
+        borderRadius: 20,
+        border: `1px dashed ${hot ? T.lineHi : T.line}`,
+        background: `linear-gradient(165deg, ${T.surface} 0%, ${T.bg} 100%)`,
+        padding: 26,
+        height: CARD_H,
+        cursor: 'default',
+        transition: 'border-color .25s ease',
+      }}
+    >
+      <span
+        className="pointer-events-none absolute"
+        style={{
+          inset: 0,
+          opacity: 0.3,
+          background: `repeating-linear-gradient(135deg, transparent 0 9px, ${T.line} 9px 10px)`,
+        }}
+      />
+
+      <span
+        className="absolute"
+        style={{
+          top: 18,
+          right: 18,
+          fontFamily: T.sans,
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: '1.8px',
+          textTransform: 'uppercase',
+          padding: '5px 11px',
+          borderRadius: 999,
+          background: `rgba(${T.accRgb},0.12)`,
+          border: `1px solid ${T.accLine}`,
+          color: T.acc,
+        }}
+      >
+        Soon
+      </span>
+
+      <div className="relative">
+        <span style={{ display: 'block', opacity: 0.72 }}>
+          <PlatformMark kind="ctrader" hot={hot} big />
+        </span>
+
+        <div style={{ marginTop: 22, opacity: 0.5 }}>
+          <div
+            style={{
+              fontFamily: T.display,
+              fontSize: 22,
+              fontWeight: 700,
+              letterSpacing: '-.02em',
+              color: T.text,
+            }}
+          >
+            cTrader
+          </div>
+          <div style={{ fontFamily: T.sans, marginTop: 5, fontSize: 13.5, color: T.text3 }}>
+            Sign in with your cTrader ID
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="relative"
+        style={{
+          marginTop: 'auto',
+          paddingTop: 22,
+          fontFamily: T.sans,
+          fontSize: 12.5,
+          color: T.text4,
+        }}
+      >
+        Next in line after MT5
+      </div>
+    </motion.div>
   );
 }

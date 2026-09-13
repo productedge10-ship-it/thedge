@@ -372,9 +372,12 @@ const sparkOption = {
   def: 'area',
 };
 
+/* 8 і «Усі» прибрані з вибору: рядок ~38px, клітинка фіксована на
+   h:2 (300px) — восьмий рядок уже не вміщався і йшов під
+   overflow:hidden. 5 — найбільше, що влазить із запасом. */
 const countOption = (def = '5') => ({
   label: 'Скільки рядків',
-  choices: [['3', '3'], ['5', '5'], ['8', '8'], ['all', 'Усі']],
+  choices: [['3', '3'], ['5', '5']],
   def,
 });
 
@@ -559,7 +562,10 @@ export const WIDGETS = {
     defaultW: 1, defaultH: 2, minH: 2,
     options: {},
     render: ({ s }) => (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 122, justifyContent: 'center' }}>
+      /* space-evenly, не gap: три рядки — завжди три, а клітинка
+         вища за них. Рівномірні проміжки розводять рядки на всю
+         висоту замість того, щоб лишати їх купкою зверху. */
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'space-evenly' }}>
         {[
           ['Найкраща смуга', `${s.bestW}`, P.ok, 'виграшів поспіль'],
           ['Найгірша смуга', `${s.worstL}`, P.bad, 'програшів поспіль'],
@@ -626,7 +632,9 @@ export const WIDGETS = {
     group: 'Графіки',
     tone: 'var(--edge-ok)',
     shape: 'bars',
-    defaultW: 1, defaultH: 1,
+    /* h:1 не влазить сам графік — recharts тримає під нього мінімум
+       120px, а в клітинці h:1 на це лишається сотня з чимось. */
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'net' },
@@ -684,7 +692,8 @@ export const WIDGETS = {
     group: 'Графіки',
     tone: 'var(--edge-acc)',
     shape: 'bars',
-    defaultW: 1, defaultH: 1,
+    /* Той самий графік, що й у «Сесій» — та сама мінімальна висота. */
+    defaultW: 1, defaultH: 2, minH: 2,
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'avg' },
@@ -748,7 +757,12 @@ export const WIDGETS = {
       });
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        /* flex:1 тут — щоб те саме flex:1 на графіку нижче мало кого
+           слухати. Без нього ця обгортка не росте всередині .ov-body,
+           і закріплений рядок (де висоту диктує найвищий із трьох
+           сусідів) лишав під кривою порожню смугу замість віддати їй
+           місце. */
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 12 }}>
           <div style={{ display: 'flex', gap: 8 }}>
             {[
               [CheckCircle2, 'По плану', followed, s.followed.length, P.ok],
@@ -799,11 +813,9 @@ export const WIDGETS = {
     group: 'Списки',
     tone: 'var(--edge-info)',
     shape: 'rows',
-    /* За замовчуванням тут 6 рядків — у клітинку h:1 влазить два-три,
-       решта обрізалась би. */
     defaultW: 1, defaultH: 2, minH: 2,
     options: {
-      count: countOption('6'),
+      count: countOption('5'),
       order: { label: 'Порядок', choices: [['best', 'Спершу найкращі'], ['worst', 'Спершу найгірші']], def: 'best' },
     },
     render: ({ s, o }) => {
@@ -829,7 +841,7 @@ export const WIDGETS = {
       const max = Math.max(...list.map((x) => Math.abs(x.v)), 1);
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'space-evenly' }}>
           {list.map((x, i) => (
             <Row
               key={x.label}
@@ -965,7 +977,10 @@ export const WIDGETS = {
       const fmt = (v) => (key === 'wr' ? `${v}%` : `${signed(v, key === 'avg' ? 2 : 1)}R`);
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        /* space-evenly замість gap: список коротший за клітинку, коли
+           активів мало, — рядки розходяться на всю висоту, а не тиснуться
+           зверху над порожнечею. */
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'space-evenly' }}>
           {list.map((x) => (
             <Row
               key={x.key}
@@ -1003,7 +1018,7 @@ export const WIDGETS = {
       const fmt = (v) => (key === 'wr' ? `${v}%` : `${signed(v, key === 'avg' ? 2 : 1)}R`);
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'space-evenly' }}>
           {list.map((x) => (
             <Row
               key={x.key}
@@ -1032,7 +1047,7 @@ export const WIDGETS = {
       const potential = s.net - sum(s.broken.filter((t) => t.rr < 0).map((t) => t.rr));
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: 122, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, justifyContent: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
             <Cap>план дотримано</Cap>
             <Num color={s.adherence >= 70 ? P.ok : P.warn} size={26}>{s.adherence}%</Num>

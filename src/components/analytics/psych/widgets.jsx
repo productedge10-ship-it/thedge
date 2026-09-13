@@ -51,8 +51,8 @@ const dirty = (t) => (t.mistakes || []).length > 0;
 function Big({ value, tone, facts = [], w = 1, note }) {
   const wide = w >= 2 && facts.length > 0;
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-5">
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-4">
         <b
           className="leading-none tabular-nums"
           style={{ fontFamily: F.mono, fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: tone }}
@@ -73,7 +73,7 @@ function Big({ value, tone, facts = [], w = 1, note }) {
         </div>
       </div>
       {note && (
-        <p className="m-0 text-[11.5px] leading-[1.5]" style={{ color: 'var(--edge-text3, #7A7A85)' }}>{note}</p>
+        <p className="m-0 text-[11.5px] leading-[1.4]" style={{ color: 'var(--edge-text3, #7A7A85)' }}>{note}</p>
       )}
     </div>
   );
@@ -293,17 +293,17 @@ const ALL_PSYCH_WIDGETS = {
       return (
         <>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
-          <div className="p-3.5 rounded-[12px] border border-[#34d399]/15 bg-[#34d399]/[0.05]">
+          <div className="p-3 rounded-[12px] border border-[#34d399]/15 bg-[#34d399]/[0.05]">
             <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Найкращий стан</span>
             <b className="block text-[15px] font-extrabold mt-1 text-[#34d399]">{EMOTION_LABEL[bestState.emotion]}</b>
             <small className="text-[11px] text-[#7A7A85]">{signed(bestState.avg, 2)}R на угоду</small>
           </div>
-          <div className="p-3.5 rounded-[12px] border border-[#f87171]/15 bg-[#f87171]/[0.05]">
+          <div className="p-3 rounded-[12px] border border-[#f87171]/15 bg-[#f87171]/[0.05]">
             <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Найгірший стан</span>
             <b className="block text-[15px] font-extrabold mt-1 text-[#f87171]">{EMOTION_LABEL[worstState.emotion]}</b>
             <small className="text-[11px] text-[#7A7A85]">{signed(worstState.avg, 2)}R на угоду</small>
           </div>
-          <div className="p-3.5 rounded-[12px] border border-[var(--edge-hair-strong)] bg-[var(--edge-hair)]">
+          <div className="p-3 rounded-[12px] border border-[var(--edge-hair-strong)] bg-[var(--edge-hair)]">
             <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Без імпульсивних входів</span>
             <div className="flex items-center gap-2 mt-1">
               <b className="text-[15px] font-extrabold text-[#7A7A85] line-through decoration-[#f87171]/60">{signed(netTotal)}R</b>
@@ -314,7 +314,13 @@ const ALL_PSYCH_WIDGETS = {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 mt-3">
+        {/* flex:1 + space-evenly, не gap: станів буває три, чотири чи
+           п'ять — стільки, скільки їх реально траплялось у журналі.
+           Клітинка розрахована на найбільше число, і фіксований gap
+           лишав під меншим порожній хвіст знизу картки. Рядки
+           розходяться на всю висоту, що лишилась після сітки зверху й
+           висновку знизу, — скільки б їх не було. */}
+        <div className="flex flex-col flex-1 min-h-0 justify-evenly mt-2.5">
           {rankedStates.map((e, i) => {
             const color = EMOTION_COLOR[e.emotion];
             const pos = e.net >= 0;
@@ -369,7 +375,7 @@ const ALL_PSYCH_WIDGETS = {
           })}
         </div>
 
-        <div className="mt-4 p-4 bg-[var(--edge-surface-hi)]/80 border border-[var(--edge-hair)] rounded-[12px]">
+        <div className="mt-3 p-3 bg-[var(--edge-surface-hi)]/80 border border-[var(--edge-hair)] rounded-[12px]">
           <p className="text-[12.5px] text-[#FAFAFA] leading-[1.6] m-0">
             <span className="text-[#8b7bff] font-bold">💡 Простими словами:</span> Спокійний вхід приносить <b className="text-[#34d399]">{signed(calmStat.avg, 2)}R</b>, вхід у тільті — <b className="text-[#f87171]">{signed(tiltStat.avg, 2)}R</b>. Різниця в <b className="text-[var(--edge-text)]">{r2(Math.abs(calmStat.avg - tiltStat.avg))}R</b> на кожну угоду — це і є ціна одного емоційного рішення.
           </p>
@@ -381,21 +387,22 @@ const ALL_PSYCH_WIDGETS = {
   mistakes: {
     title: 'Реєстр помилок (Дисципліна)',
     hint: 'Скільки коштує кожне порушення й скільки їх було',
-    icon: XCircle, group: 'Психологія', tone: '#f87171', shape: 'rows', defaultW: 4, defaultH: 2,
-    options: {
-      details: { label: 'Розклад', choices: [['off', 'Сховати'], ['on', 'Показати']], def: 'off' },
-    },
-    render: ({ s, o }) => {
+    icon: XCircle, group: 'Психологія', tone: '#f87171', shape: 'rows', defaultW: 4, defaultH: 1,
+    /* Розклад (перелік кожної помилки окремою карткою) прибрано:
+       список довільної довжини й фіксована h:1 не сумісні — увімкнений
+       «Показати» переповнював би клітинку. Підсумку (сума, типи, разів,
+       найдорожча) досить, а по типи вже видно на самому нижньому графіку. */
+    options: {},
+    render: ({ s }) => {
       const { worstMistake, ledgerTotal, ledgerCount, ledgerAbs } = derive(s);
       return (
-        <>
-        <div className="mt-2 p-3.5 bg-[var(--edge-surface-hi)]/70 border border-[#f87171]/10 rounded-[12px]">
+        <div className="flex flex-col flex-1 min-h-0 justify-center p-2.5 bg-[var(--edge-surface-hi)]/70 border border-[#f87171]/10 rounded-[12px]">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="shrink-0">
               <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[#7A7A85] font-black">Втрачено на помилках</span>
-              <b className="block text-[24px] font-extrabold text-[#f87171] leading-tight">{r1(ledgerTotal)}R</b>
+              <b className="block text-[21px] font-extrabold text-[#f87171] leading-tight">{r1(ledgerTotal)}R</b>
             </div>
-            <div className="h-9 w-px bg-[var(--edge-hair)] hidden sm:block" />
+            <div className="h-8 w-px bg-[var(--edge-hair)] hidden sm:block" />
             <div className="flex gap-5 text-[11.5px] flex-wrap">
               <span className="text-[#7A7A85]">Типів: <b className="text-[var(--edge-text)]">{s.mistakeLedger.length}</b></span>
               <span className="text-[#7A7A85]">Разів: <b className="text-[var(--edge-text)]">{ledgerCount}</b></span>
@@ -403,7 +410,7 @@ const ALL_PSYCH_WIDGETS = {
             </div>
           </div>
 
-          <div className="mt-3 w-full h-[6px] rounded-full overflow-hidden flex bg-[#232328]">
+          <div className="mt-2 w-full h-[6px] rounded-full overflow-hidden flex bg-[#232328]">
             {s.mistakeLedger.map((m, i) => (
               <div
                 key={m.name}
@@ -419,50 +426,10 @@ const ALL_PSYCH_WIDGETS = {
             ))}
           </div>
 
-          {o.details !== 'on' && (
-            <p className="text-[11.5px] text-[#7A7A85] leading-[1.5] mt-2.5 m-0">
-              Без цих порушень твій результат був би на <b className="text-[#34d399]">{r1(Math.abs(ledgerTotal))}R</b> вищим.
-            </p>
-          )}
+          <p className="text-[11.5px] text-[#7A7A85] leading-[1.4] mt-2 mb-0">
+            Без цих порушень твій результат був би на <b className="text-[#34d399]">{r1(Math.abs(ledgerTotal))}R</b> вищим.
+          </p>
         </div>
-
-        <AnimatePresence initial={false}>
-          {o.details === 'on' && (
-            <motion.div
-              key="ledger"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35, ease: premiumEasing }}
-              className="overflow-hidden"
-            >
-              <div className="flex flex-col gap-2 mt-3">
-                {s.mistakeLedger.map((m) => {
-                  const share = Math.abs(m.cost) / ledgerAbs * 100;
-                  return (
-                    <SpotlightCard key={m.name} glowColor="rgba(248,113,113, 0.15)" className="rounded-[12px]">
-                      <div className="p-[14px_16px] bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[12px] flex flex-col gap-[10px] transition-colors hover:border-[var(--edge-hair-strong)]">
-                        <div className="flex justify-between items-end">
-                          <b className="text-[#FAFAFA] text-[13px]">{m.name}</b>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 bg-[#232328] h-[4px] rounded-full overflow-hidden">
-                            <div className="h-full bg-[#f87171]" style={{ width: `${share}%` }}></div>
-                          </div>
-                          <b className="text-[#f87171] text-[13px] w-[50px] text-right font-black">{signed(m.cost)}R</b>
-                        </div>
-                        <div className="text-[11px] text-[#7A7A85]">
-                          {m.count} разів · {Math.round(share)}% усіх втрат від помилок
-                        </div>
-                      </div>
-                    </SpotlightCard>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        </>
       );
     },
   },
@@ -478,14 +445,14 @@ const ALL_PSYCH_WIDGETS = {
         <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
           <SpotlightCard glowColor="rgba(52, 211, 153, 0.25)" className="rounded-[14px]">
-            <div className="p-5 bg-[var(--edge-surface-hi)]/80 border border-[#34d399]/10 shadow-[0_0_15px_rgba(52,211,153,0.02)] rounded-[14px] relative overflow-hidden transition-colors hover:border-[#34d399]/30">
+            <div className="p-4 bg-[var(--edge-surface-hi)]/80 border border-[#34d399]/10 shadow-[0_0_15px_rgba(52,211,153,0.02)] rounded-[14px] relative overflow-hidden transition-colors hover:border-[#34d399]/30">
               <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-bold">По плану</span>
               <b className="block text-[28px] font-extrabold mt-2 mb-1 text-[#34d399]">{signed(sum(s.followed.map((t) => t.rr)))}R</b>
               <small className="text-[11.5px] font-medium text-[#7A7A85]">{s.followed.length} угод · WR {Math.round((s.followed.filter((t) => t.result === 'WIN').length / Math.max(1, s.followed.filter((t) => t.result !== 'BE').length)) * 100)}%</small>
             </div>
           </SpotlightCard>
           <SpotlightCard glowColor="rgba(248,113,113, 0.25)" className="rounded-[14px]">
-            <div className="p-5 bg-[var(--edge-surface-hi)]/80 border border-[#f87171]/10 shadow-[0_0_15px_rgba(248,113,113,0.02)] rounded-[14px] relative overflow-hidden transition-colors hover:border-[#f87171]/30">
+            <div className="p-4 bg-[var(--edge-surface-hi)]/80 border border-[#f87171]/10 shadow-[0_0_15px_rgba(248,113,113,0.02)] rounded-[14px] relative overflow-hidden transition-colors hover:border-[#f87171]/30">
               <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[#7A7A85] font-bold">З порушенням</span>
               <b className="block text-[28px] font-extrabold mt-2 mb-1 text-[#f87171]">{signed(sum(s.broken.map((t) => t.rr)))}R</b>
               <small className="text-[11.5px] font-medium text-[#7A7A85]">{s.broken.length} угод · WR {Math.round((s.broken.filter((t) => t.result === 'WIN').length / Math.max(1, s.broken.filter((t) => t.result !== 'BE').length)) * 100)}%</small>
@@ -493,9 +460,12 @@ const ALL_PSYCH_WIDGETS = {
           </SpotlightCard>
         </div>
 
-        <div className="mt-5 w-full bg-[var(--edge-surface-hi)]/40 border border-[var(--edge-hair)] rounded-[12px] p-4">
-          <h4 className="text-[11px] text-[#7A7A85] font-bold uppercase tracking-widest mb-3 text-center">Накопичений PnL (Крива капіталу)</h4>
-          <div className="w-full" style={{ flex: 1, minHeight: 120 }}>
+        {/* Заголовок над графіком прибрано: назва картки й так каже,
+           що це план проти порушень, а два кольори криво самі себе
+           пояснюють через підказку. Рядок тексту коштував 23px, яких
+           не вистачало картці, щоб влізти без прокрутки. */}
+        <div className="mt-4 flex flex-col flex-1 min-h-0 w-full bg-[var(--edge-surface-hi)]/40 border border-[var(--edge-hair)] rounded-[12px] p-3">
+          <div className="w-full" style={{ flex: 1, minHeight: 105 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={planChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                 <defs>
@@ -541,7 +511,10 @@ const ALL_PSYCH_WIDGETS = {
           <span>перебір</span>
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        {/* flex:1 + space-evenly: станів буває три чи п'ять, а
+           клітинка розрахована на найбільше число — фіксований gap
+           лишав під меншим порожнечу над плашками знизу. */}
+        <div className="flex flex-col flex-1 min-h-0 justify-evenly">
           {riskRows.map((e) => {
             const zoneColor = e.zone === 'ok' ? '#34d399' : e.zone === 'warn' ? '#fbbf24' : '#f87171';
             const pct = Math.max(2, Math.min(98, (e.avgRisk / (TARGET_RISK * 2)) * 100));
@@ -618,7 +591,7 @@ const ALL_PSYCH_WIDGETS = {
   verdict: {
     title: 'Вердикт по дисципліні',
     hint: 'Різниця між тим, що є, і тим, що вже могло бути',
-    icon: Gauge, group: 'Психологія', tone: '#8b7bff', shape: 'bars', defaultW: 4, defaultH: 3,
+    icon: Gauge, group: 'Психологія', tone: '#8b7bff', shape: 'bars', defaultW: 4, defaultH: 2, minH: 2,
     options: {
     },
     render: ({ s }) => {
@@ -697,7 +670,7 @@ const ALL_PSYCH_WIDGETS = {
   checklist: {
     title: 'Чек-лист перед входом',
     hint: 'Як часто ти реально дотримувався кожного правила',
-    icon: Target, group: 'Психологія', tone: '#34d399', shape: 'rows', defaultW: 4, defaultH: 3,
+    icon: Target, group: 'Психологія', tone: '#34d399', shape: 'rows', defaultW: 4, defaultH: 4, minH: 3,
     options: {
     },
     render: ({ s }) => {
@@ -708,7 +681,9 @@ const ALL_PSYCH_WIDGETS = {
           Не галочки, а факт: як часто ти реально дотримувався кожного правила за {totalTrades} угод.
         </p>
 
-        <div className="flex flex-col gap-2">
+        {/* flex:1 + space-evenly: правил буває від двох до шести —
+           стільки, скільки типів помилок трапилось у журналі. */}
+        <div className="flex flex-col flex-1 min-h-0 justify-evenly">
           {liveRules.map((r, i) => {
             const color = r.pct >= 90 ? '#34d399' : r.pct >= 70 ? '#fbbf24' : '#f87171';
             const broken = r.total - r.ok;
@@ -949,14 +924,23 @@ const ALL_PSYCH_WIDGETS = {
   aicoach: {
     title: 'AI-психолог',
     hint: 'Читає твої угоди й відповідає на питання про них',
-    icon: Sparkles, group: 'Психологія', tone: '#8b7bff', shape: 'number', defaultW: 2, defaultH: 1,
+    icon: Sparkles, group: 'Психологія', tone: '#8b7bff', shape: 'number',
+    /* Живе лише в боковій колонці (SIDE_IDS), на всю її ширину —
+       defaultW мусить бути 4, як у verdict/checklist поруч, інакше
+       Board.jsx (що тепер завжди бере розмір із реєстру, а не зі
+       збереженої розкладки) посадить картку вдвічі вужчою. */
+    defaultW: 4, defaultH: 1,
     options: {
     },
     render: () => (
+      /* Плитка тут фіксовано h:1. Графік лишається — ComingSoon сам
+         ховає його через контейнерний медіа-запит, коли колонці
+         реально затісно для графіка й тексту разом, і повертає, щойно
+         місця вистачає. */
       <ComingSoon
         tone="#8b7bff"
         title="AI-психолог"
-        text="Читає твої угоди й відповідає на питання про них. Житиме у власному розділі, щоб було видно, де цифри з журналу, а де думка моделі."
+        text="Читає твої угоди й відповідає на питання про них."
       />
     ),
   },
@@ -994,6 +978,6 @@ export const PSYCH_MAIN_DEFAULT = [
    одним, як і в старому дизайні, а не діляться навпіл. */
 export const PSYCH_SIDE_DEFAULT = [
   { id: 'aicoach', h: 1, w: 4, p: 'inherit', o: {} },
-  { id: 'verdict', h: 3, w: 4, p: 'inherit', o: {} },
-  { id: 'checklist', h: 3, w: 4, p: 'inherit', o: {} },
+  { id: 'verdict', h: 2, w: 4, p: 'inherit', o: {} },
+  { id: 'checklist', h: 4, w: 4, p: 'inherit', o: {} },
 ];

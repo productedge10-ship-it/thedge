@@ -39,6 +39,8 @@ const BARS = [26, 34, 22, 46, 38, 58, 50, 72, 64, 84];
    #8b7bff)`). До змінної не дописати альфу рядком: `var(...)1f` це
    невалідний колір, браузер мовчки викидає всю властивість і
    підсвітка йде на повну яскравість замість дванадцяти відсотків.
+   Саме через це заглушка нейро-звіту світилась суцільним фіолетовим
+   і з'їдала текст.
 
    color-mix розводить будь-який колір прозорістю, не розбираючи
    його на складові, тому працює однаково для обох випадків. */
@@ -50,6 +52,9 @@ export default function ComingSoon({
   title,
   text,
   compact = false,
+  /* chart=false прибирає графік і зі сну — виняток для контексту,
+     де він взагалі не потрібен. */
+  chart = true,
 }) {
   const uid = useId().replace(/:/g, '');
   const gLine = 'cs-line-' + uid;
@@ -63,9 +68,9 @@ export default function ComingSoon({
         position: 'relative',
         overflow: 'hidden',
         borderRadius: 14,
-        border: '1px solid var(--edge-hair, var(--edge-line))',
+        border: '1px solid var(--edge-hair, #232328)',
         background: 'linear-gradient(165deg, rgba(255,255,255,.028), rgba(255,255,255,.008))',
-        padding: compact ? '14px 16px 12px' : '18px 18px 14px',
+        padding: compact ? '14px 16px 12px' : '13px 18px 10px',
       }}
     >
       <style>{`
@@ -119,14 +124,32 @@ export default function ComingSoon({
         }}
       />
 
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: compact ? 14 : 18, flexWrap: 'wrap' }}>
+      {/* Графік — фон, не сусід тексту в рядку.
+
+          Три спроби поспіль ділити ширину картки між графіком і
+          текстом провалились однаково: десь ширини вистачало, десь
+          ні, і те, що працювало на одному екрані, обрізало текст на
+          іншому. Тут той самий прийом, що вже стоїть на KPI-картках
+          «Огляду» (Spark): графік лежить під текстом абсолютом, поза
+          потоком, тож він фізично не може забрати в тексту жодного
+          пікселя ширини чи висоти — рядків завжди стільки, скільки
+          треба самому тексту, за будь-якої ширини колонки.
+
+          Маска зліва направо ховає графік там, де починається текст,
+          і показує там, де картка зазвичай порожня (праворуч) —
+          лінія й так яскравішає до кінця (градієнт нижче), тож фейд
+          підсилює те, що графік уже сам малює. */}
+      {chart && (
         <svg
+          aria-hidden
           viewBox="0 0 260 92"
-          width={compact ? 132 : 168}
-          height={compact ? 47 : 60}
-          role="img"
-          aria-label="Графік, що будується"
-          style={{ flexShrink: 0, overflow: 'visible' }}
+          preserveAspectRatio="none"
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            pointerEvents: 'none', opacity: compact ? 0.5 : 0.65,
+            WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, transparent 30%, #000 62%)',
+            maskImage: 'linear-gradient(90deg, transparent 0%, transparent 30%, #000 62%)',
+          }}
         >
           <defs>
             <linearGradient id={gLine} x1="0" y1="0" x2="1" y2="0">
@@ -167,31 +190,34 @@ export default function ComingSoon({
           />
           <circle className="cs-dot" r="3.4" fill="#fff" stroke={tone} strokeWidth="2.2" />
         </svg>
+      )}
 
-        <div style={{ flex: 1, minWidth: 150 }}>
-          <span
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              fontSize: 9.5, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase',
-              color: tone,
-            }}
-          >
-            <i style={{ width: 5, height: 5, borderRadius: 99, background: tone, boxShadow: `0 0 8px ${soft(tone, 70)}`, display: 'block' }} />
-            {eyebrow}
-          </span>
+      <div style={{ position: 'relative' }}>
+        <span
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7,
+            fontSize: 9.5, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase',
+            color: tone,
+          }}
+        >
+          <i style={{ width: 5, height: 5, borderRadius: 99, background: tone, boxShadow: `0 0 8px ${soft(tone, 70)}`, display: 'block' }} />
+          {eyebrow}
+        </span>
 
-          {title && (
-            <b style={{ display: 'block', marginTop: 6, fontSize: compact ? 13.5 : 15, fontWeight: 800, color: 'var(--edge-text, var(--edge-text))', letterSpacing: '-0.1px' }}>
-              {title}
-            </b>
-          )}
+        {title && (
+          <b style={{ display: 'block', marginTop: 4, fontSize: compact ? 13.5 : 15, fontWeight: 800, color: 'var(--edge-text, #FAFAFA)', letterSpacing: '-0.1px' }}>
+            {title}
+          </b>
+        )}
 
-          {text && (
-            <p style={{ margin: '5px 0 0', fontSize: 11.5, lineHeight: 1.55, color: 'var(--edge-text3, var(--edge-text3))' }}>
-              {text}
-            </p>
-          )}
-        </div>
+        {/* text2, не text3: найтьмяніший відтінок тримав опис ледь
+           видимим на темній підкладці картки — саме на нього
+           скаржились, не на розмір чи перенос. */}
+        {text && (
+          <p style={{ margin: '3px 0 0', fontSize: 11.5, lineHeight: 1.4, color: 'var(--edge-text2, #B4B4BD)' }}>
+            {text}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot, ChevronDown, Check } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot, CalendarDays, ChevronDown, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { T } from '../lib/theme';
+import { T, EASE, SPRING } from '../lib/theme';
 import { useAuth } from '../context/AuthContext';
 import { fetchTrades, periodStart } from '../lib/analyticsStore';
 import { useStats, r1 } from '../components/analytics/data';
@@ -26,82 +26,73 @@ import ExportStats from '../components/analytics/ExportStats';
 
 const PERIODS = ['Весь час', 'Цей квартал', 'Останні 30 днів', 'Цей тиждень'];
 
-/* ------------------------------------------------------------------
-   Період — випадашка.
-
-   Сегментований перемикач на чотири варіанти був завеликий: на
-   ноутбуці тиснув вкладки, на телефоні розсипався сіткою. Випадашка
-   займає рівно один рядок тексту, а вибір ховає під клік. */
-function PeriodMenu({ value, onChange, options }) {
+/* Період — випадашка біля «Поділитись», а не рядок пігулок під
+   вкладками: чотири підписи поруч із назвами розділів змагались за
+   одну й ту саму увагу «що зараз обрано». Тут це один компактний
+   тригер, і однаковий на будь-якій ширині екрана — окремого мобільного
+   ряду більше не треба. */
+function PeriodDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
-    if (!open) return undefined;
     const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
 
   return (
-    <div ref={ref} className="relative order-3 w-full lg:order-2 lg:ml-auto lg:w-auto">
+    <div className="relative shrink-0" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 rounded-[11px] px-3.5 py-2 text-[12.5px] font-semibold transition-colors duration-150 lg:w-auto"
-        style={{
-          background: T.sunken,
-          border: `1px solid ${open ? T.lineAcc : T.line}`,
-          color: T.text,
-          fontFamily: T.sans,
-        }}
+        className="flex shrink-0 items-center gap-2 rounded-[11px] px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200"
+        style={{ background: T.sunken, border: `1px solid ${open ? T.lineAcc : T.line}`, color: T.text2, fontFamily: T.sans }}
+        onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = T.lineHi; }}
+        onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = T.line; }}
       >
-        <span>{value}</span>
-        <ChevronDown
-          size={14}
-          strokeWidth={2.4}
-          style={{ color: T.text3, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s ease' }}
-        />
+        <CalendarDays size={14} strokeWidth={2.2} style={{ color: T.text3 }} />
+        {value}
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={SPRING} className="flex shrink-0">
+          <ChevronDown size={13} strokeWidth={2.4} style={{ color: T.text4 }} />
+        </motion.span>
       </button>
 
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute left-0 right-0 z-50 mt-2 rounded-[12px] p-1 lg:left-auto lg:right-0 lg:min-w-[196px]"
+            exit={{ opacity: 0, y: -8, scale: 0.97 }}
+            transition={{ duration: 0.16, ease: EASE }}
+            className="absolute left-0 top-[calc(100%+8px)] z-[70] w-[190px] overflow-hidden rounded-2xl p-1.5"
             style={{
-              background: 'var(--edge-panel, rgba(10,10,12,0.96))',
+              background: T.surfaceHi,
               border: `1px solid ${T.lineHi}`,
-              boxShadow: '0 24px 60px -20px var(--edge-panel-glow, rgba(0,0,0,0.7))',
-              backdropFilter: 'blur(18px)',
+              boxShadow: '0 30px 70px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05)',
             }}
           >
-            {options.map((p) => {
-              const on = p === value;
+            {PERIODS.map((p) => {
+              const on = value === p;
               return (
                 <button
                   key={p}
                   type="button"
                   onClick={() => { onChange(p); setOpen(false); }}
-                  className="flex w-full items-center justify-between rounded-[8px] px-3 py-2 text-left text-[12.5px] transition-colors duration-150"
-                  style={{
-                    background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
-                    color: on ? T.acc : T.text2,
-                    fontWeight: on ? 600 : 450,
-                  }}
-                  onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(var(--edge-text-rgb),0.05)'; }}
-                  onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
+                  className="group/opt relative flex w-full items-center justify-between overflow-hidden rounded-xl px-3 py-2.5 text-left"
                 >
-                  {p}
-                  {on && <Check size={13} strokeWidth={2.6} />}
+                  {on && (
+                    <motion.span
+                      layoutId="an-period-active"
+                      transition={SPRING}
+                      className="absolute inset-0 -z-10 rounded-xl"
+                      style={{ background: `rgba(${T.accRgb},0.14)` }}
+                    />
+                  )}
+                  <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: on ? T.acc : T.text2 }}>
+                    {p}
+                  </span>
+                  {on && <Check size={14} strokeWidth={3} style={{ color: T.acc }} />}
                 </button>
               );
             })}
@@ -181,7 +172,6 @@ export default function Analytics() {
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         .animate-fade-in { animation: fade-in-up 0.35s ease both; }
-        @keyframes ai-soon-sweep { 0% { transform: translateX(-120%); } 60%, 100% { transform: translateX(220%); } }
       `}</style>
 
       {/* ---------- ВЕРХНЯ ПАНЕЛЬ ----------
@@ -191,12 +181,12 @@ export default function Analytics() {
       <div
         className="sticky top-0 z-30"
         style={{
-          background: 'var(--edge-panel, rgba(10,10,12,0.82))',
+          background: 'rgba(10,10,12,0.82)',
           backdropFilter: 'blur(18px)',
           borderBottom: `1px solid ${T.line}`,
         }}
       >
-        <div className="mx-auto w-full max-w-[1800px] px-4 pt-4 lg:px-8">
+        <div className="mx-auto w-full max-w-[1800px] px-4 pb-2.5 pt-4 lg:px-8">
 
           {/* ---------- рядок 1: хто я і одна дія ----------
 
@@ -207,58 +197,47 @@ export default function Analytics() {
               дивлюсь». Два питання, два рядки. */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
             <h1
-              className="order-1 shrink-0 text-[24px] font-bold leading-none lg:text-[26px]"
+              className="shrink-0 text-[24px] font-bold leading-none lg:text-[26px]"
               style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.035em' }}
             >
               Аналітика
             </h1>
 
-            <PeriodMenu value={period} onChange={setPeriod} options={PERIODS} />
+            <div className="ml-auto flex shrink-0 items-center gap-2.5">
+              <PeriodDropdown value={period} onChange={setPeriod} />
 
-            <button
-              onClick={() => setExportOpen(true)}
-              className="group order-2 ml-auto flex shrink-0 items-center justify-center gap-2 rounded-[11px] px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200 lg:order-3 lg:ml-0"
-              style={{
-                background: `rgba(${T.accRgb},0.10)`,
-                border: `1px solid ${T.lineAcc}`,
-                color: T.acc,
-                fontFamily: T.sans,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = `rgba(${T.accRgb},0.16)`;
-                e.currentTarget.style.boxShadow = `0 8px 24px -12px rgba(${T.accRgb},0.9)`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = `rgba(${T.accRgb},0.10)`;
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <Sparkles size={14} strokeWidth={2.3} className="transition-transform duration-300 group-hover:scale-110" />
-              <span className="hidden sm:inline">Поділитись статистикою</span>
-              <span className="sm:hidden">Поділитись</span>
-            </button>
+              <button
+                onClick={() => setExportOpen(true)}
+                className="group flex shrink-0 items-center justify-center gap-2 rounded-[11px] px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200"
+                style={{
+                  background: `rgba(${T.accRgb},0.10)`,
+                  border: `1px solid ${T.lineAcc}`,
+                  color: T.acc,
+                  fontFamily: T.sans,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `rgba(${T.accRgb},0.16)`;
+                  e.currentTarget.style.boxShadow = `0 8px 24px -12px rgba(${T.accRgb},0.9)`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = `rgba(${T.accRgb},0.10)`;
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <Sparkles size={14} strokeWidth={2.3} className="transition-transform duration-300 group-hover:scale-110" />
+                Поділитись статистикою
+              </button>
+            </div>
           </div>
 
-          {/* ---------- рядок 2: розділи ----------
-
-              Вкладки на всю ширину рядка. Раніше поруч стояв період і на
-              ноутбуці з'їдав місце — останні розділи ховались за краєм
-              без натяку на прокрутку. Тепер рядок гортається
-              горизонтально, а край гасне градієнтом: видно, що є ще. */}
-          <div
-            className="hide-scrollbar mt-3.5 overflow-x-auto"
-            style={{
-              WebkitMaskImage: 'linear-gradient(90deg, #000 calc(100% - 26px), transparent)',
-              maskImage: 'linear-gradient(90deg, #000 calc(100% - 26px), transparent)',
-            }}
-          >
-            <nav className="-mb-px flex items-center gap-0.5">
+          {/* ---------- рядок 2: розділи ---------- */}
+          <div className="mt-3.5 flex items-end">
+            <nav className="hide-scrollbar -mb-px flex items-center gap-0.5 overflow-x-auto">
               {NAV.map(({ id, label, icon: Icon, badge, soon }) => {
                 const on = tab === id;
                 return (
                   <button
                     key={id}
-                    data-tour={`analytics-tab-${id}`}
                     onClick={() => setTab(id)}
                     className="relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-[10px] px-3.5 pb-3 pt-2 text-[13.5px] transition-colors duration-150"
                     style={{ color: on ? T.text : T.text3, fontWeight: on ? 600 : 450 }}
@@ -281,26 +260,12 @@ export default function Analytics() {
                       </em>
                     )}
 
-                    {/* «Скоро» — під стиль хедера самого розділу AI:
-                        м'ятна пігулка з тонкою рамкою й відблиском, що
-                        пробігає раз на кілька секунд. */}
                     {soon && (
                       <em
-                        className="relative inline-flex items-center overflow-hidden rounded-full px-[9px] py-[3px] text-[9px] not-italic uppercase"
-                        style={{
-                          fontFamily: T.mono, letterSpacing: '0.2em', color: '#2ee6a8',
-                          border: '1px solid rgba(46,230,168,0.32)', background: 'rgba(46,230,168,0.08)',
-                        }}
+                        className="not-italic rounded-[20px] px-[7px] py-[2px] text-[9px] font-bold uppercase tracking-[0.12em]"
+                        style={{ background: `rgba(${T.accRgb},0.12)`, color: T.acc }}
                       >
                         скоро
-                        <span
-                          aria-hidden
-                          className="pointer-events-none absolute inset-y-0 w-2/5"
-                          style={{
-                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent)',
-                            animation: 'ai-soon-sweep 3.4s ease-in-out infinite',
-                          }}
-                        />
                       </em>
                     )}
 

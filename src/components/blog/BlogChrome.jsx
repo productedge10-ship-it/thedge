@@ -561,6 +561,15 @@ export const BLOG_CSS = `
 .bl-prose em{font-style:italic}
 .bl-prose a{color:var(--bl-acc-text);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;transition:background-color .18s}
 .bl-prose a:hover{background:var(--bl-acc-soft)}
+/* Підсвітка ==текст==. Не жовтий маркер, а м'яка підкладка акцентом
+   із товстішим накресленням: у трьох темах читання (світлій, темній і
+   сепії) жовтий або губиться, або кричить, а акцент уже перевірений
+   в усіх трьох. */
+.bl-prose mark.bl-mark{
+  background:var(--bl-acc-soft);color:var(--bl-text);
+  font-weight:600;padding:1px 4px;border-radius:5px;
+  box-decoration-break:clone;-webkit-box-decoration-break:clone;
+}
 .bl-prose code{
   font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:.86em;
   background:var(--bl-acc-soft);padding:2px 5px;border-radius:5px;color:var(--bl-text)

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Globe } from 'lucide-react';
 import { useEdgeFonts } from '../lib/theme';
-import { C, F, A, Cat, SHELL, KEYFRAMES } from '../components/landing/v3/base';
+import { C, F, A, Cat, KEYFRAMES } from '../components/landing/v3/base';
 import Hero, { Ticker } from '../components/landing/v3/Hero';
 import Steps from '../components/landing/v3/Steps';
 import Difference from '../components/landing/v3/Difference';
@@ -35,13 +35,6 @@ const FOOTER_COLS = [
   { title: 'ПРОДУКТ', links: [['#product', 'Що всередині'], ['#autoimport', 'Автоімпорт'], ['#coach', 'AI-коуч']] },
   { title: 'ТАРИФИ', links: [['#pricing', 'Ціни'], ['#pricing', 'Free'], ['#pricing', 'Pro']] },
   { title: 'ДОВІДКА', links: [['#faq', 'Питання'], ['/uk/blog', 'Блог'], ['#autoimport', 'Твої дані'], ['#faq', 'Підключення MT5']] },
-  {
-    title: 'КОНТАКТИ',
-    links: [
-      ['https://www.instagram.com/theedge.space/', 'Instagram'],
-      ['mailto:edge95944@gmail.com', 'edge95944@gmail.com'],
-    ],
-  },
 ];
 
 function Header() {
@@ -71,7 +64,7 @@ function Header() {
 
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 60, background: 'rgba(8,8,12,.78)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
-      <div style={{ ...SHELL, paddingTop: '0', paddingBottom: '0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, transition: 'height .25s ease', height: shrunk ? 56 : 64 }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, transition: 'height .25s ease', height: shrunk ? 56 : 64 }}>
         <a href="#top" style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <Cat size={36} />
           <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 15.5, letterSpacing: '2.4px', color: '#fff', whiteSpace: 'nowrap' }}>
@@ -145,7 +138,7 @@ function Header() {
 function Footer() {
   return (
     <footer style={{ borderTop: '1px solid rgba(255,255,255,.06)', background: '#0a0a0e' }}>
-      <div style={{ ...SHELL, paddingTop: '40px', paddingBottom: '40px', display: 'flex', gap: 44, flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '40px 32px', display: 'flex', gap: 44, flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ flex: '0 1 250px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <Cat size={34} />
@@ -164,21 +157,17 @@ function Footer() {
           <div key={col.title} style={{ flex: '0 1 150px' }}>
             <div style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 700, letterSpacing: '1.6px', color: C.dim, marginBottom: 14 }}>{col.title}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {col.links.map(([href, label]) => {
-                const external = href.startsWith('http');
-                return (
-                  <a
-                    key={label}
-                    href={href}
-                    {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                    style={{ fontFamily: F.sans, fontSize: 13.5, color: '#8a8a9c', transition: 'color .16s', wordBreak: 'break-word' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = C.accSoft; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#8a8a9c'; }}
-                  >
-                    {label}
-                  </a>
-                );
-              })}
+              {col.links.map(([href, label]) => (
+                <a
+                  key={label}
+                  href={href}
+                  style={{ fontFamily: F.sans, fontSize: 13.5, color: '#8a8a9c', transition: 'color .16s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = C.accSoft; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = '#8a8a9c'; }}
+                >
+                  {label}
+                </a>
+              ))}
             </div>
           </div>
         ))}

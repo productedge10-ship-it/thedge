@@ -40,15 +40,8 @@ const normalize = (v) => {
       w: Math.min(4, Math.max(1, Number(x.w) || 1)),
       /* Висота теж належить розкладці, а не вмісту. Стара збережена
          дошка про неї не знає, тому підставляємо ту, з якою віджет
-         задумувався.
-
-         Але на відміну від ширини, тут є нижня межа — і не 1, а
-         `minH` віджета. Список на п'ять рядків чи серії з трьох
-         рядків фізично не влазять у чверть клітинки: це не вибір
-         людини, як вузька крива, а зламане верстання, яке обрізає
-         текст. Якщо колись давно зберігся h:1 для такого віджета,
-         він підтягується вгору й тут, а не тільки для нових карток. */
-      h: Math.min(4, Math.max(WIDGETS[x.id].minH || 1, Number(x.h) || WIDGETS[x.id].defaultH || 2)),
+         задумувався. */
+      h: Math.min(4, Math.max(1, Number(x.h) || WIDGETS[x.id].defaultH || 2)),
       p: typeof x.p === 'string' ? x.p : 'inherit',
       o: x.o && typeof x.o === 'object' ? x.o : {},
     }));
@@ -73,7 +66,10 @@ const normalize = (v) => {
 
 export default function Overview({ s, rows = [] }) {
   const [layout, setLayout, { saving }] = useCloudState(
-    'analytics_overview_v1',
+    /* v2 — «сесії»/«дні тижня» тепер h:2 (графіку нема де малюватись
+       у h:1), «дисципліна» стиснута під h:1: збережена дошка тримала
+       старі числа й не бачила нових дефолтів. */
+    'analytics_overview_v2',
     DEFAULT_LAYOUT,
     { normalize },
   );

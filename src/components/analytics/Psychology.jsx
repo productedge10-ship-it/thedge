@@ -1,7 +1,8 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { Check, Cog } from 'lucide-react';
 import useCloudState from '../../hooks/useCloudState';
 import { useStats } from './data';
-import Board from './overview/Board';
+import Board, { ToolButton } from './overview/Board';
 import {
   PSYCH_MAIN_WIDGETS, PSYCH_MAIN_DEFAULT, PSYCH_SIDE_WIDGETS, PSYCH_SIDE_DEFAULT,
 } from './psych/widgets';
@@ -44,13 +45,24 @@ const normalizeMain = makeNormalize(PSYCH_MAIN_WIDGETS, PSYCH_MAIN_DEFAULT);
 const normalizeSide = makeNormalize(PSYCH_SIDE_WIDGETS, PSYCH_SIDE_DEFAULT);
 
 export default function Psychology({ s, rows = [] }) {
+  /* Кнопка редагування винесена з дошки нагору сторінки. У «Огляду» й
+     «Перформансу» вона сама стоїть у верхньому правому куті — тут же,
+     всередині лівої дошки (2fr від ширини), той самий кут опинявся
+     десь у середині сторінки, над проміжком між колонками, а не над
+     жодною з карток. Board.jsx керується ззовні (edit/onEditChange,
+     showGear=false), а сама кнопка стоїть тут, над обома колонками. */
+  const [mainEdit, setMainEdit] = useState(false);
+
   const [mainLayout, setMainLayout, { saving: savingMain }] = useCloudState(
     'analytics_psychology_main_v1',
     PSYCH_MAIN_DEFAULT,
     { normalize: normalizeMain },
   );
   const [sideLayout, setSideLayout, { saving: savingSide }] = useCloudState(
-    'analytics_psychology_side_v1',
+    /* v3 — висоти «вердикту» (h:2) і «чек-листа» (h:4) підігнані під
+       реальний вміст: збережена розкладка тримала старі числа і не
+       бачила нових дефолтів. */
+    'analytics_psychology_side_v3',
     PSYCH_SIDE_DEFAULT,
     { normalize: normalizeSide },
   );
@@ -75,25 +87,44 @@ export default function Psychology({ s, rows = [] }) {
   }, [s, s7, s30, s90, sAll]);
 
   return (
-    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-      <Board
-        layout={mainLayout}
-        setLayout={setMainLayout}
-        statsFor={statsFor}
-        saving={savingMain}
-        registry={PSYCH_MAIN_WIDGETS}
-        defaults={PSYCH_MAIN_DEFAULT}
-      />
-
-      <div className="xl:sticky xl:top-5">
-        <Board
-          layout={sideLayout}
-          setLayout={setSideLayout}
-          statsFor={statsFor}
-          saving={savingSide}
-          registry={PSYCH_SIDE_WIDGETS}
-          defaults={PSYCH_SIDE_DEFAULT}
+    <div>
+      <div className="mb-4 flex justify-end">
+        <ToolButton
+          icon={mainEdit ? Check : Cog}
+          title={mainEdit ? 'Готово' : 'Налаштувати дошку'}
+          onClick={() => setMainEdit((v) => !v)}
+          primary={mainEdit}
+          iconOnly
         />
+      </div>
+
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <Board
+          layout={mainLayout}
+          setLayout={setMainLayout}
+          statsFor={statsFor}
+          saving={savingMain}
+          registry={PSYCH_MAIN_WIDGETS}
+          defaults={PSYCH_MAIN_DEFAULT}
+          edit={mainEdit}
+          onEditChange={setMainEdit}
+          showGear={false}
+        />
+
+        <div className="xl:sticky xl:top-5">
+          <Board
+            layout={sideLayout}
+            setLayout={setSideLayout}
+            statsFor={statsFor}
+            saving={savingSide}
+            registry={PSYCH_SIDE_WIDGETS}
+            defaults={PSYCH_SIDE_DEFAULT}
+            /* Права колонка — не конструктор: AI-психолог, вердикт і
+               чек-лист завжди ці три й завжди в цьому порядку. Додавання
+               живе лише зліва. */
+            editable={false}
+          />
+        </div>
       </div>
     </div>
   );

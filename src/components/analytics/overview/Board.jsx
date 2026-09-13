@@ -5,7 +5,7 @@ import {
   DndContext, DragOverlay, PointerSensor, closestCenter, useDraggable, useSensor, useSensors,
 } from '@dnd-kit/core';
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
-import { SortableContext, rectSwappingStrategy, useSortable } from '@dnd-kit/sortable';
+import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Check, Cog, GripVertical, Plus, RotateCcw, X,
@@ -325,8 +325,14 @@ function SettingsPanel({ id, item, onChange, onClose, resizable = true }) {
 
 function CardShell({
   item, stats, edit, hover, lifted, overlay, removing, openSettings, dropTarget,
-  setHover, onRemove, onToggleSettings, onChange,
-  draggable = true, removable = true, resizable = true,
+  setHover, onRemove, onToggleSettings, onChange, renderW,
+  /* resizable вимкнено за замовчуванням: розмір плитки — рішення
+     дизайну (реєстр), не людини. Довільні W/H одної картки ламали
+     сітку сусідніх — «Очікування» одного разу розтягнули в 3×2, і
+     решта рядка попливла під неї. Board.jsx тепер і не читає
+     збережені w/h для розміру (див. рендер нижче), а це — щоб панель
+     налаштувань більше не пропонувала їх міняти. */
+  draggable = true, removable = true, resizable = false,
 }) {
   const WIDGETS = useRegistry();
   const spec = WIDGETS[item.id];
@@ -460,20 +466,19 @@ function CardShell({
           вилізла б за межі плитки замість того, щоб віддати графіку
           рівно те місце, яке лишилось.
 
-          Прокрутка тут — запобіжник, а не спосіб дивитись віджет:
-          якщо людина поставила плитці висоту S, а всередині список на
-          сім правил, краще дати прокрутку, ніж обрізати текст. */}
+          Прокрутки нема свідомо, а не auto з запобіжником: розмір
+          тепер завжди задає реєстр, людина його не чіпає (нижче —
+          resizable вимкнено), тож і рятувати нема від чого. auto
+          лише вмикав скролбар на ховері там, де вміст ліг на
+          піксель за декоративний хвіст спарклайна, хоч насправді
+          обрізати не було чого. */}
       <div
         className="ov-body"
         style={{
           position: 'relative', flex: 1, minHeight: 0,
           display: 'flex', flexDirection: 'column',
-          /* `safe center` — доки вміст влазить, він по центру; щойно
-             переростає плитку, вирівнювання падає на початок, і
-             прокрутка бере від першого рядка, а не обрізає його
-             згори (класичний баг flex + overflow + center). */
           justifyContent: 'safe center',
-          overflowY: 'auto', overflowX: 'hidden',
+          overflow: 'hidden',
         }}
       >
         {/* Віджет знає, якої він зараз ширини й чи на ньому курсор.
@@ -484,7 +489,7 @@ function CardShell({
           s: stats,
           o: opts,
           id: item.id + (overlay ? '-ov' : ''),
-          w: item.w,
+          w: renderW ?? item.w,
           hover: !!hover || !!overlay,
         })}
       </div>
@@ -498,11 +503,12 @@ function CardShell({
   );
 }
 
-function SortableCard({ item, edit, removing, ...rest }) {
+function SortableCard({ item, edit, removing, stretchW, ...rest }) {
   const [hover, setHover] = useState(false);
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging, isOver,
   } = useSortable({ id: item.id, disabled: !edit });
+  const w = stretchW || item.w;
 
 
   /* Тягнеться вся картка, а не ручка.
@@ -532,7 +538,7 @@ function SortableCard({ item, edit, removing, ...rest }) {
       {...(edit ? attributes : {})}
       {...(edit ? listeners : {})}
       style={{
-        gridColumn: `span ${item.w}`,
+        gridColumn: `span ${w}`,
         gridRow: `span ${item.h}`,
         /* Тільки зсув. Масштаб із трансформу викидаємо: картки різної
            ширини, і при обміні місцями бібліотека інакше розтягує
@@ -555,6 +561,7 @@ function SortableCard({ item, edit, removing, ...rest }) {
       >
         <CardShell
           item={item}
+          renderW={w}
           edit={edit}
           removing={removing}
           hover={hover && !isDragging}
@@ -769,6 +776,103 @@ function LibGhost({ id }) {
   );
 }
 
+/* ------------------------------------------------------------------
+   Розтягування самотніх плиток
+
+   `row dense` чудово латає дірки посеред сітки — але не бачить наперед
+   і нічим не заповнить те, що лишилось ПІСЛЯ останньої картки: там
+   просто нікого поставити. Саме це й лишало порожні клітинки поруч із
+   щойно доданим віджетом чи біля картки, в якої забрали сусіда.
+
+   Тому та сама dense-розкладка рахується тут ще раз, наперед, у JS —
+   і кожній картці, з якою в її власних рядках нікому ділити клітинку,
+   віддається вся сусідня вільна ширина замість того, щоб лишати її
+   порожньою. Тільки вшир: висота лишається тим, що задав реєстр, бо
+   розтягування під сусіда — та сама помилка, яку тут уже виправляли
+   один раз (див. коментар про плитку вище).
+
+   Рахується наново з поточного layout на кожен рендер, тож щойно
+   зʼявляється сусід — картка сама повертається до свого розміру. */
+
+/* Розмір картки — завжди з реєстру, ніколи зі збереженої розкладки:
+   людина його більше не обирає (SettingsPanel resizable=false), тож
+   довіряти x.w/x.h із бази — довіряти випадковому числу з часів, коли
+   резайз ще існував. cols обмежує ширину видимим числом колонок на
+   вузькому екрані — інакше w:3 картка на телефоні (1 колонка) ніколи
+   не знайшла б собі місця. */
+function sizeOf(id, registry, cols = 4) {
+  const spec = registry[id] || {};
+  return {
+    w: Math.min(Math.max(spec.defaultW || 1, 1), cols),
+    h: Math.min(Math.max(spec.defaultH || 2, spec.minH || 1), 4),
+  };
+}
+
+function computeStretch(boardLayout, registry, cols) {
+  const items = boardLayout.map((item) => ({ id: item.id, ...sizeOf(item.id, registry, cols) }));
+
+  const rows = [];
+  const ensure = (r) => { while (rows.length <= r) rows.push(new Array(cols).fill(null)); };
+  const fits = (r, c, w, h) => {
+    if (c + w > cols) return false;
+    for (let rr = r; rr < r + h; rr++) {
+      ensure(rr);
+      for (let cc = c; cc < c + w; cc++) if (rows[rr][cc]) return false;
+    }
+    return true;
+  };
+  const place = (id, r, c, w, h) => {
+    for (let rr = r; rr < r + h; rr++) for (let cc = c; cc < c + w; cc++) rows[rr][cc] = id;
+  };
+
+  const placed = [];
+  for (const it of items) {
+    let done = false;
+    for (let r = 0; !done; r++) {
+      for (let c = 0; c <= cols - it.w; c++) {
+        if (fits(r, c, it.w, it.h)) { place(it.id, r, c, it.w, it.h); placed.push({ ...it, r, c }); done = true; break; }
+      }
+    }
+  }
+
+  const free = (r, c) => !!rows[r] && rows[r][c] === null;
+  const stretch = {};
+  for (const it of placed) {
+    const span = Array.from({ length: it.h }, (_, i) => it.r + i);
+    let left = it.c;
+    while (left > 0 && span.every((r) => free(r, left - 1))) left--;
+    let right = it.c + it.w;
+    while (right < cols && span.every((r) => free(r, right))) right++;
+    if (right - left > it.w) stretch[it.id] = right - left;
+  }
+  return stretch;
+}
+
+/* `--ov-cols` уже живе в CSS (media query нижче) — тут лише те саме
+   правило дублюється для JS, бо розрахунку розтягування треба знати
+   живу кількість колонок, а не саму лише формулу з span. */
+function useCols() {
+  const read = () => {
+    if (typeof window === 'undefined' || !window.matchMedia) return 4;
+    if (window.matchMedia('(max-width: 719px)').matches) return 1;
+    if (window.matchMedia('(max-width: 1279px)').matches) return 2;
+    return 4;
+  };
+  const [cols, setCols] = useState(read);
+  useEffect(() => {
+    const mqNarrow = window.matchMedia('(max-width: 719px)');
+    const mqMid = window.matchMedia('(max-width: 1279px)');
+    const update = () => setCols(read());
+    mqNarrow.addEventListener('change', update);
+    mqMid.addEventListener('change', update);
+    return () => {
+      mqNarrow.removeEventListener('change', update);
+      mqMid.removeEventListener('change', update);
+    };
+  }, []);
+  return cols;
+}
+
 /* ==================================================================
    ДОШКА
 ================================================================== */
@@ -776,8 +880,26 @@ function LibGhost({ id }) {
 export default function Board({
   layout, setLayout, statsFor, saving,
   registry = WIDGETS, defaults = DEFAULT_LAYOUT, hint,
+  /* Психологія малює цю дошку двічі: зліва — повний конструктор,
+     справа — вузька приклеєна колонка з тим самим АІ-психологом,
+     вердиктом і чек-листом, яка й не мала бути дошкою для
+     перетягувань. editable=false ховає всю панель керування —
+     без кнопки «Налаштувати» edit ніколи не стає true, і решта
+     (drag, «Додати віджет», хрестики на картках) вимикається сама,
+     бо вже й так висить на цьому самому стані. */
+  editable = true,
+  /* showGear=false ховає лише саму кнопку-шестерню з рядка керування
+     (решта — «Додати віджет», «Скинути», підказка — лишається). Разом
+     з controlled edit/onEditChange це дозволяє Психології винести
+     кнопку з рядка над лівою дошкою нагору сторінки, над обома
+     колонками, а не ховати редагування, як робить editable. */
+  showGear = true,
+  edit: controlledEdit,
+  onEditChange,
 }) {
-  const [edit, setEdit] = useState(false);
+  const [internalEdit, setInternalEdit] = useState(false);
+  const edit = controlledEdit ?? internalEdit;
+  const setEdit = onEditChange ?? setInternalEdit;
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [activeId, setActiveId] = useState(null);
@@ -817,6 +939,12 @@ export default function Board({
   const ids = useMemo(() => boardLayout.map((x) => x.id), [boardLayout]);
   const libId = typeof activeId === 'string' && activeId.startsWith('lib:') ? activeId.slice(4) : null;
   const activeItem = activeId && !libId ? layout.find((x) => x.id === activeId) : null;
+
+  const cols = useCols();
+  const stretch = useMemo(
+    () => computeStretch(boardLayout, registry, cols),
+    [boardLayout, registry, cols],
+  );
 
   useEffect(() => {
     if (!edit) { setAdding(false); setOpenId(null); setActiveId(null); }
@@ -865,14 +993,18 @@ export default function Board({
       return;
     }
 
+    /* Переставляємо, а не міняємо місцями.
+       Обмін двох плиток різного розміру змушував dense перекласти
+       половину сітки навколо різниці в розмірі — саме це й виглядало
+       «криво». Вставлення на місце — той самий жест, що в звичайному
+       сортованому списку: картка встає туди, куди її кинули, а решта
+       лише зсувається, звільняючи місце. */
     if (a.id === over.id) return;
     setLayout((prev) => {
       const from = prev.findIndex((x) => x.id === a.id);
       const to = prev.findIndex((x) => x.id === over.id);
       if (from < 0 || to < 0) return prev;
-      const next = [...prev];
-      [next[from], next[to]] = [next[to], next[from]];
-      return next;
+      return arrayMove(prev, from, to);
     });
   };
 
@@ -908,7 +1040,13 @@ export default function Board({
         onDragEnd={onDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        {/* ---------- рядок керування ---------- */}
+        {/* ---------- рядок керування ----------
+            Без гвинтика й поза редагуванням рядку нема чого показати:
+            «Додати віджет»/«Скинути» самі ховаються без edit, і 44px
+            висоти лишались би порожньою смугою над картками
+            (Психологія ховає саме гвинтик, кнопка стоїть нагорі
+            сторінки, над обома колонками). */}
+        {editable && (showGear || edit) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 16, flexWrap: 'wrap', minHeight: 44 }}>
           <AnimatePresence initial={false} mode="popLayout">
             {edit && (
@@ -934,7 +1072,7 @@ export default function Board({
                 </ToolButton>
 
                 <span style={{ fontFamily: F.sans, fontSize: 12.5, color: P.dim }}>
-                  Тягни картку — віджети поміняються місцями
+                  Тягни картку на потрібне місце
                 </span>
               </motion.div>
             )}
@@ -960,21 +1098,24 @@ export default function Board({
               інтерфейсах узагалі. Підпис займав місце в рядку, який і
               так тісний, і тягнув на себе увагу нарівні з даними —
               хоча відкривають цю дошку не заради нього. */}
-          <ToolButton
-            icon={edit ? Check : Cog}
-            title={edit ? 'Готово' : 'Налаштувати дошку'}
-            onClick={() => setEdit((v) => !v)}
-            primary={edit}
-            iconOnly
-          />
+          {showGear && (
+            <ToolButton
+              icon={edit ? Check : Cog}
+              title={edit ? 'Готово' : 'Налаштувати дошку'}
+              onClick={() => setEdit((v) => !v)}
+              primary={edit}
+              iconOnly
+            />
+          )}
         </div>
+        )}
 
         <AnimatePresence>
           {edit && adding && <AddPanel hidden={hidden} onAdd={(id) => add(id)} onClose={() => setAdding(false)} />}
         </AnimatePresence>
 
         {/* ---------- сітка ---------- */}
-        <SortableContext items={ids} strategy={rectSwappingStrategy}>
+        <SortableContext items={ids} strategy={rectSortingStrategy}>
           <div
             className="ov-board"
             style={{
@@ -995,9 +1136,14 @@ export default function Board({
                 key={item.id}
                 item={{
                   ...item,
-                  w: Math.min(Math.max(item.w || 1, 1), 4),
-                  h: Math.min(Math.max(item.h || registry[item.id]?.defaultH || 2, registry[item.id]?.minH || 1), 4),
+                  /* Не item.w/item.h — сам реєстр. Розмір більше не
+                     людське рішення (settings resizable=false вище),
+                     тож і читати збережене число нема сенсу: стара
+                     розкладка могла тримати випадкове w:4 чи h:3 із
+                     часів, коли резайз ще існував. */
+                  ...sizeOf(item.id, registry, cols),
                 }}
+                stretchW={stretch[item.id]}
                 stats={statsFor(item.p)}
                 edit={edit}
                 removing={removingId === item.id}
@@ -1032,7 +1178,15 @@ export default function Board({
         {createPortal(
           <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(.22,1,.36,1)' }}>
             {libId && <LibGhost id={libId} />}
-            {activeItem && <CardShell item={activeItem} stats={statsFor(activeItem.p)} edit overlay />}
+            {activeItem && (
+              <CardShell
+                item={activeItem}
+                renderW={sizeOf(activeItem.id, registry, cols).w}
+                stats={statsFor(activeItem.p)}
+                edit
+                overlay
+              />
+            )}
           </DragOverlay>,
           document.body,
         )}
@@ -1061,7 +1215,7 @@ export default function Board({
   );
 }
 
-function ToolButton({ icon: Icon, children, onClick, active, primary, iconOnly, title }) {
+export function ToolButton({ icon: Icon, children, onClick, active, primary, iconOnly, title }) {
   const [hover, setHover] = useState(false);
 
   if (primary) {

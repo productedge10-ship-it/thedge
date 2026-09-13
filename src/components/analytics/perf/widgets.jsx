@@ -112,7 +112,7 @@ function Fact({ label, value }) {
    тільки вміст, який людина впізнає з попередньої версії розділу. */
 function ClassicKpi({ id, value, subtext, subStats = [], color, data, dataKey }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minHeight: 96 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minHeight: 0 }}>
       <div>
         <b style={{ fontFamily: F.mono, fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color }}>
           {value}
@@ -135,7 +135,7 @@ function ClassicKpi({ id, value, subtext, subStats = [], color, data, dataKey })
       )}
 
       {data && data.length > 0 && (
-        <div style={{ flex: 1, minHeight: 40 }}>
+        <div style={{ flex: 1, minHeight: 28 }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <defs>
@@ -670,7 +670,9 @@ export const PERF_WIDGETS = {
           <ResponsiveContainer>
             <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 12, left: 4, bottom: 4 }}>
               <XAxis type="number" {...AX} />
-              <YAxis type="category" dataKey="emotion" {...AX} width={68} tickFormatter={(v) => ({ calm: 'Спокій', confident: 'Впевненість', anxious: 'Тривога', tilt: 'Тільт', fomo: 'FOMO' }[v] || v)} />
+              {/* 68 обрізало «Впевненість» до «певненість» — найдовшу
+                  назву стану треба вміщати цілою, не найкоротшу. */}
+              <YAxis type="category" dataKey="emotion" {...AX} width={92} tickFormatter={(v) => ({ calm: 'Спокій', confident: 'Впевненість', anxious: 'Тривога', tilt: 'Тільт', fomo: 'FOMO' }[v] || v)} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
               <ReferenceLine x={0} stroke={P.lineHover} />
               <Bar dataKey={o.metric} radius={[0, 5, 5, 0]} maxBarSize={22} isAnimationActive animationDuration={420}>
