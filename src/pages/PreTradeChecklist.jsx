@@ -56,6 +56,10 @@ function Item({
   onToggle, onStartEdit, onSaveEdit, onCancelEdit, onDelete,
   editText, setEditText,
 }) {
+  /* Хук до раннього повернення: в режимі редагування пункт малюється
+     іншою гілкою, і порядок хуків не має від цього мінятись. */
+  const [hover, setHover] = useState(false);
+
   if (editing) {
     return (
       <motion.div
@@ -106,6 +110,8 @@ function Item({
       transition={{ duration: 0.2, ease: EASE }}
       whileTap={editMode ? undefined : { scale: 0.995 }}
       onClick={() => { if (!editMode) onToggle(item.id); }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
       className={`group relative flex select-none items-center gap-3 overflow-hidden rounded-[10px] py-[9px] pl-3 pr-2 ${editMode ? '' : 'cursor-pointer'}`}
       /* Підкладка світліша за картку, а не темніша: темна читалась як
          дірка в поверхні, світла — як предмет, що лежить зверху.
@@ -114,12 +120,21 @@ function Item({
          Курсор показаний акцентною підкладкою, а не смужкою зліва:
          зліва вже живе жовта риска критичності, і два різні сенси на
          одних двох пікселях завжди читаються як один. */
+      /* Наведення міняє тільки яскравість підкладки — не розмір і не
+         положення. Зсув під курсором змушує око щоразу заново ловити
+         рядок, який саме читають.
+
+         Відмічений пункт підкладку втратив, тому під курсором її
+         отримує назад ледь помітною: інакше він виглядає як текст, а
+         не як щось, що ще можна натиснути й зняти. */
       style={{
         background: checked
-          ? 'transparent'
+          ? (hover && !editMode ? 'var(--edge-hair)' : 'transparent')
           : focused && !editMode
             ? `rgba(${T.accRgb},0.13)`
-            : 'var(--edge-hair)',
+            : hover && !editMode
+              ? `rgba(${T.accRgb},0.07)`
+              : 'var(--edge-hair)',
         transition: 'background 200ms',
       }}
     >
@@ -143,7 +158,13 @@ function Item({
         initial={false}
         animate={{
           backgroundColor: checked ? T.ok : 'rgba(0,0,0,0)',
-          borderColor: checked ? T.ok : focused && !editMode ? T.acc : T.lineHi,
+          borderColor: checked
+            ? T.ok
+            : focused && !editMode
+              ? T.acc
+              : hover && !editMode
+                ? `rgba(${T.accRgb},0.6)`
+                : T.lineHi,
         }}
         transition={{ type: 'spring', stiffness: 420, damping: 22 }}
         style={{ borderWidth: 1.5, borderStyle: 'solid' }}

@@ -4,33 +4,35 @@ import { motion, AnimatePresence, useMotionValue, useMotionTemplate } from 'fram
 import Fuse from 'fuse.js';
 import {
   Calculator as CalcIcon, ChevronDown, Search as SearchIcon, Loader2, Settings2,
+  ArrowUpDown, Star, Wallet, Plus, LayoutGrid,
 } from 'lucide-react';
 
 import { T } from '../lib/theme';
 import AssetIcon, { CURRENCY_TO_FLAG } from '../components/ui/AssetIcon';
 import ResultsBoard from '../components/calculator/ResultsBoard';
 import AssetSearchModal from '../components/modals/AssetSearchModal';
-import Popover from '../components/ui/Popover';
 
 /* ==================================================================
    Калькулятор позиції.
 
-   Перероблено з двох колонок в одну, і це головне.
+   Дві колонки на широкому екрані: зліва ввід, справа липке табло.
+   До цього сторінка була одним стовпчиком у 720 пікселів — на
+   моніторі це вузька стрічка посеред порожнечі, а результат
+   доводилось шукати очима над полями. Тепер число видно постійно,
+   і воно міняється в тій самій точці екрана, куди людина дивиться.
 
-   Калькулятор — лінійна задача: пʼять полів дають одне число. Дві
-   колонки розносили ввід і результат на шістсот пікселів, і око
-   мандрувало через екран після кожного символу. Тепер результат —
-   липка смуга над полями, все в межах одного погляду.
+   На вузькому екрані колонки складаються в одну, табло йде першим і
+   лишається липким — рівно та поведінка, що була.
 
-   Порядок полів тепер збігається з порядком мислення трейдера:
-   актив → вхід → стоп (ці двоє задають ризик і мусять бути поруч)
-   → відсоток → тейк, який насправді необовʼязковий і думається
-   останнім. Раніше тейк стояв між входом і стопом, розриваючи
-   єдину думку.
+   Порядок полів збігається з порядком мислення трейдера:
+   рахунок → актив → вхід і стоп (задають ризик, стоять поруч)
+   → відсоток → тейк, який думається останнім.
 
-   Підписи винесені над поля. Плейсхолдер зникає, щойно почав
-   друкувати, і три однакові порожні прямокутники з дрібними
-   кольоровими крапками ставали нерозрізненними.
+   Вибір скрізь зроблено видимим, а не захованим у випадайки й
+   модалки: рахунки — плитками з балансом, активи — плитками з
+   пошуком і категоріями просто на сторінці, ризик — великими
+   кнопками. Модалка лишилась для повного каталогу, але доходити до
+   неї тепер майже не треба.
 ================================================================== */
 
 const QUICK_SELECT_SYMBOLS = ['BTC/USD', 'EUR/USD', 'GER40', 'ETH/USD', 'GBP/USD', 'XAU/USD'];
@@ -47,10 +49,22 @@ const item = {
 
 const NO_SPIN = '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]';
 
+/* Скорочені підписи категорій: у базі вони довгі («Forex Majors»),
+   а в рядку вкладок місця на це немає. */
+const CAT_LABEL = {
+  'Forex Majors': 'Форекс',
+  'Forex Minors': 'Форекс ·',
+  Cryptocurrencies: 'Крипта',
+  Indices: 'Індекси',
+  Commodities: 'Сировина',
+  Metals: 'Метали',
+  Stocks: 'Акції',
+};
+
 /* ---------- картка без руху ----------
    Тільки світло за курсором. Нахил і підстрибування змушують око
    щоразу заново ловити вміст, а тут його читають. */
-function Card({ children, className = '' }) {
+function Card({ children, title, right, className = '' }) {
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
 
@@ -63,14 +77,24 @@ function Card({ children, className = '' }) {
   return (
     <div
       onMouseMove={move}
-      className={`group relative overflow-hidden rounded-2xl p-5 ${className}`}
+      className={`group relative overflow-hidden rounded-2xl p-5 sm:p-6 ${className}`}
       style={{ background: T.surface, border: `1px solid ${T.line}` }}
     >
       <motion.div
         className="pointer-events-none absolute -inset-px z-0 rounded-[inherit] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         style={{ background: useMotionTemplate`radial-gradient(400px circle at ${mx}px ${my}px, rgba(${T.accRgb},0.09), transparent 80%)` }}
       />
-      <div className="relative z-10">{children}</div>
+      <div className="relative z-10">
+        {(title || right) && (
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
+              {title}
+            </div>
+            {right}
+          </div>
+        )}
+        {children}
+      </div>
     </div>
   );
 }
@@ -79,26 +103,26 @@ function Card({ children, className = '' }) {
 
    Порожнє обовʼязкове поле підсвічує власний підпис акцентом. Так
    зникла потреба в окремій плашці «заповни: актив, вхід, стоп» —
-   вона показувала те саме, але окремою порожньою коробкою вгорі,
-   далеко від полів, до яких стосувалась. */
-function Field({ id, label, hint, value, onChange, placeholder, tone, inputRef, required }) {
+   вона показувала те саме, але окремою коробкою вгорі, далеко від
+   полів, до яких стосувалась. */
+function Field({ id, label, hint, value, onChange, placeholder, tone, inputRef, required, sub }) {
   const wanted = required && !Number(value);
 
   return (
-    <div>
+    <div className="min-w-0">
       {/* Порожній підпис лишав би над полем висоту рядка — і сусідні
           поля в тому ж ряду ставали б на різній висоті. */}
       {(label || hint) && (
         <label
           htmlFor={id}
-          className="mb-2 flex items-baseline justify-between text-[13px] font-semibold"
+          className="mb-2 flex items-baseline justify-between gap-2 text-[13.5px] font-semibold"
           style={{ fontFamily: T.sans, color: wanted ? T.acc : T.text2 }}
         >
           <span className="flex items-center gap-2">
-            {tone && <span className="h-2 w-2 rounded-full" style={{ background: tone }} />}
+            {tone && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: tone }} />}
             {label}
           </span>
-          {hint && <span className="text-[12px]" style={{ color: T.text3 }}>{hint}</span>}
+          {hint && <span className="shrink-0 text-[12px]" style={{ color: T.text3 }}>{hint}</span>}
         </label>
       )}
       <input
@@ -109,7 +133,7 @@ function Field({ id, label, hint, value, onChange, placeholder, tone, inputRef, 
         value={value}
         onChange={(e) => onChange(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))}
         placeholder={placeholder}
-        className={`h-14 w-full rounded-xl px-4 text-[18px] outline-none transition-colors ${NO_SPIN}`}
+        className={`h-16 w-full rounded-xl px-4 text-[21px] outline-none transition-colors ${NO_SPIN}`}
         style={{
           fontFamily: T.mono,
           background: T.sunken,
@@ -119,6 +143,13 @@ function Field({ id, label, hint, value, onChange, placeholder, tone, inputRef, 
         onFocus={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
         onBlur={(e) => (e.currentTarget.style.borderColor = wanted ? `rgba(${T.accRgb},0.28)` : T.line)}
       />
+      {/* Підказка під полем, а не в підписі: вона стосується вже
+          введеного числа, тож має стояти після нього. Рядок під полем
+          зарезервований завжди — інакше картка підстрибує на 18
+          пікселів, щойно введено стоп. */}
+      <div className="mt-1.5 h-[16px] text-[12.5px] leading-none tabular-nums" style={{ fontFamily: T.mono, color: T.text3 }}>
+        {sub}
+      </div>
     </div>
   );
 }
@@ -131,6 +162,7 @@ export default function Calculator() {
   const [favorites, setFavorites] = useState([]);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [swapHint, setSwapHint] = useState(false);
 
   const searchInputRef = useRef(null);
   const balanceRef = useRef(null);
@@ -147,6 +179,12 @@ export default function Calculator() {
 
   const [assetSearch, setAssetSearch] = useState('');
   const deferredSearch = useDeferredValue(assetSearch);
+
+  /* Окремий пошук просто на сторінці — модалка лишається для
+     повного каталогу, але типовий вибір робиться без неї. */
+  const [inlineSearch, setInlineSearch] = useState('');
+  const deferredInline = useDeferredValue(inlineSearch);
+  const [assetTab, setAssetTab] = useState('fav');
 
   const [entryPrice, setEntryPrice] = useState('');
   const [takeProfit, setTakeProfit] = useState('');
@@ -356,14 +394,31 @@ export default function Calculator() {
     [favorites, flatAssets],
   );
 
-  /* Улюблені попереду, типові добираються слідом. Шість штук —
-     стільки влазить у два рядки й охоплюється поглядом. */
+  /* Улюблені попереду, типові добираються слідом. */
   const quickRow = useMemo(() => {
     const seen = new Set();
     return [...favoriteAssetsList, ...quickSelectAssets]
       .filter((a) => a && !seen.has(a.symbol) && seen.add(a.symbol))
-      .slice(0, 6);
+      .slice(0, 8);
   }, [favoriteAssetsList, quickSelectAssets]);
+
+  /* Вкладки будуються з того, що реально є в базі, а не з
+     захардкодженого переліку: інструменти додаються, і список
+     категорій мав би розʼїжджатись із ним. */
+  const categories = useMemo(() => {
+    const count = {};
+    flatAssets.forEach((a) => { count[a.category] = (count[a.category] || 0) + 1; });
+    return Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c]) => c);
+  }, [flatAssets]);
+
+  /* Що показати плитками: знайдене, вкладка категорії або добірка
+     «улюблені + типові». */
+  const assetGrid = useMemo(() => {
+    const q = deferredInline.trim();
+    if (q) return fuse.search(q).map((r) => r.item).slice(0, 12);
+    if (assetTab === 'fav') return quickRow;
+    return flatAssets.filter((a) => a.category === assetTab).slice(0, 12);
+  }, [deferredInline, fuse, assetTab, quickRow, flatAssets]);
 
   /* ---------- розрахунок ---------- */
   const calculatePosition = () => {
@@ -434,322 +489,485 @@ export default function Calculator() {
     ? `$${(Number(balance) * Number(riskPercent) / 100).toLocaleString('uk-UA', { maximumFractionDigits: 2 })}`
     : null;
 
+  /* Напрям угоди з самих чисел, а не окремим перемикачем: стоп під
+     входом означає лонг, над ним — шорт. Показуємо це підписом, щоб
+     помилка в полі була видна одразу. */
+  const side = useMemo(() => {
+    const e = Number(entryPrice);
+    const s = Number(stopLoss);
+    if (isPipsMode || !e || !s || e === s) return null;
+    return s < e ? 'Long' : 'Short';
+  }, [entryPrice, stopLoss, isPipsMode]);
+
+  const swapLevels = () => {
+    setEntryPrice(stopLoss);
+    setStopLoss(entryPrice);
+  };
+
   return (
     <div className="relative min-h-full">
       <motion.div
         variants={container}
         initial="hidden"
         animate="show"
-        className="relative z-10 mx-auto w-full max-w-[720px] px-4 pb-24 pt-5 sm:px-6 lg:pt-7"
+        className="relative z-10 mx-auto w-full max-w-[1240px] px-4 pb-24 pt-5 sm:px-6 lg:pt-7"
       >
         {/* ─────────── Шапка ─────────── */}
-        <motion.div variants={item} className="mb-5 flex items-center gap-3.5">
+        <motion.div variants={item} className="mb-5 flex flex-wrap items-center gap-3.5">
           <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
             style={{ background: `rgba(${T.accRgb},0.10)`, border: `1px solid ${T.lineAcc}` }}
           >
-            <CalcIcon size={20} style={{ color: T.acc }} />
+            <CalcIcon size={21} style={{ color: T.acc }} />
           </div>
           <div className="min-w-0">
             <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
               Ризик-менеджмент
             </div>
             <h1
-              className="text-[26px] font-bold leading-none sm:text-[30px]"
+              className="text-[28px] font-bold leading-none sm:text-[34px]"
               style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
             >
               Калькулятор позиції
             </h1>
           </div>
+
+          {/* Режим — тихий перемикач у шапці: його чіпають раз на
+              місяць, але стосується він усієї форми, тому стоїть над
+              нею, а не всередині картки з рівнями. */}
+          <div className="ml-auto flex gap-1 rounded-xl p-1" style={{ background: 'rgba(var(--edge-hair-rgb),0.04)' }}>
+            {[
+              { id: false, label: 'за ціною' },
+              { id: true, label: 'у пунктах' },
+            ].map((m) => {
+              const on = isPipsMode === m.id;
+              return (
+                <button
+                  key={String(m.id)}
+                  type="button"
+                  onClick={() => { setIsPipsMode(m.id); localStorage.setItem('calc_pips_mode', String(m.id)); }}
+                  className="rounded-lg px-3.5 py-2 text-[13px] font-bold transition-colors"
+                  style={{
+                    fontFamily: T.sans,
+                    color: on ? T.text : T.text3,
+                    background: on ? 'rgba(var(--edge-hair-rgb),0.09)' : 'transparent',
+                  }}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
         </motion.div>
 
-        {/* ─────────── Результат ─────────── */}
-        <ResultsBoard
-          lotSize={lotSize}
-          riskAmount={riskAmount}
-          profit={profit}
-          rr={rr}
-          ready={ready}
-          balance={balance}
-          riskPercent={riskPercent}
-          stopDistance={stopDistance}
-          isPipsMode={isPipsMode}
-        />
+        {/* ─────────── Дві колонки ───────────
+            Табло першим у розмітці: на вузькому екрані воно має
+            лишитись зверху, а на широкому grid ставить його праворуч
+            без жодного дублювання. */}
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_370px] lg:gap-5">
 
-        <div className="flex flex-col gap-3">
-
-          {/* ─────────── Рахунок ─────────── */}
-          <motion.div variants={item} className="relative z-20">
-            <Card>
-              <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                Рахунок
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                {/* Портальний Popover, а не абсолютний блок усередині
-                    картки: у Card стоїть overflow-hidden заради
-                    заокруглення й світла за курсором, і він обрізав
-                    випадайку по нижньому краю картки. */}
-                {/* Підписи над цими двома полями прибрані: заголовок
-                    «Рахунок» стоїть рядком вище, а самі поля кажуть
-                    про себе — у випадайці видно назву рахунку, у
-                    сусідньому полі суму. Два зайві написи лише
-                    подвоювали ту саму думку. */}
-                <div className="min-w-0 flex-1">
-                  <Popover
-                    triggerClass="block w-full"
-                    renderTrigger={({ open, toggle }) => (
-                      <button
-                        type="button"
-                        onClick={() => !isLoadingAccounts && toggle()}
-                        className="flex h-14 w-full items-center justify-between rounded-xl px-4 text-left transition-colors"
-                        style={{
-                          background: T.sunken,
-                          border: `1px solid ${open ? T.lineAcc : T.line}`,
-                          cursor: isLoadingAccounts ? 'wait' : 'pointer',
-                        }}
-                      >
-                        <span className="truncate text-[15px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
-                          {isLoadingAccounts ? (
-                            <span className="flex items-center gap-2" style={{ color: T.text3 }}>
-                              <Loader2 size={15} className="animate-spin" /> завантажую…
-                            </span>
-                          ) : selectedAccount === 'custom'
-                            ? 'Вручну'
-                            : accounts.find((a) => a.id === selectedAccount)?.firm_name || 'Обрати'}
-                        </span>
-                        <ChevronDown
-                          size={16}
-                          style={{ color: T.text3, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
-                        />
-                      </button>
-                    )}
-                  >
-                    {({ close }) => (
-                      <div
-                        className="w-[280px] overflow-hidden rounded-xl"
-                        style={{ background: T.surfaceHi, border: `1px solid ${T.lineHi}`, boxShadow: '0 28px 64px -20px rgba(0,0,0,0.9)' }}
-                      >
-                        <div className="flex max-h-[280px] flex-col gap-1 overflow-y-auto p-1.5">
-                          {accounts.map((acc) => {
-                            const on = selectedAccount === acc.id;
-                            return (
-                              <button
-                                key={acc.id}
-                                onClick={() => { handleAccountSelect(acc); close(); }}
-                                className="flex items-center justify-between rounded-lg px-3 py-3 text-[14px] font-semibold transition-colors"
-                                style={{
-                                  fontFamily: T.sans,
-                                  color: on ? T.acc : T.text2,
-                                  background: on ? `rgba(${T.accRgb},0.12)` : 'transparent',
-                                }}
-                              >
-                                <span className="truncate">{acc.firm_name}</span>
-                                <span className="ml-2 shrink-0 tabular-nums" style={{ fontFamily: T.mono, color: T.text3 }}>
-                                  ${acc.balance.toLocaleString('uk-UA')}
-                                </span>
-                              </button>
-                            );
-                          })}
-                          <button
-                            onClick={() => { handleAccountSelect('custom'); close(); }}
-                            className="rounded-lg px-3 py-3 text-left text-[14px] font-semibold transition-colors"
-                            style={{
-                              fontFamily: T.sans,
-                              color: selectedAccount === 'custom' ? T.acc : T.text2,
-                              background: selectedAccount === 'custom' ? `rgba(${T.accRgb},0.12)` : 'transparent',
-                              borderTop: accounts.length ? `1px solid ${T.line}` : 'none',
-                            }}
-                          >
-                            Ввести вручну
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </Popover>
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <Field
-                    id="calc-balance"
-                    inputRef={balanceRef}
-                    required
-                    value={balance}
-                    onChange={(v) => {
-                      setBalance(v);
-                      setSelectedAccount('custom');
-                      localStorage.setItem('calc_selected_account', 'custom');
-                      localStorage.setItem('calc_custom_balance', v);
-                    }}
-                    placeholder="Депозит, $"
-                  />
-                </div>
-              </div>
-            </Card>
+          {/* ───── права колонка (на мобільному — верхня) ───── */}
+          <motion.div variants={item} className="sticky top-3 z-30 lg:order-2">
+            <ResultsBoard
+              lotSize={lotSize}
+              riskAmount={riskAmount}
+              profit={profit}
+              rr={rr}
+              ready={ready}
+              balance={balance}
+              riskPercent={riskPercent}
+              stopDistance={stopDistance}
+              isPipsMode={isPipsMode}
+            />
           </motion.div>
 
-          {/* ─────────── Угода ─────────── */}
-          <motion.div variants={item}>
-            <Card>
-              <div className="mb-3 flex items-center justify-between">
-                <div className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                  Угода
-                </div>
-                {/* Режим — тихий перемикач, а не два великі прямокутники:
-                    його чіпають раз на місяць. */}
-                <div className="flex gap-1 rounded-lg p-1" style={{ background: 'rgba(var(--edge-hair-rgb),0.04)' }}>
-                  {[
-                    { id: false, label: 'за ціною' },
-                    { id: true, label: 'у пунктах' },
-                  ].map((m) => {
-                    const on = isPipsMode === m.id;
-                    return (
+          {/* ───── ліва колонка: ввід ───── */}
+          <div className="flex min-w-0 flex-col gap-4 lg:order-1">
+
+            {/* ─────────── Рахунок ─────────── */}
+            <motion.div variants={item}>
+              <Card title="Рахунок">
+                {isLoadingAccounts ? (
+                  <div className="flex h-[76px] items-center gap-2 text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                    <Loader2 size={15} className="animate-spin" /> завантажую рахунки…
+                  </div>
+                ) : (
+                  <>
+                    {/* Плитки замість випадайки: рахунків у трейдера
+                        одиниці, а баланс кожного — саме те число, за
+                        яким його й вибирають. Ховати це в список
+                        означало змушувати відкривати його щоразу. */}
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {accounts.map((acc) => {
+                        const on = selectedAccount === acc.id;
+                        return (
+                          <button
+                            key={acc.id}
+                            type="button"
+                            onClick={() => handleAccountSelect(acc)}
+                            className="flex h-[74px] flex-col justify-center gap-1 rounded-xl px-3.5 text-left transition-colors"
+                            style={{
+                              background: on ? `rgba(${T.accRgb},0.12)` : T.sunken,
+                              border: `1px solid ${on ? T.lineAcc : T.line}`,
+                            }}
+                            onMouseEnter={(e) => { if (!on) e.currentTarget.style.borderColor = T.lineHi; }}
+                            onMouseLeave={(e) => { if (!on) e.currentTarget.style.borderColor = T.line; }}
+                          >
+                            <span
+                              className="truncate text-[13.5px] font-bold"
+                              style={{ fontFamily: T.sans, color: on ? T.acc : T.text2 }}
+                            >
+                              {acc.firm_name}
+                            </span>
+                            <span className="truncate text-[16px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: on ? T.text : T.text3 }}>
+                              ${Number(acc.balance).toLocaleString('uk-UA')}
+                            </span>
+                          </button>
+                        );
+                      })}
+
                       <button
-                        key={String(m.id)}
                         type="button"
-                        onClick={() => { setIsPipsMode(m.id); localStorage.setItem('calc_pips_mode', String(m.id)); }}
-                        className="rounded-md px-2.5 py-1 text-[12px] font-semibold transition-colors"
+                        onClick={() => { handleAccountSelect('custom'); balanceRef.current?.focus(); }}
+                        className="flex h-[74px] flex-col justify-center gap-1 rounded-xl px-3.5 text-left transition-colors"
                         style={{
-                          fontFamily: T.sans,
-                          color: on ? T.text : T.text3,
-                          background: on ? 'rgba(var(--edge-hair-rgb),0.09)' : 'transparent',
+                          background: selectedAccount === 'custom' ? `rgba(${T.accRgb},0.12)` : T.sunken,
+                          border: `1px solid ${selectedAccount === 'custom' ? T.lineAcc : T.line}`,
                         }}
                       >
-                        {m.label}
+                        <span className="flex items-center gap-1.5 text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: selectedAccount === 'custom' ? T.acc : T.text2 }}>
+                          {accounts.length ? <Plus size={14} strokeWidth={2.6} /> : <Wallet size={14} strokeWidth={2.4} />}
+                          Вручну
+                        </span>
+                        <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                          свій депозит
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="mt-3.5">
+                      <Field
+                        id="calc-balance"
+                        inputRef={balanceRef}
+                        required
+                        label="Депозит"
+                        hint={riskMoney ? `ризик ${riskMoney}` : null}
+                        value={balance}
+                        onChange={(v) => {
+                          setBalance(v);
+                          setSelectedAccount('custom');
+                          localStorage.setItem('calc_selected_account', 'custom');
+                          localStorage.setItem('calc_custom_balance', v);
+                        }}
+                        placeholder="10000"
+                      />
+                    </div>
+                  </>
+                )}
+              </Card>
+            </motion.div>
+
+            {/* ─────────── Актив ─────────── */}
+            <motion.div variants={item}>
+              <Card
+                title="Актив"
+                right={isLoadingAssets ? <Loader2 size={14} className="animate-spin" style={{ color: T.acc }} /> : null}
+              >
+                {/* Обраний актив великою плашкою: це якір усієї
+                    сторінки, від нього залежить і розмір контракту, і
+                    ціна пункту. */}
+                <div
+                  className="mb-3.5 flex h-16 items-center gap-3 rounded-xl px-4"
+                  style={{
+                    background: assetPair ? `rgba(${T.accRgb},0.08)` : T.sunken,
+                    border: `1px solid ${assetPair ? T.lineAcc : `rgba(${T.accRgb},0.28)`}`,
+                  }}
+                >
+                  {assetPair
+                    ? <AssetIcon symbol={assetPair} category={flatAssets.find((a) => a.symbol === assetPair)?.category} />
+                    : <SearchIcon size={18} style={{ color: T.text3 }} />}
+                  <span
+                    className="truncate text-[21px] font-bold"
+                    style={{ fontFamily: assetPair ? T.mono : T.sans, color: assetPair ? T.text : T.text3 }}
+                  >
+                    {assetPair || 'інструмент не обрано'}
+                  </span>
+                  {assetPair && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleToggleFavorite(e, assetPair)}
+                      className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors"
+                      style={{
+                        background: 'rgba(var(--edge-hair-rgb),0.05)',
+                        color: favorites.includes(assetPair) ? T.warn : T.text3,
+                      }}
+                      title={favorites.includes(assetPair) ? 'Прибрати з улюблених' : 'В улюблені'}
+                    >
+                      <Star size={16} strokeWidth={2.2} fill={favorites.includes(assetPair) ? T.warn : 'none'} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Пошук прямо тут. Раніше єдиний шлях до інструмента
+                    лежав через модалку: відкрити, знайти, клікнути,
+                    дочекатись закриття — чотири дії на те, що робиться
+                    одним дотиком. */}
+                <div className="flex gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <SearchIcon size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: T.text3 }} />
+                    <input
+                      type="text"
+                      value={inlineSearch}
+                      onChange={(e) => setInlineSearch(e.target.value)}
+                      placeholder="Пошук: EURUSD, BTC, GER40…"
+                      className="h-12 w-full rounded-xl pl-10 pr-3 text-[15px] outline-none transition-colors"
+                      style={{ fontFamily: T.sans, background: T.sunken, border: `1px solid ${T.line}`, color: T.text }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = T.line)}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => !isLoadingAssets && setIsAssetModalOpen(true)}
+                    className="flex h-12 shrink-0 items-center gap-2 rounded-xl px-3.5 text-[13.5px] font-bold transition-colors"
+                    style={{ fontFamily: T.sans, background: T.sunken, border: `1px solid ${T.line}`, color: T.text2 }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
+                    title="Повний каталог"
+                  >
+                    <LayoutGrid size={15} strokeWidth={2.2} />
+                    <span className="hidden sm:inline">усі</span>
+                  </button>
+                </div>
+
+                {/* Вкладки категорій. Поки в пошуку щось є — вони
+                    ховаються: два фільтри одночасно тільки плутають. */}
+                {!deferredInline.trim() && categories.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {[{ id: 'fav', label: 'Обрані' }, ...categories.map((c) => ({ id: c, label: CAT_LABEL[c] || c }))].map((tab) => {
+                      const on = assetTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setAssetTab(tab.id)}
+                          className="h-9 rounded-lg px-3 text-[13px] font-bold transition-colors"
+                          style={{
+                            fontFamily: T.sans,
+                            color: on ? T.acc : T.text3,
+                            background: on ? `rgba(${T.accRgb},0.12)` : 'rgba(var(--edge-hair-rgb),0.04)',
+                            border: `1px solid ${on ? T.accLine : 'transparent'}`,
+                          }}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Плитки: іконка плюс тікер, у два-три стовпчики.
+                    Рядок чипів, що був раніше, тримав три штуки й
+                    обрізався — решту доводилось шукати в модалці. */}
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {assetGrid.map((a) => {
+                    const on = assetPair === a.symbol;
+                    return (
+                      <button
+                        key={a.symbol}
+                        type="button"
+                        onClick={() => handleAssetSelect(a)}
+                        className="flex h-12 items-center gap-2.5 rounded-xl px-3 text-left transition-colors"
+                        style={{
+                          background: on ? `rgba(${T.accRgb},0.12)` : T.sunken,
+                          border: `1px solid ${on ? T.lineAcc : T.line}`,
+                        }}
+                        onMouseEnter={(e) => { if (!on) e.currentTarget.style.borderColor = T.lineHi; }}
+                        onMouseLeave={(e) => { if (!on) e.currentTarget.style.borderColor = T.line; }}
+                      >
+                        <AssetIcon symbol={a.symbol} category={a.category} />
+                        <span className="truncate text-[14px] font-bold" style={{ fontFamily: T.mono, color: on ? T.acc : T.text2 }}>
+                          {a.symbol}
+                        </span>
+                      </button>
+                    );
+                  })}
+
+                  {assetGrid.length === 0 && (
+                    <div className="col-span-full py-3 text-[13.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                      {isLoadingAssets ? 'завантажую інструменти…' : 'нічого не знайшлось — спробуй повний каталог'}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* ─────────── Рівні ─────────── */}
+            <motion.div variants={item}>
+              <Card
+                title="Рівні"
+                right={side && (
+                  <span
+                    className="rounded-lg px-2.5 py-1 text-[12px] font-bold"
+                    style={{
+                      fontFamily: T.sans,
+                      color: side === 'Long' ? T.ok : T.bad,
+                      background: side === 'Long' ? `rgba(${T.okRgb},0.12)` : `rgba(${T.badRgb},0.12)`,
+                    }}
+                  >
+                    {side}
+                  </span>
+                )}
+              >
+                {/* Вхід і стоп поруч: разом вони задають ризик, це одна
+                    думка. Кнопка між ними міняє їх місцями — помилка
+                    «набрав навпаки» трапляється частіше за всі інші,
+                    і виправляти її переписуванням двох полів довго. */}
+                {/* Вирівнювання по ВЕРХУ. По низу поле зі стопом
+                    підскакувало вгору, щойно під ним зʼявлялась
+                    дистанція: flex тягнув до спільного низу разом із
+                    підказкою, і два однакові поля ставали на різній
+                    висоті. */}
+                <div className="flex items-start gap-2">
+                  {!isPipsMode && (
+                    <>
+                      <div className="min-w-0 flex-1">
+                        <Field
+                          id="calc-entry"
+                          inputRef={entryRef}
+                          required
+                          label="Вхід"
+                          value={entryPrice}
+                          onChange={setEntryPrice}
+                          placeholder="1.08500"
+                          tone={T.acc}
+                        />
+                      </div>
+                      {/* Сама стрілка не пояснює, що робить кнопка, а
+                          системний title спливає аж через секунду й у
+                          чужому стилі. Тому підказка своя й майже
+                          миттєва. */}
+                      {/* 30px — рівно висота підпису над полем
+                          (13.5px рядок + 8px відступу): так кнопка
+                          стоїть врівень з обома полями, а не з їхніми
+                          заголовками. */}
+                      <div
+                        className="relative shrink-0"
+                        style={{ marginTop: 30 }}
+                        onMouseEnter={() => setSwapHint(true)}
+                        onMouseLeave={() => setSwapHint(false)}
+                      >
+                        <button
+                          type="button"
+                          onClick={swapLevels}
+                          className="grid h-16 w-11 place-items-center rounded-xl transition-colors"
+                          style={{
+                            background: swapHint ? `rgba(${T.accRgb},0.10)` : T.sunken,
+                            border: `1px solid ${swapHint ? T.lineAcc : T.line}`,
+                            color: swapHint ? T.acc : T.text3,
+                          }}
+                          aria-label="Поміняти вхід і стоп місцями"
+                        >
+                          <ArrowUpDown size={16} strokeWidth={2.2} />
+                        </button>
+
+                        <AnimatePresence>
+                          {swapHint && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 4 }}
+                              transition={{ duration: 0.14 }}
+                              className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[12px] font-semibold"
+                              style={{
+                                fontFamily: T.sans,
+                                background: T.surfaceHi,
+                                border: `1px solid ${T.lineHi}`,
+                                color: T.text2,
+                                boxShadow: '0 12px 28px -12px rgba(0,0,0,0.9)',
+                              }}
+                            >
+                              поміняти місцями
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <Field
+                      id="calc-stop"
+                      inputRef={stopRef}
+                      required
+                      label={isPipsMode ? 'Стоп, пунктів' : 'Стоп'}
+                      value={stopLoss}
+                      onChange={setStopLoss}
+                      placeholder={isPipsMode ? '250' : '1.08300'}
+                      tone={T.bad}
+                      sub={!isPipsMode && stopDistance ? `дистанція ${stopDistance}` : null}
+                    />
+                  </div>
+                </div>
+
+                {/* Тейк останній і підписаний як необовʼязковий — він і
+                    справді думається після того, як ризик уже заданий. */}
+                <div className="mt-3.5">
+                  <Field
+                    id="calc-tp"
+                    label={isPipsMode ? 'Тейк, пунктів' : 'Тейк'}
+                    hint="не обовʼязково"
+                    value={takeProfit}
+                    onChange={setTakeProfit}
+                    placeholder={isPipsMode ? '500' : '1.08900'}
+                    tone={T.ok}
+                    sub={Number(rr) > 0 ? `1 : ${rr}` : null}
+                  />
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* ─────────── Ризик ─────────── */}
+            <motion.div variants={item}>
+              <Card
+                title="Ризик на угоду"
+                right={riskMoney && (
+                  <span className="text-[16px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.bad }}>
+                    {riskMoney}
+                  </span>
+                )}
+              >
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {/* Порівняння числове, не рядкове: при значенні '1.0'
+                      чип '1' інакше ніколи не підсвічувався. */}
+                  {['0.25', '0.5', '1', '2'].map((v) => {
+                    const on = Number(riskPercent) === Number(v);
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => { setRiskPercent(v); localStorage.setItem('calc_risk_percent', v); }}
+                        className="h-16 rounded-xl text-[19px] font-bold tabular-nums transition-colors"
+                        style={{
+                          fontFamily: T.mono,
+                          color: on ? T.bad : T.text3,
+                          background: on ? `rgba(${T.badRgb},0.12)` : T.sunken,
+                          border: `1px solid ${on ? `rgba(${T.badRgb},0.32)` : T.line}`,
+                        }}
+                      >
+                        {v}%
                       </button>
                     );
                   })}
                 </div>
-              </div>
 
-              <div className="flex flex-col gap-3.5">
-
-                {/* актив */}
-                <div>
-                  <label
-                    className="mb-2 flex items-center justify-between text-[13px] font-semibold"
-                    style={{ fontFamily: T.sans, color: assetPair ? T.text2 : T.acc }}
-                  >
-                    Актив
-                    {isLoadingAssets && <Loader2 size={13} className="animate-spin" style={{ color: T.acc }} />}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => !isLoadingAssets && setIsAssetModalOpen(true)}
-                    className="flex h-14 w-full items-center justify-between rounded-xl px-4 transition-colors"
-                    style={{ background: T.sunken, border: `1px solid ${assetPair ? T.line : `rgba(${T.accRgb},0.28)`}` }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = assetPair ? T.line : `rgba(${T.accRgb},0.28)`)}
-                  >
-                    <span className="flex min-w-0 items-center gap-3">
-                      {assetPair && (
-                        <AssetIcon symbol={assetPair} category={flatAssets.find((a) => a.symbol === assetPair)?.category} />
-                      )}
-                      <span
-                        className="truncate text-[17px] font-bold"
-                        style={{ fontFamily: assetPair ? T.mono : T.sans, color: assetPair ? T.text : T.text3 }}
-                      >
-                        {assetPair || 'обрати інструмент'}
-                      </span>
-                    </span>
-                    <SearchIcon size={17} style={{ color: T.text3 }} />
-                  </button>
-
-                  {/* Швидкі активи прямо тут: улюблені плюс типові.
-                      Раніше вони жили тільки всередині модалки, і щоб
-                      узяти EUR/USD, треба було її відкрити, знайти,
-                      клікнути. Тепер один дотик. */}
-                  {quickRow.length > 0 && (
-                    <div className="mt-2.5 flex flex-wrap gap-1.5">
-                      {quickRow.map((a) => {
-                        const on = assetPair === a.symbol;
-                        return (
-                          <button
-                            key={a.symbol}
-                            type="button"
-                            onClick={() => handleAssetSelect(a)}
-                            className="flex h-9 items-center gap-2 rounded-lg px-2.5 text-[13px] font-bold transition-colors"
-                            style={{
-                              fontFamily: T.mono,
-                              color: on ? T.acc : T.text2,
-                              background: on ? `rgba(${T.accRgb},0.12)` : 'rgba(var(--edge-hair-rgb),0.04)',
-                            }}
-                            onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.09)'; }}
-                            onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'rgba(var(--edge-hair-rgb),0.04)'; }}
-                          >
-                            <AssetIcon symbol={a.symbol} category={a.category} />
-                            {a.symbol}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Вхід і стоп поруч: разом вони задають ризик, це одна
-                    думка. Раніше між ними стояв тейк і розривав її. */}
-                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-                  {!isPipsMode && (
-                    <Field
-                      id="calc-entry"
-                      inputRef={entryRef}
-                      required
-                      label="Вхід"
-                      value={entryPrice}
-                      onChange={setEntryPrice}
-                      placeholder="1.08500"
-                      tone={T.acc}
-                    />
-                  )}
-                  <Field
-                    id="calc-stop"
-                    inputRef={stopRef}
-                    required
-                    label={isPipsMode ? 'Стоп, пунктів' : 'Стоп'}
-                    hint={!isPipsMode && stopDistance ? `${stopDistance}` : null}
-                    value={stopLoss}
-                    onChange={setStopLoss}
-                    placeholder={isPipsMode ? '250' : '1.08300'}
-                    tone={T.bad}
-                  />
-                </div>
-
-                {/* ризик */}
-                <div>
-                  <label htmlFor="calc-risk" className="mb-2 flex items-baseline justify-between text-[13px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
-                    <span className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full" style={{ background: T.bad }} />
-                      Ризик на угоду
-                    </span>
-                    {riskMoney && <span className="tabular-nums" style={{ fontFamily: T.mono, color: T.bad }}>{riskMoney}</span>}
-                  </label>
-
-                  <div className="flex gap-2">
-                    {/* Порівняння числове, не рядкове. Раніше тут було
-                        String(riskPercent) === v, і при значенні '1.0'
-                        чип '1' ніколи не підсвічувався — вибране
-                        значення виглядало як невибране. */}
-                    <div className="flex flex-1 gap-1.5">
-                      {['0.25', '0.5', '1', '2'].map((v) => {
-                        const on = Number(riskPercent) === Number(v);
-                        return (
-                          <button
-                            key={v}
-                            type="button"
-                            onClick={() => { setRiskPercent(v); localStorage.setItem('calc_risk_percent', v); }}
-                            className="h-14 flex-1 rounded-xl text-[15px] font-bold tabular-nums transition-colors"
-                            style={{
-                              fontFamily: T.mono,
-                              color: on ? T.bad : T.text3,
-                              background: on ? `rgba(${T.badRgb},0.12)` : T.sunken,
-                              border: `1px solid ${on ? `rgba(${T.badRgb},0.32)` : T.line}`,
-                            }}
-                          >
-                            {v}%
-                          </button>
-                        );
-                      })}
-                    </div>
+                {/* Своє значення — окремим підписаним полем, а не
+                    пʼятим чипом у ряду: раніше воно виглядало як
+                    кнопка з обрізаним числом. */}
+                <div className="mt-3.5 flex items-end gap-3">
+                  <div className="w-[140px] shrink-0">
+                    <label htmlFor="calc-risk" className="mb-2 block text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
+                      Своє, %
+                    </label>
                     <input
                       id="calc-risk"
                       ref={riskRef}
@@ -761,30 +979,20 @@ export default function Calculator() {
                         setRiskPercent(val);
                         localStorage.setItem('calc_risk_percent', val);
                       }}
-                      className={`h-14 w-[84px] shrink-0 rounded-xl px-2 text-center text-[17px] outline-none transition-colors ${NO_SPIN}`}
+                      className={`h-14 w-full rounded-xl px-3 text-center text-[19px] outline-none transition-colors ${NO_SPIN}`}
                       style={{ fontFamily: T.mono, background: T.sunken, border: `1px solid ${T.line}`, color: T.bad }}
                       onFocus={(e) => (e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.45)`)}
                       onBlur={(e) => (e.currentTarget.style.borderColor = T.line)}
                     />
                   </div>
+                  <p className="pb-4 text-[12.5px] leading-snug" style={{ fontFamily: T.sans, color: T.text3 }}>
+                    Відсоток від депозиту, яким готовий ризикнути в цій угоді.
+                  </p>
                 </div>
 
-                {/* Тейк останній і підписаний як необовʼязковий — він і
-                    справді думається після того, як ризик уже заданий. */}
-                <Field
-                  id="calc-tp"
-                  label={isPipsMode ? 'Тейк, пунктів' : 'Тейк'}
-                  hint="не обовʼязково"
-                  value={takeProfit}
-                  onChange={setTakeProfit}
-                  placeholder={isPipsMode ? '500' : '1.08900'}
-                  tone={T.ok}
-                />
-
                 {/* Розмір контракту підставляється з активу сам, тому
-                    ховається. Раніше він стояв поруч із ризиком і мав
-                    три різні підписи на одне поле. */}
-                <div style={{ borderTop: `1px solid ${T.line}`, paddingTop: 12 }}>
+                    ховається під згортайкою. */}
+                <div className="mt-4" style={{ borderTop: `1px solid ${T.line}`, paddingTop: 14 }}>
                   <button
                     type="button"
                     onClick={() => setShowAdvanced((v) => !v)}
@@ -823,7 +1031,7 @@ export default function Calculator() {
                               localStorage.setItem('calc_contract_size', v);
                             }}
                             placeholder="100000"
-                            className={`h-11 w-full rounded-xl px-3.5 text-[15px] outline-none ${NO_SPIN}`}
+                            className={`h-12 w-full rounded-xl px-3.5 text-[15px] outline-none ${NO_SPIN}`}
                             style={{ fontFamily: T.mono, background: T.sunken, border: `1px solid ${T.line}`, color: T.text2 }}
                           />
                           <p className="mt-2 text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
@@ -834,9 +1042,9 @@ export default function Calculator() {
                     )}
                   </AnimatePresence>
                 </div>
-              </div>
-            </Card>
-          </motion.div>
+              </Card>
+            </motion.div>
+          </div>
         </div>
       </motion.div>
 

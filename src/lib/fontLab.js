@@ -26,8 +26,8 @@ const FULL = [300, 400, 500, 600, 700, 800, 900];
 export const FONTS = [
   {
     id: 'main',
-    name: 'MAIN',
-    note: 'зараз на сайті',
+    name: 'Roboto',
+    note: 'як було до Unbounded',
     stack: "'Roboto', system-ui, -apple-system, sans-serif",
     google: 'Roboto:wght@300;400;500;700;900',
     weights: [300, 400, 500, 700, 900],
@@ -35,7 +35,7 @@ export const FONTS = [
   {
     id: 'unbounded',
     name: 'Unbounded',
-    note: 'геометричний, гучний',
+    note: 'зараз у заголовках',
     stack: "'Unbounded', system-ui, sans-serif",
     google: 'Unbounded:wght@300;400;500;600;700;800;900',
     weights: FULL,
@@ -59,7 +59,7 @@ export const FONTS = [
   {
     id: 'golos',
     name: 'Golos Text',
-    note: 'щільний, для тексту',
+    note: 'зараз у тексті',
     stack: "'Golos Text', system-ui, sans-serif",
     google: 'Golos+Text:wght@400;500;600;700;800;900',
     weights: [400, 500, 600, 700, 800, 900],
@@ -94,6 +94,16 @@ export const FONTS = [
     byo: true,
   },
 ];
+
+/* Те, що вже зашито в index.css і theme.js. Панель стартує з цього
+   стану, і «повернути як було» веде сюди, а не до старого Roboto. */
+export const BASE = {
+  display: 'unbounded',
+  sans: 'golos',
+  headWeight: 600,
+  textShift: -2,
+  textWeight: 0,
+};
 
 export const byId = (id) => FONTS.find((f) => f.id === id) || FONTS[0];
 
@@ -148,7 +158,7 @@ const shifted = (font, base, shift) => {
 
 const STYLE_ID = 'edge-fontlab-weights';
 
-export function applyFonts({ display, sans, headWeight, textShift }) {
+export function applyFonts({ display, sans, headWeight, textShift, textWeight }) {
   const root = document.documentElement;
   const dFont = byId(display);
   const sFont = byId(sans);
@@ -174,6 +184,14 @@ export function applyFonts({ display, sans, headWeight, textShift }) {
     });
   }
 
+  /* Лендінг не користується утилітами Tailwind: вага там стоїть
+     інлайном у кожному блоці, і зсув шкали її не дістає. Тому для
+     описів є друга ручка — пряма вага. Скоупимо на .ln-root, щоб
+     правило не поїхало в застосунок, де ієрархію тримає textShift. */
+  if (textWeight) {
+    rules.push(`.ln-root p,.ln-root .lp-sub{font-weight:${nearest(sFont, textWeight)} !important}`);
+  }
+
   if (headWeight) {
     /* заголовки мають перебити утиліту на самому елементі, а вона
        вагоміша за селектор по тегу — тут !important доречний */
@@ -188,13 +206,14 @@ export function readChoice() {
     const raw = localStorage.getItem(KEY);
     const v = raw ? JSON.parse(raw) : null;
     return {
-      display: v?.display || 'main',
-      sans: v?.sans || 'main',
-      headWeight: v?.headWeight || 0,
-      textShift: v?.textShift || 0,
+      display: v?.display || BASE.display,
+      sans: v?.sans || BASE.sans,
+      headWeight: v?.headWeight ?? BASE.headWeight,
+      textShift: v?.textShift ?? BASE.textShift,
+      textWeight: v?.textWeight ?? BASE.textWeight,
     };
   } catch {
-    return { display: 'main', sans: 'main', headWeight: 0, textShift: 0 };
+    return { ...BASE };
   }
 }
 

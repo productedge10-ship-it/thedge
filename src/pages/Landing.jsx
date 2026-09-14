@@ -9,6 +9,7 @@ import AutoImport from '../components/landing/v3/AutoImport';
 import Product from '../components/landing/v3/Product';
 import Coach from '../components/landing/v3/Coach';
 import { Rhythm, NotDoing, Pricing, FinalFaq } from '../components/landing/v3/Closing';
+import FontLab from '../components/landing/FontLab';
 
 /* ==================================================================
    Landing.
@@ -203,6 +204,11 @@ export default function Landing() {
       <Pricing />
       <FinalFaq />
       <Footer />
+
+      {/* Примірочна шрифтів. Інструмент вибору, не функція для
+          відвідувача: щойно гарнітура затверджена — значення переїжджає
+          в theme.js, а цей рядок зникає. */}
+      <FontLab />
     </div>
   );
 }

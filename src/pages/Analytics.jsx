@@ -26,6 +26,31 @@ import ExportStats from '../components/analytics/ExportStats';
 
 const PERIODS = ['Весь час', 'Цей квартал', 'Останні 30 днів', 'Цей тиждень'];
 
+/* ------------------------------------------------------------------
+   Іконка розділу оживає під курсором.
+
+   Не заради прикраси: сім однакових за вагою пунктів у рядку
+   розрізняються тільки підписом, і око щоразу перечитує всі сім.
+   Рух дає кожному власний характер — стрілка перформансу тягнеться
+   вгору, гаманець активів трусить монетами, історія відмотує коло, —
+   і вкладка починає впізнаватись периферійним зором.
+
+   Рух короткий і одноразовий, крім двох живих станів (мозок дихає,
+   бот погойдується): нескінченна анімація на всіх семи перетворила б
+   шапку на гірлянду.
+------------------------------------------------------------------ */
+const ICON_MOTION = {
+  Overview:    { scale: [1, 0.86, 1.06, 1], rotate: [0, -5, 5, 0], transition: { duration: 0.5, ease: EASE } },
+  Performance: { x: [0, 3, 0], y: [0, -4, 0], scale: [1, 1.14, 1], transition: { duration: 0.45, ease: EASE } },
+  Psychology:  { scale: [1, 1.12, 1], transition: { duration: 1.1, repeat: Infinity, ease: 'easeInOut' } },
+  Assets:      { rotate: [0, -13, 11, -7, 0], y: [0, -2, 0, -1, 0], transition: { duration: 0.55, ease: EASE } },
+  Simulator:   { rotate: [0, -20, 14, 0], transition: { duration: 0.6, ease: EASE } },
+  History:     { rotate: [0, -360], transition: { duration: 0.75, ease: EASE } },
+  AI:          { y: [0, -3, 0], transition: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' } },
+};
+
+const ICON_REST = { x: 0, y: 0, rotate: 0, scale: 1, transition: { duration: 0.25, ease: EASE } };
+
 /* Період — випадашка біля «Поділитись», а не рядок пігулок під
    вкладками: чотири підписи поруч із назвами розділів змагались за
    одну й ту саму увагу «що зараз обрано». Тут це один компактний
@@ -107,6 +132,7 @@ export default function Analytics() {
   const { user } = useAuth();
 
   const [tab, setTab] = useState('Overview');
+  const [hotTab, setHotTab] = useState(null);
   const [period, setPeriod] = useState('Весь час');
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -180,13 +206,21 @@ export default function Analytics() {
           плитою і виглядала як шматок іншого застосунку. */}
       <div
         className="sticky top-0 z-30"
+        /* Скло, а не пофарбована плита. Тло застосунку живе крапками,
+           і суцільний прямокутник поверх них читався як окремий
+           віджет, що приїхав з іншої сторінки. Тепер шапка пропускає
+           фон крізь себе й тримається лише розмиттям.
+
+           Межа знизу — не лінія, а згасання: рівна волосінь на всю
+           ширину екрана ріже сторінку навпіл сильніше, ніж відділяє
+           шапку. */
         style={{
-          background: 'rgba(10,10,12,0.82)',
-          backdropFilter: 'blur(18px)',
-          borderBottom: `1px solid ${T.line}`,
+          background: 'linear-gradient(180deg, rgba(10,10,12,0.88), rgba(10,10,12,0.62))',
+          backdropFilter: 'blur(22px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(22px) saturate(140%)',
         }}
       >
-        <div className="mx-auto w-full max-w-[1800px] px-4 pb-2.5 pt-4 lg:px-8">
+        <div className="w-full px-4 pb-2 pt-4 lg:px-8">
 
           {/* ---------- рядок 1: хто я і одна дія ----------
 
@@ -230,21 +264,65 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* ---------- рядок 2: розділи ---------- */}
-          <div className="mt-3.5 flex items-end">
-            <nav className="hide-scrollbar -mb-px flex items-center gap-0.5 overflow-x-auto">
+          {/* ---------- рядок 2: розділи ----------
+
+              Пігулки замість підкреслення. Підкреслення прив'язує
+              вкладку до нижнього краю шапки — а шапка тепер скляна й
+              власного краю не має. Пігулка ж тримає активний розділ
+              сама по собі, і її можна плавно перевозити між пунктами
+              одним layoutId.
+
+              Наведення підсвічує пункт цілком, а не лише текст: у
+              рядку з семи однакових підписів підсвічені три букви
+              майже не помітні. */}
+          <div className="mt-3 flex items-center">
+            <nav className="hide-scrollbar flex items-center gap-1 overflow-x-auto py-0.5">
               {NAV.map(({ id, label, icon: Icon, badge, soon }) => {
                 const on = tab === id;
+                const hot = hotTab === id;
                 return (
                   <button
                     key={id}
                     onClick={() => setTab(id)}
-                    className="relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-[10px] px-3.5 pb-3 pt-2 text-[13.5px] transition-colors duration-150"
-                    style={{ color: on ? T.text : T.text3, fontWeight: on ? 600 : 450 }}
-                    onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
-                    onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
+                    onMouseEnter={() => setHotTab(id)}
+                    onMouseLeave={() => setHotTab(null)}
+                    className="relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-[13.5px] transition-colors duration-200"
+                    style={{ color: on ? T.text : hot ? T.text2 : T.text3, fontWeight: on ? 600 : 450 }}
                   >
-                    <Icon size={15} strokeWidth={2} style={{ color: on ? T.acc : 'currentColor' }} />
+                    {/* Активна пігулка одна на весь рядок і переїжджає
+                        між пунктами — саме тому вона окремим шаром під
+                        вмістом, а не фоном кнопки. */}
+                    {on && (
+                      <motion.span
+                        layoutId="an-tab"
+                        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                        className="absolute inset-0 -z-10 rounded-xl"
+                        style={{
+                          background: `rgba(${T.accRgb},0.13)`,
+                          border: `1px solid ${T.accLine}`,
+                          boxShadow: `0 6px 20px -12px rgba(${T.accRgb},0.9)`,
+                        }}
+                      />
+                    )}
+
+                    {/* Підкладка наведення — окремо від активної, щоб
+                        вони не сперечались за один і той самий шар. */}
+                    {!on && hot && (
+                      <motion.span
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="absolute inset-0 -z-10 rounded-xl"
+                        style={{ background: 'rgba(var(--edge-hair-rgb),0.05)' }}
+                      />
+                    )}
+
+                    <motion.span
+                      className="flex shrink-0"
+                      animate={hot || (on && ICON_MOTION[id]?.transition?.repeat) ? ICON_MOTION[id] : ICON_REST}
+                      style={{ color: on ? T.acc : 'currentColor' }}
+                    >
+                      <Icon size={15} strokeWidth={2} />
+                    </motion.span>
                     {label}
 
                     {/* Ціна тільта поруч із «Психологією». Була червона
@@ -268,31 +346,32 @@ export default function Analytics() {
                         скоро
                       </em>
                     )}
-
-                    {on && (
-                      <motion.span
-                        layoutId="an-tab"
-                        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                        className="absolute inset-x-2 bottom-0 h-[2px] rounded-full"
-                        style={{ background: T.acc, boxShadow: `0 0 12px rgba(${T.accRgb},0.7)` }}
-                      />
-                    )}
                   </button>
                 );
               })}
             </nav>
           </div>
         </div>
+
+        {/* Жодної лінії під шапкою. Будь-яка волосінь на всю ширину
+            читається як шов між двома різними сторінками — а шапка
+            скляна саме для того, щоб сторінка під нею була одна.
+            Відділяє її тінь-згасання, що розчиняється за 24 пікселі. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-full h-6"
+          style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0))' }}
+        />
       </div>
 
       {/* ---------- КОНТЕНТ ----------
-          Розділ AI навмисно без межі 1800px: він один суцільний екран
-          із власним тлом на всю ширину, а не колонка карток, тому на
-          великому моніторі (24"+) той самий 1800 виглядав як острівець
-          посеред порожнечі. Іншим вкладкам межа лишається — там колонки
-          карток, які на надширокому екрані просто розтягувались б. */}
+          Межі 1800px більше немає ні тут, ні в шапці. Вона лишала по
+          чорній смузі обабіч на широкому моніторі, і це читалось не як
+          «колонка не розтягується», а як «сторінка не доїхала до краю»
+          — тим помітніше, що розділ AI уже жив на всю ширину, і шапка
+          над ним висіла вужчою за власний контент. */}
       <main
-        className={`animate-fade-in w-full px-4 pb-16 pt-6 lg:px-8 ${tab === 'AI' ? '' : 'mx-auto max-w-[1800px]'}`}
+        className="animate-fade-in w-full px-4 pb-16 pt-6 lg:px-8"
         key={tab}
       >
         {/* Розділ AI живе поза перевіркою на порожній журнал: там поки
