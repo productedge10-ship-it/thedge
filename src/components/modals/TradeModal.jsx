@@ -1112,8 +1112,12 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
     /* Свої сетапи за останні пів року. Беремо частотою, а не
        алфавітом: у підказках першим має стояти те, чим людина
        торгує, а не те, що починається на «А». */
+    /* user_id обовʼязково: адмінська політика на trades дає право
+       читати чужі рядки, і без цього фільтра в підказки сетапів
+       натекли б чужі назви. */
     supabase.from('trades')
       .select('setup')
+      .eq('user_id', user?.id || '')
       .not('setup', 'is', null)
       .order('created_at', { ascending: false })
       .limit(300)

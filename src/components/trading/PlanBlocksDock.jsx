@@ -33,24 +33,30 @@ export default function PlanBlocksDock({ mode }) {
       className="no-print mt-6 rounded-2xl"
       style={{ background: T.surface, border: `1px dashed ${T.lineHi}` }}
     >
-      <button type="button" onClick={toggleOpen} aria-expanded={open} className="flex w-full flex-wrap items-center justify-between gap-3 p-5 text-left sm:px-6">
-        <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ background: `rgba(${T.accRgb},0.12)`, color: T.acc }}>
-            <LayoutGrid size={19} strokeWidth={2.2} />
-          </span>
-          <div>
-            <div className="text-[19px] font-semibold" style={{ fontFamily: T.display, color: T.text }}>
-              Блоки плану
-            </div>
-            <div className="mt-0.5 text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              Залиш тільки те, чим користуєшся. Натисни на блок, щоб прибрати або повернути його — записи не зникнуть.
-            </div>
-          </div>
-        </div>
-        <span className="text-[14.5px] font-medium tabular-nums" style={{ fontFamily: T.sans, color: T.text3 }}>
-          {shown} з {blocks.length} на сторінці
-          <motion.span className="ml-3 inline-grid align-middle" animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25, ease: EASE }}>
-            <ChevronDown size={18} strokeWidth={2.4} />
+      {/* Згорнута панель — один тонкий рядок.
+
+          Раніше вона займала висоту повноцінної секції: велика іконка,
+          заголовок дисплейним шрифтом і два рядки пояснення. Але
+          налаштовують блоки раз на місяць, а бачать цю плашку щодня —
+          і вона щодня відтісняла сам план униз. Пояснення переїхало
+          всередину, під розгортання: там воно доречне, бо там і
+          натискають. */}
+      <button
+        type="button"
+        onClick={toggleOpen}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+      >
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: `rgba(${T.accRgb},0.12)`, color: T.acc }}>
+          <LayoutGrid size={14} strokeWidth={2.3} />
+        </span>
+        <span className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
+          Блоки плану
+        </span>
+        <span className="ml-auto flex items-center gap-2 text-[12.5px] tabular-nums" style={{ fontFamily: T.sans, color: T.text4 }}>
+          {shown} з {blocks.length}
+          <motion.span className="inline-grid" animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25, ease: EASE }}>
+            <ChevronDown size={15} strokeWidth={2.4} />
           </motion.span>
         </span>
       </button>
@@ -66,7 +72,12 @@ export default function PlanBlocksDock({ mode }) {
         style={{ overflow: 'hidden' }}
       >
 
-      <div className="flex flex-col gap-4 px-5 pb-5 sm:px-6 sm:pb-6">
+      <p className="px-4 pb-3 text-[12.5px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text4 }}>
+        Залиш тільки те, чим користуєшся. Натисни на блок, щоб прибрати або
+        повернути його — записи не зникнуть.
+      </p>
+
+      <div className="flex flex-col gap-4 px-4 pb-4">
         {phases.map((phase) => {
           const list = blocks.filter((b) => b.phase === phase);
           if (!list.length) return null;

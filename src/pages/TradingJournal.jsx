@@ -21,6 +21,7 @@ import { supabase } from "../lib/supabase";
 import { notify } from "../utils/notify";
 import { pullMt5Trades, prefetchTradeCandles } from "../lib/mt5Store";
 import useEmailGate from "../hooks/useEmailGate";
+import { useAuth } from "../context/AuthContext";
 import { getTradeProfit } from "../utils/journalUtils";
 import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
 
@@ -619,6 +620,16 @@ function ChartTooltip({ active, payload }) {
 export default function TradingJournal() {
   useEdgeFonts();
 
+  /* Свої угоди просимо явно, а не покладаємось на RLS.
+
+     У політиках trades є admin_read_all з умовою is_admin(), і для
+     адміністратора база чесно віддає геть усе — так і задумано для
+     адмінки. Але журнал — не адмінка: тут людина дивиться власну
+     торгівлю, і побачити в ній чужі угоди страшніше за будь-яку
+     помилку. RLS лишається підлогою, а не фільтром застосунку. */
+  const { user } = useAuth();
+  const mine = (q) => (user?.id ? q.eq('user_id', user.id) : q);
+
   /* Створювати угоди можна лише з підтвердженою поштою. Кнопка при
      цьому лишається клікабельною — guard покаже пояснення замість
      мовчазної відмови. */
@@ -659,7 +670,7 @@ export default function TradingJournal() {
   /* ---------- Завантаження ---------- */
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("prop_accounts").select("*");
+      const { data } = await mine(supabase.from("prop_accounts").select("*"));
       if (data) {
         const map = {};
         data.forEach((a) => {
@@ -672,7 +683,7 @@ export default function TradingJournal() {
     })();
 
     (async () => {
-      const { data } = await supabase.from("trades").select("plan_pair");
+      const { data } = await mine(supabase.from("trades").select("plan_pair"));
       if (data)
         setUniquePairs([
           "All",
@@ -707,12 +718,13 @@ export default function TradingJournal() {
 
   const applyFilters = useCallback(
     (q) => {
+      q = mine(q);
       if (filterPair !== "All") q = q.eq("plan_pair", filterPair);
       if (dateFrom) q = q.gte("plan_date", dateFrom);
       if (dateTo) q = q.lte("plan_date", dateTo);
       return q;
     },
-    [filterPair, dateFrom, dateTo]
+    [filterPair, dateFrom, dateTo, user?.id]
   );
 
   /* Швидкі фільтри — теж у запит, а не поверх завантаженої сторінки.
@@ -954,7 +966,10 @@ export default function TradingJournal() {
     const id = tradeToDelete;
     setTradeToDelete(null);
     try {
-      const { error } = await supabase.from("trades").delete().eq("id", id);
+      /* user_id у видаленні — не зайва обережність: адмінська політика
+         дає нам право читати чужі рядки, і один невдалий id міг би
+         стерти чужу угоду. */
+      const { error } = await mine(supabase.from("trades").delete().eq("id", id));
       if (error) throw error;
       tradesCache.current = {};
       fetchGlobalData();
