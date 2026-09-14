@@ -6,6 +6,7 @@ import TextareaAutosize from 'react-textarea-autosize';
 import {
   X, Pencil, Save, Trash2, Loader2, ImagePlus,
   Check, AlertTriangle, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Clock, BookOpen, Share2,
+  Eye, EyeOff,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
@@ -583,6 +584,76 @@ export default function TradeDetailsModal({
     }
   }
 
+  /* TDA в посиланні.
+
+     За замовчуванням вимкнено: людина ділиться однією угодою, а не
+     всією підготовкою дня. При вмиканні кладемо в угоду ЗНІМОК блоків
+     замість посилання на план — інакше довелось би відкрити анонові
+     весь рядок плану, включно з тим, чим людина не ділилась.
+
+     Знімок означає, що пізніші правки розбору в посилання не
+     доїдуть. Це радше плюс: поділився — зафіксував. Щоб оновити,
+     досить вимкнути й увімкнути. */
+  const tdaBlocks = useMemo(() => {
+    const list = plan?.plan_data?.tdaBlocks;
+    return Array.isArray(list) ? list.filter((b) => b?.image || b?.text?.trim()) : [];
+  }, [plan]);
+
+  /* У знімок їде не тільки сітка графіків, а й стратегія з апдейтами:
+     без них розбір читається як набір скрінів без висновку. */
+  const tdaSnapshot = useMemo(() => ({
+    blocks: tdaBlocks,
+    planText: plan?.plan_data?.planText?.trim() || '',
+    narrative: plan?.narrative || '',
+    updates: (plan?.plan_data?.updates || []).filter((u) => u?.image || u?.text?.trim()),
+  }), [tdaBlocks, plan]);
+
+  /* Знімок оновлюється сам, поки ділитись увімкнено.
+
+     Спершу він був «зроблено раз і назавжди»: поділився — зафіксував.
+     На практиці це означало, що дописаний після публікації апдейт у
+     посилання не доїжджав, і єдиний спосіб його туди додати — вимкнути
+     кнопку й увімкнути назад. Ніхто цього не вгадає. Тож поки розбір
+     відкритий, посилання показує те, що в плані зараз. */
+  useEffect(() => {
+    if (!d?.id || !d.share_tda || !plan) return;
+    if (JSON.stringify(d.shared_tda) === JSON.stringify(tdaSnapshot)) return;
+    supabase.from('trades').update({ shared_tda: tdaSnapshot })
+      .eq('id', d.id).eq('user_id', user?.id)
+      .then(({ error }) => { if (!error) setD((p) => ({ ...p, shared_tda: tdaSnapshot })); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d?.id, d?.share_tda, plan, tdaSnapshot]);
+
+  const hasPlanToShare = tdaSnapshot.blocks.length > 0
+    || Boolean(tdaSnapshot.planText)
+    || tdaSnapshot.updates.length > 0;
+
+  const [tdaBusy, setTdaBusy] = useState(false);
+  const [tdaHint, setTdaHint] = useState(false);
+  async function toggleTda() {
+    if (!d?.id || tdaBusy) return;
+    if (window.location.pathname.startsWith('/demo')) {
+      notify.error('Недоступно в демо', 'Спробуй у своєму журналі після реєстрації.');
+      return;
+    }
+    const next = !d.share_tda;
+    setTdaBusy(true);
+    try {
+      const patch = { share_tda: next, shared_tda: next ? tdaSnapshot : null };
+      const { error } = await supabase.from('trades').update(patch).eq('id', d.id).eq('user_id', user?.id);
+      if (error) throw error;
+      setD((p) => ({ ...p, ...patch }));
+      notify.success(
+        next ? 'Розбір у посиланні' : 'Розбір приховано',
+        next ? 'Хто відкриє лінк, побачить твій TDA за цей день.' : 'За посиланням лишилась тільки сама угода.',
+      );
+    } catch (err) {
+      notify.error('Не вдалось змінити', err.message);
+    } finally {
+      setTdaBusy(false);
+    }
+  }
+
   const images = useMemo(() => {
     if (Array.isArray(d?.mistake_images) && d.mistake_images.length) return d.mistake_images;
     if (d?.mistake_image) return [d.mistake_image];
@@ -800,6 +871,62 @@ export default function TradeDetailsModal({
               {sharing ? <Loader2 size={13} className="animate-spin" /> : copied ? <Check size={13} strokeWidth={2.8} /> : <Share2 size={13} strokeWidth={2.4} />}
               {copied ? 'Скопійовано' : 'Поділитись'}
             </motion.button>
+
+            {/* Іконка без підпису: дія рідкісна й другорядна поруч із
+                «Поділитись». Що вона робить — каже підказка при
+                наведенні, своя, бо системний title спливає аж через
+                секунду й у чужому стилі. */}
+            {hasPlanToShare && (
+              <div
+                className="relative shrink-0"
+                onMouseEnter={() => setTdaHint(true)}
+                onMouseLeave={() => setTdaHint(false)}
+              >
+                <motion.button
+                  onClick={toggleTda}
+                  disabled={tdaBusy}
+                  whileTap={{ scale: 0.95 }}
+                  transition={SPRING_TAP}
+                  aria-label={d.share_tda ? 'Прибрати розбір дня з посилання' : 'Показати розбір дня за посиланням'}
+                  className="grid h-[34px] w-[34px] place-items-center rounded-lg transition-colors"
+                  style={{
+                    background: d.share_tda ? `rgba(${T.accRgb},0.12)` : T.bg,
+                    border: `1px solid ${d.share_tda ? T.lineAcc : T.line}`,
+                    color: d.share_tda ? T.acc : T.text3,
+                  }}
+                >
+                  {tdaBusy
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : d.share_tda ? <Eye size={14} strokeWidth={2.3} /> : <EyeOff size={14} strokeWidth={2.3} />}
+                </motion.button>
+
+                <AnimatePresence>
+                  {tdaHint && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 4 }}
+                      transition={{ duration: 0.14 }}
+                      className="pointer-events-none absolute right-0 top-[calc(100%+8px)] z-50 w-[220px] rounded-xl px-3 py-2.5 text-left"
+                      style={{
+                        background: T.surfaceHi,
+                        border: `1px solid ${T.lineHi}`,
+                        boxShadow: '0 16px 36px -14px rgba(0,0,0,0.9)',
+                      }}
+                    >
+                      <div className="text-[12.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
+                        {d.share_tda ? 'Розбір дня видно за посиланням' : 'Розбір дня приховано'}
+                      </div>
+                      <div className="mt-1 text-[12px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.5 }}>
+                        {d.share_tda
+                          ? 'Натисни, щоб лишити в лінку тільки саму угоду.'
+                          : `Натисни, щоб додати в лінк підготовку за цей день: графіки, стратегію, апдейти.`}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
 
             {editing && (

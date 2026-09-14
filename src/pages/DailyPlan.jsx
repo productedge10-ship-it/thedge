@@ -22,6 +22,7 @@ import PlanHeader from '../components/trading/PlanHeader';
 import PlanMetadata from '../components/trading/PlanMetadata';
 import LoadingSyncScreen from '../components/trading/LoadingSyncScreen';
 import TdaGrid from '../components/trading/TdaGrid';
+import { warmUpTf } from '../lib/tfDetect';
 import UpdatesList from '../components/trading/UpdatesList';
 import FloatingActionButtons from '../components/trading/FloatingActionButtons';
 import SavingOverlay from '../components/modals/SavingOverlay';
@@ -78,6 +79,11 @@ export default function DailyPlan() {
   useTerminalSkin();
 
   useEdgeFonts();
+
+  /* Піднімаємо розпізнавання таймфрейму заздалегідь, у простої.
+     Саме тут, на плані, і вставляють графіки — до моменту вставки
+     модель уже в браузері, і чекати нічого не доводиться. */
+  useEffect(() => { warmUpTf(); }, []);
 
   const { user } = useAuth();
   const { date: paramDate, pair: paramPair } = useParams();
@@ -803,26 +809,44 @@ export default function DailyPlan() {
     navigate(`/plan/${newDate}/${encodeURIComponent(newPair)}`);
   };
 
+  /* Порожній план на сьогодні. Виніс окремо, бо скидати треба в
+     обох випадках, а не лише коли ми вже на «/plan». */
+  const resetToBlankPlan = () => {
+    const today = todayLocal();
+    ignoreNextChangeRef.current = true;
+    setHasUnsavedChanges(false);
+    setLastSaved(null);
+    setLastAction('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setPlan((p) => ({
+      ...p, title: getUkrainianTitle(today), date: today, pair: '', narrative: '',
+      tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(), conclusionBlocks: emptyConclusions(),
+      actualNarrative: '', analysisMistakeText: '',
+      dayFlow: null, dayState: null, conclusionsText: '',
+    }));
+  };
+
   const handleNewPlan = async () => {
     if (canSaveToCloud && hasUnsavedChanges && !isSaving) await performSave();
     localStorage.removeItem('last_edited_plan_id');
     setPlanId(null);
     currentPlanIdRef.current = null;
-    if (paramDate || paramPair) navigate('/plan');
-    else {
-      const today = todayLocal();
-      ignoreNextChangeRef.current = true;
-      setLastSaved(null);
-      setLastAction('');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setPlan((p) => ({
-        ...p, title: getUkrainianTitle(today), date: today, pair: '', narrative: '',
-        tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(), conclusionBlocks: emptyConclusions(),
-        actualNarrative: '', analysisMistakeText: '',
-        dayFlow: null, dayState: null, conclusionsText: '',
-      }));
-      notify.success('Новий план', 'Можна починати.');
-    }
+
+    /* Скидаємо ЗАВЖДИ, і тільки потім міняємо адресу.
+
+       Раніше на маршруті /plan/:date/:pair кнопка робила рівно одне —
+       navigate('/plan'). Адреса мінялась, ефект бачив, що цілі більше
+       немає й останнього id теж (ми його щойно стерли), і просто
+       нічого не завантажував. А стан форми лишався від попереднього
+       плану: на екрані висів старий актив із старим розбором, і
+       порожній план з'являвся аж після перезавантаження сторінки.
+
+       Гірше того: наступне автозбереження бачило в полях старий актив
+       і заводило під нього ще один план. Саме звідси бралися «нові
+       плани» на актив, вибраний у перемикачі вгорі. */
+    resetToBlankPlan();
+    if (paramDate || paramPair) navigate('/plan', { replace: true });
+    notify.success('Новий план', 'Можна починати.');
   };
 
   const handleAssetSelectModal = (asset) => {

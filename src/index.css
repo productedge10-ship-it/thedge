@@ -589,3 +589,11 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(var(--edge-acc-rgb, 139, 123, 255), 0.7);
   box-shadow: 0 0 0 3px rgba(var(--edge-acc-rgb, 139, 123, 255), 0.1);
 }
+
+/* Пульс біля поля таймфрейму, поки читаємо шапку скріна.
+   Саме CSS, а не framer: анімація нескінченна, і будь-яка спроба
+   зробити її через animate+exit лишає елемент у дереві назавжди. */
+@keyframes tfPulse {
+  0%, 100% { opacity: .35; }
+  50% { opacity: 1; }
+}
