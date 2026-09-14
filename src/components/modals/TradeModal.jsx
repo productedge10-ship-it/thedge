@@ -93,7 +93,6 @@ const RESULT_COLORS = {
 };
 /* Базові сетапи — щоб список не був порожнім у новачка; свої, з
    історії угод, стають першими. */
-const DEFAULT_SETUPS = ['OB retest', 'FVG retest', 'Liquidity sweep', 'BOS + retest', 'CHoCH', 'Breaker block', 'Range breakout', 'Trend continuation'];
 const DEFAULT_PAIRS = ['GER40', 'EURUSD', 'NQ100', 'S&P500', 'GOLD', 'NZD/USD', 'BTC', 'ETH', 'SOL'];
 
 /* Сім питань розбору — той самий порядок і той самий «good», що й у
@@ -177,13 +176,54 @@ function DirectionToggle({ value, onChange }) {
   );
 }
 
+/* ---------- статус і ризик ---------- */
+
+/* Обидва — випадашки, а не ряди кнопок.
+
+   Сегменти виглядали переконливо на макеті й програли на практиці:
+   пʼять станів результату розтягували рядок на всю ширину вікна, а
+   чотири пігулки ризику стояли поруч із полем цілі й читались як одна
+   каша з цифр. Випадашка займає рівно одне поле, і всі поля форми
+   стають однаковими — око перестає перечіплятись. */
+function StatusPicker({ value, onChange }) {
+  return (
+    <MenuPicker
+      title="Результат"
+      value={value}
+      options={RESULT_CHIPS}
+      onChange={onChange}
+      labelOf={(v) => RESULT_LABEL[v] || v}
+      colorOf={(o) => RESULT_COLORS[o]}
+      placeholder="Результат"
+      isEmpty={(v) => !v || v === 'Not Selected'}
+      toggleOff="Not Selected"
+    />
+  );
+}
+
+const RISK_OPTIONS = ['0.25%', '0.5%', '1%', '1.5%', '2%', '3%'];
+
+function RiskPicker({ value, onChange }) {
+  return (
+    <MenuPicker
+      title="Ризик"
+      value={value}
+      options={RISK_OPTIONS}
+      onChange={onChange}
+      placeholder="Ризик"
+      isEmpty={(v) => !v}
+      allowCustom
+    />
+  );
+}
+
 /* ---------- вибір активу ---------- */
 
 /* Маленька випадашка з пошуком, як було спочатку — не повноекранна
    модалка. Свій актив, якого нема в списку, не «кешується» на
    клієнті, а одразу летить у user_assets: наступного разу він є
    в списку з будь-якого пристрою. */
-function AssetPicker({ value, onChange }) {
+function AssetPicker({ value, onChange, compact }) {
   const [search, setSearch] = useState('');
   const [userAssetRows, setUserAssetRows] = useCachedList('assets', 'user_assets', 'name', 'name');
   const userPairs = userAssetRows.map((d) => d.name);
@@ -222,7 +262,7 @@ function AssetPicker({ value, onChange }) {
           onClick={toggle}
           whileTap={{ scale: 0.99 }}
           transition={SPRING}
-          className="flex h-[48px] w-full items-center justify-between gap-2 rounded-[12px] px-4 transition-colors duration-200"
+          className={`flex items-center justify-between gap-2 transition-colors duration-200 ${compact ? 'h-9 rounded-[10px] px-2.5' : 'h-[48px] w-full rounded-[12px] px-4'}`}
           style={{
             fontFamily: T.sans,
             background: FIELD_BG,
@@ -427,25 +467,6 @@ function SessionPicker({ value, onChange }) {
   );
 }
 
-/* Статус — той самий тригер, підпис через RESULT_LABEL (Take/Stop/…),
-   повторний клік на активному знімає вибір назад у «Not Selected». */
-function StatusPicker({ value, onChange }) {
-  const colorOf = (o) => RESULT_COLORS[o];
-  return (
-    <MenuPicker
-      title="Статус"
-      value={value}
-      options={RESULT_CHIPS}
-      onChange={onChange}
-      labelOf={(v) => RESULT_LABEL[v] || v}
-      colorOf={colorOf}
-      placeholder="Статус"
-      isEmpty={(v) => !v || v === 'Not Selected'}
-      toggleOff="Not Selected"
-    />
-  );
-}
-
 /* ---------- розкривні пункти сетапу ---------- */
 
 /* Три пункти сетапу (назва, скрін, логіка) — не завжди розгорнуті
@@ -488,7 +509,7 @@ function Disclosure({ title, summary, open, onToggle, children }) {
 
 /* ---------- дата ---------- */
 
-function TradeDate({ value, onChange }) {
+function TradeDate({ value, onChange, compact }) {
   const selected = value ? new Date(`${value}T12:00:00`) : new Date();
 
   const set = (d) => {
@@ -506,7 +527,7 @@ function TradeDate({ value, onChange }) {
         <button
           type="button"
           onClick={toggle}
-          className="flex h-[52px] items-center gap-2 rounded-xl px-4 text-[15.5px] font-medium"
+          className={`flex items-center gap-2 font-medium ${compact ? 'h-9 rounded-[10px] px-2.5 text-[13px]' : 'h-[52px] rounded-xl px-4 text-[15.5px]'}`}
           style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${open ? line(0.16) : line(0.08)}`, color: txt(0.8) }}
         >
           <CalendarDays size={13} strokeWidth={2.3} style={{ color: open ? ACCENT : txt(0.5) }} />
@@ -557,30 +578,32 @@ function TradeDate({ value, onChange }) {
 }
 
 /* ---------- рахунок ----------
-   Той самий випадаючий список рахунків, що й був — джерело, поведінка
-   і сама панель не змінюються, тільки тригер тепер сидить першою
-   колонкою в об'єднаній картці (див. AccountRiskCard) замість
-   окремого поля зі своєю рамкою й радіусом. */
+   Випадаючий список рахунків. Стоїть окремим полем поруч із сесією:
+   раніше він був першою колонкою зрощеної картки з ризиком і
+   результатом, і через це не мав ні власної рамки, ні висоти —
+   виглядав шматком таблиці, а не полем вибору. */
 function AccountPicker({ value, options, onChange }) {
   return (
     <Popover
       z={600}
-      triggerClass="flex h-full"
+      triggerClass="flex w-full"
       renderTrigger={({ open, toggle }) => (
         <button
           type="button"
           onClick={toggle}
-          className="flex h-full w-full flex-col items-start gap-[7px] px-4 py-[17px] text-left transition-colors duration-200"
-          style={{ background: open ? line(0.03) : 'transparent' }}
-          onMouseEnter={(e) => { if (!open) e.currentTarget.style.background = line(0.03); }}
-          onMouseLeave={(e) => { if (!open) e.currentTarget.style.background = 'transparent'; }}
+          className="flex h-12 w-full items-center justify-between gap-2 px-4 text-left transition-colors duration-200"
+          style={{ borderRadius: 12, background: FIELD_BG, border: `1px solid ${value ? line(0.11) : (open ? line(0.16) : line(0.07))}` }}
         >
-          <span className="text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.45) }}>Акаунт</span>
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 7px rgba(${ACCENT_RGB},0.8)` }} />
-            <span className="truncate text-[15.5px] font-semibold" style={{ fontFamily: T.sans, color: value ? 'var(--edge-text)' : txt(0.5) }}>{value || 'Немає акаунтів'}</span>
-            <Caret color={txt(0.45)} open={open} />
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: value ? ACCENT : line(0.14), boxShadow: value ? `0 0 7px rgba(${ACCENT_RGB},0.75)` : 'none' }} />
+            <span
+              className="truncate text-[14.5px]"
+              style={{ fontFamily: T.sans, fontWeight: value ? 500 : 400, letterSpacing: '-0.005em', color: value ? 'var(--edge-text)' : txt(0.45) }}
+            >
+              {value || 'Акаунт'}
+            </span>
           </span>
+          <Caret color={value ? ACCENT : txt(0.4)} open={open} />
         </button>
       )}
     >
@@ -620,110 +643,10 @@ function AccountPicker({ value, options, onChange }) {
 /* Сетап — той самий вільний текст із частотними підказками, що й був,
    але тепер тригер-поповер замість окремої картки з інпутом: набір
    попередніх сетапів у списку, свій варіант — рядком знизу. */
-function SetupPicker({ value, onChange, options, height, radius }) {
-  return (
-    <MenuPicker
-      title="Сетап"
-      value={value}
-      options={options && options.length ? options : []}
-      onChange={onChange}
-      placeholder="Сетап"
-      isEmpty={(v) => !v?.trim()}
-      allowCustom
-      height={height}
-      radius={radius}
-    />
-  );
-}
-
 /* ---------- об'єднана картка «рахунок · 1R · результат · ризик» (макет v12) ----------
    Три колонки зверху (рахунок / гроші в 1R / результат у R), знизу —
    один рядок: пресети ризику, ціль у R і сетап. Розрахунок 1R і колір
    результату — та сама логіка, що була в RiskCard. */
-function AccountRiskCard({
-  account, accountOptions, onAccount, risk, setRisk, rr, setRr, balance, setup, setSetup, setupOptions,
-}) {
-  const pct = parseFloat(String(risk).replace('%', '').replace(',', '.')) || 0;
-  const oneR = balance ? Math.round(balance * pct / 100) : null;
-  const rNum = parseFloat(String(rr).replace(',', '.'));
-  const hasR = !Number.isNaN(rNum);
-  const rColor = !hasR ? txt(0.4) : rNum > 0 ? GREEN : rNum < 0 ? BAD : 'var(--edge-text)';
-  const setPct = (v) => setRisk(`${v}%`);
-
-  return (
-    <div className="overflow-hidden rounded-[14px]" style={{ border: `1px solid ${line(0.08)}`, background: line(0.018) }}>
-      <div className="grid" style={{ gridTemplateColumns: 'minmax(0,1.15fr) minmax(0,1fr) auto' }}>
-        <div style={{ borderRight: `1px solid ${line(0.07)}` }}>
-          <AccountPicker value={account} options={accountOptions} onChange={onAccount} />
-        </div>
-
-        <div className="flex flex-col gap-[6px] px-4 py-[17px]" style={{ borderRight: `1px solid ${line(0.07)}` }}>
-          <div className="text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.45) }}>1R у грошах</div>
-          <div className="flex items-baseline gap-[3px]">
-            <span className="text-[14.5px] font-medium" style={{ fontFamily: T.sans, color: txt(0.55) }}>$</span>
-            <span className="text-[26.5px] font-semibold leading-none" style={{ fontFamily: MONO, letterSpacing: '-0.04em', color: 'var(--edge-text)' }}>
-              {oneR != null ? oneR.toLocaleString('en-US') : '—'}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end gap-[6px] px-4 py-[17px]">
-          <div className="text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.45) }}>Результат</div>
-          <div className="text-[19px] font-semibold leading-[1.25]" style={{ fontFamily: MONO, letterSpacing: '-0.02em', color: hasR ? rColor : txt(0.45) }}>
-            {hasR ? `${rNum > 0 ? '+' : ''}${rNum.toFixed(2)}R` : '0.00R'}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-[10px] gap-y-3 px-5 py-4" style={{ borderTop: `1px solid ${line(0.07)}` }}>
-        <span className="shrink-0 text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.45) }}>Ризик</span>
-        <div className="flex shrink-0 gap-1">
-          {['0.25', '0.5', '1', '2'].map((v) => {
-            const on = pct === parseFloat(v);
-            return (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setPct(v)}
-                className="flex h-11 items-center rounded-[11px] px-3.5 text-[13px] font-medium transition-all duration-200"
-                style={{
-                  fontFamily: MONO,
-                  background: on ? `rgba(${ACCENT_RGB},0.14)` : 'transparent',
-                  border: `1px solid ${on ? `rgba(${ACCENT_RGB},0.42)` : line(0.07)}`,
-                  color: on ? '#b6a4ff' : txt(0.52),
-                }}
-                onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = line(0.05); }}
-                onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
-              >
-                {v}%
-              </button>
-            );
-          })}
-        </div>
-
-        <span className="h-[18px] w-px shrink-0" style={{ background: line(0.08) }} />
-
-        <span className="shrink-0 text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.45) }}>Ціль</span>
-        <div className="flex h-11 shrink-0 items-center gap-1.5 rounded-[11px] px-3.5" style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${line(0.07)}` }}>
-          <input
-            value={rr}
-            onChange={(e) => setRr(e.target.value.replace(',', '.'))}
-            inputMode="decimal"
-            placeholder="2.5"
-            className="w-[40px] bg-transparent text-[14px] outline-none"
-            style={{ fontFamily: MONO, color: hasR ? rColor : 'var(--edge-text)' }}
-          />
-          <span className="shrink-0 text-[11px]" style={{ fontFamily: MONO, color: txt(0.42) }}>R</span>
-        </div>
-
-        <div className="min-w-[200px] flex-1">
-          <SetupPicker value={setup} onChange={setSetup} options={setupOptions} height={44} radius={11} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ---------- зона для скріншота ---------- */
 /* Горизонтальна дропзона з макета: іконка зліва, підпис справа, а не
    центрований квадрат. Коли є картинка — звичайний превʼю з хрестиком. */
@@ -815,107 +738,59 @@ function plural(n) {
   return `${n} відповідей`;
 }
 
-function ReviewGrid({ values, setters }) {
-  const [hov, setHov] = useState(null);
-  const [cur, setCur] = useState(0);
+/* Розбір виконання — список, а не сітка.
 
+   Раніше це була таблиця з чотирьох колонок: у кожній клітинці
+   скорочення («План», «FOMO», «Повторив би») і пара кнопок Так/Ні, а
+   сам текст питання зʼявлявся внизу — на ховері. Тобто відповідати
+   пропонували, не прочитавши питання; на телефоні ховера немає
+   взагалі, і повний текст не показувався ніколи.
+
+   Тепер питання стоїть повністю, кнопки праворуч від нього, і на
+   кожне видно відповідь без наведення. Рядок із «поганою» відповіддю
+   тихо підсвічується — сім таких підсвічень підряд і є той висновок,
+   заради якого розбір узагалі заповнюють. */
+function ReviewList({ values, setters }) {
   const done = QUESTIONS.filter((q) => values[q.key] !== null).length;
   const clean = QUESTIONS.filter((q) => values[q.key] !== null && values[q.key] === q.good).length;
   const full = done === QUESTIONS.length;
-  const hi = hov ?? cur;
 
-  const scoreColor = !done ? txt(0.3) : clean >= done - 1 ? GREEN : clean * 2 >= done ? AMBER : BAD;
   const verdict = !full
     ? { text: `Лишилось ${QUESTIONS.length - done}`, c: '#b3a6ff', rgb: ACCENT_RGB }
-    : clean === 7 ? { text: 'Чисте виконання', c: GREEN, rgb: GREEN_RGB, glow: true }
+    : clean === QUESTIONS.length ? { text: 'Чисте виконання', c: GREEN, rgb: GREEN_RGB, glow: true }
       : clean >= 5 ? { text: 'Дрібні зриви', c: AMBER, rgb: AMBER_RGB }
         : { text: 'Емоції керували', c: '#ff7d88', rgb: BAD_RGB };
 
-  const set = (i, key, v) => {
-    /* повторний клік знімає відповідь — інакше помилкову не прибрати */
-    setters[key](values[key] === v ? null : v);
-    setCur(i);
-  };
+  const scoreColor = !done ? txt(0.3) : clean >= done - 1 ? GREEN : clean * 2 >= done ? AMBER : BAD;
 
   return (
-    <div className="overflow-hidden rounded-[18px]" style={{ background: CARD_BG, border: `1px solid ${line(0.05)}` }}>
-      <div className="grid grid-cols-2 sm:grid-cols-4">
-        {QUESTIONS.map((q, i) => {
-          const v = values[q.key];
-          const tone = toneOf(q, v);
-          const tn = tone || { c: '#a89bf9', rgb: ACCENT_RGB };
-          return (
-            <div
-              key={q.key}
-              onMouseEnter={() => setHov(i)}
-              onMouseLeave={() => setHov(null)}
-              className="flex h-[88px] flex-col justify-between gap-3 px-[14px] py-[13px] transition-colors duration-200"
-              style={{
-                borderRight: `1px solid ${line(0.05)}`,
-                borderTop: `1px solid ${line(0.05)}`,
-                marginTop: -1,
-                background: hov === i ? line(0.035) : tone ? `rgba(${tone.rgb},0.05)` : 'transparent',
-              }}
-            >
-              <div className="flex items-center gap-[7px]">
-                <span className="h-[5px] w-[5px] shrink-0 rounded-full transition-colors duration-200" style={{ background: tone ? tone.c : line(0.14) }} />
-                <span className="truncate text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: txt(0.55) }}>{q.short}</span>
-              </div>
-              <div className="flex gap-1.5">
-                {[true, false].map((opt) => {
-                  const active = v === opt;
-                  return (
-                    <button
-                      key={String(opt)}
-                      type="button"
-                      onClick={() => set(i, q.key, opt)}
-                      className="flex h-[30px] flex-1 items-center justify-center rounded-lg text-[13px] transition-all duration-150"
-                      style={{
-                        fontFamily: T.sans,
-                        fontWeight: active ? 600 : 500,
-                        background: active ? `rgba(${tn.rgb},0.14)` : 'rgba(0,0,0,0.25)',
-                        border: `1px solid ${active ? `rgba(${tn.rgb},0.36)` : line(0.06)}`,
-                        color: active ? tn.c : txt(0.6),
-                      }}
-                    >
-                      {opt ? 'Так' : 'Ні'}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-
-        <div className="flex h-[88px] flex-col justify-between gap-3 px-4 py-[13px]" style={{ background: `rgba(${ACCENT_RGB},0.07)`, borderTop: `1px solid ${line(0.05)}`, marginTop: -1 }}>
-          <span className="text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: '#9b8cfa' }}>Дисципліна</span>
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[22px] font-semibold leading-none transition-colors duration-200" style={{ fontFamily: T.sans, letterSpacing: '-0.01em', color: scoreColor }}>
-              {done ? `${clean}/${done}` : '—'}
-            </span>
-            <span className="flex items-end gap-[3px]">
-              {QUESTIONS.map((q) => {
-                const tone = toneOf(q, values[q.key]);
-                return (
-                  <span
-                    key={q.key}
-                    className="w-[3px] rounded-sm transition-all duration-300"
-                    style={{ height: tone ? 16 : 7, background: tone ? tone.c : line(0.12) }}
-                  />
-                );
-              })}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex min-h-[46px] items-center gap-3 px-4 py-2" style={{ borderTop: `1px solid ${line(0.05)}`, background: 'rgba(0,0,0,0.18)' }}>
-        <span className="shrink-0 text-[10.5px] font-medium" style={{ fontFamily: MONO, letterSpacing: '0.14em', color: '#a89bf9' }}>
-          {String(hi + 1).padStart(2, '0')}
+    <div className="overflow-hidden rounded-[16px]" style={{ background: CARD_BG, border: `1px solid ${line(0.07)}` }}>
+      {/* Підсумок угорі: його читають першим і повертаються до нього
+          після кожної відповіді. */}
+      <div
+        className="flex items-center gap-3 px-4 py-3"
+        style={{ borderBottom: `1px solid ${line(0.06)}`, background: `rgba(${ACCENT_RGB},0.05)` }}
+      >
+        <span className="text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: '#9b8cfa' }}>
+          Дисципліна
         </span>
-        <span className="min-w-0 flex-1 text-[14px] leading-[1.3]" style={{ fontFamily: T.sans, color: txt(0.75) }}>
-          {QUESTIONS[hi].q}
+        <span className="text-[19px] font-semibold leading-none" style={{ fontFamily: T.sans, letterSpacing: '-0.01em', color: scoreColor }}>
+          {done ? `${clean}/${done}` : '—'}
         </span>
+
+        <span className="ml-auto flex items-end gap-[3px]">
+          {QUESTIONS.map((q) => {
+            const tone = toneOf(q, values[q.key]);
+            return (
+              <span
+                key={q.key}
+                className="w-[3px] rounded-sm transition-all duration-300"
+                style={{ height: tone ? 15 : 7, background: tone ? tone.c : line(0.12) }}
+              />
+            );
+          })}
+        </span>
+
         <span
           className="shrink-0 rounded-lg px-[11px] py-1.5 text-[10px] font-semibold uppercase transition-all duration-300"
           style={{
@@ -930,6 +805,58 @@ function ReviewGrid({ values, setters }) {
           {verdict.text}
         </span>
       </div>
+
+      {QUESTIONS.map((q, i) => {
+        const v = values[q.key];
+        const tone = toneOf(q, v);
+        const tn = tone || { c: '#a89bf9', rgb: ACCENT_RGB };
+        const bad = v !== null && v !== q.good;
+
+        return (
+          <div
+            key={q.key}
+            className="flex items-center gap-3 px-4 transition-colors duration-200"
+            style={{
+              height: 54,
+              borderTop: i === 0 ? 'none' : `1px solid ${line(0.05)}`,
+              background: bad ? `rgba(${tn.rgb},0.045)` : 'transparent',
+            }}
+          >
+            <span className="shrink-0 text-[10.5px]" style={{ fontFamily: MONO, letterSpacing: '0.12em', color: txt(0.3) }}>
+              {String(i + 1).padStart(2, '0')}
+            </span>
+
+            <span className="min-w-0 flex-1 truncate text-[14.5px]" style={{ fontFamily: T.sans, color: v === null ? txt(0.62) : 'var(--edge-text)' }}>
+              {q.q}
+            </span>
+
+            <div className="flex shrink-0 gap-1.5">
+              {[true, false].map((opt) => {
+                const active = v === opt;
+                return (
+                  <button
+                    key={String(opt)}
+                    type="button"
+                    /* Повторний клік знімає відповідь — інакше
+                       помилково натиснуту не прибрати. */
+                    onClick={() => setters[q.key](v === opt ? null : opt)}
+                    className="flex h-[34px] w-[62px] items-center justify-center rounded-[9px] text-[13px] transition-all duration-150"
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: active ? 600 : 500,
+                      background: active ? `rgba(${tn.rgb},0.14)` : 'rgba(0,0,0,0.22)',
+                      border: `1px solid ${active ? `rgba(${tn.rgb},0.36)` : line(0.06)}`,
+                      color: active ? tn.c : txt(0.55),
+                    }}
+                  >
+                    {opt ? 'Так' : 'Ні'}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -959,6 +886,8 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   useEdgeFonts();
 
   const [step, setStep] = useState(0);
+
+
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -982,8 +911,6 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
      трейдера, і чужий перелік або не збігається з його мовою, або
      змушує підганяти під неї. Підказки збираються з його ж
      попередніх угод. */
-  const [setupName, setSetupName] = useState('');
-  const [setupOptions, setSetupOptions] = useState(DEFAULT_SETUPS);
   const [entryTime, setEntryTime] = useState('');
   const [exitTime, setExitTime] = useState('');
 
@@ -1047,7 +974,6 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
         else if (existingTrade.trade_image) tImgs = [existingTrade.trade_image];
         setTradeImages(tImgs);
       }
-      setSetupName(existingTrade.setup || '');
       /* База віддає час як HH:MM:SS, полю input потрібні HH:MM */
       setEntryTime((existingTrade.entry_time || '').slice(0, 5));
       setExitTime((existingTrade.exit_time || '').slice(0, 5));
@@ -1083,7 +1009,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       setSelectedPair(planPair || '');
       setRisk('1%'); setRr(''); setTradeType('Long'); setResult('Not Selected'); setSession('London');
       setTradeDescription(''); setTradeImages([]);
-      setSetupName(''); setEntryTime(''); setExitTime('');
+      setEntryTime(''); setExitTime('');
       setFollowedPlan(null); setRushed(null); setHasMistake(null);
       setMistakeText(''); setMistakeImages([]);
       setPsyConfident(null); setPsyFear(null); setPsyRepeat(null); setPsyRevenge(null); setPsyNotes('');
@@ -1109,28 +1035,6 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       });
     }
 
-    /* Свої сетапи за останні пів року. Беремо частотою, а не
-       алфавітом: у підказках першим має стояти те, чим людина
-       торгує, а не те, що починається на «А». */
-    /* user_id обовʼязково: адмінська політика на trades дає право
-       читати чужі рядки, і без цього фільтра в підказки сетапів
-       натекли б чужі назви. */
-    supabase.from('trades')
-      .select('setup')
-      .eq('user_id', user?.id || '')
-      .not('setup', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(300)
-      .then(({ data }) => {
-        if (!data) return;
-        const freq = new Map();
-        data.forEach((r) => {
-          const v = (r.setup || '').trim();
-          if (v) freq.set(v, (freq.get(v) || 0) + 1);
-        });
-        const mine = [...freq.entries()].sort((a, b) => b[1] - a[1]).map(([v]) => v);
-        setSetupOptions([...new Set([...mine, ...DEFAULT_SETUPS])].slice(0, 12));
-      });
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [isOpen, existingTrade, planDate, planPair]);
 
@@ -1197,6 +1101,16 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
      у футері має показувати правду, а не вигадану цифру з макета. */
   const step1LeftCount = [!selectedPair?.trim(), !tradeDate, !account, !risk?.trim()].filter(Boolean).length;
 
+  /* Похідні числа форми: 1R у грошах і результат у R. Рахуються тут, а
+     не всередині розмітки, бо потрібні у двох місцях і не мають
+     перераховуватись двічі. */
+  const riskPct = parseFloat(String(risk).replace('%', '').replace(',', '.')) || 0;
+  const accountBalance = Number(accounts.find((a) => a.firm_name === account)?.balance) || null;
+  const oneR = accountBalance ? Math.round((accountBalance * riskPct) / 100) : null;
+  const rNum = parseFloat(String(rr).replace(',', '.'));
+  const hasR = !Number.isNaN(rNum);
+  const rColor = !hasR ? 'var(--edge-text)' : rNum > 0 ? GREEN : rNum < 0 ? BAD : 'var(--edge-text)';
+
   /* Значення семи питань розбору, в порядку QUESTIONS */
   const psyValues = { followedPlan, rushed, hasMistake, psyConfident, psyFear, psyRepeat, psyRevenge };
   const psySetters = {
@@ -1250,7 +1164,6 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
         plan_date: tradeDate, plan_pair: selectedPair, account_name: account, risk,
         rr: rr ? parseFloat(String(rr).replace(',', '.')) : null,
         type: tradeType, result, session,
-        setup: setupName.trim() || null,
         entry_time: entryTime || null,
         exit_time: exitTime || null,
         trade_description: tradeDescription,
@@ -1357,17 +1270,23 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
           >
             {/* ─────────── Шапка ─────────── */}
             <div className="flex shrink-0 items-center justify-between gap-5 px-6 pb-3 pt-[14px]" style={{ borderBottom: `1px solid ${line(0.06)}` }}>
-              <div className="min-w-0">
-                <div className="text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.28em', color: txt(0.45) }}>
-                  {step === 0
-                    ? `Запис журналу · ${tradeDate || todayLocal()}`
-                    : `Запис журналу · ${selectedPair || '—'} · ${DIRECTION_LABEL[tradeType] || tradeType} · ${rr ? `${rr}R` : '—'}`}
-                </div>
-                <h2 className="mt-[5px] text-[23px] font-bold leading-[1.1]" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.03em' }}>
+              {/* Актив і дата живуть у шапці, а не окремими полями в
+                  формі. Обидва підставляються самі — з плану або з
+                  сьогоднішньої дати, — і міняють їх рідко. Поле, яке
+                  вже заповнене й рідко правиться, не має займати рядок
+                  нарівні з тим, що заповнюють щоразу. */}
+              <div className="flex min-w-0 flex-col gap-2">
+                <h2 className="text-[21px] font-bold leading-[1.1]" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.03em' }}>
                   {step === 0
                     ? (existingTrade ? 'Редагувати угоду' : 'Записати угоду')
                     : 'Розбір виконання'}
                 </h2>
+                {step === 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <AssetPicker compact value={selectedPair} onChange={setSelectedPair} />
+                    <TradeDate compact value={tradeDate} onChange={setTradeDate} />
+                  </div>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-3.5">
                 <div className="flex items-center gap-2" style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.14em' }}>
@@ -1476,36 +1395,57 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         )}
                       </div>
 
-                      {/* Актив і напрямок */}
-                      <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                        <AssetPicker value={selectedPair} onChange={setSelectedPair} />
-                        <DirectionToggle value={tradeType} onChange={setTradeType} />
-                      </div>
+                      {/* Напрямок лишається сегментами: їх рівно два,
+                          вибір робиться в кожній угоді, і ховати його
+                          під клік означало б додати крок там, де його
+                          не було. Решта — однакові поля-випадашки. */}
+                      <DirectionToggle value={tradeType} onChange={setTradeType} />
 
-                      {/* Рахунок · 1R · результат · ризик · сетап — одна картка з макета v12 */}
-                      <AccountRiskCard
-                        account={account}
-                        accountOptions={accountOptions}
-                        onAccount={setAccount}
-                        risk={risk}
-                        setRisk={setRisk}
-                        rr={rr}
-                        setRr={setRr}
-                        balance={Number(accounts.find((a) => a.firm_name === account)?.balance) || null}
-                        setup={setupName}
-                        setSetup={setSetupName}
-                        setupOptions={setupOptions}
-                      />
-
-                      {/* Сесія і статус */}
                       <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                        <SessionPicker value={session} onChange={setSession} />
                         <StatusPicker value={result} onChange={setResult} />
+                        <SessionPicker value={session} onChange={setSession} />
                       </div>
 
-                      {/* Нотатка — один рядок з макета v12: іконка ліворуч,
-                          лічильник символів справа. Той самий tradeDescription,
-                          що й раніше — просто без окремої великої textarea. */}
+                      <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                        <AccountPicker value={account} options={accountOptions} onChange={setAccount} />
+                        <RiskPicker value={risk} onChange={setRisk} />
+                      </div>
+
+                      {/* Ціль і похідні числа — тонкою смугою. 1R і
+                          результат рахуються з ризику й цілі, тож
+                          стоять поруч із ними, а не окремими великими
+                          цифрами вгорі форми. */}
+                      <div
+                        className="flex items-center gap-2.5 rounded-[12px] px-3 py-2"
+                        style={{ background: line(0.02), border: `1px solid ${line(0.07)}` }}
+                      >
+                        <span className="shrink-0 text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: txt(0.4) }}>
+                          Ціль
+                        </span>
+                        <div className="flex h-9 shrink-0 items-center gap-1 rounded-[9px] px-3" style={{ background: 'rgba(0,0,0,0.28)', border: `1px solid ${line(0.07)}` }}>
+                          <input
+                            value={rr}
+                            onChange={(e) => setRr(e.target.value.replace(',', '.'))}
+                            inputMode="decimal"
+                            placeholder="2.5"
+                            className="w-[38px] bg-transparent text-[13.5px] outline-none"
+                            style={{ fontFamily: MONO, color: rColor }}
+                          />
+                          <span className="shrink-0 text-[11px]" style={{ fontFamily: MONO, color: txt(0.4) }}>R</span>
+                        </div>
+
+                        <span className="ml-auto flex shrink-0 items-center gap-3">
+                          <span className="text-[12.5px]" style={{ fontFamily: MONO, color: txt(0.42) }}>
+                            1R {oneR != null ? `$${oneR.toLocaleString('en-US')}` : '—'}
+                          </span>
+                          <span className="text-[13.5px] font-semibold" style={{ fontFamily: MONO, color: hasR ? rColor : txt(0.35) }}>
+                            {hasR ? `${rNum > 0 ? '+' : ''}${rNum.toFixed(2)}R` : '—'}
+                          </span>
+                        </span>
+                      </div>
+
+                      {/* Нотатка — один рядок: іконка ліворуч,
+                          лічильник символів справа. */}
                       <div className="edge-note-field flex h-12 items-center gap-2.5 rounded-xl px-[15px] transition-colors duration-200" style={{ background: line(0.02), border: `1px solid ${line(0.07)}` }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={txt(0.5)} strokeWidth="1.8" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h9" /></svg>
                         <input
@@ -1527,7 +1467,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       transition={{ duration: 0.2, ease: EASE }}
                       className="flex flex-col gap-3 py-5"
                     >
-                      <ReviewGrid values={psyValues} setters={psySetters} />
+                      <ReviewList values={psyValues} setters={psySetters} />
 
                       {/* Розбір помилки — функціональний блок понад
                           макет: помилка з угоди летить у Журнал

@@ -152,101 +152,13 @@ function useRailLeft() {
    Наведення показує все на мить (попередній перегляд), клік лишає
    розгорнутим, доки не клікнути ще раз — так само, як наведення саме
    лишає її, коли миша йде геть, а клік — ні. */
-function DesktopRail({ assetSwitcher, plans = [], currentPair, onPickPlan }) {
-  const left = useRailLeft();
+/* Ліва рейка прибрана.
 
-  /* Рейка більше не про фази дня.
-
-     Навігація по секціях там була зайвою: сторінка коротка, а фази
-     й так розділені великими якорями — до потрібної швидше доїхати
-     колесом, ніж прицілитись у кільце завбільшки з ніготь. Кільця
-     прогресу теж пішли: відсоток заповненості форми не є метою, і
-     щодня бачити його перед очима — не найкорисніша звичка.
-
-     Натомість рейка робить те, чого не вміло ніщо інше: тримає під
-     рукою всі сьогоднішні плани. Зробив розбір по чотирьох активах —
-     перемикаєшся між ними одним кліком, не шукаючи їх у пошуку. */
-  return (
-    <div
-      className="fixed top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center xl:flex no-print"
-      style={{ left, filter: 'drop-shadow(0 20px 40px var(--edge-panel-glow, rgba(0,0,0,0.3)))', transition: 'left 0.42s cubic-bezier(0.22,1,0.36,1)' }}
-    >
-      {plans.length > 0 && (
-        <motion.div
-          layout
-          className="mb-2.5 flex flex-col items-center gap-1 rounded-2xl p-2"
-          style={{
-            background: 'var(--edge-panel, rgba(13,13,16,0.90))',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: `1px solid ${T.line}`,
-          }}
-          transition={SPRING}
-        >
-          <span
-            className="mb-0.5 text-[9px] font-bold uppercase tracking-[0.14em]"
-            style={{ fontFamily: T.sans, color: T.text4 }}
-          >
-            Плани
-          </span>
-
-          {plans.map((p) => {
-            const on = p.symbol === currentPair;
-            return (
-              <button
-                key={p.symbol}
-                type="button"
-                onClick={() => !on && onPickPlan?.(p.symbol)}
-                title={p.symbol}
-                className="group relative grid h-10 w-10 place-items-center rounded-xl transition-colors duration-200"
-                style={{ background: on ? `rgba(${T.accRgb},0.14)` : 'transparent' }}
-                onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.surfaceHi; }}
-                onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
-              >
-                {on && (
-                  <motion.span
-                    layoutId="rail-plan-active"
-                    className="absolute inset-0 rounded-xl"
-                    style={{ border: `1px solid rgba(${T.accRgb},0.38)` }}
-                    transition={SPRING}
-                  />
-                )}
-                <span className="relative grid w-7 place-items-center">
-                  <AssetIcon symbol={p.symbol} category={p.category} />
-                </span>
-
-                {/* Підпис тільки під курсором: чотири тикери стовпчиком
-                    перетворили б рейку на другий сайдбар. */}
-                <span
-                  className="pointer-events-none absolute left-[calc(100%+8px)] whitespace-nowrap rounded-md px-2 py-1 text-[12px] font-semibold opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                  style={{ background: T.surfaceHi, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
-                >
-                  {p.symbol}
-                </span>
-              </button>
-            );
-          })}
-        </motion.div>
-      )}
-
-      {/* Пошук нового активу лишається окремою капсулою: додати план —
-          дія іншого роду, ніж перемкнутись між уже зробленими. */}
-      {assetSwitcher && (
-        <div
-          className="rounded-2xl p-2"
-          style={{
-            background: 'var(--edge-panel, rgba(13,13,16,0.90))',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: `1px solid ${T.line}`,
-          }}
-        >
-          {assetSwitcher}
-        </div>
-      )}
-    </div>
-  );
-}
+   Вона тримала навігацію по фазах і кільця прогресу, але сторінка
+   коротка: до фази швидше доїхати колесом, ніж прицілитись у кільце
+   завбільшки з ніготь. Перемикач планів, який жив тут деякий час,
+   переїхав у шапку — там він поруч із рештою службових елементів,
+   а не приклеєний збоку окремим стовпчиком. */
 
 /* ==================================================================
    Мобільний / планшетний фолбек: горизонтальний sticky-док зверху,
@@ -351,16 +263,10 @@ export function BackToTop({ visible, onClick }) {
   );
 }
 
-export default function PlanTabs({ active, onNavigate, progress, overall, assetSwitcher, visiblePhases, plans, currentPair, onPickPlan }) {
+export default function PlanTabs({ active, onNavigate, progress, overall, visiblePhases }) {
   const sections = visiblePhases ? SECTIONS.filter((s) => visiblePhases.includes(s.id)) : SECTIONS;
   return (
     <>
-      <DesktopRail
-        assetSwitcher={assetSwitcher}
-        plans={plans}
-        currentPair={currentPair}
-        onPickPlan={onPickPlan}
-      />
       <MobileDock active={active} onNavigate={onNavigate} progress={progress} overall={overall} sections={sections} />
     </>
   );

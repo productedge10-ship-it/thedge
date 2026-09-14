@@ -1,6 +1,7 @@
-import { motion } from 'framer-motion';
-import { useState } from 'react';
-import { CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2, ChevronDown, Layers } from 'lucide-react';
+import AssetIcon from '../ui/AssetIcon';
 import { T, SPRING, EASE } from './planTheme';
 
 /* ==================================================================
@@ -230,6 +231,9 @@ export default function PlanHeader({
   mode = 'daily',
   onBackToDaily,
   onGoWeekly,
+  plans,
+  onPickPlan,
+  onAddPlan,
   onNewPlan,
   onShare,
   onOpenQuiz,
@@ -296,6 +300,10 @@ export default function PlanHeader({
             </div>
           );
         })()}
+
+        {!weekly && (
+          <PlanSwitcher plans={plans} current={pair} onPick={onPickPlan} onAdd={onAddPlan} />
+        )}
 
         {/* Diagnostics-квіз про «сьогодні», а не про конкретний план,
             тому лишається однаковим і на денному, і на тижневому масштабі —

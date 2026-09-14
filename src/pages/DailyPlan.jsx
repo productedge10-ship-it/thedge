@@ -27,7 +27,7 @@ import FloatingActionButtons from '../components/trading/FloatingActionButtons';
 import SavingOverlay from '../components/modals/SavingOverlay';
 import AssetSearchModal from '../components/modals/AssetSearchModal';
 import PlanTabs, { SECTIONS, useScrollSpy, BackToTop } from '../components/trading/PlanTabs';
-import AssetSwitcher, { pushRecentAsset } from '../components/trading/AssetSwitcher';
+import { pushRecentAsset } from '../components/trading/AssetSwitcher';
 import { loadTodayPairs } from '../lib/planAssets';
 import { Section, SectionAnchor, WriteBlock } from '../components/trading/PlanPrimitives';
 import WeeklyPlanView from '../components/trading/WeeklyPlanView';
@@ -365,9 +365,9 @@ export default function DailyPlan() {
       ? Math.min(planData.updates.filter((u) => u.image || u.text?.trim()).length / planData.updates.length, 1)
       : 0;
 
-    const reviewFilled = planData.reviewBlocks.filter((b) => b.image || b.text?.trim()).length;
+    const shots = (planData.conclusionBlocks || []).filter((b) => b.image || b.text?.trim()).length;
     const reviewPart = [
-      Math.min(reviewFilled / 1, 1),
+      Math.min(shots / 1, 1),
       planData.actualNarrative ? 1 : 0,
       planData.dayFlow ? 1 : 0,
       planData.dayState ? 1 : 0,
@@ -869,6 +869,9 @@ export default function DailyPlan() {
           mode={mode}
           onBackToDaily={backToDaily}
           onGoWeekly={goWeekly}
+          plans={dayPlans.map((sym) => ({ symbol: sym, category: flatAssets.find((a) => a.symbol === sym)?.category }))}
+          onPickPlan={(sym) => handleRouteChange(planData.date, sym)}
+          onAddPlan={() => !isLoadingAssets && setIsAssetModalOpen(true)}
           onNewPlan={mode === 'weekly' ? goThisWeek : openPlanTypeModalForNewPlan}
           onShare={handleShare}
           onOpenQuiz={() => setIsQuizModalOpen(true)}
@@ -908,27 +911,30 @@ export default function DailyPlan() {
             progress={progress}
             overall={overall}
             visiblePhases={['plan', 'live', 'review'].filter((ph) => dailyBlocks.phaseVisible(ph))}
-            plans={dayPlans.map((sym) => ({ symbol: sym, category: flatAssets.find((a) => a.symbol === sym)?.category }))}
-            currentPair={planData.pair}
-            onPickPlan={(sym) => handleRouteChange(planData.date, sym)}
-            assetSwitcher={
-              <AssetSwitcher
-                currentPair={planData.pair}
-                flatAssets={flatAssets}
-                favorites={favorites}
-                onPick={(symbol, date) => handleRouteChange(date || planData.date, symbol)}
-                onToggleFavorite={handleToggleFavorite}
-                onOpenFullSearch={() => !isLoadingAssets && setIsAssetModalOpen(true)}
-              />
-            }
+
           />
         </div>
 
-        {/* Без затемнення при перемиканні активу. Воно задумувалось як
-            «дані оновлюються», а читалось як «сторінка зависла»: пів
-            секунди блідого розмитого екрана на кожен клік. Дані і так
-            приходять миттєво. */}
-        <motion.div>
+        {/* Перехід між планами.
+
+            Раніше тут було затемнення з розмиттям — воно задумувалось
+            як «дані оновлюються», а читалось як «сторінка зависла».
+            Тепер навпаки: старий план не блякне, а йде вгору й
+            поступається місцем новому, який приходить знизу. Ключ на
+            парі «дата + актив» змушує Framer вважати їх різними
+            предметами, а не одним, що перемалювався.
+
+            mode="wait" тут принциповий: два плани не мають накластись
+            один на одного, бо секції в них однакові й на мить вийшло б
+            дві однакові шапки. */}
+        <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={`${planData.date}|${planData.pair}`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.24, ease: EASE }}
+        >
           {/* ═══════════════ PLAN ═══════════════ */}
           {dailyBlocks.phaseVisible('plan') && (
           <SectionAnchor
@@ -1024,20 +1030,9 @@ export default function DailyPlan() {
           )}
 
           <div className="flex flex-col gap-5">
-            {dailyBlocks.isVisible('review') && (
-            <Section
-              icon={LineChart}
-              storageKey="review"
-              onHide={() => dailyBlocks.hide('review')}
-              group="review"
-              title="Розбір після сесії"
-              done={planData.reviewBlocks.some((b) => b.image || b.text?.trim())}
-            >
-              <div className="p-5 sm:p-6">
-                <TdaGrid blocks={planData.reviewBlocks} onSave={saveReview} />
-              </div>
-            </Section>
-            )}
+            {/* «Розбір після сесії» прибраний: він і «Висновки» питали
+                те саме двома блоками поспіль — скріншоти з підписами.
+                Лишився один, і тепер він чесно називається ревю дня. */}
 
             {dailyBlocks.isVisible('diagnostics') && (
             <Section
@@ -1066,7 +1061,7 @@ export default function DailyPlan() {
               storageKey="conclusions"
               onHide={() => dailyBlocks.hide('conclusions')}
               group="review"
-              title="Висновки"
+              title="Ревю дня"
               done={!!planData.conclusionsText?.trim()}
             >
               <WriteBlock
@@ -1096,6 +1091,7 @@ export default function DailyPlan() {
               екраном, відтісняючи сам план униз. */}
           <PlanBlocksDock mode="daily" />
         </motion.div>
+        </AnimatePresence>
         </>
         )}
       </div>

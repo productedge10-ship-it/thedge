@@ -10,9 +10,8 @@ export const PLAN_BLOCKS = {
     { id: 'tda', phase: 'plan', title: 'Top-down аналіз' },
     { id: 'strategy', phase: 'plan', title: 'Стратегія та точки входу' },
     { id: 'updates', phase: 'live', title: 'Апдейти по ходу сесії' },
-    { id: 'review', phase: 'review', title: 'Розбір після сесії' },
     { id: 'diagnostics', phase: 'review', title: 'Діагностика' },
-    { id: 'conclusions', phase: 'review', title: 'Висновки' },
+    { id: 'conclusions', phase: 'review', title: 'Ревю дня' },
   ],
   weekly: [
     { id: 'week-tda', phase: 'plan', title: 'Top-down аналізи' },

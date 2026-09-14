@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Building2, Loader2, Check, Trash2, Lock,
+  X, Building2, Loader2, Check, Trash2, Lock, Pencil,
   TrendingUp, TrendingDown,
 } from 'lucide-react';
 
@@ -15,6 +15,8 @@ import {
 } from '../../lib/accountsStore';
 import DateField from '../ui/DateField';
 import BalanceChart from './BalanceChart';
+import { listMt5Snapshots } from '../../lib/mt5Store';
+import { supabase as sb } from '../../lib/supabase';
 
 /* ==================================================================
    Account details.
@@ -53,6 +55,17 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
   const { user } = useAuth();
 
   const [events, setEvents] = useState([]);
+
+  /* Знімки балансу з терміналу. У рахунку, підключеного до MT5, подій
+     руками ніхто не заводить — виплат ще не було, поповнень теж, тож
+     крива з account_events лишається порожньою назавжди. А баланс при
+     цьому рухається щодня: його пише воркер у mt5_snapshots. */
+  const [shots, setShots] = useState([]);
+
+  /* Чернетка назви — окремо від acc.firm_name: поки людина друкує,
+     нагору нічого не піднімаємо, інакше кожна літера йшла б у базу. */
+  const [nameDraft, setNameDraft] = useState(account.firm_name || '');
+  const [nameHot, setNameHot] = useState(false);
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -104,6 +117,43 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
     return () => { alive = false; };
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [user?.id, acc.id]);
+
+  useEffect(() => {
+    if (!acc.mt5_account_id) return undefined;
+    let alive = true;
+    listMt5Snapshots(acc.mt5_account_id, 400)
+      .then((rows) => { if (alive) setShots(rows); })
+      /* Мовчки: крива — доповнення, і якщо вона не приїхала, решта
+         картки має відкритись як відкривалась. */
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [acc.mt5_account_id]);
+
+  useEffect(() => { setNameDraft(acc.firm_name || ''); }, [acc.id, acc.firm_name]);
+
+  /* Перейменування зачіпає не лише рахунок: угоди звʼязані з ним
+     рядком account_name, і без другого запиту вони лишились би
+     висіти на старій назві. */
+  const saveName = async () => {
+    const next = nameDraft.trim();
+    if (!next || next === acc.firm_name) { setNameDraft(acc.firm_name || ''); return; }
+
+    try {
+      const { error } = await sb.from('prop_accounts').update({ firm_name: next }).eq('id', acc.id);
+      if (error) throw error;
+
+      await sb.from('trades')
+        .update({ account_name: next })
+        .eq('user_id', user.id)
+        .eq('account_name', acc.firm_name);
+
+      onUpdate?.({ ...acc, firm_name: next });
+      notify.success('Перейменовано', `Рахунок тепер «${next}»`);
+    } catch (err) {
+      setNameDraft(acc.firm_name || '');
+      notify.error('Не вийшло перейменувати', err.message);
+    }
+  };
 
   const stats = useMemo(() => tradeStats(trades), [trades]);
   const payouts = useMemo(() => events.filter((e) => e.kind === 'payout'), [events]);
@@ -158,16 +208,36 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
     return Math.max(0, ((peak - balance) / peak) * 100);
   }, [events, initial, balance]);
 
+  /* Точки кривої: події рахунку або знімки з терміналу.
+
+     Змішувати їх не можна. Подія — це рух, який хтось зробив (виплата,
+     поповнення), і в неї є сума та підпис. Знімок — просто стан на
+     момент часу. Якби вони лягли в один ряд, підказка на графіку
+     показувала б «виплата $0» там, де нічого не відбувалось.
+
+     Тому рахунок із терміналом малюється знімками, решта — подіями. */
+  const points = useMemo(() => {
+    if (!acc.mt5_account_id || !shots.length) return events;
+    return shots.map((r) => ({
+      id: r.taken_at,
+      happened_at: String(r.taken_at).slice(0, 10),
+      balance_after: r.balance,
+      kind: 'snapshot',
+      amount: 0,
+    }));
+  }, [acc.mt5_account_id, shots, events]);
+
   /* «30д» показує лише свіжі точки, але завжди лишає одну точку
      перед вирізаним вікном — інакше лінія починалась би нізвідки. */
   const chartEvents = useMemo(() => {
+    const events = points;
     if (chartRange === 'all' || events.length < 2) return events;
     const cutoff = Date.now() - 30 * 86400000;
     const inRange = events.filter((e) => new Date(`${e.happened_at}T00:00:00`).getTime() >= cutoff);
     const firstInIdx = events.findIndex((e) => inRange.includes(e));
     if (firstInIdx > 0) return events.slice(firstInIdx - 1);
     return inRange.length ? inRange : events;
-  }, [events, chartRange]);
+  }, [points, chartRange]);
 
   /* Тихий підпис під графіком: пік, дно і скільки днів у вибраному
      вікні — щоб цифру не доводилось вичитувати з самої кривої. */
@@ -404,12 +474,55 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
             <Building2 size={19} strokeWidth={2} style={{ color: T.acc }} />
           </span>
           <div className="min-w-0 flex-1">
-            <h2
-              className="truncate text-[20px] font-bold sm:text-[23px]"
-              style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.025em' }}
-            >
-              {acc.firm_name}
-            </h2>
+            {/* Назва редагується просто тут: клік — і це поле вводу.
+                Окрема кнопка «перейменувати» з діалогом заради одного
+                рядка тексту коштувала б трьох дій замість однієї.
+
+                Ширина поля йде за текстом, а не за колонкою: інакше
+                порожня смуга на пів екрана заявляє про себе голосніше
+                за саму назву. Міряємо невидимим двійником того ж
+                накреслення — ch-одиниці на дисплейному шрифті брешуть
+                на третину. */}
+            <span className="group relative inline-flex max-w-full items-center gap-1.5">
+              <span className="relative inline-block max-w-full">
+                <span
+                  aria-hidden
+                  className="invisible block whitespace-pre px-2 text-[20px] font-bold sm:text-[23px]"
+                  style={{ fontFamily: T.display, letterSpacing: '-0.025em' }}
+                >
+                  {nameDraft || acc.firm_name || ' '}
+                </span>
+                <input
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onFocus={() => setNameHot(true)}
+                  onBlur={() => { setNameHot(false); saveName(); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.currentTarget.blur();
+                    if (e.key === 'Escape') { setNameDraft(acc.firm_name); e.currentTarget.blur(); }
+                  }}
+                  spellCheck={false}
+                  className="absolute inset-0 w-full rounded-lg bg-transparent px-2 text-[20px] font-bold outline-none transition-colors duration-200 sm:text-[23px]"
+                  style={{
+                    fontFamily: T.display,
+                    color: T.text,
+                    letterSpacing: '-0.025em',
+                    border: `1px solid ${nameHot ? T.lineAcc : 'transparent'}`,
+                    background: nameHot ? T.sunken : 'transparent',
+                  }}
+                />
+              </span>
+
+              {/* Олівець — єдина підказка, що заголовок клікабельний.
+                  Показуємо під курсором: постійна іконка біля назви
+                  читалась би як частина назви. */}
+              <Pencil
+                size={13}
+                strokeWidth={2.2}
+                className="shrink-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                style={{ color: T.text4, opacity: nameHot ? 1 : undefined }}
+              />
+            </span>
             <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold sm:text-[12.5px]" style={{ fontFamily: T.sans, color: isClosed ? T.text3 : T.ok }}>
               <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: isClosed ? T.text3 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
               <span className="shrink-0">{isClosed ? 'Closed' : 'Active'}</span>
