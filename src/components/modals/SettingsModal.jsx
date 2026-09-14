@@ -7,7 +7,7 @@ import {
   X, RotateCcw, Eye, EyeOff, Moon, Sun, ZapOff,
   User, Target, BookOpen, Palette, Sparkles, LayoutGrid,
   MailCheck, MailWarning, KeyRound, Loader2, Check, Send,
-  Plug, HelpCircle, ArrowRight, ChevronDown,
+  Plug, HelpCircle, ArrowRight, ChevronDown, Unlink,
 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
@@ -17,7 +17,9 @@ import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { openVerifyEmail } from '../../lib/emailGate';
 import { NAV, MOTION, FX, PSY, HIDEABLE, GOALS, goalById, OPEN_EVENT } from '../../lib/settings';
-import { connectMt5, watchMt5Account, readMt5Status, listMt5Accounts } from '../../lib/mt5Store';
+import {
+  connectMt5, watchMt5Account, readMt5Status, listMt5Accounts, removeMt5Account,
+} from '../../lib/mt5Store';
 import { THEMES } from '../../lib/themes';
 
 /* ==================================================================
@@ -169,7 +171,13 @@ export default function SettingsModal() {
   useEffect(() => { setNick(s.nickname); }, [s.nickname]);
 
   useEffect(() => {
-    const onOpen = () => setOpen(true);
+    const onOpen = (e) => {
+      /* Вкладку задає той, хто відкриває: з «Accounts» ведуть одразу
+         в «Connections», і змушувати шукати її очима було б дивно. */
+      const want = e?.detail?.tab;
+      if (want) setTab(want);
+      setOpen(true);
+    };
     window.addEventListener(OPEN_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_EVENT, onOpen);
   }, []);
@@ -1931,14 +1939,37 @@ function LinkedAccounts({ tick }) {
       className="flex flex-col"
       style={{ gap: 6 }}
     >
-      {rows.map((r) => <LinkedRow key={r.id} row={r} />)}
+      {rows.map((r) => (
+        <LinkedRow
+          key={r.id}
+          row={r}
+          onGone={() => setRows((list) => list.filter((x) => x.id !== r.id))}
+        />
+      ))}
     </motion.div>
   );
 }
 
-function LinkedRow({ row }) {
+function LinkedRow({ row, onGone }) {
   const [hot, setHot] = useState(false);
+
+  /* Питаємо підтвердження прямо в рядку, а не модалкою поверх модалки:
+     дія дрібна, і вибір має стояти там, де на нього дивляться. */
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
   const ref = useRef(null);
+
+  const drop = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await removeMt5Account(row.id);
+      onGone?.();
+    } catch {
+      setBusy(false);
+      setAsking(false);
+    }
+  };
   const st = LINK_STATE[row.status] || LINK_STATE.pending;
   const broker = brokerById(row.broker);
 
@@ -1958,7 +1989,7 @@ function LinkedRow({ row }) {
       ref={ref}
       onMouseMove={onMove}
       onMouseEnter={() => setHot(true)}
-      onMouseLeave={() => setHot(false)}
+      onMouseLeave={() => { setHot(false); if (!busy) setAsking(false); }}
       className="relative flex items-center overflow-hidden"
       style={{
         gap: 9,
@@ -1994,34 +2025,91 @@ function LinkedRow({ row }) {
         {row.server}
       </span>
 
-      <span
-        className="relative flex shrink-0 items-center"
-        style={{ gap: 6 }}
-      >
-        <motion.span
-          className="rounded-full"
-          style={{ width: 6, height: 6, background: st.c }}
-          /* Пульс лише поки триває перевірка: анімація, що не
-             закінчується, перестає щось означати. */
-          animate={row.status === 'pending'
-            ? { opacity: [1, 0.35, 1], scale: [1, 0.82, 1] }
-            : { opacity: 1, scale: 1 }}
-          transition={row.status === 'pending'
-            ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
-            : { duration: 0.2 }}
-        />
-        <span
-          style={{
-            fontFamily: T.sans,
-            fontSize: 10.5,
-            fontWeight: 700,
-            letterSpacing: '.07em',
-            textTransform: 'uppercase',
-            color: st.c,
-          }}
-        >
-          {st.label}
-        </span>
+      <span className="relative flex shrink-0 items-center" style={{ gap: 8 }}>
+        {asking ? (
+          /* Підтвердження замінює статус, а не тулиться поруч: у
+             вузькому рядку два змагальні блоки читаються гірше, ніж
+             одне ясне питання. */
+          <motion.span
+            className="flex items-center"
+            initial={{ opacity: 0, x: 6 }}
+            animate={{ opacity: 1, x: 0 }}
+            style={{ gap: 8 }}
+          >
+            <span style={{ fontFamily: T.sans, fontSize: 11.5, color: T.text3 }}>
+              Unlink?
+            </span>
+            <button
+              type="button"
+              onClick={drop}
+              disabled={busy}
+              className="flex items-center rounded-md px-2 py-0.5"
+              style={{
+                gap: 5,
+                fontFamily: T.sans,
+                fontSize: 11,
+                fontWeight: 700,
+                color: T.bad,
+                background: `rgba(${T.badRgb},0.12)`,
+                border: `1px solid rgba(${T.badRgb},0.26)`,
+              }}
+            >
+              {busy && <Loader2 size={11} className="animate-spin" />}
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => setAsking(false)}
+              style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, color: T.text4 }}
+            >
+              No
+            </button>
+          </motion.span>
+        ) : (
+          <>
+            <motion.span
+              className="rounded-full"
+              style={{ width: 6, height: 6, background: st.c }}
+              /* Пульс лише поки триває перевірка: анімація, що не
+                 закінчується, перестає щось означати. */
+              animate={row.status === 'pending'
+                ? { opacity: [1, 0.35, 1], scale: [1, 0.82, 1] }
+                : { opacity: 1, scale: 1 }}
+              transition={row.status === 'pending'
+                ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
+                : { duration: 0.2 }}
+            />
+            <span
+              style={{
+                fontFamily: T.sans,
+                fontSize: 10.5,
+                fontWeight: 700,
+                letterSpacing: '.07em',
+                textTransform: 'uppercase',
+                color: st.c,
+              }}
+            >
+              {st.label}
+            </span>
+
+            {/* Відвʼязка зʼявляється лише під курсором: дія рідкісна й
+                незворотна, тримати її постійно на очах — запрошувати
+                до випадкового кліку. */}
+            <motion.button
+              type="button"
+              onClick={() => setAsking(true)}
+              className="grid place-items-center"
+              animate={{ opacity: hot ? 1 : 0, width: hot ? 22 : 0 }}
+              transition={{ duration: 0.18, ease: EASE }}
+              style={{ height: 22, borderRadius: 7, color: T.text4, overflow: 'hidden' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
+              title="Unlink this account"
+            >
+              <Unlink size={13} strokeWidth={2.3} />
+            </motion.button>
+          </>
+        )}
       </span>
     </div>
   );

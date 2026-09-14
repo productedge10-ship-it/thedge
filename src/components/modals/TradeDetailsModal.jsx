@@ -15,6 +15,7 @@ import { syncErrorFromTrade, fetchErrorForTrade, catsFromTrade } from '../../lib
 import { CATS } from '../errors/utils';
 import ErrorComposerModal from '../errors/ErrorComposerModal';
 import ImageSlider from '../ui/ImageSlider';
+import TradeLevels from '../journal/TradeLevels';
 import { T } from '../../lib/theme';
 
 /* ==================================================================
@@ -306,6 +307,14 @@ export default function TradeDetailsModal({
     if (d?.trade_image) return [d.trade_image];
     return [];
   }, [d]);
+
+  /* Схему малюємо тільки коли є з чого: сам лише вхід без стопа й
+     тейка — це одна лінія посеред порожнечі, гірша за чесне «немає
+     скріншотів». */
+  const hasLevels = useMemo(() => {
+    const n = (v) => Number.isFinite(Number(v)) && Number(v) !== 0;
+    return n(d?.entry_price) && (n(d?.sl_price) || n(d?.tp_price) || n(d?.exit_price));
+  }, [d?.entry_price, d?.sl_price, d?.tp_price, d?.exit_price]);
 
   const profit = useMemo(() => {
     const rr = parseFloat(d?.rr);
@@ -605,7 +614,16 @@ export default function TradeDetailsModal({
           {/* ЛІВА КОЛОНКА */}
           <motion.div layout transition={SPRING_UI} className="flex flex-col gap-3 p-5" style={{ borderRight: `1px solid ${T.line}` }}>
             {images.length > 0 ? (
-              <ImageSlider images={images} containerClassName="min-h-[420px] rounded-2xl" />
+              <>
+                <ImageSlider images={images} containerClassName="min-h-[420px] rounded-2xl" />
+                {hasLevels && <TradeLevels trade={d} />}
+              </>
+            ) : hasLevels ? (
+              /* Скріна в імпортованої угоди немає й не буде — вона
+                 приїхала з терміналу, а не з рук. Замість порожньої
+                 плашки показуємо те, що термінал таки знає: де стояв
+                 вхід, стоп і тейк, і де угода закрилась насправді. */
+              <TradeLevels trade={d} className="min-h-[420px]" />
             ) : editing ? (
               <div
                 onPaste={(e) => handlePaste(e, 'trade')}

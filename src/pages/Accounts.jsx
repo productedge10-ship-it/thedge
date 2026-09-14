@@ -12,7 +12,6 @@ import { T } from '../lib/theme';
 import { money, money2 } from '../lib/accountsStore';
 import { supabase as sb } from '../lib/supabase';
 import AccountDetails from '../components/accounts/AccountDetails';
-import useEmailGate from '../hooks/useEmailGate';
 
 const PREDEFINED_FIRMS = [
   'FTMO', 'Funding Pips', 'Topstep', 'The Funded Trader', 
@@ -105,10 +104,6 @@ function AccCard({ children, hue = T.accRgb, onClick, hoverable = false, classNa
 
 export default function Accounts() {
   const { user } = useAuth();
-  /* Створювати акаунти можна лише з підтвердженою поштою. Кнопка
-     лишається клікабельною — guard покаже пояснення замість мовчазної
-     відмови. */
-  const { guard } = useEmailGate();
 
   const [accounts, setAccounts] = useState([]);
   const [payouts, setPayouts] = useState([]);
@@ -421,7 +416,7 @@ return (
 
           <button
             data-tour="acc-add"
-            onClick={guard(openAddModal)}
+            onClick={openAddModal}
             className="edge-add-btn inline-flex h-[48px] flex-1 shrink-0 items-center justify-center gap-2 rounded-2xl px-4 text-[13.5px] font-bold sm:h-[54px] sm:ml-1 sm:px-6 sm:text-[14.5px] md:flex-none"
             style={{ color: '#fff', fontFamily: T.sans }}
           >

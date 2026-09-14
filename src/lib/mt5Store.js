@@ -151,11 +151,102 @@ export async function readMt5Status(id) {
 export async function listMt5Accounts() {
   const { data, error } = await supabase
     .from('mt5_accounts')
-    .select('id, platform, broker, server, login, status, last_error, last_sync_at, created_at')
+    .select(
+      'id, platform, broker, server, login, status, last_error, last_sync_at, created_at, '
+      + 'account_title, currency, leverage, balance, equity, stat_at',
+    )
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   return data || [];
+}
+
+/* Історія балансу рахунку.
+
+   Крива будується з чисел брокера, а не з наших підрахунків по
+   угодах: у брокера в балансі вже враховані свопи, комісії й виплати,
+   які журнал може й не бачити. Беремо останні N знімків — на картці
+   потрібен силует, а не кожна крапка. */
+export async function listMt5Snapshots(accountId, limit = 60) {
+  const { data, error } = await supabase
+    .from('mt5_snapshots')
+    .select('taken_at, balance, equity')
+    .eq('account_id', accountId)
+    .order('taken_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data || []).reverse();
+}
+
+/* Свічки конкретної угоди.
+
+   Лежать окремою таблицею, бо рядок угоди возять пачками по сорок
+   штук на кожну сторінку журналу, а свічки потрібні рівно тоді, коли
+   картку відкрили. Тягнути їх разом зі списком означало б платити
+   мегабайтом за те, на що дивляться раз.
+
+   Кеш на рівні модуля: людина відкриває ту саму угоду по кілька
+   разів за сеанс — гортає, повертається, порівнює. Свічки при цьому
+   не міняються, тож другий похід у базу нічого нового не приносить. */
+const candleCache = new Map();
+const keyOf = (t) => `${t?.source}|${t?.external_id}`;
+
+/* Синхронний зазирк у кеш. Потрібен, щоб картка відкривалась із уже
+   намальованим графіком: якби вона спершу рендерилась порожньою й
+   лише потім дізнавалась, що дані є, людина бачила б блимання на
+   рівному місці. */
+export function peekTradeCandles(trade) {
+  if (!trade?.source || !trade?.external_id) return null;
+  return candleCache.get(keyOf(trade));
+}
+
+/* Передзавантаження для цілої сторінки списку.
+
+   Один запит на сорок угод замість сорока окремих — і, головне, у
+   фоні: список малюється одразу, а свічки доїжджають, поки людина
+   веде очима по рядках. На момент кліку вони вже в памʼяті. */
+export async function prefetchTradeCandles(trades) {
+  const want = (trades || []).filter(
+    (t) => t?.source === 'mt5' && t?.external_id && !candleCache.has(keyOf(t)),
+  );
+  if (!want.length) return;
+
+  const ids = [...new Set(want.map((t) => t.external_id))];
+
+  const { data, error } = await supabase
+    .from('trade_candles')
+    .select('external_id, data')
+    .eq('source', 'mt5')
+    .in('external_id', ids);
+
+  if (error) return;
+
+  const got = new Map((data || []).map((r) => [r.external_id, r.data]));
+
+  /* Записуємо навіть порожні відповіді: «свічок немає» — теж знання,
+     і питати про них удруге сенсу немає. */
+  for (const t of want) candleCache.set(keyOf(t), got.get(t.external_id) || null);
+}
+
+export async function getTradeCandles(trade) {
+  if (!trade?.source || !trade?.external_id) return null;
+
+  const key = keyOf(trade);
+  if (candleCache.has(key)) return candleCache.get(key);
+
+  const { data, error } = await supabase
+    .from('trade_candles')
+    .select('data')
+    .eq('source', trade.source)
+    .eq('external_id', trade.external_id)
+    .maybeSingle();
+
+  /* Помилку не кидаємо: графік — доповнення до картки, і якщо він не
+     приїхав, решта має відкритись як відкривалась. */
+  const out = error ? null : (data?.data || null);
+  candleCache.set(key, out);
+  return out;
 }
 
 export async function removeMt5Account(id) {

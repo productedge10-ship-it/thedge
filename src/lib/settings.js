@@ -207,4 +207,10 @@ export function normalize(v) {
 /* Відкрити налаштування можна звідки завгодно — подія долітає до
    вікна, де б воно не було змонтоване. */
 export const OPEN_EVENT = 'edge:settings';
-export const openSettings = () => window.dispatchEvent(new Event(OPEN_EVENT));
+
+/* Необовʼязковий аргумент — вкладка, на якій відкритись. Потрібен,
+   коли в налаштування ведуть не з меню, а з конкретного місця: з
+   «Accounts» логічно потрапити одразу в «Connections», а не шукати
+   потрібну вкладку самому. */
+export const openSettings = (tab) =>
+  window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: tab ? { tab } : null }));

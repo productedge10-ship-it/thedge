@@ -19,7 +19,7 @@ import {
 
 import { supabase } from "../lib/supabase";
 import { notify } from "../utils/notify";
-import { pullMt5Trades } from "../lib/mt5Store";
+import { pullMt5Trades, prefetchTradeCandles } from "../lib/mt5Store";
 import useEmailGate from "../hooks/useEmailGate";
 import { getTradeProfit } from "../utils/journalUtils";
 import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
@@ -31,7 +31,8 @@ import { Magnetic, Shine } from "../components/ui/Hovers";
 import TradesTable from "../components/journal/TradesTable";
 import AssetIcon from "../components/ui/AssetIcon";
 
-const PAGE = 10;
+const PAGE_SIZES = [10, 20, 30, 40];
+const PAGE_DEFAULT = 10;
 
 /* ==================================================================
    Селектори фільтрів — власний преміальний стиль сторінки Journal.
@@ -299,14 +300,33 @@ function periodToRange(id) {
    зліва — результат угоди (взаємовиключні стани), справа —
    дисципліна виконання (незалежні прапорці). Розведення по різних
    боках рядка саме й показує цю різницю значень, а не тільки колір. */
+/* Словник результату мав би бути один, але в базі досі трапляється
+   написання з імпорту перших версій — LOSS замість lose. Нормалізуємо
+   в одному місці: інакше таблиця показує «Stop», а фільтр тих самих
+   угод не бачить, і виглядає це як зламаний фільтр. */
+const normResult = (v) => {
+  const s = String(v || "").trim().toLowerCase();
+  return s === "loss" ? "lose" : s;
+};
+
+/* Ті самі синоніми для запиту в базу: SQL порівнює посимвольно і про
+   регістр не здогадається. Прибрати можна буде тоді, коли в таблиці
+   не лишиться жодного старого написання. */
+const RESULT_ALIASES = {
+  win:     ["win", "Win", "WIN"],
+  lose:    ["lose", "Lose", "LOSE", "loss", "Loss", "LOSS"],
+  be:      ["be", "Be", "BE"],
+  scratch: ["scratch", "Scratch", "SCRATCH"],
+};
+
 const QUICK_RESULT = [
-  { id: "win",  label: "Take", icon: TrendingUp,   c: T.ok,   rgb: T.okRgb,   test: (t) => t.result?.trim().toLowerCase() === "win" },
-  { id: "lose", label: "Stop", icon: TrendingDown, c: T.bad,  rgb: T.badRgb,  test: (t) => t.result?.trim().toLowerCase() === "lose" },
-  { id: "be",   label: "BE",   icon: Minus,        c: T.warn, rgb: T.warnRgb, test: (t) => t.result?.trim().toLowerCase() === "be" },
+  { id: "win",  label: "Take", icon: TrendingUp,   c: T.ok,   rgb: T.okRgb,   test: (t) => normResult(t.result) === "win" },
+  { id: "lose", label: "Stop", icon: TrendingDown, c: T.bad,  rgb: T.badRgb,  test: (t) => normResult(t.result) === "lose" },
+  { id: "be",   label: "BE",   icon: Minus,        c: T.warn, rgb: T.warnRgb, test: (t) => normResult(t.result) === "be" },
   /* Закрився там же, де зайшов. Окремий фільтр потрібен, бо такі
      угоди найцікавіше дивитись пачкою: зазвичай за ними стоїть одна
      й та сама причина, і видно її тільки поруч. */
-  { id: "scratch", label: "Scratch", icon: Minus, c: T.info, rgb: T.infoRgb, test: (t) => t.result?.trim().toLowerCase() === "scratch" },
+  { id: "scratch", label: "Scratch", icon: Minus, c: T.info, rgb: T.infoRgb, test: (t) => normResult(t.result) === "scratch" },
 ];
 const QUICK_DISCIPLINE = [
   { id: "offplan", label: "Off plan", icon: ShieldAlert,  c: T.bad,  rgb: T.badRgb,  test: (t) => !t.followed_plan },
@@ -314,6 +334,7 @@ const QUICK_DISCIPLINE = [
   { id: "rushed",  label: "Rushed",       icon: Zap,          c: "#fb923c", rgb: "251,146,60", test: (t) => !!t.rushed },
 ];
 const QUICK = [...QUICK_RESULT, ...QUICK_DISCIPLINE];
+const RESULT_QUICK_IDS = QUICK_RESULT.map((f) => f.id);
 
 const TILE_PRESS = { type: "spring", duration: 0.22, bounce: 0 };
 const TILE_CONFIRM = { type: "spring", duration: 0.34, bounce: 0.3 };
@@ -404,22 +425,61 @@ function QuickTile({ f, on, n, onToggle }) {
   );
 }
 
-function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
+/* Скільки рядків показувати. Заглиблена доріжка з пігулками — той
+   самий словник, що й перемикач періоду на аналітиці, тож людина
+   впізнає елемент, не вчитуючись. */
+function PageSizePicker({ value, onChange }) {
+  return (
+    <div
+      className="flex items-center gap-1 rounded-[10px] p-1"
+      style={{ background: T.sunken, border: `1px solid ${T.line}` }}
+    >
+      {PAGE_SIZES.map((n) => {
+        const on = n === value;
+        return (
+          <button
+            key={n}
+            onClick={() => onChange(n)}
+            className="rounded-lg px-2.5 py-1 text-[12px] font-bold tabular-nums transition-colors"
+            style={{
+              fontFamily: T.sans,
+              color: on ? T.text : T.text4,
+              background: on ? `rgba(${T.accRgb},0.16)` : "transparent",
+            }}
+          >
+            {n}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function QuickFilters({ active, onToggle, onClear, counts, total, pageSize, onPageSize }) {
   const has = active.length > 0;
 
   return (
     <div className="px-5 py-3.5" style={{ borderBottom: `1px solid ${T.line}` }}>
-      <div className="mb-2.5 flex items-center justify-between">
-        <span className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          Quick filters
-        </span>
-        <div className="flex items-center gap-3">
+      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-baseline gap-2.5">
+          <span className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+            Quick filters
+          </span>
+
+          {/* Лічильник стоїть біля заголовка, а не в протилежному кутку:
+              він описує саме те, що зараз відібрано фільтрами, і з
+              відстані в пів екрана цей звʼязок не читався. */}
+          <span className="text-[12px] font-bold tabular-nums" style={{ fontFamily: T.sans, color: has ? T.acc : T.text3 }}>
+            {total} {total === 1 ? "trade" : "trades"}
+            {has ? " found" : ""}
+          </span>
+
           <AnimatePresence>
             {has && (
               <motion.button
-                initial={{ opacity: 0, x: 8 }}
+                initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 8 }}
+                exit={{ opacity: 0, x: -6 }}
                 transition={TILE_PRESS}
                 whileTap={{ scale: 0.94 }}
                 onClick={onClear}
@@ -432,9 +492,13 @@ function QuickFilters({ active, onToggle, onClear, counts, shown, total }) {
               </motion.button>
             )}
           </AnimatePresence>
-          <span className="text-[12px] font-bold tabular-nums" style={{ fontFamily: T.sans, color: T.text3 }}>
-            {has ? `${shown} of ${total}` : `${total} trades`}
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <span className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+            Per page
           </span>
+          <PageSizePicker value={pageSize} onChange={onPageSize} />
         </div>
       </div>
 
@@ -573,6 +637,13 @@ export default function TradingJournal() {
   const [period, setPeriod] = useState("all");
   const [quick, setQuick] = useState([]);
 
+  /* Скільки рядків тягнути за раз. Вибір людини переживає перезахід —
+     хто один раз попросив сорок, той не хоче просити щоразу. */
+  const [pageSize, setPageSize] = useState(() => {
+    const saved = Number(localStorage.getItem("journal_page_size"));
+    return PAGE_SIZES.includes(saved) ? saved : PAGE_DEFAULT;
+  });
+
   const [tradeToDelete, setTradeToDelete] = useState(null);
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
 
@@ -644,6 +715,28 @@ export default function TradingJournal() {
     [filterPair, dateFrom, dateTo]
   );
 
+  /* Швидкі фільтри — теж у запит, а не поверх завантаженої сторінки.
+     Раніше вони відсіювали лише те, що вже лежало на екрані: сторінка
+     з десяти прибуткових угод після кліку на «Stop» ставала порожньою,
+     хоча стопи в журналі були — просто на інших сторінках. Виглядало
+     це як непрацюючий фільтр, і по суті ним і було.
+
+     Результати між собою йдуть через АБО (взаємовиключні стани однієї
+     угоди), прапорці дисципліни — через І (незалежні ознаки). */
+  const applyQuick = useCallback(
+    (q) => {
+      const results = quick.filter((id) => RESULT_QUICK_IDS.includes(id));
+      if (results.length) {
+        q = q.in("result", results.flatMap((id) => RESULT_ALIASES[id] || [id]));
+      }
+      if (quick.includes("offplan")) q = q.eq("followed_plan", false);
+      if (quick.includes("mistake")) q = q.eq("has_mistake", true);
+      if (quick.includes("rushed")) q = q.eq("rushed", true);
+      return q;
+    },
+    [quick]
+  );
+
   const fetchGlobalData = useCallback(async () => {
     const q = applyFilters(
       supabase
@@ -664,7 +757,8 @@ export default function TradingJournal() {
      старими сторінками. Мутації (додав/видалив/відредагував угоду)
      скидають кеш повністю — свіжість даних важливіша за швидкість. */
   const tradesCache = useRef({});
-  const cacheKey = (pageNum) => `${filterPair}|${dateFrom}|${dateTo}|${pageNum}`;
+  const cacheKey = (pageNum) =>
+    `${filterPair}|${dateFrom}|${dateTo}|${[...quick].sort().join(",")}|${pageSize}|${pageNum}`;
 
   const fetchTradesList = useCallback(
     async (pageNum = 1, { force = false } = {}) => {
@@ -678,13 +772,15 @@ export default function TradingJournal() {
 
       setLoadingInitial(true);
       try {
-        const from = (pageNum - 1) * PAGE;
-        const q = applyFilters(
-          supabase
-            .from("trades")
-            .select("*", { count: "exact" })
-            .order("plan_date", { ascending: false })
-        ).range(from, from + PAGE - 1);
+        const from = (pageNum - 1) * pageSize;
+        const q = applyQuick(
+          applyFilters(
+            supabase
+              .from("trades")
+              .select("*", { count: "exact" })
+              .order("plan_date", { ascending: false })
+          )
+        ).range(from, from + pageSize - 1);
 
         const { data, error, count } = await q;
         if (error) throw error;
@@ -692,13 +788,19 @@ export default function TradingJournal() {
         tradesCache.current[key] = { data: data || [], count: count || 0 };
         setTrades(data || []);
         setTotalCount(count || 0);
+
+        /* Свічки для цієї сторінки тягнемо у фоні, без await: список
+           уже намальований, а на момент, коли людина відкриє картку,
+           графік буде в памʼяті. Інакше кожне відкриття починалось би
+           з порожнього кадру. */
+        prefetchTradeCandles(data || []);
       } catch (err) {
         console.error("Error loading trades:", err);
       } finally {
         setLoadingInitial(false);
       }
     },
-    [applyFilters, filterPair, dateFrom, dateTo]
+    [applyFilters, applyQuick, filterPair, dateFrom, dateTo, quick, pageSize]
   );
 
   /* Ручний імпорт із терміналу.
@@ -744,7 +846,11 @@ export default function TradingJournal() {
      можна опинитись на сторінці 8, якої після фільтра вже нема. */
   useEffect(() => {
     setPage(1);
-  }, [filterPair, dateFrom, dateTo]);
+  }, [filterPair, dateFrom, dateTo, quick, pageSize]);
+
+  useEffect(() => {
+    localStorage.setItem("journal_page_size", String(pageSize));
+  }, [pageSize]);
 
   /* Статистика/графік не залежать від сторінки — рахуються з усього
      відфільтрованого набору. Раніше цей запит висів у тому ж
@@ -826,31 +932,23 @@ export default function TradingJournal() {
     });
   }, [globalStatsData, accountsMap]);
 
-  /* Швидкі фільтри працюють локально — миттєво, без запиту.
-     Win/Lose/BE — взаємовиключні стани однієї угоди, тому між собою
-     вони об'єднуються через АБО (інакше вибір двох одразу завжди
-     давав порожній список). Решта прапорців (не за планом, з
-     помилкою, поспіх) — незалежні один від одного, тому лишаються
-     на І: угода має відповідати кожному з них. */
-  const RESULT_QUICK_IDS = ["win", "lose", "be", "scratch"];
-  const visibleTrades = useMemo(() => {
-    if (!quick.length) return trades;
-    const resultIds = quick.filter((id) => RESULT_QUICK_IDS.includes(id));
-    const otherIds = quick.filter((id) => !RESULT_QUICK_IDS.includes(id));
-    return trades.filter((t) => {
-      const resultOk = !resultIds.length || resultIds.some((id) => QUICK.find((f) => f.id === id)?.test(t));
-      const otherOk = otherIds.every((id) => QUICK.find((f) => f.id === id)?.test(t));
-      return resultOk && otherOk;
-    });
-  }, [trades, quick]);
+  /* Фільтрація тепер уся на сервері, тож показуємо рівно те, що
+     прийшло. Лишається як окрема назва, бо так читається різниця між
+     «сирі дані сторінки» і «те, що на екрані». */
+  const visibleTrades = trades;
 
+  /* Лічильники рахуємо з повного набору, а не зі сторінки: цифра на
+     плитці має відповідати на питання «скільки в мене стопів узагалі»,
+     а не «скільки їх серед десяти видимих рядків». globalStatsData
+     навмисно не знає про швидкі фільтри — інакше після кліку на «Stop»
+     усі інші плитки показали б нуль. */
   const quickCounts = useMemo(() => {
     const c = {};
     QUICK.forEach((f) => {
-      c[f.id] = trades.filter(f.test).length;
+      c[f.id] = globalStatsData.filter(f.test).length;
     });
     return c;
-  }, [trades]);
+  }, [globalStatsData]);
 
   const confirmDelete = async () => {
     const id = tradeToDelete;
@@ -1148,8 +1246,9 @@ export default function TradingJournal() {
           <QuickFilters
             active={quick}
             counts={quickCounts}
-            shown={visibleTrades.length}
             total={totalCount}
+            pageSize={pageSize}
+            onPageSize={setPageSize}
             onToggle={(id) =>
               setQuick((q) =>
                 q.includes(id) ? q.filter((x) => x !== id) : [...q, id]
@@ -1165,9 +1264,9 @@ export default function TradingJournal() {
             onOpen={setSelectedTrade}
             onDelete={setTradeToDelete}
             loading={loadingInitial && trades.length === 0}
-            pageSize={PAGE}
+            pageSize={pageSize}
             page={page}
-            totalPages={Math.max(1, Math.ceil(totalCount / PAGE))}
+            totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
             onPageChange={setPage}
           />
         </motion.div>
