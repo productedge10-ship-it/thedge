@@ -55,28 +55,10 @@ function Rail({ step, setStep, carried }) {
       className="relative overflow-hidden rounded-2xl px-5 py-4"
       style={{ background: T.sunken, border: `1px solid ${T.line}` }}
     >
-      {/* Лінія під вузлами, а не між ними: суцільна рейка читається
-          як шлях, а два окремі відрізки — як дві кнопки поруч. */}
+      {/* Рейку під вузлами прибрано: вона йшла на висоті заголовка й
+          читалась як смуга позаду тексту, а не шлях між кроками. Два
+          кружки з підписами й самі по собі зрозумілі як послідовність. */}
       <div className="relative flex items-stretch gap-3">
-        {/* Геометрія рейки рахується від центрів кружків, а не «на
-            око»: кнопка має padding 8px, кружок 34px, отже центр
-            першого — 25px від лівого краю, другого — на 6px правіше
-            за половину (половина гепа gap-3). Тому траса починається
-            на 25px і має ширину calc(50% + 6px). */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-[25px] top-[21px] h-px"
-          style={{ width: 'calc(50% + 6px)', background: T.line }}
-        />
-        <motion.span
-          aria-hidden
-          className="pointer-events-none absolute left-[25px] top-[21px] h-px origin-left"
-          initial={false}
-          animate={{ scaleX: idx === 0 ? 0 : 1 }}
-          transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-          style={{ width: 'calc(50% + 6px)', background: T.acc, boxShadow: `0 0 10px rgba(${T.accRgb},0.7)` }}
-        />
-
         {STEPS.map((s, i) => {
           const on = s.id === step;
           const done = i < idx;

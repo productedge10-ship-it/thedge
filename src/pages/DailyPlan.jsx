@@ -30,6 +30,8 @@ import PlanTabs, { SECTIONS, useScrollSpy, BackToTop } from '../components/tradi
 import AssetSwitcher, { pushRecentAsset } from '../components/trading/AssetSwitcher';
 import { Section, SectionAnchor, WriteBlock } from '../components/trading/PlanPrimitives';
 import WeeklyPlanView from '../components/trading/WeeklyPlanView';
+import PlanBlocksDock from '../components/trading/PlanBlocksDock';
+import { usePlanBlocks } from '../lib/planBlocks';
 import { T, EASE, useEdgeFonts } from '../components/trading/planTheme';
 import useTerminalSkin from '../hooks/useTerminalSkin';
 import {
@@ -80,6 +82,7 @@ export default function DailyPlan() {
   const targetId = location.state?.id;
 
   const { active: activeSection, scrollTo, scrollToTop, scrolled } = useScrollSpy(SECTION_IDS);
+  const dailyBlocks = usePlanBlocks('daily');
 
   /* Навігація з лівої рейки: спершу просимо секції фази розгорнутись,
      потім скролимо до якоря (з невеликою затримкою, щоб розкриття
@@ -190,17 +193,16 @@ export default function DailyPlan() {
   /* ==================================================================
      Вибір типу плану: денний чи тижневий.
 
-     Два незалежні входи в ту саму модалку. «auto» — пн-вт пропонують
-     явний вибір замість тихого дефолту на денний, і лише перемикають
-     režим (жодних скидань — кожен масштаб сам вантажить свої дані).
-     «new» — свідомий клік на «New plan»: як і денний скид нижче, це
-     чистий старт, тому вибір тижневого тут заводить порожній тижневий
-     план, а не продовжує те, що вже було. */
+     Єдиний вхід у тижневий режим тепер, коли перемикача в хедері
+     нема: і пн-вт автопоказ, і клік на «New plan» ведуть сюди. Вибір
+     тижневого — не скидання, а просто перехід на секцію, де тижневий
+     план і так живе (свій чи порожній — довантажить ефект нижче, той
+     самий, що й для «New week»). Скидати треба лише денний — там
+     кнопка й раніше означала «почати заново», і це не змінилось. */
   const [isPlanTypeModalOpen, setIsPlanTypeModalOpen] = useState(false);
   const [planTypeModalContext, setPlanTypeModalContext] = useState('auto');
   const isPlanTypeModalOpenRef = useRef(false);
   isPlanTypeModalOpenRef.current = isPlanTypeModalOpen;
-  const skipNextWeekLoadRef = useRef(false);
 
   useEffect(() => {
     if (isInitialLoading || location.state?.mode) return;
@@ -220,32 +222,17 @@ export default function DailyPlan() {
 
   const handleChoosePlanType = useCallback(async (type) => {
     setIsPlanTypeModalOpen(false);
-    if (planTypeModalContext === 'auto') { setMode(type); return; }
-
-    if (type === 'daily') { await handleNewPlan(); return; }
-
-    /* «New plan» → тижневий: свідомо порожній тиждень, а не продовження
-       того, що вже лежить у weekData, — той самий принцип, що й у
-       handleNewPlan для денного. emptyWeekPlan сама заводить ОДИН новий
-       tdaAnalyses-розбір, тому нового блоку ніколи не буде «всередині»
-       вже існуючого. */
-    if (mode === 'daily' && canSaveToCloud && hasUnsavedChanges && !isSaving) await performSave();
-    const monday = mondayOf(todayLocal());
-    skipNextWeekLoadRef.current = true;
-    weekPlanIdRef.current = null;
-    setWeekMonday(monday);
-    setWeekData(emptyWeekPlan(monday));
-    setWeekHasUnsaved(false);
-    setWeekLastSaved(null);
-    setMode('weekly');
+    if (type === 'weekly') {
+      setMode('weekly');
+      setWeekMonday(mondayOf(todayLocal()));
+      return;
+    }
+    if (planTypeModalContext === 'new') await handleNewPlan();
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [planTypeModalContext, mode, canSaveToCloud, hasUnsavedChanges, isSaving]);
+  }, [planTypeModalContext]);
 
   useEffect(() => {
     if (mode !== 'weekly' || !user?.id) return undefined;
-    /* «New plan» щойно завів свій порожній тиждень локально — не тягнемо
-       поверх нього те, що лежить у хмарі, інакше скидання й не було. */
-    if (skipNextWeekLoadRef.current) { skipNextWeekLoadRef.current = false; return undefined; }
     let alive = true;
     setIsWeekLoading(true);
 
@@ -326,6 +313,15 @@ export default function DailyPlan() {
      у хедері, яка повертає сюди після перегляду минулого через Аналізи. */
   const goThisWeek = useCallback(() => setWeekMonday(mondayOf(todayLocal())), []);
 
+  /* Єдиний вихід назад із тижневого режиму — раніше єдиним способом
+     було перезавантажити сторінку. Просте перемикання, як і в auto-
+     контексті вибору плану, але спершу дописуємо тижневий дебаунс, що
+     ще не встиг спрацювати — інакше свіжий текст губився без сліду. */
+  const backToDaily = useCallback(async () => {
+    if (weekHasUnsaved && !isWeekSaving && !checkIsWeekPlanEmpty(weekData)) await performSaveWeek();
+    setMode('daily');
+  }, [weekHasUnsaved, isWeekSaving, weekData, performSaveWeek]);
+
   /* ---------- Прогрес по вкладках ---------- */
   const progress = useMemo(() => {
     const tdaFilled = planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length;
@@ -354,7 +350,14 @@ export default function DailyPlan() {
     return { plan, live, review };
   }, [planData]);
 
-  const overall = (progress.plan * 0.45 + progress.live * 0.1 + progress.review * 0.45);
+  /* Загальний прогрес рахує лише фази, які людина лишила на сторінці:
+     прибраний «Review» не має тримати відсоток на 55% назавжди. */
+  const overall = (() => {
+    const w = { plan: 0.45, live: 0.1, review: 0.45 };
+    const phases = ['plan', 'live', 'review'].filter((ph) => dailyBlocks.phaseVisible(ph));
+    const total = phases.reduce((a, ph) => a + w[ph], 0);
+    return total ? phases.reduce((a, ph) => a + progress[ph] * w[ph], 0) / total : 0;
+  })();
 
   /* ---------- Активи ---------- */
   useEffect(() => {
@@ -725,20 +728,38 @@ export default function DailyPlan() {
 
   /* Поділитись = свідомо відкрити план назовні. Доки is_public = false,
      посилання не працює ні для кого, навіть якщо id хтось вгадає. */
+  /* Поділитись — і денним, і тижневим планом. Обидва живуть у
+     trading_plans, тож механіка одна: спершу дописуємо незбережене (без
+     рядка в базі нема чого відкривати), вмикаємо is_public і кладемо
+     посилання в буфер. Повертає true, щоб кнопка показала «Скопійовано». */
   const handleShare = async () => {
-    let id = planId;
-    if (!id) {
-      await performSave();
-      id = currentPlanIdRef.current;
+    if (location.pathname.startsWith('/demo')) {
+      notify.error('Недоступно в демо', 'Поділитись планом можна у своєму журналі після реєстрації.');
+      return false;
     }
-    if (!id) return notify.error('Немає що показувати', 'Спершу напиши хоч щось у плані.');
+    const weekly = mode === 'weekly';
+    let id = weekly ? weekPlanIdRef.current : planId;
+    if (!id) {
+      if (weekly) await performSaveWeek(); else await performSave();
+      id = weekly ? weekPlanIdRef.current : currentPlanIdRef.current;
+    }
+    if (!id) {
+      notify.error('Немає що показувати', weekly ? 'Спершу заповни хоч щось у тижневому плані.' : 'Спершу напиши хоч щось у плані.');
+      return false;
+    }
 
     const { error } = await supabase.from('trading_plans')
       .update({ is_public: true }).eq('id', id).eq('user_id', user.id);
-    if (error) return notify.error('Не вдалось відкрити доступ', error.message);
+    if (error) { notify.error('Не вдалось відкрити доступ', error.message); return false; }
 
-    await navigator.clipboard.writeText(`${window.location.origin}/shared/plan/${id}`);
-    notify.success('Лінк скопійовано', 'План відкрито для перегляду за посиланням.');
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/shared/plan/${id}`);
+    } catch {
+      notify.error('Не вдалось скопіювати', `${window.location.origin}/shared/plan/${id}`);
+      return false;
+    }
+    notify.success('Лінк скопійовано', weekly ? 'Тижневий план відкрито для перегляду за посиланням.' : 'План відкрито для перегляду за посиланням.');
+    return true;
   };
 
   const handleRouteChange = async (newDate, newPair) => {
@@ -816,7 +837,7 @@ export default function DailyPlan() {
           title={mode === 'weekly' ? weekRangeLabel(weekMonday) : planData.title}
           pair={mode === 'weekly' ? '' : planData.pair}
           mode={mode}
-          onModeChange={setMode}
+          onBackToDaily={backToDaily}
           onNewPlan={mode === 'weekly' ? goThisWeek : openPlanTypeModalForNewPlan}
           onShare={handleShare}
           onOpenQuiz={() => setIsQuizModalOpen(true)}
@@ -849,12 +870,15 @@ export default function DailyPlan() {
           onNarrativeChange={(v) => setPlan((p) => ({ ...p, narrative: v }))}
         />
 
+        <PlanBlocksDock mode="daily" />
+
         <div className="mt-6">
           <PlanTabs
             active={activeSection}
             onNavigate={navigateToSection}
             progress={progress}
             overall={overall}
+            visiblePhases={['plan', 'live', 'review'].filter((ph) => dailyBlocks.phaseVisible(ph))}
             assetSwitcher={
               <AssetSwitcher
                 currentPair={planData.pair}
@@ -874,17 +898,21 @@ export default function DailyPlan() {
           className={isSwitching ? 'pointer-events-none' : ''}
         >
           {/* ═══════════════ PLAN ═══════════════ */}
+          {dailyBlocks.phaseVisible('plan') && (
           <SectionAnchor
             id="plan" first
             label="Plan" sub="Before"
             icon={Crosshair}
             progress={progress.plan}
           />
+          )}
 
           <div className="flex flex-col gap-5">
+            {dailyBlocks.isVisible('tda') && (
             <Section
               icon={Layers}
               storageKey="tda"
+              onHide={() => dailyBlocks.hide('tda')}
               group="plan"
               title="Top-down аналіз"
               hint="Структура від старших ТФ до молодших"
@@ -900,10 +928,13 @@ export default function DailyPlan() {
                 <TdaGrid blocks={planData.tdaBlocks} onSave={saveTda} />
               </div>
             </Section>
+            )}
 
+            {dailyBlocks.isVisible('strategy') && (
             <Section
               icon={Crosshair}
               storageKey="strategy"
+              onHide={() => dailyBlocks.hide('strategy')}
               group="plan"
               title="Стратегія та точки входу"
               hint="Тригери, стоп, інвалідація"
@@ -917,19 +948,24 @@ export default function DailyPlan() {
                 minRows={8}
               />
             </Section>
+            )}
           </div>
 
           {/* ═══════════════ LIVE ═══════════════ */}
+          {dailyBlocks.phaseVisible('live') && (
           <SectionAnchor
-            id="live"
+            id="live" first={!dailyBlocks.phaseVisible('plan')}
             label="Live" sub="During"
             icon={Radio}
             progress={progress.live}
           />
+          )}
 
+          {dailyBlocks.isVisible('updates') && (
           <Section
             icon={Radio}
             storageKey="updates"
+            onHide={() => dailyBlocks.hide('updates')}
             group="live"
             title="Апдейти по ходу сесії"
             hint="Що змінилось відносно плану"
@@ -952,19 +988,24 @@ export default function DailyPlan() {
               />
             </div>
           </Section>
+          )}
 
           {/* ═══════════════ REVIEW ═══════════════ */}
+          {dailyBlocks.phaseVisible('review') && (
           <SectionAnchor
-            id="review"
+            id="review" first={!dailyBlocks.phaseVisible('plan') && !dailyBlocks.phaseVisible('live')}
             label="Review" sub="After"
             icon={LineChart}
             progress={progress.review}
           />
+          )}
 
           <div className="flex flex-col gap-5">
+            {dailyBlocks.isVisible('review') && (
             <Section
               icon={LineChart}
               storageKey="review"
+              onHide={() => dailyBlocks.hide('review')}
               group="review"
               title="Розбір після сесії"
               hint="Як усе виглядало по факту"
@@ -980,10 +1021,13 @@ export default function DailyPlan() {
                 <TdaGrid blocks={planData.reviewBlocks} onSave={saveReview} />
               </div>
             </Section>
+            )}
 
+            {dailyBlocks.isVisible('diagnostics') && (
             <Section
               icon={Stethoscope}
               storageKey="diagnostics"
+              onHide={() => dailyBlocks.hide('diagnostics')}
               group="review"
               title="Діагностика"
               hint="Три перевірки перед висновками"
@@ -999,10 +1043,13 @@ export default function DailyPlan() {
                 updatePlanData={(u) => setPlan((p) => ({ ...p, ...u }))}
               />
             </Section>
+            )}
 
+            {dailyBlocks.isVisible('conclusions') && (
             <Section
               icon={NotebookPen}
               storageKey="conclusions"
+              onHide={() => dailyBlocks.hide('conclusions')}
               group="review"
               title="Висновки"
               hint="Головний урок дня"
@@ -1016,6 +1063,7 @@ export default function DailyPlan() {
                 minRows={8}
               />
             </Section>
+            )}
           </div>
         </motion.div>
         </>

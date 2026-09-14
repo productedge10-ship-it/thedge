@@ -153,7 +153,9 @@ const toPlan = (row) => {
        Беремо блок і тоді, коли в ньому лише графік без підпису: у
        плані це звична ситуація — картинка з TradingView сама по собі
        і є думкою. Фільтр по самому тексту такі блоки мовчки викидав. */
-    tda: blocksOf(d.tdaBlocks),
+    /* Тижневий план тримає розбори по активах окремо (tdaAnalyses),
+       денний — досі один спільний список (tdaBlocks). */
+    tda: blocksOf(d.tdaAnalyses ? d.tdaAnalyses.flatMap((t) => t.blocks || []) : d.tdaBlocks),
     review: blocksOf(d.reviewBlocks),
     updates: Array.isArray(d.updates) ? d.updates : [],
     quiz: d.quiz && typeof d.quiz === 'object' ? d.quiz : null,

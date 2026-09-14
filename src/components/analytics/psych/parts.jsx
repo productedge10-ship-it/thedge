@@ -492,7 +492,7 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
             <NeuroScanner neuro={neuro} active={active} setActive={setActive} />
           </div>
 
-          <div className="flex flex-col gap-3 min-w-0">
+          <div className="flex flex-col gap-4 min-w-0">
             <p className="text-[12.5px] text-[#B4B4BD] leading-[1.6] m-0">
               {activeAxis ? (
                 <><b className="text-[var(--edge-text)]">{activeAxis.full}:</b> {activeAxis.desc} {activeAxis.hint}</>
@@ -501,7 +501,12 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
               )}
             </p>
 
-            <div className="flex flex-col gap-2">
+            {/* py-3.5, не py-2: сканер зліва — фіксованої висоти
+               (230px, і роздувати його під клітинку означало б
+               спотворити малюнок), тож саме права колонка мала
+               наздогнати h:3 — інакше картка мала 90px порожнечі під
+               собою. */}
+            <div className="flex flex-col gap-2.5">
               {neuro.axes.map((a) => {
                 const Icon = a.icon;
                 const on = active === a.key;
@@ -510,7 +515,7 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
                     key={a.key}
                     onMouseEnter={() => setActive(a.key)}
                     onMouseLeave={() => setActive(null)}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-[10px] border transition-colors cursor-default ${on ? 'bg-[var(--edge-surface-hi)] border-white/15' : 'bg-[var(--edge-surface-hi)]/40 border-[var(--edge-hair)]'}`}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-[10px] border transition-colors cursor-default ${on ? 'bg-[var(--edge-surface-hi)] border-white/15' : 'bg-[var(--edge-surface-hi)]/40 border-[var(--edge-hair)]'}`}
                   >
                     <Icon size={14} style={{ color: a.color }} className="shrink-0" />
                     <span
@@ -544,7 +549,7 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
                 { l: 'Імпульсивних', v: `${neuro.impulsive}`, c: '#f87171' },
                 { l: 'Пік ризику', v: `${r2(neuro.maxRisk)}%`, c: '#fbbf24' }
               ].map((x, i) => (
-                <div key={i} className="px-3 py-2.5 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[10px]">
+                <div key={i} className="px-3 py-4 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[10px]">
                   <span className="block text-[9.5px] uppercase tracking-[0.12em] text-[#7A7A85] font-black">{x.l}</span>
                   <b className="block text-[15px] font-extrabold mt-0.5" style={{ color: x.c }}>{x.v}</b>
                 </div>
@@ -553,7 +558,7 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
 
             <button
               onClick={() => setOpen(true)}
-              className="mt-1 w-full py-2.5 rounded-xl border text-[12.5px] font-bold transition-colors flex items-center justify-center gap-2"
+              className="mt-1 w-full py-3.5 rounded-xl border text-[12.5px] font-bold transition-colors flex items-center justify-center gap-2"
               style={{ borderColor: `${neuro.tier.color}33`, background: `${neuro.tier.color}10`, color: neuro.tier.color }}
             >
               <Brain size={15} /> Відкрити повний нейро-звіт

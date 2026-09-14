@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { Plus, Share2, ClipboardCheck, Briefcase, Send, Check } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2 } from 'lucide-react';
 import { T, SPRING } from './planTheme';
-import PlanTypeToggle from '../ui/PlanTypeToggle';
 
 /* ==================================================================
    Хедер плану. Раніше 6 різнокольорових кнопок кричали однаково
@@ -51,11 +51,49 @@ function TextBtn({ icon: Icon, children, onClick, tone, softBg, softLine }) {
   );
 }
 
+/* Поділитись — не безіменна іконка з підказкою на ховері, а кнопка з
+   підписом: дія важлива (відкриває план чужим), тож має читатись одразу.
+   Після кліку на мить стає зеленою «Скопійовано» — видно, що лінк уже в
+   буфері, без погляду на тост. */
+function ShareBtn({ onShare }) {
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const click = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const ok = await onShare?.();
+      if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1800); }
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={click}
+      title="Відкрити доступ і скопіювати посилання"
+      className="flex h-[38px] items-center gap-2 rounded-xl px-3.5 text-[14px] font-semibold transition-all duration-200 active:scale-[0.97]"
+      style={{
+        background: copied ? `rgba(${T.okRgb},0.12)` : `rgba(${T.accRgb},0.08)`,
+        border: `1px solid ${copied ? `rgba(${T.okRgb},0.32)` : `rgba(${T.accRgb},0.24)`}`,
+        color: copied ? T.ok : T.acc,
+        fontFamily: T.sans,
+      }}
+      onMouseEnter={(e) => { if (!copied) e.currentTarget.style.filter = 'brightness(1.3)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
+    >
+      {busy ? <Loader2 size={14} className="animate-spin" /> : copied ? <Check size={14} strokeWidth={2.8} /> : <Share2 size={14} strokeWidth={2.3} />}
+      {copied ? 'Скопійовано' : 'Поділитись'}
+    </button>
+  );
+}
+
 export default function PlanHeader({
   title,
   pair,
   mode = 'daily',
-  onModeChange,
+  onBackToDaily,
   onNewPlan,
   onShare,
   onOpenQuiz,
@@ -73,16 +111,53 @@ export default function PlanHeader({
           Тепер це один рядок службових елементів, а заголовок унизу
           отримує весь рядок і звучить голосніше сам по собі. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {onModeChange ? (
-          <PlanTypeToggle mode={mode} onChange={onModeChange} layoutId="plan-type-toggle-header" />
-        ) : (
-          <div
-            className="text-[12px] font-bold uppercase tracking-[0.22em]"
-            style={{ fontFamily: T.sans, color: T.acc }}
-          >
-            Daily plan
-          </div>
-        )}
+        {/* Мітка режиму — кольоровий бейдж з іконкою, а не голий рядок
+            капсом: одразу видно, денний це план чи тижневий. Колір той
+            самий, що в перемикачі режимів: день — фіолетовий, тиждень —
+            синій. На тижневому бейдж лишається виходом назад. */}
+        {(() => {
+          const tone = weekly ? T.info : T.acc;
+          const rgb = weekly ? T.infoRgb : T.accRgb;
+          const Icon = weekly ? CalendarRange : CalendarDays;
+          const inner = (
+            <>
+              {weekly && (
+                <ArrowLeft size={14} strokeWidth={2.6} className="shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" style={{ color: T.text3 }} />
+              )}
+              <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ background: `rgba(${rgb},0.16)`, color: tone }}>
+                <Icon size={17} strokeWidth={2.3} />
+                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full" style={{ background: tone, boxShadow: `0 0 8px rgba(${rgb},0.9)` }} />
+              </span>
+              <span className="flex flex-col leading-none">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: T.text4 }}>Режим</span>
+                <span className="mt-1 text-[16.5px] font-semibold" style={{ color: T.text }}>
+                  {weekly ? 'Weekly plan' : 'Daily plan'}
+                </span>
+              </span>
+            </>
+          );
+          const style = {
+            fontFamily: T.sans,
+            background: `linear-gradient(135deg, rgba(${rgb},0.12), rgba(${rgb},0.03))`,
+            border: `1px solid rgba(${rgb},0.3)`,
+            boxShadow: `0 10px 28px -16px rgba(${rgb},0.7)`,
+          };
+          return weekly ? (
+            <button
+              type="button"
+              onClick={onBackToDaily}
+              title="Повернутись до денного плану"
+              className="group flex items-center gap-2.5 rounded-xl py-1.5 pl-2.5 pr-4 transition-all duration-200 hover:brightness-125"
+              style={style}
+            >
+              {inner}
+            </button>
+          ) : (
+            <div className="flex items-center gap-2.5 rounded-xl py-1.5 pl-1.5 pr-4" style={style}>
+              {inner}
+            </div>
+          );
+        })()}
 
         {/* Diagnostics-квіз про «сьогодні», а не про конкретний план,
             тому лишається однаковим і на денному, і на тижневому масштабі —
@@ -121,7 +196,7 @@ export default function PlanHeader({
           <div className="mx-1 h-6 w-px" style={{ background: T.line }} />
 
           <IconBtn icon={Send}    label="Telegram alert" onClick={onOpenTgAlert} tone={T.info} />
-          <IconBtn icon={Share2}  label="Копіювати лінк"  onClick={onShare} />
+          <ShareBtn onShare={onShare} />
 
           {/* Головна дія хедера. Магнітний ефект прибрано — кнопка їхала
               з-під курсора; колір нейтральний, бо поруч уже є зелена

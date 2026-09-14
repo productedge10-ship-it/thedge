@@ -89,8 +89,12 @@ const COACH_KF = `
 @keyframes coachWordGlow{0%,100%{opacity:.55}50%{opacity:1}}
 .ln-ai-grid{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:60px;align-items:start}
 @media(max-width:920px){.ln-ai-grid{grid-template-columns:1fr;gap:36px}}
-.ln-ai-bleed{margin:-24px -16px -64px}
-@media(min-width:1024px){.ln-ai-bleed{margin:-24px -32px -64px}}
+/* Виліт має точно скасовувати власний бічний відступ <main> (px-4
+   lg:px-8), інакше фон розділу лишається вужчим за решту вкладок —
+   і тут-таки повертає той самий відступ контенту, тож той сидить
+   рівно там, де й в інших вкладках, а не тулиться до самого краю. */
+.ln-ai-bleed{margin:-24px -16px -64px;padding-left:16px;padding-right:16px}
+@media(min-width:1024px){.ln-ai-bleed{margin:-24px -32px -64px;padding-left:32px;padding-right:32px}}
 `;
 
 /* Приклад розбору. Рахується формулами — тими самими, що вже живуть у
@@ -318,7 +322,7 @@ export default function AiLab({ s }) {
       style={{
         position: 'relative', overflow: 'hidden',
         background: '#050508', color: '#e9e9f2', fontFamily: F.sans,
-        padding: 'clamp(52px,7vw,96px) clamp(24px,4.5vw,56px) 96px',
+        paddingTop: 'clamp(52px,7vw,96px)', paddingBottom: 96,
       }}
     >
       <style>{KEYFRAMES + COACH_KF}</style>
@@ -384,11 +388,11 @@ export default function AiLab({ s }) {
       </div>
 
       {/* ---------- контент ----------
-          1400 було вужче за саму сторінку аналітики (max-w-[1800px]):
-          на 14" це непомітно, а на великому моніторі розділ виглядав
-          вузькою колонкою посеред власного фону на всю ширину. Тепер
-          межа та сама, що й у решти вкладок. */}
-      <div style={{ position: 'relative', maxWidth: 1800, margin: '0 auto' }}>
+          Без власної maxWidth: сторінка аналітики (<main>) уже задає
+          спільну межу (1800px) для всіх вкладок. Друга, своя межа тут
+          лише звужувала розділ і на великому моніторі, і на ноутбуці —
+          тепер контент бере всю ширину, яку дає сторінка. */}
+      <div style={{ position: 'relative', width: '100%' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26, flexWrap: 'wrap' }}>
           <div style={{ width: 34, height: 1, background: 'linear-gradient(90deg, transparent, #6c5ce7)' }} />

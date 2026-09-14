@@ -66,7 +66,10 @@ const normalize = (v) => {
 
 export default function Overview({ s, rows = [] }) {
   const [layout, setLayout, { saving }] = useCloudState(
-    'analytics_overview_v1',
+    /* v2 — «сесії»/«дні тижня» тепер h:2 (графіку нема де малюватись
+       у h:1), «дисципліна» стиснута під h:1: збережена дошка тримала
+       старі числа й не бачила нових дефолтів. */
+    'analytics_overview_v2',
     DEFAULT_LAYOUT,
     { normalize },
   );
