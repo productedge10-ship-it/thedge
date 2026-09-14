@@ -562,10 +562,9 @@ export const WIDGETS = {
     defaultW: 1, defaultH: 2, minH: 2,
     options: {},
     render: ({ s }) => (
-      /* space-evenly, не gap: три рядки — завжди три, а клітинка
-         вища за них. Рівномірні проміжки розводять рядки на всю
-         висоту замість того, щоб лишати їх купкою зверху. */
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'space-evenly' }}>
+      /* Рядки щільно зверху з рівним кроком: розводити їх на всю
+         висоту (space-evenly) давало великі порожні смуги між ними. */
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'flex-start', gap: 8 }}>
         {[
           ['Найкраща смуга', `${s.bestW}`, P.ok, 'виграшів поспіль'],
           ['Найгірша смуга', `${s.worstL}`, P.bad, 'програшів поспіль'],
@@ -841,7 +840,7 @@ export const WIDGETS = {
       const max = Math.max(...list.map((x) => Math.abs(x.v)), 1);
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'space-evenly' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'flex-start', gap: 8 }}>
           {list.map((x, i) => (
             <Row
               key={x.label}
@@ -977,10 +976,9 @@ export const WIDGETS = {
       const fmt = (v) => (key === 'wr' ? `${v}%` : `${signed(v, key === 'avg' ? 2 : 1)}R`);
 
       return (
-        /* space-evenly замість gap: список коротший за клітинку, коли
-           активів мало, — рядки розходяться на всю висоту, а не тиснуться
-           зверху над порожнечею. */
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'space-evenly' }}>
+        /* Список щільно зверху: розкидані на всю висоту рядки
+           виглядали як порожня картка з кількома острівцями. */
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'flex-start', gap: 8 }}>
           {list.map((x) => (
             <Row
               key={x.key}
@@ -1018,7 +1016,7 @@ export const WIDGETS = {
       const fmt = (v) => (key === 'wr' ? `${v}%` : `${signed(v, key === 'avg' ? 2 : 1)}R`);
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'space-evenly' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, justifyContent: 'flex-start', gap: 8 }}>
           {list.map((x) => (
             <Row
               key={x.key}
@@ -1047,7 +1045,7 @@ export const WIDGETS = {
       const potential = s.net - sum(s.broken.filter((t) => t.rr < 0).map((t) => t.rr));
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, justifyContent: 'flex-start' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
             <Cap>план дотримано</Cap>
             <Num color={s.adherence >= 70 ? P.ok : P.warn} size={26}>{s.adherence}%</Num>

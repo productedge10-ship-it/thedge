@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import useDeferredField from '../../hooks/useDeferredField';
 import { motion, AnimatePresence } from 'framer-motion';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Maximize2, Minimize2, Check, ChevronDown } from 'lucide-react';
+import { Maximize2, Minimize2, Check, ChevronDown, EyeOff } from 'lucide-react';
 import { T, EASE, SPRING } from './planTheme';
 import { Spotlight } from '../ui/Hovers';
 
@@ -174,7 +174,7 @@ export function SectionHead({
    перезавантаження сторінки не скидає те, що людина вже склала. */
 export function Section({
   icon, title, hint, accent, right, done,
-  storageKey, defaultOpen = true, group, children,
+  storageKey, defaultOpen = true, group, onHide, children,
 }) {
   const key = storageKey ? `edge.plan.section.${storageKey}` : null;
   const [open, setOpen] = useState(() => {
@@ -212,7 +212,26 @@ export function Section({
         title={title}
         hint={hint}
         accent={accent}
-        right={right}
+        right={onHide ? (
+          <div className="flex items-center gap-3">
+            {right}
+            {/* span, а не button: уся шапка вже кнопка згортання, і
+                вкладена кнопка в кнопці — невалідна розмітка */}
+            <span
+              role="button"
+              tabIndex={0}
+              title="Прибрати блок зі сторінки (повернути — у «Блоках плану» внизу)"
+              onClick={(e) => { e.stopPropagation(); onHide(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onHide(); } }}
+              className="no-print grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors duration-150"
+              style={{ color: T.text4 }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.background = T.surfaceHi; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <EyeOff size={14} strokeWidth={2.2} />
+            </span>
+          </div>
+        ) : right}
         done={done}
         collapsible
         open={open}

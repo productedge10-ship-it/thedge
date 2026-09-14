@@ -99,13 +99,13 @@ const DEFAULT_PAIRS = ['GER40', 'EURUSD', 'NQ100', 'S&P500', 'GOLD', 'NZD/USD', 
 /* Сім питань розбору — той самий порядок і той самий «good», що й у
    макеті, зіставлений з реальними полями психоблоку. */
 const QUESTIONS = [
-  { key: 'followedPlan', q: 'Чи дотримувався торгового плану?', good: true },
-  { key: 'rushed', q: 'Чи поспішав зі входом (FOMO)?', good: false },
-  { key: 'hasMistake', q: 'Чи була очевидна помилка?', good: false },
-  { key: 'psyConfident', q: 'Чи був впевнений у своїх рішеннях?', good: true },
-  { key: 'psyFear', q: 'Чи був присутній страх?', good: false },
-  { key: 'psyRepeat', q: 'Чи повторив би цю угоду?', good: true },
-  { key: 'psyRevenge', q: 'Чи було бажання відігратися?', good: false },
+  { key: 'followedPlan', q: 'Чи дотримувався торгового плану?', short: 'План', good: true },
+  { key: 'rushed', q: 'Чи поспішав зі входом (FOMO)?', short: 'FOMO', good: false },
+  { key: 'hasMistake', q: 'Чи була очевидна помилка?', short: 'Помилка', good: false },
+  { key: 'psyConfident', q: 'Чи був впевнений у своїх рішеннях?', short: 'Впевненість', good: true },
+  { key: 'psyFear', q: 'Чи був присутній страх?', short: 'Страх', good: false },
+  { key: 'psyRepeat', q: 'Чи повторив би цю угоду?', short: 'Повторив би', good: true },
+  { key: 'psyRevenge', q: 'Чи було бажання відігратися?', short: 'Відігратися', good: false },
 ];
 
 /* Локальна дата: toISOString() зсуває день на UTC і о другій ночі
@@ -797,6 +797,143 @@ function ShotZone({ image, onPaste, onClear, label, tone, compact }) {
   );
 }
 
+/* ---------- сітка розбору (макет «Розбір виконання») ----------
+
+   Сім питань — не стос карток, а щільна сітка 4×2: у клітинці коротка
+   назва і дві мікрокнопки. Восьма клітинка — «Дисципліна»: рахунок
+   чистих відповідей і сім планок. Під сіткою рядок-підказка: повне
+   питання тієї клітинки, над якою миша (або останньої відповіді), і
+   вердикт. Колір відповіді — не «так/ні», а «добре/погано»: «ні» на
+   FOMO — зелене, «так» на страх — бурштинове. */
+const AMBER_RGB = '245,181,74';
+const toneOf = (q, v) => (v === null || v === undefined ? null : v === q.good ? { c: GREEN, rgb: GREEN_RGB } : { c: AMBER, rgb: AMBER_RGB });
+
+function plural(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return `${n} відповідь`;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return `${n} відповіді`;
+  return `${n} відповідей`;
+}
+
+function ReviewGrid({ values, setters }) {
+  const [hov, setHov] = useState(null);
+  const [cur, setCur] = useState(0);
+
+  const done = QUESTIONS.filter((q) => values[q.key] !== null).length;
+  const clean = QUESTIONS.filter((q) => values[q.key] !== null && values[q.key] === q.good).length;
+  const full = done === QUESTIONS.length;
+  const hi = hov ?? cur;
+
+  const scoreColor = !done ? txt(0.3) : clean >= done - 1 ? GREEN : clean * 2 >= done ? AMBER : BAD;
+  const verdict = !full
+    ? { text: `Лишилось ${QUESTIONS.length - done}`, c: '#b3a6ff', rgb: ACCENT_RGB }
+    : clean === 7 ? { text: 'Чисте виконання', c: GREEN, rgb: GREEN_RGB, glow: true }
+      : clean >= 5 ? { text: 'Дрібні зриви', c: AMBER, rgb: AMBER_RGB }
+        : { text: 'Емоції керували', c: '#ff7d88', rgb: BAD_RGB };
+
+  const set = (i, key, v) => {
+    /* повторний клік знімає відповідь — інакше помилкову не прибрати */
+    setters[key](values[key] === v ? null : v);
+    setCur(i);
+  };
+
+  return (
+    <div className="overflow-hidden rounded-[18px]" style={{ background: CARD_BG, border: `1px solid ${line(0.05)}` }}>
+      <div className="grid grid-cols-2 sm:grid-cols-4">
+        {QUESTIONS.map((q, i) => {
+          const v = values[q.key];
+          const tone = toneOf(q, v);
+          const tn = tone || { c: '#a89bf9', rgb: ACCENT_RGB };
+          return (
+            <div
+              key={q.key}
+              onMouseEnter={() => setHov(i)}
+              onMouseLeave={() => setHov(null)}
+              className="flex h-[88px] flex-col justify-between gap-3 px-[14px] py-[13px] transition-colors duration-200"
+              style={{
+                borderRight: `1px solid ${line(0.05)}`,
+                borderTop: `1px solid ${line(0.05)}`,
+                marginTop: -1,
+                background: hov === i ? line(0.035) : tone ? `rgba(${tone.rgb},0.05)` : 'transparent',
+              }}
+            >
+              <div className="flex items-center gap-[7px]">
+                <span className="h-[5px] w-[5px] shrink-0 rounded-full transition-colors duration-200" style={{ background: tone ? tone.c : line(0.14) }} />
+                <span className="truncate text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: txt(0.55) }}>{q.short}</span>
+              </div>
+              <div className="flex gap-1.5">
+                {[true, false].map((opt) => {
+                  const active = v === opt;
+                  return (
+                    <button
+                      key={String(opt)}
+                      type="button"
+                      onClick={() => set(i, q.key, opt)}
+                      className="flex h-[30px] flex-1 items-center justify-center rounded-lg text-[13px] transition-all duration-150"
+                      style={{
+                        fontFamily: T.sans,
+                        fontWeight: active ? 600 : 500,
+                        background: active ? `rgba(${tn.rgb},0.14)` : 'rgba(0,0,0,0.25)',
+                        border: `1px solid ${active ? `rgba(${tn.rgb},0.36)` : line(0.06)}`,
+                        color: active ? tn.c : txt(0.6),
+                      }}
+                    >
+                      {opt ? 'Так' : 'Ні'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="flex h-[88px] flex-col justify-between gap-3 px-4 py-[13px]" style={{ background: `rgba(${ACCENT_RGB},0.07)`, borderTop: `1px solid ${line(0.05)}`, marginTop: -1 }}>
+          <span className="text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: '#9b8cfa' }}>Дисципліна</span>
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[22px] font-semibold leading-none transition-colors duration-200" style={{ fontFamily: T.sans, letterSpacing: '-0.01em', color: scoreColor }}>
+              {done ? `${clean}/${done}` : '—'}
+            </span>
+            <span className="flex items-end gap-[3px]">
+              {QUESTIONS.map((q) => {
+                const tone = toneOf(q, values[q.key]);
+                return (
+                  <span
+                    key={q.key}
+                    className="w-[3px] rounded-sm transition-all duration-300"
+                    style={{ height: tone ? 16 : 7, background: tone ? tone.c : line(0.12) }}
+                  />
+                );
+              })}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex min-h-[46px] items-center gap-3 px-4 py-2" style={{ borderTop: `1px solid ${line(0.05)}`, background: 'rgba(0,0,0,0.18)' }}>
+        <span className="shrink-0 text-[10.5px] font-medium" style={{ fontFamily: MONO, letterSpacing: '0.14em', color: '#a89bf9' }}>
+          {String(hi + 1).padStart(2, '0')}
+        </span>
+        <span className="min-w-0 flex-1 text-[14px] leading-[1.3]" style={{ fontFamily: T.sans, color: txt(0.75) }}>
+          {QUESTIONS[hi].q}
+        </span>
+        <span
+          className="shrink-0 rounded-lg px-[11px] py-1.5 text-[10px] font-semibold uppercase transition-all duration-300"
+          style={{
+            fontFamily: MONO,
+            letterSpacing: '0.16em',
+            background: `rgba(${verdict.rgb},0.14)`,
+            border: `1px solid rgba(${verdict.rgb},0.34)`,
+            color: verdict.c,
+            boxShadow: verdict.glow ? `0 0 26px rgba(${verdict.rgb},0.18)` : 'none',
+          }}
+        >
+          {verdict.text}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /* ================================================================== */
 
 /* Час у хвилинах від початку доби. Порожнє поле — це «не знаю», а не
@@ -1384,78 +1521,9 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       initial={{ opacity: 0, x: 8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.2, ease: EASE }}
-                      className="flex flex-col gap-[22px] py-[30px]"
+                      className="flex flex-col gap-3 py-5"
                     >
-                      <div className="flex flex-wrap items-end justify-between gap-5">
-                        <p className="max-w-[400px] text-[16.5px] leading-[1.5]" style={{ fontFamily: T.sans, color: txt(0.6) }}>
-                          Сім питань. Відповідай, як було насправді, а не як хотілося б.
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <span className="text-[22px] font-semibold" style={{ fontFamily: MONO, color: ACCENT }}>
-                            {psyDoneAll}<span style={{ color: txt(0.4) }}>/7</span>
-                          </span>
-                          <span className="h-1 w-[88px] overflow-hidden rounded-full" style={{ background: line(0.07) }}>
-                            <motion.span
-                              className="block h-full rounded-full"
-                              initial={false}
-                              animate={{ width: `${(psyDoneAll / 7) * 100}%` }}
-                              transition={{ duration: 0.25 }}
-                              style={{ background: ACCENT }}
-                            />
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        {QUESTIONS.map((qq, i) => {
-                          const v = psyValues[qq.key];
-                          const on = v !== null;
-                          const set = psySetters[qq.key];
-                          return (
-                            <div
-                              key={qq.key}
-                              className="flex items-center gap-3.5 rounded-[16px] px-4 py-[13px] transition-colors duration-200"
-                              style={{
-                                background: on ? `rgba(${ACCENT_RGB},0.09)` : line(0.022),
-                                border: `1px solid ${on ? `rgba(${ACCENT_RGB},0.3)` : line(0.06)}`,
-                              }}
-                            >
-                              <span className="w-[22px] shrink-0 text-[12px]" style={{ fontFamily: MONO, color: txt(0.34) }}>
-                                {String(i + 1).padStart(2, '0')}
-                              </span>
-                              <span className="min-w-0 flex-1 text-[16px] font-medium leading-[1.35]" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
-                                {qq.q}
-                              </span>
-                              <div
-                                className="grid shrink-0 grid-cols-2 gap-[5px] rounded-[13px] p-1"
-                                style={{ background: line(0.03), border: `1px solid ${line(0.06)}` }}
-                              >
-                                {[true, false].map((v2) => {
-                                  const active = v === v2;
-                                  const tone = v2 ? GREEN : BAD;
-                                  const rgb = v2 ? GREEN_RGB : BAD_RGB;
-                                  return (
-                                    <button
-                                      key={String(v2)}
-                                      type="button"
-                                      onClick={() => set(active ? null : v2)}
-                                      className="rounded-[11px] px-[18px] py-[10px] text-[14.5px] font-semibold transition-all duration-200"
-                                      style={{
-                                        fontFamily: T.sans,
-                                        background: active ? `rgba(${rgb},0.15)` : 'transparent',
-                                        color: active ? tone : txt(0.42),
-                                        boxShadow: active ? `inset 0 0 0 1px rgba(${rgb},0.36)` : 'none',
-                                      }}
-                                    >
-                                      {v2 ? 'Так' : 'Ні'}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <ReviewGrid values={psyValues} setters={psySetters} />
 
                       {/* Розбір помилки — функціональний блок понад
                           макет: помилка з угоди летить у Журнал
@@ -1554,17 +1622,21 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         )}
                       </AnimatePresence>
 
-                      <div>
-                        <div className="mb-[11px] text-[11px]" style={{ fontFamily: MONO, letterSpacing: '0.22em', color: txt(0.5) }}>НОТАТКА</div>
+                      <div className="flex min-h-[54px] items-center gap-3.5 rounded-2xl px-[18px] transition-colors duration-200" style={{ background: CARD_BG, border: `1px solid ${line(0.05)}` }}>
+                        <span className="flex shrink-0 flex-col gap-[3px]">
+                          <span className="h-[1.5px] w-[13px]" style={{ background: txt(0.4) }} />
+                          <span className="h-[1.5px] w-[13px]" style={{ background: txt(0.4) }} />
+                          <span className="h-[1.5px] w-[9px]" style={{ background: txt(0.4) }} />
+                        </span>
                         <textarea
                           value={psyNotes}
                           onChange={(e) => setPsyNotes(e.target.value)}
-                          placeholder="Що саме зашкодило або врятувало цю угоду?"
-                          className="min-h-[116px] w-full resize-y rounded-[18px] p-[18px] text-[16px] outline-none transition-colors duration-200 placeholder:opacity-60"
-                          style={{ background: FIELD_BG, border: `1px solid var(--edge-line)`, color: txt(0.85), fontFamily: T.sans, lineHeight: 1.55 }}
-                          onFocus={(e) => { e.currentTarget.style.borderColor = `rgba(${ACCENT_RGB},0.6)`; e.currentTarget.style.background = `rgba(${ACCENT_RGB},0.08)`; }}
-                          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line)'; e.currentTarget.style.background = FIELD_BG; }}
+                          rows={1}
+                          placeholder="Що зіпсувало або зберегло цю угоду?"
+                          className="min-w-0 flex-1 resize-none bg-transparent py-4 text-[15px] leading-[1.4] outline-none placeholder:opacity-60"
+                          style={{ fontFamily: T.sans, color: txt(0.85), fieldSizing: 'content' }}
                         />
+                        <span className="shrink-0 text-[11.5px] font-medium" style={{ fontFamily: MONO, color: txt(0.4) }}>{psyNotes.length}</span>
                       </div>
                     </motion.div>
                   )}
@@ -1595,23 +1667,24 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                     <span className="hidden sm:inline">Чернетка зберігається автоматично</span>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <span className="hidden text-[13.5px] font-medium sm:block" style={{ fontFamily: T.sans, color: step === 0 ? (step1LeftCount === 0 ? GREEN : txt(0.5)) : (submitReady ? GREEN : txt(0.5)) }}>
+                  <div className="flex shrink-0 flex-nowrap items-center gap-3">
+                    <span className="hidden whitespace-nowrap text-[13.5px] font-medium sm:block" style={{ fontFamily: T.sans, color: step === 0 ? (step1LeftCount === 0 ? GREEN : txt(0.5)) : (submitReady ? GREEN : txt(0.5)) }}>
                       {step === 0
                         ? (step1LeftCount === 0 ? 'Можна продовжувати' : `Залишилось полів: ${step1LeftCount}`)
-                        : (submitReady ? 'Усі відповіді на місці' : `Залишилось: ${7 - psyDoneAll}`)}
+                        : (submitReady ? 'Можна записувати' : `Лишилось ${plural(7 - psyDoneAll)}`)}
                     </span>
 
                     {step === 1 && (
                       <button
                         type="button"
                         onClick={goBack}
-                        className="rounded-[13px] px-5 py-[13px] text-[15.5px] font-medium transition-colors duration-200"
+                        className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-[12px] px-5 text-[14.5px] font-medium transition-colors duration-200"
                         style={{ fontFamily: T.sans, background: 'transparent', border: `1px solid ${line(0.1)}`, color: txt(0.65) }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-text)'; e.currentTarget.style.borderColor = line(0.22); }}
                         onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.65); e.currentTarget.style.borderColor = line(0.1); }}
                       >
-                        ← Назад
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H6M11 6l-6 6 6 6" /></svg>
+                        Назад
                       </button>
                     )}
 
@@ -1619,7 +1692,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       <button
                         type="button"
                         onClick={goNext}
-                        className="flex h-9 items-center gap-2 rounded-[11px] px-5 text-[14.5px] font-semibold transition-all duration-200 active:scale-[0.98]"
+                        className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-[12px] px-5 text-[14.5px] font-semibold transition-all duration-200 active:scale-[0.98]"
                         style={{ fontFamily: T.sans, background: ACCENT, color: 'var(--edge-on-acc)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.boxShadow = `0 10px 30px -6px rgba(${ACCENT_RGB},0.55)`; }}
                         onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
@@ -1631,18 +1704,20 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       <button
                         type="submit"
                         disabled={loading || !submitReady}
-                        className="flex h-9 items-center gap-2 rounded-[11px] px-5 text-[14.5px] font-semibold transition-all duration-200"
+                        className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-[13px] px-[22px] text-[14.5px] font-semibold transition-all duration-200"
                         style={{
                           fontFamily: T.sans,
                           cursor: submitReady ? 'pointer' : 'not-allowed',
-                          background: submitReady ? ACCENT : line(0.06),
-                          color: submitReady ? 'var(--edge-on-acc)' : txt(0.4),
-                          border: submitReady ? 'none' : `1px solid ${line(0.08)}`,
+                          background: submitReady ? ACCENT : line(0.05),
+                          color: submitReady ? 'var(--edge-on-acc)' : txt(0.42),
+                          border: `1px solid ${submitReady ? ACCENT : line(0.07)}`,
+                          boxShadow: submitReady ? `0 0 36px rgba(${ACCENT_RGB},0.35)` : 'none',
                           opacity: loading ? 0.7 : 1,
                         }}
                       >
                         {loading ? <Loader2 size={14} strokeWidth={3} className="animate-spin" /> : null}
                         {existingTrade ? 'Оновити угоду' : 'Записати угоду'}
+                        {!loading && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h13M13 6l6 6-6 6" /></svg>}
                       </button>
                     )}
                   </div>

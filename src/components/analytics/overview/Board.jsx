@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -84,6 +84,18 @@ const REMOVE_MS = 220;
 ------------------------------------------------------------------ */
 const ROW_H = 180;
 const GAP = 14;
+/* Крок рядка сітки. Картка без графіка міряє свій вміст і
+   округлюється вгору до цілих клітинок по 90px. Попіксельна висота
+   давала сусідам низи, що розходились на кілька пікселів, — і через
+   цю щілину графік поруч уже не міг розширитись у вільну колонку.
+   Кратні клітинки знову дають рівні краї, а отже й щільне укладання. */
+const CELL = 90;
+const unitsOf = (px) => Math.max(1, Math.ceil((px + GAP) / (CELL + GAP)));
+/* Графік справді заповнює будь-яку висоту — він і тримає розмір
+   з реєстру, і може дорости вниз у дірку. Список чи число — ні:
+   таким картка рівно по вмісту, без порожнечі під ним. */
+const growsWith = (spec = {}) => spec.shape === 'curve' || spec.shape === 'bars' || (spec.shape === 'dip' && (spec.defaultH || 1) >= 2);
+const tilePx = (h) => h * ROW_H + (h - 1) * GAP;
 
 const HEIGHT_LABEL = { 1: 'S', 2: 'M', 3: 'L', 4: 'XL' };
 
@@ -325,7 +337,7 @@ function SettingsPanel({ id, item, onChange, onClose, resizable = true }) {
 
 function CardShell({
   item, stats, edit, hover, lifted, overlay, removing, openSettings, dropTarget,
-  setHover, onRemove, onToggleSettings, onChange, renderW,
+  setHover, onRemove, onToggleSettings, onChange, renderW, fit,
   /* resizable вимкнено за замовчуванням: розмір плитки — рішення
      дизайну (реєстр), не людини. Довільні W/H одної картки ламали
      сітку сусідніх — «Очікування» одного разу розтягнули в 3×2, і
@@ -475,9 +487,9 @@ function CardShell({
       <div
         className="ov-body"
         style={{
-          position: 'relative', flex: 1, minHeight: 0,
+          position: 'relative', flex: fit ? '0 0 auto' : 1, minHeight: 0,
           display: 'flex', flexDirection: 'column',
-          justifyContent: 'safe center',
+          justifyContent: fit ? 'flex-start' : 'safe center',
           overflow: 'hidden',
         }}
       >
@@ -503,12 +515,58 @@ function CardShell({
   );
 }
 
-function SortableCard({ item, edit, removing, stretchW, ...rest }) {
+function SortableCard({ item, edit, removing, place, fit, onMeasure, ...rest }) {
   const [hover, setHover] = useState(false);
+  const bodyRef = useRef(null);
+  /* Картка без графіка міряє свою природну висоту й віддає її дошці.
+
+     Шапку й вміст шукаємо в момент виміру, а не один раз при монтуванні:
+     на першому кадрі їх ще може не бути (реєстр, анімація появи), і тоді
+     разовий ефект мовчки нічого не міряв — дошка вічно брала висоту з
+     реєстру. Картка сама тягнеться на всю плитку, тому природна висота —
+     це шапка + відступ + вміст (flex: none, не розтягується) + падінги й
+     рамка. */
+  const measure = useCallback(() => {
+    const root = bodyRef.current;
+    if (!fit || !root || !onMeasure) return;
+    const head = root.querySelector('header');
+    const body = root.querySelector('.ov-body');
+    if (!head || !body || !body.offsetHeight) return;
+    onMeasure(item.id, Math.ceil(head.offsetHeight + 14 + body.offsetHeight + 36 + 2));
+  }, [fit, onMeasure, item.id]);
+  /* Спостерігач вішається через callback ref на звичайний DOM-вузол
+     плитки, а не в useEffect через ref на motion.div: у ефекті той ref
+     бував порожнім, ефект виходив і більше не запускався — жодного
+     виміру, дошка вічно брала висоту з реєстру. Callback ref спрацьовує
+     рівно тоді, коли вузол зʼявився в DOM. */
+  const roRef = useRef(null);
+  const attachMeasure = useCallback((node) => {
+    roRef.current?.disconnect();
+    roRef.current = null;
+    bodyRef.current = node;
+    if (!node || !fit) return;
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(node);
+    node.querySelectorAll('header, .ov-body').forEach((n) => ro.observe(n));
+    roRef.current = ro;
+    measure();
+  }, [fit, measure]);
+  /* Після кожного рендеру — ще раз, на наступному кадрі: вміст міг
+     змінитись (інші дані, період) без зміни розміру самої плитки.
+     reportHeight ігнорує різницю до 2px, тож циклу не буде. */
+  useEffect(() => {
+    if (!fit) return undefined;
+    const raf = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(raf);
+  });
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging, isOver,
   } = useSortable({ id: item.id, disabled: !edit });
-  const w = stretchW || item.w;
+  const w = place?.w || item.w;
+  /* Один стабільний ref замість стрілки в JSX: нова функція на кожен
+     рендер змушувала React перепідключати спостерігач щоразу, зокрема
+     на кожен кадр перетягування. */
+  const tileRef = useCallback((node) => { setNodeRef(node); attachMeasure(node); }, [setNodeRef, attachMeasure]);
 
 
   /* Тягнеться вся картка, а не ручка.
@@ -534,12 +592,12 @@ function SortableCard({ item, edit, removing, stretchW, ...rest }) {
      місця, і око читало саме стрибок. */
   return (
     <div
-      ref={setNodeRef}
+      ref={tileRef}
       {...(edit ? attributes : {})}
       {...(edit ? listeners : {})}
       style={{
-        gridColumn: `span ${w}`,
-        gridRow: `span ${item.h}`,
+        gridColumn: place ? `${place.c + 1} / span ${w}` : `span ${w}`,
+        gridRow: place ? `${place.r + 1} / span ${place.h}` : `span ${unitsOf(tilePx(item.h))}`,
         /* Тільки зсув. Масштаб із трансформу викидаємо: картки різної
            ширини, і при обміні місцями бібліотека інакше розтягує
            вузьку під розмір широкої — віджет на мить роздувається. */
@@ -561,6 +619,7 @@ function SortableCard({ item, edit, removing, stretchW, ...rest }) {
       >
         <CardShell
           item={item}
+          fit={fit}
           renderW={w}
           edit={edit}
           removing={removing}
@@ -786,10 +845,9 @@ function LibGhost({ id }) {
 
    Тому та сама dense-розкладка рахується тут ще раз, наперед, у JS —
    і кожній картці, з якою в її власних рядках нікому ділити клітинку,
-   віддається вся сусідня вільна ширина замість того, щоб лишати її
-   порожньою. Тільки вшир: висота лишається тим, що задав реєстр, бо
-   розтягування під сусіда — та сама помилка, яку тут уже виправляли
-   один раз (див. коментар про плитку вище).
+   віддається вся сусідня вільна ширина, а потім і висота до низу
+   дошки — щоб розкладка лягала щільно, як тетріс, без порожніх
+   клітинок під короткими плитками.
 
    Рахується наново з поточного layout на кожен рендер, тож щойно
    зʼявляється сусід — картка сама повертається до свого розміру. */
@@ -808,8 +866,20 @@ function sizeOf(id, registry, cols = 4) {
   };
 }
 
-function computeStretch(boardLayout, registry, cols) {
-  const items = boardLayout.map((item) => ({ id: item.id, ...sizeOf(item.id, registry, cols) }));
+function computeStretch(boardLayout, registry, cols, heights = {}) {
+  const items = boardLayout.map((item) => {
+    const size = sizeOf(item.id, registry, cols);
+    const spec = registry[item.id];
+    /* Графік ставимо з мінімальною висотою (3 клітинки ≈ 300px), а
+       не з повною: він однаково дотягнеться вниз до сусідів. Інакше
+       висока колонка графіків задавала низ дошки, і короткий список
+       поруч (серії, сетапи) доводилось роздувати на пів екрана. */
+    const chart = growsWith(spec);
+    const h = chart
+      ? Math.max(3, unitsOf(tilePx(size.h)) - 1)
+      : unitsOf(heights[item.id] ?? tilePx(size.h));
+    return { id: item.id, w: size.w, h, base: h };
+  });
 
   const rows = [];
   const ensure = (r) => { while (rows.length <= r) rows.push(new Array(cols).fill(null)); };
@@ -825,26 +895,98 @@ function computeStretch(boardLayout, registry, cols) {
     for (let rr = r; rr < r + h; rr++) for (let cc = c; cc < c + w; cc++) rows[rr][cc] = id;
   };
 
+  /* Куди класти плитку. Не просто найперше вільне місце: список чи
+     число, покладене просто під графік, забирає в графіка право рости
+     вниз — і порожнеча переїжджає під сусідній список, який потім
+     доводиться роздувати. Тож для такої плитки місце під графіком
+     «дорожче» на півтора ряду: якщо поруч є місце під іншим списком
+     трохи нижче, вона стане туди, а графік лишиться вільним. */
+  const isChart = (id) => growsWith(registry[id]);
   const placed = [];
   for (const it of items) {
-    let done = false;
-    for (let r = 0; !done; r++) {
+    const chart = isChart(it.id);
+    let best = null;
+    const limit = Math.max(rows.length, 0) + it.h + 8;
+    for (let r = 0; r < limit; r++) {
+      if (best && r > best.score) break;
       for (let c = 0; c <= cols - it.w; c++) {
-        if (fits(r, c, it.w, it.h)) { place(it.id, r, c, it.w, it.h); placed.push({ ...it, r, c }); done = true; break; }
+        if (!fits(r, c, it.w, it.h)) continue;
+        let score = r;
+        if (!chart && r > 0) {
+          const above = new Set();
+          for (let cc = c; cc < c + it.w; cc++) if (rows[r - 1]?.[cc]) above.add(rows[r - 1][cc]);
+          if ([...above].some(isChart)) score += 1.5;
+        }
+        if (!best || score < best.score) best = { r, c, score };
+      }
+    }
+    place(it.id, best.r, best.c, it.w, it.h);
+    placed.push({ ...it, r: best.r, c: best.c });
+  }
+
+  /* Тетріс: після dense-розкладки кожна плитка забирає сусідні
+     порожні клітинки — спершу вшир (вся її висота мусить бути
+     вільною), потім униз, до низу дошки. Повторюємо, доки щось
+     змінюється: розширення однієї відкриває місце для іншої. Низ —
+     останній зайнятий ряд, тож дошка не росте, а лише закриває дірки.
+     Позиції віддаються явно (row/col), а не span: інакше CSS dense
+     переклав би розтягнуті плитки по-своєму й дірки повернулись би. */
+  const total = placed.reduce((m, it) => Math.max(m, it.r + it.h), 0);
+  ensure(total - 1);
+  const free = (r, c) => r < total && !!rows[r] && rows[r][c] === null;
+  const claim = (it, r0, r1, c0, c1) => { for (let rr = r0; rr < r1; rr++) for (let cc = c0; cc < c1; cc++) rows[rr][cc] = it.id; };
+
+  const canGrow = (id) => growsWith(registry[id]);
+
+  /* Два проходи. Перший: вшир усі, униз графіки без меж і решта на
+     одну клітинку. Другий — лише для того, що лишилось: будь-яка
+     плитка дотягується до низу, бо дірка в дошці гірша за трохи
+     повітря під списком. */
+  for (const pass of [1, 2]) {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const it of placed) {
+      const rowsOf = () => Array.from({ length: it.h }, (_, i) => it.r + i);
+      while (it.c > 0 && rowsOf().every((r) => free(r, it.c - 1))) {
+        claim(it, it.r, it.r + it.h, it.c - 1, it.c); it.c -= 1; it.w += 1; changed = true;
+      }
+      while (it.c + it.w < cols && rowsOf().every((r) => free(r, it.c + it.w))) {
+        claim(it, it.r, it.r + it.h, it.c + it.w, it.c + it.w + 1); it.w += 1; changed = true;
+      }
+      /* Униз ростуть лише графіки: вони справді заповнюють висоту.
+         Список із двох рядків чи одне число в картці на три ряди — це
+         гігантська коробка з порожнечею, тож такі плитки лишаються
+         свого розміру, а дірку під ними забирає сусід-графік. */
+      /* Графік росте скільки завгодно; список чи число — щонайбільше
+         на одну клітинку понад свій вміст, щоб закрити дрібну щілину,
+         але не стати коробкою з порожнечею. */
+      const maxH = canGrow(it.id) || pass === 2 ? Infinity : it.base + 1;
+      const colsOf = () => Array.from({ length: it.w }, (_, i) => it.c + i);
+      while (it.h < maxH && it.r + it.h < total && colsOf().every((c) => free(it.r + it.h, c))) {
+        claim(it, it.r + it.h, it.r + it.h + 1, it.c, it.c + it.w); it.h += 1; changed = true;
       }
     }
   }
 
-  const free = (r, c) => !!rows[r] && rows[r][c] === null;
-  const stretch = {};
-  for (const it of placed) {
-    const span = Array.from({ length: it.h }, (_, i) => it.r + i);
-    let left = it.c;
-    while (left > 0 && span.every((r) => free(r, left - 1))) left--;
-    let right = it.c + it.w;
-    while (right < cols && span.every((r) => free(r, right))) right++;
-    if (right - left > it.w) stretch[it.id] = right - left;
   }
+
+  /* Підрізання низу. Заповнення могло дотягнути все до низу найвищої
+     колонки — і тоді список поруч роздувався. Якщо в останньому ряду
+     КОЖНА плитка має зайву висоту понад свій мінімум (графік — 3
+     клітинки, решта — свій вміст), цей ряд зайвий: знімаємо його всім
+     разом. Дірок не зʼявляється, бо зникає ряд цілком. */
+  let bottom = placed.reduce((m, it) => Math.max(m, it.r + it.h), 0);
+  while (bottom > 1) {
+    const inRow = placed.filter((it) => it.r < bottom && it.r + it.h >= bottom);
+    const coversAll = Array.from({ length: cols }, (_, c) => inRow.some((it) => c >= it.c && c < it.c + it.w)).every(Boolean);
+    if (!coversAll || inRow.some((it) => it.h <= it.base)) break;
+    inRow.forEach((it) => { it.h -= 1; });
+    bottom -= 1;
+  }
+
+  const stretch = {};
+  for (const it of placed) stretch[it.id] = { r: it.r, c: it.c, w: it.w, h: it.h };
   return stretch;
 }
 
@@ -941,9 +1083,15 @@ export default function Board({
   const activeItem = activeId && !libId ? layout.find((x) => x.id === activeId) : null;
 
   const cols = useCols();
+  const [heights, setHeights] = useState({});
+  /* Дрібні коливання (субпіксельне округлення, ховер-рамка) не мають
+     перекладати дошку — лише справжня зміна вмісту. */
+  const reportHeight = useCallback((id, px) => {
+    setHeights((prev) => (Math.abs((prev[id] || 0) - px) <= 2 ? prev : { ...prev, [id]: px }));
+  }, []);
   const stretch = useMemo(
-    () => computeStretch(boardLayout, registry, cols),
-    [boardLayout, registry, cols],
+    () => computeStretch(boardLayout, registry, cols, heights),
+    [boardLayout, registry, cols, heights],
   );
 
   useEffect(() => {
@@ -1121,7 +1269,7 @@ export default function Board({
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(var(--ov-cols, 4), minmax(0, 1fr))',
-              gridAutoRows: `${ROW_H}px`,
+              gridAutoRows: `${CELL}px`,
               /* dense — те, заради чого все це. Без нього плитка, яка
                  не влізла поруч, чекає кінця найвищої сусідки, і під
                  короткими лишаються дірки. З ним вона заповзає в
@@ -1143,7 +1291,9 @@ export default function Board({
                      часів, коли резайз ще існував. */
                   ...sizeOf(item.id, registry, cols),
                 }}
-                stretchW={stretch[item.id]}
+                place={stretch[item.id]}
+                fit={!growsWith(registry[item.id])}
+                onMeasure={reportHeight}
                 stats={statsFor(item.p)}
                 edit={edit}
                 removing={removingId === item.id}

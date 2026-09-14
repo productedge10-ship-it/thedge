@@ -151,12 +151,13 @@ function useRailLeft() {
    Наведення показує все на мить (попередній перегляд), клік лишає
    розгорнутим, доки не клікнути ще раз — так само, як наведення саме
    лишає її, коли миша йде геть, а клік — ні. */
-function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
+function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher, sections = SECTIONS }) {
   const left = useRailLeft();
   const [hovered, setHovered] = useState(false);
   const [pinned, setPinned] = useState(false);
   const open = hovered || pinned;
-  const visible = open ? SECTIONS : SECTIONS.filter((s) => s.id === active);
+  const current = sections.some((s) => s.id === active) ? active : sections[0]?.id;
+  const visible = open ? sections : sections.filter((s) => s.id === current);
 
   return (
     <div
@@ -332,7 +333,7 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher }) {
    Мобільний / планшетний фолбек: горизонтальний sticky-док зверху,
    той самий, що був — залишаємо для вузьких екранів.
 ================================================================== */
-function MobileDock({ active, onNavigate, progress, overall }) {
+function MobileDock({ active, onNavigate, progress, overall, sections = SECTIONS }) {
   return (
     <div className="sticky top-3 z-40 mb-8 flex w-full justify-center px-2 no-print xl:hidden">
       <div
@@ -344,7 +345,7 @@ function MobileDock({ active, onNavigate, progress, overall }) {
           boxShadow: '0 16px 40px var(--edge-panel-glow, rgba(0,0,0,0.6))',
         }}
       >
-        {SECTIONS.map((s) => {
+        {sections.map((s) => {
           const isActive = active === s.id;
           const value = progress?.[s.id] ?? 0;
           const Icon = s.icon;
@@ -431,7 +432,8 @@ export function BackToTop({ visible, onClick }) {
   );
 }
 
-export default function PlanTabs({ active, onNavigate, progress, overall, assetSwitcher }) {
+export default function PlanTabs({ active, onNavigate, progress, overall, assetSwitcher, visiblePhases }) {
+  const sections = visiblePhases ? SECTIONS.filter((s) => visiblePhases.includes(s.id)) : SECTIONS;
   return (
     <>
       <DesktopRail
@@ -440,8 +442,9 @@ export default function PlanTabs({ active, onNavigate, progress, overall, assetS
         progress={progress}
         overall={overall}
         assetSwitcher={assetSwitcher}
+        sections={sections}
       />
-      <MobileDock active={active} onNavigate={onNavigate} progress={progress} overall={overall} />
+      <MobileDock active={active} onNavigate={onNavigate} progress={progress} overall={overall} sections={sections} />
     </>
   );
 }

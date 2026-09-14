@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import TextareaAutosize from 'react-textarea-autosize';
 import {
-  X, Pencil, Save, Trash2, Loader2, ExternalLink, ImagePlus,
-  Check, AlertTriangle, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Clock,
+  X, Pencil, Save, Trash2, Loader2, ImagePlus,
+  Check, AlertTriangle, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Clock, BookOpen, Share2,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
@@ -260,6 +260,226 @@ function Editable({ value, onChange, editing, placeholder, minRows = 4, maxRows 
 
 /* ================================================================== */
 
+/* ---------- редагування в стрічці цифр ----------
+
+   R, ризик і акаунт — головні числа угоди, тож і правляться там, де їх
+   читають: у стрічці зверху, а не дрібними інпутами в кінці правої
+   колонки. Пунктирна акцентна рамка — та сама мова «це поле зараз
+   редагується», що й у решті картки. */
+const RISK_PRESETS = ['0.25%', '0.5%', '1%', '2%'];
+
+function StripInput({ value, onChange, placeholder, suffix, color, width = 104 }) {
+  return (
+    <label
+      className="flex h-[38px] items-center gap-1.5 rounded-lg px-2.5"
+      style={{ width, background: T.sunken, border: `1px dashed ${T.lineAcc}`, cursor: 'text' }}
+    >
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        inputMode="decimal"
+        className="min-w-0 flex-1 bg-transparent text-[19px] font-bold tabular-nums outline-none"
+        style={{ fontFamily: MONO, color: color || T.text }}
+      />
+      {suffix && <span className="shrink-0 text-[13px] font-semibold" style={{ fontFamily: MONO, color: T.text4 }}>{suffix}</span>}
+    </label>
+  );
+}
+
+function AccountSelect({ value, options, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-[38px] w-full min-w-[160px] items-center justify-between gap-2 rounded-lg px-3"
+        style={{ background: T.sunken, border: `1px dashed ${T.lineAcc}`, color: T.text }}
+      >
+        <span className="truncate text-[15px] font-semibold" style={{ fontFamily: MONO }}>{value || 'Select account'}</span>
+        <ChevronDown size={14} style={{ color: T.text4, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 top-[calc(100%+6px)] z-50 w-full min-w-[240px] rounded-xl p-1"
+            style={{ background: T.surfaceHi, border: `1px solid ${T.lineHi}`, boxShadow: '0 18px 40px -12px rgba(0,0,0,.7)' }}
+          >
+            {options.length === 0 ? (
+              <div className="px-3 py-2.5 text-[13.5px]" style={{ color: T.text4, fontFamily: T.sans }}>No active accounts</div>
+            ) : options.map((o) => {
+              const on = o.firm_name === value;
+              return (
+                <button
+                  key={o.id || o.firm_name}
+                  type="button"
+                  onClick={() => { onChange(o.firm_name); setOpen(false); }}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors"
+                  style={{ background: on ? `rgba(${T.accRgb},0.12)` : 'transparent', color: on ? T.text : T.text2 }}
+                  onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.bg; }}
+                  onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span className="truncate text-[14px] font-semibold" style={{ fontFamily: T.sans }}>{o.firm_name}</span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {o.balance != null && (
+                      <span className="text-[12px] tabular-nums" style={{ fontFamily: MONO, color: T.text4 }}>
+                        ${Number(o.balance).toLocaleString('en-US')}
+                      </span>
+                    )}
+                    {on && <Check size={13} strokeWidth={2.8} style={{ color: T.acc }} />}
+                  </span>
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ---------- торговий план дня ----------
+
+   Угода без плану — половина історії: видно, що зробив, але не видно,
+   що збирався зробити. Тож план того ж дня й активу підтягується
+   прямо в картку — bias, скріни top-down, стратегія й висновки, — а
+   повний план відкривається одним кліком. */
+function Clamp({ text, lines = 4 }) {
+  const [more, setMore] = useState(false);
+  const long = (text || '').length > 220;
+  return (
+    <div>
+      <p
+        className="whitespace-pre-wrap text-[14.5px] leading-[1.55]"
+        style={{
+          fontFamily: T.sans, color: T.text2,
+          ...(more || !long ? {} : { display: '-webkit-box', WebkitLineClamp: lines, WebkitBoxOrient: 'vertical', overflow: 'hidden' }),
+        }}
+      >
+        {text}
+      </p>
+      {long && (
+        <button
+          type="button"
+          onClick={() => setMore((v) => !v)}
+          className="mt-1 text-[12.5px] font-semibold"
+          style={{ fontFamily: T.sans, color: T.acc }}
+        >
+          {more ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PlanPanel({ plan, pair, date, onOpen }) {
+  const pd = plan?.plan_data || {};
+  const bias = plan?.narrative || pd.narrative || '';
+  const biasTone = /bull/i.test(bias) ? T.ok : /bear/i.test(bias) ? T.bad : T.text3;
+  const showBias = /bull|bear|neutral|range/i.test(bias);
+  const tda = (pd.tdaBlocks || []).filter((b) => b.image);
+  const planText = (pd.planText || '').trim();
+  const conclusions = (pd.conclusionsText || '').trim();
+  const empty = plan && !tda.length && !planText && !conclusions;
+
+  return (
+    <div className="rounded-xl p-4" style={{ border: `1px solid ${T.line}`, background: T.bg }}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <BookOpen size={13} strokeWidth={2.4} style={{ color: T.acc }} />
+          <Eyebrow>TRADING PLAN</Eyebrow>
+          {showBias && (
+            <span
+              className="rounded-md px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.08em]"
+              style={{ fontFamily: MONO, color: biasTone, background: T.sunken, border: `1px solid ${T.line}` }}
+            >
+              {bias}
+            </span>
+          )}
+        </div>
+        {date && pair && (
+          <button
+            type="button"
+            onClick={onOpen}
+            className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-semibold transition-colors"
+            style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
+          >
+            {plan ? 'Open plan' : 'Create plan'}
+            <ArrowUpRight size={13} strokeWidth={2.4} />
+          </button>
+        )}
+      </div>
+
+      {plan === undefined ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <div className="h-3 w-2/3 animate-pulse rounded" style={{ background: T.sunken }} />
+          <div className="h-3 w-1/2 animate-pulse rounded" style={{ background: T.sunken }} />
+        </div>
+      ) : plan === null ? (
+        <p className="mt-2.5 text-[14px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+          {date && pair ? `No plan for ${pair} on ${date}.` : 'This trade has no date or asset to find a plan.'}
+        </p>
+      ) : empty ? (
+        <p className="mt-2.5 text-[14px]" style={{ fontFamily: T.sans, color: T.text4 }}>The plan exists but is still empty.</p>
+      ) : (
+        <div className="mt-3 flex flex-col gap-3.5">
+          {tda.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {tda.slice(0, 4).map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={onOpen}
+                  className="relative aspect-video overflow-hidden rounded-lg"
+                  style={{ border: `1px solid ${T.line}`, background: T.sunken }}
+                >
+                  <img src={b.image} alt="" className="h-full w-full object-cover" />
+                  {b.tf && (
+                    <span
+                      className="absolute left-1.5 top-1.5 rounded px-1.5 py-0.5 text-[10.5px] font-bold"
+                      style={{ fontFamily: MONO, color: T.text, background: 'rgba(0,0,0,.6)' }}
+                    >
+                      {b.tf}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          {planText && (
+            <div className="flex flex-col gap-1.5">
+              <Eyebrow>STRATEGY</Eyebrow>
+              <Clamp text={planText} />
+            </div>
+          )}
+          {conclusions && (
+            <div className="flex flex-col gap-1.5">
+              <Eyebrow>CONCLUSIONS</Eyebrow>
+              <Clamp text={conclusions} lines={3} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TradeDetailsModal({
   trade, accountsMap = {}, onClose, onDeleted, onUpdated,
   /* сумісність зі старим API */
@@ -299,6 +519,69 @@ export default function TradeDetailsModal({
 
   const set = (patch) => setD((p) => ({ ...p, ...patch }));
 
+  /* Акаунти — з балансом і статусом: список для перемикача (лише
+     активні + той, що вже стоїть в угоді) і баланс для профіту, щоб
+     при зміні акаунта долари перерахувались одразу. */
+  const [accounts, setAccounts] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    supabase.from('prop_accounts').select('id, firm_name, balance, status')
+      .then(({ data }) => { if (alive && Array.isArray(data)) setAccounts(data); });
+    return () => { alive = false; };
+  }, []);
+  const balances = useMemo(
+    () => ({ ...accountsMap, ...Object.fromEntries(accounts.map((a) => [a.firm_name, Number(a.balance) || 0])) }),
+    [accountsMap, accounts],
+  );
+  const accountOptions = useMemo(
+    () => accounts.filter((a) => a.status !== 'Closed' || a.firm_name === trade?.account_name),
+    [accounts, trade?.account_name],
+  );
+
+  /* План дня: undefined — ще вантажиться, null — плану немає. */
+  const [plan, setPlan] = useState(undefined);
+  useEffect(() => {
+    let alive = true;
+    if (!user?.id || !trade?.plan_date || !trade?.plan_pair) { setPlan(null); return undefined; }
+    setPlan(undefined);
+    supabase.from('trading_plans').select('id, date, pair, narrative, plan_data')
+      .eq('user_id', user.id).eq('date', trade.plan_date).eq('pair', trade.plan_pair)
+      .order('created_at', { ascending: false }).limit(1)
+      .then(({ data, error }) => { if (alive) setPlan(error ? null : (data?.[0] || null)); });
+    return () => { alive = false; };
+  }, [user?.id, trade?.plan_date, trade?.plan_pair]);
+  const openPlan = () => { onClose(); navigate(`/plan/${d.plan_date}/${encodeURIComponent(d.plan_pair)}`); };
+
+  /* Поділитись — один клік: відкриваємо доступ (is_public) і одразу
+     кладемо посилання в буфер. Сторінка /shared/trade/:id показує
+     угоду без акаунта й доларів. У демо даних у справжній базі нема,
+     тож посилання там нікуди б не вело — кажемо про це прямо. */
+  const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  async function share() {
+    if (window.location.pathname.startsWith('/demo')) {
+      notify.error('Недоступно в демо', 'Поділитись угодою можна у своєму журналі після реєстрації.');
+      return;
+    }
+    if (!d?.id || sharing) return;
+    setSharing(true);
+    try {
+      if (!d.is_public) {
+        const { error } = await supabase.from('trades').update({ is_public: true }).eq('id', d.id).eq('user_id', user?.id);
+        if (error) throw error;
+        setD((p) => ({ ...p, is_public: true }));
+      }
+      await navigator.clipboard.writeText(`${window.location.origin}/shared/trade/${d.id}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+      notify.success('Лінк скопійовано', 'Угоду відкрито для перегляду за посиланням.');
+    } catch (err) {
+      notify.error('Не вдалось поділитись', err.message);
+    } finally {
+      setSharing(false);
+    }
+  }
+
   const images = useMemo(() => {
     if (Array.isArray(d?.mistake_images) && d.mistake_images.length) return d.mistake_images;
     if (d?.mistake_image) return [d.mistake_image];
@@ -313,13 +596,13 @@ export default function TradeDetailsModal({
     const s = String(d?.risk || '').trim();
     let riskValue = 0;
     if (s.includes('$')) riskValue = parseFloat(s.replace(/[^0-9.]/g, ''));
-    else if (s.includes('%')) riskValue = (accountsMap[d.account_name] || 0) * (parseFloat(s.replace(/[^0-9.]/g, '')) / 100);
+    else if (s.includes('%')) riskValue = (balances[d.account_name] || 0) * (parseFloat(s.replace(/[^0-9.]/g, '')) / 100);
     else {
       const v = parseFloat(s);
-      if (!isNaN(v)) riskValue = v <= 10 ? (accountsMap[d.account_name] || 0) * (v / 100) : v;
+      if (!isNaN(v)) riskValue = v <= 10 ? (balances[d.account_name] || 0) * (v / 100) : v;
     }
     return riskValue > 0 ? riskValue * rr : null;
-  }, [d, accountsMap]);
+  }, [d, balances]);
 
   async function save() {
     setSaving(true);
@@ -489,20 +772,26 @@ export default function TradeDetailsModal({
           <div className="flex-1" />
 
           <div className="flex shrink-0 items-center gap-2">
-            {d.plan_date && d.plan_pair && (
-              <motion.button
-                onClick={() => { onClose(); navigate(`/plan/${d.plan_date}/${encodeURIComponent(d.plan_pair)}`); }}
-                title="Open this day's plan"
-                whileTap={{ scale: 0.92 }}
-                transition={SPRING_TAP}
-                className="grid h-[34px] w-[34px] place-items-center rounded-lg transition-colors"
-                style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text3 }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text3; }}
-              >
-                <ExternalLink size={14} strokeWidth={2.3} />
-              </motion.button>
-            )}
+            <motion.button
+              onClick={share}
+              disabled={sharing}
+              title="Поділитись: скопіювати посилання на угоду"
+              whileTap={{ scale: 0.95 }}
+              transition={SPRING_TAP}
+              className="flex h-[34px] items-center gap-2 rounded-lg px-3 text-[14.5px] font-semibold transition-colors"
+              style={{
+                background: copied ? `rgba(${T.okRgb},0.12)` : T.bg,
+                border: `1px solid ${copied ? `rgba(${T.okRgb},0.35)` : T.line}`,
+                color: copied ? T.ok : T.text2,
+                fontFamily: T.sans,
+              }}
+              onMouseEnter={(e) => { if (!copied) e.currentTarget.style.borderColor = T.lineHi; }}
+              onMouseLeave={(e) => { if (!copied) e.currentTarget.style.borderColor = T.line; }}
+            >
+              {sharing ? <Loader2 size={13} className="animate-spin" /> : copied ? <Check size={13} strokeWidth={2.8} /> : <Share2 size={13} strokeWidth={2.4} />}
+              {copied ? 'Скопійовано' : 'Поділитись'}
+            </motion.button>
+
 
             {editing && (
               <motion.button
@@ -559,26 +848,90 @@ export default function TradeDetailsModal({
         </header>
 
         {/* ---------- СТРІЧКА ЦИФР ---------- */}
-        <div className="flex items-stretch px-6" style={{ borderBottom: `1px solid ${T.line}` }}>
-          {[
-            { label: 'R', value: rrDisplay, color: rrColor, flex: 1 },
-            { label: 'Profit', value: profitDisplay, color: profitColor, flex: 1 },
-            { label: 'Risk', value: d.risk || '—', color: T.text2, flex: 1 },
-            { label: 'Account', value: d.account_name || '—', color: T.text3, flex: 1.4, small: true },
-          ].map((cell, i) => (
-            <div key={cell.label} className="flex min-w-0" style={{ flex: cell.flex }}>
-              {i > 0 && <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />}
-              <div className="flex min-w-0 flex-col gap-1.5 py-3.5">
-                <Eyebrow>{cell.label.toUpperCase()}</Eyebrow>
-                <span
-                  className={`truncate font-bold tabular-nums ${cell.small ? 'text-[16px] pt-0.5' : 'text-[21.5px]'}`}
-                  style={{ fontFamily: MONO, color: cell.color }}
-                >
-                  {cell.value}
-                </span>
+        {/* У режимі редагування R, ризик і акаунт правляться прямо тут —
+            профіт поруч перераховується наживо. */}
+        <div className="flex flex-wrap items-stretch px-6" style={{ borderBottom: `1px solid ${T.line}` }}>
+          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: 1 }}>
+            <Eyebrow>R</Eyebrow>
+            {editing ? (
+              <StripInput value={d.rr ?? ''} onChange={(v) => set({ rr: v.replace(',', '.') })} placeholder="2.5" suffix="R" color={rrColor} />
+            ) : (
+              <span className="truncate text-[21.5px] font-bold tabular-nums" style={{ fontFamily: MONO, color: rrColor }}>{rrDisplay}</span>
+            )}
+          </div>
+
+          <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
+          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: 1 }}>
+            <Eyebrow>PROFIT</Eyebrow>
+            <span className={`truncate font-bold tabular-nums ${editing ? 'pt-1.5 text-[19px]' : 'text-[21.5px]'}`} style={{ fontFamily: MONO, color: profitColor }}>
+              {profitDisplay}
+            </span>
+          </div>
+
+          <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
+          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: editing ? 1.3 : 1 }}>
+            <Eyebrow>RISK</Eyebrow>
+            {editing ? (
+              /* Один сегментований контрол замість поля й чотирьох окремих
+                 кнопок, що переносились на другий рядок: пресети й власне
+                 значення в одній доріжці, висотою як інпут R поруч. */
+              <div
+                className="flex h-[38px] w-fit max-w-full items-center gap-0.5 rounded-lg p-[3px]"
+                style={{ background: T.sunken, border: `1px dashed ${T.lineAcc}` }}
+              >
+                {RISK_PRESETS.map((r) => {
+                  const on = String(d.risk || '').replace(/\s/g, '') === r;
+                  return (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => set({ risk: r })}
+                      className="h-full rounded-md px-2 text-[13px] font-semibold tabular-nums transition-colors"
+                      style={{
+                        fontFamily: MONO,
+                        background: on ? `rgba(${T.accRgb},0.18)` : 'transparent',
+                        color: on ? T.acc : T.text3,
+                      }}
+                      onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text; }}
+                      onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
+                    >
+                      {r.replace('%', '')}
+                    </button>
+                  );
+                })}
+                <span className="mx-1 h-4 w-px shrink-0" style={{ background: T.line }} />
+                <label className="flex h-full items-center gap-0.5 pr-1.5" style={{ cursor: 'text' }}>
+                  <input
+                    value={String(d.risk ?? '').replace('%', '')}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(',', '.').replace(/[^0-9.$]/g, '');
+                      set({ risk: v === '' ? '' : v.includes('$') ? v : `${v}%` });
+                    }}
+                    placeholder="—"
+                    inputMode="decimal"
+                    className="w-[38px] bg-transparent text-right text-[15px] font-bold tabular-nums outline-none"
+                    style={{ fontFamily: MONO, color: T.text }}
+                  />
+                  {!String(d.risk ?? '').includes('$') && (
+                    <span className="text-[13px] font-semibold" style={{ fontFamily: MONO, color: T.text4 }}>%</span>
+                  )}
+                </label>
               </div>
-            </div>
-          ))}
+            ) : (
+              <span className="truncate text-[21.5px] font-bold tabular-nums" style={{ fontFamily: MONO, color: T.text2 }}>{d.risk || '—'}</span>
+            )}
+          </div>
+
+          <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
+          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: 1.4 }}>
+            <Eyebrow>ACCOUNT</Eyebrow>
+            {editing ? (
+              <AccountSelect value={d.account_name} options={accountOptions} onChange={(v) => set({ account_name: v })} />
+            ) : (
+              <span className="truncate pt-0.5 text-[16px] font-bold" style={{ fontFamily: MONO, color: T.text3 }}>{d.account_name || '—'}</span>
+            )}
+          </div>
+
           <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
           <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: 1 }}>
             <Eyebrow>DISCIPLINE</Eyebrow>
@@ -628,6 +981,8 @@ export default function TradeDetailsModal({
                 <Editable editing={editing} value={d.trade_description} onChange={(v) => set({ trade_description: v })} placeholder="No description" />
               </div>
             </div>
+
+            <PlanPanel plan={plan} pair={d.plan_pair} date={d.plan_date} onOpen={openPlan} />
           </motion.div>
 
           {/* ПРАВА КОЛОНКА — довідка й чеклісти */}
@@ -669,41 +1024,11 @@ export default function TradeDetailsModal({
                 <PillGroup groupId="session" editing={editing} options={SESSIONS} value={d.session} onChange={(v) => set({ session: v })} colorMap={SESSION_COLORS} />
               </div>
 
-              <div className="flex flex-col gap-2 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
+              <div className="flex flex-col gap-2 px-3.5 py-3">
                 <Eyebrow>RESULT</Eyebrow>
                 <PillGroup groupId="result" editing={editing} options={RESULT_OPTS.map((r) => r.value)} value={d.result} onChange={(v) => set({ result: v })} colorMap={resultMap} labelMap={resultLabelMap} />
               </div>
 
-              <div className="grid grid-cols-2">
-                <div className="flex flex-col gap-1.5 px-3.5 py-3" style={{ borderRight: `1px solid ${T.line}` }}>
-                  <Eyebrow>R</Eyebrow>
-                  {editing ? (
-                    <input
-                      value={d.rr ?? ''}
-                      onChange={(e) => set({ rr: e.target.value })}
-                      placeholder="e.g. 2"
-                      className="h-7 w-full rounded-md px-2 outline-none"
-                      style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: MONO, fontSize: 14.5 }}
-                    />
-                  ) : (
-                    <span className="text-[15.5px] font-semibold tabular-nums" style={{ fontFamily: MONO, color: rrColor }}>{rrDisplay}</span>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5 px-3.5 py-3">
-                  <Eyebrow>RISK</Eyebrow>
-                  {editing ? (
-                    <input
-                      value={d.risk ?? ''}
-                      onChange={(e) => set({ risk: e.target.value })}
-                      placeholder="e.g. 1%"
-                      className="h-7 w-full rounded-md px-2 outline-none"
-                      style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: MONO, fontSize: 14.5 }}
-                    />
-                  ) : (
-                    <span className="text-[15.5px] font-semibold" style={{ fontFamily: MONO, color: T.text2 }}>{d.risk || '—'}</span>
-                  )}
-                </div>
-              </div>
             </div>
 
             {/* Процес — за замовчуванням тільки відхилення, решта за кліком */}

@@ -3,6 +3,8 @@ import { Compass, Radio, LineChart, NotebookPen, Layers, Trash2 } from 'lucide-r
 import NarrativeSelect from '../ui/NarrativeSelect';
 import UpdatesList from './UpdatesList';
 import PlanTabs from './PlanTabs';
+import PlanBlocksDock from './PlanBlocksDock';
+import { usePlanBlocks } from '../../lib/planBlocks';
 import TdaGrid from './TdaGrid';
 import { Section, SectionAnchor, FieldLabel, WriteBlock } from './PlanPrimitives';
 import { TdaAnalysisFields, AddTdaButton } from './TdaAnalysisCard';
@@ -145,7 +147,11 @@ export default function WeeklyPlanView({
      через weekPlanProgress — тут лишається тільки useMemo-обгортка,
      щоб не рахувати заново на кожен рендер. */
   const progress = useMemo(() => weekPlanProgress(data), [data]);
-  const overall = progress.plan * 0.45 + progress.live * 0.1 + progress.review * 0.45;
+  const blocks = usePlanBlocks('weekly');
+  const phases = ['plan', 'live', 'review'].filter((ph) => blocks.phaseVisible(ph));
+  const W = { plan: 0.45, live: 0.1, review: 0.45 };
+  const wTotal = phases.reduce((a, ph) => a + W[ph], 0);
+  const overall = wTotal ? phases.reduce((a, ph) => a + progress[ph] * W[ph], 0) / wTotal : 0;
 
   const addUpdate = () => {
     const weekday = new Date().toLocaleDateString('uk-UA', { weekday: 'short' });
@@ -176,17 +182,21 @@ export default function WeeklyPlanView({
         onNavigate={onNavigateSection}
         progress={progress}
         overall={overall}
+        visiblePhases={phases}
       />
+
+      <PlanBlocksDock mode="weekly" />
 
       <div className="mt-6">
         {/* ═══════════════ PLAN ═══════════════ */}
-        <SectionAnchor id="plan" first label="Plan" sub="Before" icon={Compass} progress={progress.plan} />
+        {blocks.phaseVisible('plan') && <SectionAnchor id="plan" first label="Plan" sub="Before" icon={Compass} progress={progress.plan} />}
 
         <div className="flex flex-col gap-5">
           {/* Один розбір — своя окрема секція, а не картка всередині
               спільної: кожен актив згортається окремо, і видно, який
               він, ще до розгортання (заголовок = сам актив). Кнопка
               додати новий розбір — поза секціями, на їхньому рівні. */}
+          {blocks.isVisible('week-tda') && (<>
           {tdaAnalyses.map((t) => {
             const filled = t.blocks.filter((b) => b.image || b.text?.trim()).length;
             return (
@@ -194,6 +204,7 @@ export default function WeeklyPlanView({
                 key={t.id}
                 icon={Layers}
                 storageKey={`tda-${t.id}`}
+                onHide={() => blocks.hide('week-tda')}
                 group="plan"
                 title={t.pair || 'Top-down аналіз'}
                 hint={t.pair ? 'Top-down аналіз' : 'Актив, плановий bias і сітка ТФ'}
@@ -235,10 +246,13 @@ export default function WeeklyPlanView({
             );
           })}
           <AddTdaButton onAdd={addTdaAnalysis} />
+          </>)}
 
+          {blocks.isVisible('week-thesis') && (
           <Section
             icon={Compass}
             storageKey="week-thesis"
+            onHide={() => blocks.hide('week-thesis')}
             group="plan"
             title="Теза тижня"
             hint="Загальна картина ринку і що її заперечить"
@@ -252,14 +266,17 @@ export default function WeeklyPlanView({
               minRows={6}
             />
           </Section>
+          )}
         </div>
 
         {/* ═══════════════ LIVE ═══════════════ */}
-        <SectionAnchor id="live" label="Live" sub="During" icon={Radio} progress={progress.live} />
+        {blocks.phaseVisible('live') && <SectionAnchor id="live" first={!blocks.phaseVisible('plan')} label="Live" sub="During" icon={Radio} progress={progress.live} />}
 
+        {blocks.isVisible('week-updates') && (
         <Section
           icon={Radio}
           storageKey="week-updates"
+          onHide={() => blocks.hide('week-updates')}
           group="live"
           title="Проміжні перевірки"
           hint="Середа — гарний день звірити тезу з реальністю"
@@ -269,14 +286,17 @@ export default function WeeklyPlanView({
             <UpdatesList updates={data.updates} onAdd={addUpdate} onSave={saveUpdate} />
           </div>
         </Section>
+        )}
 
         {/* ═══════════════ REVIEW ═══════════════ */}
-        <SectionAnchor id="review" label="Review" sub="After" icon={LineChart} progress={progress.review} />
+        {blocks.phaseVisible('review') && <SectionAnchor id="review" first={!blocks.phaseVisible('plan') && !blocks.phaseVisible('live')} label="Review" sub="After" icon={LineChart} progress={progress.review} />}
 
         <div className="flex flex-col gap-5">
+          {blocks.isVisible('week-outcome') && (
           <Section
             icon={LineChart}
             storageKey="week-outcome"
+            onHide={() => blocks.hide('week-outcome')}
             group="review"
             title="Що вийшло по активах"
             hint="Порівняй плановий bias з фактом по кожному розбору"
@@ -293,10 +313,13 @@ export default function WeeklyPlanView({
               <AssetsBoard analyses={tdaAnalyses} onSave={saveTdaAnalysis} />
             </div>
           </Section>
+          )}
 
+          {blocks.isVisible('week-conclusions') && (
           <Section
             icon={NotebookPen}
             storageKey="week-conclusions"
+            onHide={() => blocks.hide('week-conclusions')}
             group="review"
             title="Висновки тижня"
             hint="Що забереш у наступний тиждень"
@@ -313,6 +336,7 @@ export default function WeeklyPlanView({
               minRows={6}
             />
           </Section>
+          )}
         </div>
       </div>
     </>

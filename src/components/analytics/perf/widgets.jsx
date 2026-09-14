@@ -76,7 +76,7 @@ function Kpi({ value, color, facts = [], w = 1 }) {
 
   return (
     <div style={{ display: 'flex', gap: 18, minHeight: 96 }}>
-      <div style={{ flex: wide ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 12 }}>
+      <div style={{ flex: wide ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 12 }}>
         <b style={{ fontFamily: F.mono, fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color }}>
           {value}
         </b>
@@ -84,7 +84,7 @@ function Kpi({ value, color, facts = [], w = 1 }) {
 
       <div
         style={{
-          flex: 1, alignSelf: 'center', display: 'grid', gap: '6px 14px',
+          flex: 1, alignSelf: 'flex-start', display: 'grid', gap: '6px 14px',
           gridTemplateColumns: wide && w >= 3 ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)',
         }}
       >

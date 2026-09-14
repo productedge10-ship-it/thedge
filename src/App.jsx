@@ -34,6 +34,7 @@ import SharedPlan from './pages/SharedPlan';
 import SharedReview from './pages/SharedReview';
 import SharedBacktest from './pages/SharedBacktest';
 import SharedStats from './pages/SharedStats';
+import SharedTrade from './pages/SharedTrade';
 import PreTradeChecklist from './pages/PreTradeChecklist';
 import Calculator from './pages/Calculator';
 import News from './pages/News';
@@ -93,6 +94,7 @@ const router = createBrowserRouter([
   { path: '/shared/review/:id', element: <SharedReview /> },
   { path: '/shared/backtest/:id', element: <SharedBacktest /> },
   { path: '/shared/stats/:id', element: <SharedStats /> },
+  { path: '/shared/trade/:id', element: <SharedTrade /> },
 
   // --- Захищені маршрути з Layout і сайдбаром ---
   {
