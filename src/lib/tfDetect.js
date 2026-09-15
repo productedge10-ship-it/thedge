@@ -161,15 +161,20 @@ function textBands(img) {
   const scored = bands.map(([a, b]) => {
     let left = 0;
     let total = 0;
+    let right = 0;
     for (let y = a; y < b; y++) {
       for (let x = 0; x < w; x++) {
         if (Math.abs(luminance(px, (y * w + x) * 4) - rowMean[y]) > 45) {
           total++;
           if (x < leftEdge) left++;
+          if (x > right) right = x;
         }
       }
     }
-    return { band: [a, b], score: total ? left / total : 0 };
+    /* `right` — де закінчується чорнило. Потрібен, щоб не тягнути в
+       OCR півкадру порожнього графіка: чим вужчий кадр, тим сильніше
+       можна збільшити те, що в ньому лишилось. */
+    return { band: [a, b, right], score: total ? left / total : 0 };
   });
 
   scored.sort((p, q) => q.score - p.score);
@@ -191,7 +196,7 @@ function textBands(img) {
    Темний фон означає світлий текст, який треба інвертувати. `mode`
    дозволяє спробувати навпаки — на випадок графіка, де підпис
    лежить на плашці іншого кольору, ніж решта смужки. */
-function prepCanvas(img, y0, y1, w, mode) {
+function prepCanvas(img, y0, y1, w, mode, zoom) {
   const pad = 4;
   const top = Math.max(0, Math.round(y0) - pad);
   const bot = Math.min(img.naturalHeight, Math.round(y1) + pad);
@@ -263,10 +268,20 @@ function prepCanvas(img, y0, y1, w, mode) {
     pctx.putImageData(data, 0, 0);
   }
 
-  /* Дрібний шрифт шапки — 11px. Tesseract хоче хоча б 30px висоти
-     літери, тому тягнемо до ~1600px по ширині, але не більше вчетверо:
-     далі росте лише час. */
-  const scale = Math.min(4, Math.max(2, Math.round(1600 / w)));
+  /* Збільшення рахується від ВИСОТИ РЯДКА, а не від ширини кадру.
+
+     Раніше було навпаки — «тягнути полотно до 1600px по ширині», — і
+     воно працювало рівно назадницю: що більший скрін, то менше
+     збільшення діставалось тексту. На знімку з дрібною шапкою літера
+     лишалась висотою в три пікселі, і OCR повертав кашу з будь-якою
+     бінаризацією.
+
+     Tesseract хоче приблизно 30–40 пікселів на літеру. */
+  let scale = Math.min(8, Math.max(2, Math.round(zoom || 3)));
+  /* Стеля на розмір полотна: восьмикратне збільшення широкого кадру
+     дало б десять тисяч пікселів у ширину — це вже не точність, а
+     кілька секунд простою й мегабайти памʼяті. */
+  while (scale > 2 && w * scale > 4200) scale -= 1;
   const out = document.createElement('canvas');
   out.width = w * scale;
   out.height = bh * scale;
@@ -528,6 +543,66 @@ export function warmUpTf() {
   else setTimeout(go, 2500);
 }
 
+/* ------------------------------------------------------------------
+   «1ч» проти «1Д»
+
+   Це єдина пара, яку текстом розрізнити неможливо. Після бінаризації
+   дрібна кирилична «ч» і велика «Д» дають настільки схожий контур, що
+   OCR обидві повертає четвіркою: і годинний, і денний графік
+   приходять однаковим «14».
+
+   Але розрізнити їх можна не за формою, а за ЗРОСТОМ. «Д» — велика
+   літера на всю висоту рядка, «ч» — рядкова, приблизно дві третини.
+   Цифра поруч дає еталон висоти, тож порівняння чесне й не залежить
+   ні від масштабу скріна, ні від шрифту.
+
+   Рамки символів OCR рахує сам — лишається їх прочитати.
+------------------------------------------------------------------ */
+function fixAmbiguousUnits(data) {
+  const text = String(data?.text || '');
+  const words = data?.words || [];
+  if (!words.length) return text;
+
+  let out = text;
+
+  for (const word of words) {
+    const t = String(word?.text || '').trim();
+    /* Ціль — «одна-дві цифри й один знак». Сюди потрапляють і «1ч», і
+       «14», і «1Н»: що саме там написано, вирішуємо не за літерою, яку
+       повернув OCR, а за геометрією. Літера ненадійна, рамка — ні. */
+    if (!/^\d{1,2}[^\s]$/.test(t)) continue;
+
+    const sym = word?.symbols || [];
+    if (sym.length < 2) continue;
+
+    const a = sym[0]?.bbox;
+    const b = sym[sym.length - 1]?.bbox;
+    if (!a || !b) continue;
+
+    const hDigit = a.y1 - a.y0;
+    const hUnit = b.y1 - b.y0;
+    if (hDigit < 6 || hUnit < 3) continue;
+
+    const ratio = hUnit / hDigit;
+    /* Наскільки знак звисає нижче цифри. Цифри стоять на базовій
+       лінії рівно, тож будь-яке помітне звисання — це ніжки «Д». */
+    const drop = (b.y1 - a.y1) / hDigit;
+
+    let unit = null;
+    if (drop > 0.12) unit = 'Д';          // ніжки під базовою лінією
+    else if (ratio < 0.82) unit = 'ч';    // рядкова, без виносних
+
+    console.info(
+      `[tf] «${t}»: висота ${Math.round(ratio * 100)}%, звисання ${Math.round(drop * 100)}% → `
+      + (unit === 'Д' ? 'дні' : unit === 'ч' ? 'години' : 'лишаємо як прочитано'),
+    );
+
+    if (unit) out = out.replace(t, `${t.slice(0, -1)}${unit}`);
+  }
+
+  return out;
+}
+
 /* Кешуємо ТІЛЬКИ успіх. Порожня відповідь у кеші означала б, що та
    сама картинка більше ніколи навіть не спробується — а причина
    невдачі могла бути тимчасовою (модель ще качалась, мережа лягла). */
@@ -559,21 +634,45 @@ export async function detectTimeframe(src) {
     if (near.length) {
       const top = near[0][0];
       const bot = near[near.length - 1][1];
+
+      /* Висота рядка задає збільшення: ціль — близько 38 пікселів на
+         літеру, стільки Tesseract читає впевнено. */
+      const lineH = Math.max(6, Math.min(...near.map(([a, b]) => b - a)));
+      const zoom = Math.max(2, Math.min(8, Math.round(38 / lineH)));
+
+      /* Дві ширини кадру.
+
+         Вузька — по найкоротшому рядку. Шапка з таймфреймом майже
+         завжди найкоротша: водяний знак довший, а підпис індикатора
+         («CRYPTOLOGY sessions (GMT+3, No, London, 1000-1500, …»)
+         тягнеться на півекрана. Обрізавши кадр по ній, ми і зайве
+         відсікаємо, і решту можемо збільшити сильніше.
+
+         Широка — на випадок, коли найкоротшим виявився не той рядок. */
+      const rights = near.map(([, , r]) => r).filter((r) => r > 0).sort((p, q) => p - q);
+      const cap = Math.round(img.naturalWidth * 0.62);
+      const narrow = rights.length ? Math.min(cap, Math.max(120, rights[0] + 14)) : w;
+      const wide = rights.length ? Math.min(cap, Math.max(160, rights[rights.length - 1] + 14)) : w;
+
       /* Жорстка бінаризація йде ПЕРШОЮ: на тьмяному дрібному шрифті
          шапки вона читається помітно краще за півтони. */
-      targets.push(prepCanvas(img, top, bot, w, 'binary'));
-      targets.push(prepCanvas(img, top, bot, w, 'auto'));
+      targets.push(prepCanvas(img, top, bot, narrow, 'binary', Math.round(zoom * 1.4)));
+      targets.push(prepCanvas(img, top, bot, narrow, 'auto', Math.round(zoom * 1.4)));
+      if (wide > narrow * 1.2) {
+        targets.push(prepCanvas(img, top, bot, wide, 'binary', zoom));
+        targets.push(prepCanvas(img, top, bot, wide, 'auto', zoom));
+      }
       /* Протилежна полярність: буває, що підпис лежить на плашці,
          темнішій або світлішій за решту кадру, і автовибір
          помиляється. */
-      targets.push(prepCanvas(img, top, bot, w, 'binary-flip'));
+      targets.push(prepCanvas(img, top, bot, narrow, 'binary-flip', zoom));
     }
 
     /* Запасний варіант — просто верхівка кадру, без жодних здогадів
        про те, де там рядки. */
     const strip = Math.max(48, Math.round(H * 0.16));
-    targets.push(prepCanvas(img, 0, strip, w, 'binary'));
-    targets.push(prepCanvas(img, 0, strip, w, 'auto'));
+    targets.push(prepCanvas(img, 0, strip, w, 'binary', 3));
+    targets.push(prepCanvas(img, 0, strip, w, 'auto', 3));
 
     const ready = targets.filter(Boolean);
     if (!ready.length) {
@@ -586,7 +685,7 @@ export async function detectTimeframe(src) {
     for (const canvas of ready) {
       if (Date.now() > deadline) break;
       const { data } = await worker.recognize(canvas);
-      const text = data?.text?.trim() || '';
+      const text = fixAmbiguousUnits(data).trim();
       log.push(text);
       const found = parse(text);
       if (found) {
