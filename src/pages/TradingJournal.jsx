@@ -14,12 +14,12 @@ import {
 import {
   BookOpen, Plus, TrendingUp, TrendingDown, Minus, AlertTriangle, X,
   Filter, Calendar, ChevronDown, Check, Search, ShieldAlert, AlertOctagon, Zap,
-  DownloadCloud, Loader2,
+  CandlestickChart,
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
 import { notify } from "../utils/notify";
-import { pullMt5Trades, prefetchTradeCandles } from "../lib/mt5Store";
+import { prefetchTradeCandles } from "../lib/mt5Store";
 import useEmailGate from "../hooks/useEmailGate";
 import { useAuth } from "../context/AuthContext";
 import { getTradeProfit } from "../utils/journalUtils";
@@ -28,7 +28,7 @@ import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
 import TradeModal from "../components/modals/TradeModal";
 import TradeDetailsModal from "../components/modals/TradeDetailsModal";
 import StatCards, { StreakBar } from "../components/journal/StatCards";
-import { Magnetic, Shine } from "../components/ui/Hovers";
+import { Magnetic } from "../components/ui/Hovers";
 import TradesTable from "../components/journal/TradesTable";
 import AssetIcon from "../components/ui/AssetIcon";
 
@@ -36,62 +36,84 @@ const PAGE_SIZES = [10, 20, 30, 40];
 const PAGE_DEFAULT = 10;
 
 /* ==================================================================
-   Селектори фільтрів — власний преміальний стиль сторінки Journal.
-   Двоярусний тригер (дрібний лейбл зверху, значення знизу) — патерн
-   фінтех-дашбордів (Stripe/Mercury), а не просто «іконка + текст».
-   Скляна панель з ковзним підсвітом активного рядка; в активі —
-   миттєвий пошук, бо список активів росте разом з журналом.
+   Селектори фільтрів.
+
+   Були двоярусні: дрібний підпис «ASSET» зверху, значення знизу. Ідея
+   з фінтех-дашбордів, але тут вона не спрацювала — і на це три
+   причини, кожна сама по собі достатня.
+
+   Підпис був 9 пікселів кольором `text4`. Це 2.1:1 контрасту при
+   нормі 4.5 — його не просто дрібно читати, його майже не видно.
+
+   Він нічого не додавав. Значення й так каже «All assets» і «All
+   time»: слово «ASSET» над «All assets» — це той самий іменник двічі,
+   тільки вдруге нечитабельний.
+
+   І він ламав вирівнювання. Стрілка стояла в одному рядку з підписом,
+   тобто у верхній половині кнопки, а значення — в нижній. Збоку це
+   читалось як зʼїхала стрілка, хоч зʼїхала насправді вся сітка.
+
+   Тепер один ярус: іконка, значення, стрілка — усе по центру висоти.
+   Висота 54, як у сусідньої головної кнопки: раніше було 44, і рядок
+   виглядав ступінчастим.
 ================================================================== */
 
-function FieldTrigger({ label, value, icon, active, open, onClick, minWidth = 148 }) {
+function FieldTrigger({ label, value, icon, active, open, onClick, minWidth = 168 }) {
   return (
     <motion.button
+      type="button"
       onClick={onClick}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
+      aria-label={label}
+      aria-expanded={open}
+      whileTap={{ scale: 0.985 }}
       transition={SPRING}
-      className="relative flex h-[44px] flex-col justify-center gap-0.5 rounded-xl px-3 text-left"
+      className="field-trigger relative flex h-[54px] items-center gap-2.5 rounded-2xl px-4 text-left"
       style={{
         minWidth,
-        background: active
-          ? `linear-gradient(180deg, rgba(${T.accRgb},0.10), rgba(${T.accRgb},0.02))`
-          : T.sunken,
+        background: active ? `rgba(${T.accRgb},0.10)` : T.surface,
         border: `1px solid ${open || active ? T.lineAcc : T.line}`,
-        boxShadow: open
-          ? `0 10px 26px -10px rgba(${T.accRgb},0.5)`
-          : active
-          ? `0 4px 14px -7px rgba(${T.accRgb},0.3)`
-          : "none",
+        boxShadow: open ? `0 10px 26px -10px rgba(${T.accRgb},0.5)` : "none",
       }}
     >
-      <span className="flex items-center justify-between gap-2.5">
-        <span
-          className="text-[9px] font-bold uppercase tracking-[0.14em]"
-          style={{ fontFamily: T.sans, color: active ? T.acc : T.text4 }}
-        >
-          {label}
-        </span>
-        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={SPRING} className="flex shrink-0">
-          <ChevronDown size={11} strokeWidth={2.6} style={{ color: active ? T.acc : T.text4 }} />
-        </motion.span>
-      </span>
-      <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
+      {/* Іконка в своєму квадраті: без нього прапорець пари й значок
+          календаря мають різну ширину, і текст поруч стрибає на
+          кілька пікселів при кожній зміні фільтра. */}
+      <span className="grid h-6 w-6 shrink-0 place-items-center">
         {icon}
-        <span className="truncate">{value}</span>
       </span>
+
+      <span
+        className="min-w-0 flex-1 truncate text-[14px] font-bold"
+        style={{ fontFamily: T.sans, color: active ? T.text : T.text2 }}
+      >
+        {value}
+      </span>
+
+      <motion.span
+        animate={{ rotate: open ? 180 : 0 }}
+        transition={SPRING}
+        className="flex shrink-0"
+      >
+        <ChevronDown size={14} strokeWidth={2.6} style={{ color: active ? T.acc : T.text3 }} />
+      </motion.span>
     </motion.button>
   );
 }
 
-function FieldPanel({ children, width = "w-[248px]" }) {
+/* Панель ніколи не вужча за свій тригер. Раніше ширина була зашита
+   числом, і випадайка то звисала збоку, то обривалась вужче за кнопку —
+   а звʼязок «це відкрилось саме звідси» тримається саме на тому, що
+   ліві краї збігаються, а права не тікає. */
+function FieldPanel({ children, width = "w-[268px]" }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -10, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.96 }}
       transition={{ duration: 0.16, ease: EASE }}
-      className={`absolute left-0 top-[calc(100%+10px)] z-[130] ${width} overflow-hidden rounded-2xl`}
+      className={`absolute left-0 top-[calc(100%+8px)] z-[130] ${width} overflow-hidden rounded-2xl`}
       style={{
+        minWidth: '100%',
         background: T.surfaceHi,
         border: `1px solid ${T.lineHi}`,
         boxShadow: "0 30px 70px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05)",
@@ -164,28 +186,35 @@ function AssetSelect({ options, value, onChange, categories }) {
       <AnimatePresence>
         {open && (
           <FieldPanel>
-            <div className="p-2" style={{ borderBottom: `1px solid ${T.line}` }}>
-              <div className="flex items-center gap-2 rounded-xl px-3" style={{ background: T.sunken, height: 38 }}>
-                <Search size={13} strokeWidth={2.4} style={{ color: T.text4 }} />
-                <input
-                  autoFocus
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Search asset…"
-                  className="w-full border-none bg-transparent text-[13.5px] outline-none"
-                  style={{ fontFamily: T.sans, color: T.text }}
-                />
-              </div>
+            {/* Пошук без власної рамки.
+
+                Була заглиблена плашка з фоном, та ще й із яскравою
+                фіолетовою обводкою у фокусі — рамка в рамці всередині
+                рамки. Тепер поле просто лежить у шапці панелі, а межу
+                малює одна лінія знизу: вона й так відділяє пошук від
+                списку, другої межі для цього не треба. */}
+            <div className="flex items-center gap-2.5 px-3.5" style={{ height: 46, borderBottom: `1px solid ${T.line}` }}>
+              <Search size={14} strokeWidth={2.4} style={{ color: T.text3 }} />
+              <input
+                autoFocus
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search asset…"
+                className="w-full border-none bg-transparent text-[14px] outline-none placeholder:opacity-60"
+                style={{ fontFamily: T.sans, color: T.text, boxShadow: 'none' }}
+              />
             </div>
 
-            <div className="max-h-[260px] overflow-y-auto asset-dropdown-scroll p-1.5">
+            <div className="asset-dropdown-scroll max-h-[288px] overflow-y-auto p-1.5">
               {!q && (
                 <OptionRow active={value === "All"} layoutId="asset-select-active" onClick={() => { onChange("All"); setOpen(false); setQ(""); }}>
-                  <span className="flex items-center gap-2.5 pl-1.5 text-[14px] font-bold" style={{ fontFamily: T.sans, color: value === "All" ? T.acc : T.text2 }}>
-                    <Filter size={14} strokeWidth={2.4} style={{ color: value === "All" ? T.acc : T.text4 }} />
+                  <span className="flex min-w-0 items-center gap-3 text-[14px] font-semibold" style={{ fontFamily: T.sans, color: value === "All" ? T.text : T.text2 }}>
+                    <span className="grid h-7 w-7 shrink-0 place-items-center">
+                      <Filter size={14} strokeWidth={2.4} style={{ color: value === "All" ? T.acc : T.text3 }} />
+                    </span>
                     All assets
                   </span>
-                  {value === "All" && <Check size={14} strokeWidth={3} style={{ color: T.acc }} />}
+                  {value === "All" && <Check size={15} strokeWidth={3} style={{ color: T.acc }} />}
                 </OptionRow>
               )}
 
@@ -193,21 +222,27 @@ function AssetSelect({ options, value, onChange, categories }) {
                 const rowActive = value === o;
                 return (
                   <OptionRow key={o} active={rowActive} layoutId="asset-select-active" onClick={() => { onChange(o); setOpen(false); setQ(""); }}>
-                    <span className="flex min-w-0 items-center gap-2.5 pl-1.5">
-                      <span className="flex w-9 shrink-0 items-center justify-start">
-                        <AssetIcon symbol={o} category={categories[o]} />
+                    {/* Знак активу в квадраті фіксованої ширини.
+
+                        Пара прапорів ширша за одинарний прапор, а той
+                        ширший за монограму — і без спільної колонки
+                        назви в списку стояли сходинкою, кожна зі своїм
+                        відступом. */}
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center">
+                        <AssetIcon symbol={o} category={categories[o]} size={22} />
                       </span>
-                      <span className="truncate text-[14px] font-bold" style={{ fontFamily: T.sans, color: rowActive ? T.acc : T.text2 }}>
+                      <span className="truncate text-[14px] font-semibold" style={{ fontFamily: T.sans, color: rowActive ? T.text : T.text2 }}>
                         {o}
                       </span>
                     </span>
-                    {rowActive && <Check size={14} strokeWidth={3} style={{ color: T.acc }} className="shrink-0" />}
+                    {rowActive && <Check size={15} strokeWidth={3} style={{ color: T.acc }} className="shrink-0" />}
                   </OptionRow>
                 );
               })}
 
               {q && !filtered.length && (
-                <div className="px-3 py-8 text-center text-[13px]" style={{ color: T.text4, fontFamily: T.sans }}>
+                <div className="px-3 py-8 text-center text-[13.5px]" style={{ color: T.text3, fontFamily: T.sans }}>
                   Asset not found
                 </div>
               )}
@@ -658,7 +693,6 @@ export default function TradingJournal() {
   const [tradeToDelete, setTradeToDelete] = useState(null);
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
 
-  const [pulling, setPulling] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [pairCategories, setPairCategories] = useState({});
 
@@ -753,8 +787,12 @@ export default function TradingJournal() {
     const q = applyFilters(
       supabase
         .from("trades")
+        /* profit_money тягнемо обовʼязково: для імпортованих угод це
+           справжній результат від брокера, і без нього підсумок у
+           доларах рахувався лише по тих угодах, де вручну заповнений
+           ризик. */
         .select(
-          "plan_date, result, rr, followed_plan, has_mistake, rushed, account_name, risk"
+          "plan_date, result, rr, followed_plan, has_mistake, rushed, account_name, risk, profit_money"
         )
         .order("plan_date", { ascending: true })
     );
@@ -815,44 +853,11 @@ export default function TradingJournal() {
     [applyFilters, applyQuick, filterPair, dateFrom, dateTo, quick, pageSize]
   );
 
-  /* Ручний імпорт із терміналу.
+  /* Ручного імпорту з терміналу тут більше немає.
 
-     Кнопка нічого не тягне з MT5 сама — доступ до термінала має лише
-     VPS. Вона проштовхує рахунок повз чергу, чекає на воркера і
-     перечитує список: те, що він поклав, зʼявляється в таблиці без
-     перезавантаження сторінки.
-
-     Оголошена саме тут, після fetchTradesList: у списку залежностей
-     ці функції мають уже існувати, інакше React читає їх до
-     ініціалізації і компонент падає ще на рендері. */
-  const pullFromMt5 = useCallback(async () => {
-    if (pulling) return;
-    setPulling(true);
-
-    try {
-      const { trades: rows, synced } = await pullMt5Trades();
-
-      /* Після синхронізації застарів увесь кеш сторінок, а не лише
-         поточна: нові угоди могли лягти в будь-яку з них. */
-      tradesCache.current = {};
-      await Promise.all([fetchTradesList(page, { force: true }), fetchGlobalData()]);
-
-      if (!rows.length) {
-        notify.success('Nothing to import', 'No closed trades on the connected account yet.');
-      } else {
-        notify.success(
-          `${rows.length} trades from MT5`,
-          synced
-            ? 'Freshly synced from the terminal.'
-            : 'From the last sync — the worker is still busy.',
-        );
-      }
-    } catch (e) {
-      notify.error('Couldn’t pull', e?.message || 'Try again in a minute.');
-    } finally {
-      setPulling(false);
-    }
-  }, [pulling, page, fetchTradesList, fetchGlobalData]);
+     Воркер тягне угоди сам щохвилини, тож кнопка просила людину
+     зробити те, що вже робиться без неї. Разом із нею пішли стан
+     `pulling`, обробник і виклик `pullMt5Trades`. */
 
   /* Зміна фільтрів завжди повертає на першу сторінку — інакше
      можна опинитись на сторінці 8, якої після фільтра вже нема. */
@@ -882,6 +887,7 @@ export default function TradingJournal() {
     let wins = 0,
       totalRR = 0,
       totalProfit = 0,
+      priced = 0,
       followed = 0,
       mistakes = 0,
       rushed = 0;
@@ -893,7 +899,7 @@ export default function TradingJournal() {
       if (t.has_mistake) mistakes++;
       if (t.rushed) rushed++;
       const p = getTradeProfit(t, accountsMap);
-      if (p !== null) totalProfit += p;
+      if (p !== null) { totalProfit += p; priced++; }
     });
 
     return {
@@ -901,6 +907,10 @@ export default function TradingJournal() {
       winrate: total ? Math.round((wins / total) * 100) : 0,
       totalRR: parseFloat(totalRR.toFixed(2)),
       totalProfit: parseFloat(totalProfit.toFixed(2)),
+      /* Скільки угод узагалі мають ціну. Якщо менше за всі — сума в
+         доларах порахована не по тому ж наборі, що R, і мовчати про
+         це не можна: саме так «−5.72R» опинявся поруч із «+$191». */
+      pricedTrades: priced,
       planRate: total ? Math.round((followed / total) * 100) : 0,
       mistakeRate: total ? Math.round((mistakes / total) * 100) : 0,
       rushRate: total ? Math.round((rushed / total) * 100) : 0,
@@ -1027,47 +1037,169 @@ export default function TradingJournal() {
             />
             <PeriodSelect value={period} onChange={setPeriod} />
 
-            <button
-              type="button"
-              onClick={pullFromMt5}
-              disabled={pulling}
-              className="inline-flex h-[54px] shrink-0 items-center gap-2.5 rounded-2xl px-5 text-[14px] font-semibold transition-colors duration-200"
-              style={{
-                fontFamily: T.sans,
-                border: `1px solid ${T.line}`,
-                background: T.surface,
-                color: pulling ? T.text3 : T.text2,
-                cursor: pulling ? 'default' : 'pointer',
-              }}
-              onMouseEnter={(e) => { if (!pulling) { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; } }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = pulling ? T.text3 : T.text2; }}
-            >
-              {pulling
-                ? <Loader2 size={16} strokeWidth={2.4} className="animate-spin" />
-                : <DownloadCloud size={16} strokeWidth={2.2} />}
-              <span className="whitespace-nowrap">
-                {pulling ? 'Pulling…' : 'Pull from MT5'}
-              </span>
-            </button>
+            {/* Кнопка «Pull from MT5» прибрана.
 
+                Вона просила людину зробити руками те, що воркер робить
+                сам щохвилини. Кнопка, яка дублює автоматику, шкідлива
+                двічі: вона займає місце в найпомітнішому рядку сторінки
+                і натякає, що без неї дані застаріють — тобто підриває
+                довіру до самої синхронізації. */}
+
+            {/* Головна дія сторінки.
+
+                Раніше вона була зелена, `#00C896` — колір, якого немає
+                більше ніде в застосунку. І це не дрібниця: зелений у
+                журналі вже зайнятий, ним позначені прибуткові угоди.
+                Виходило, що найпомітніший елемент екрана пофарбований
+                у колір результату, хоча жодного результату не означає.
+
+                Тепер акцент — той самий фіолетовий, що й у решти
+                головних дій. Заразом прибраний зсув угору на ховері:
+                правило проєкту каже «замість руху — світло», і тут
+                воно доречне вдвічі, бо кнопка стоїть у рядку з іншими
+                й тягла рядок за собою. */}
             <Magnetic
               onClick={guard(() => setIsTradeModalOpen(true))}
-              className="group ml-1 inline-flex h-[54px] shrink-0 items-center justify-center rounded-2xl px-6 text-[14.5px] font-bold transition-all duration-200 hover:-translate-y-[2px]"
+              /* strength=0 — магніт вимкнено.
+
+                 Саме він і смикав кнопку: Magnetic тягне елемент до
+                 курсора, і перша ж подія руху миші прилітає не з краю,
+                 а звідти, де курсор опинився, — тому кнопка стрибала
+                 вниз ривком замість того, щоб плавно поїхати.
+
+                 Правило сторінки й так каже «замість руху — світло», і
+                 тут воно доречне вдвічі: кнопка стоїть у рядку з
+                 фільтрами й тягла б рядок за собою. Від Magnetic
+                 лишається стиск при натисканні. */
+              strength={0}
+              className="journal-cta group ml-1 inline-flex h-[54px] shrink-0 items-center justify-center rounded-2xl px-6 text-[14.5px] font-bold"
+              /* Темна панель, а не суцільна заливка акцентом.
+
+                 Причина проста: під курсором кнопка перетворюється на
+                 графік, а свічки мають бути зеленими й червоними —
+                 своїми справжніми кольорами. На фіолетовому тлі
+                 зелений і червоний або гаснуть, або починають із ним
+                 сваритись. На темному вони читаються так само, як у
+                 самому журналі, і кнопка стає маленьким терміналом.
+
+                 Помітність від цього не впала: її тримають акцентна
+                 рамка, фіолетовий ореол під кнопкою й іконка. */
               style={{
-                background: "#00C896",
-                color: "#06110D",
+                background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
+                border: `1px solid ${T.lineAcc}`,
+                color: T.text,
                 fontFamily: T.sans,
-                boxShadow: "0 10px 28px -8px rgba(0, 200, 150, 0.55)",
+                boxShadow: `0 10px 28px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`,
+              }}
+              /* Ховер — світлом, а не рухом: кнопка стоїть у рядку з
+                 фільтрами, і будь-який зсув тягнув рядок за собою.
+                 Ореол розростається й трохи яскравішає сама заливка —
+                 цього достатньо, щоб було ясно, що під курсором. */
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = `0 16px 40px -14px rgba(${T.accRgb},0.8), 0 0 0 3px rgba(${T.accRgb},0.14)`;
+                e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = `0 10px 28px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`;
+                e.currentTarget.style.borderColor = T.lineAcc;
               }}
             >
-              <Shine className="[&>span]:!flex [&>span]:!flex-row [&>span]:!items-center [&>span]:!gap-2 [&>span]:!whitespace-nowrap">
-                <Plus
-                  size={16}
-                  strokeWidth={3}
-                  className="!block !shrink-0 transition-transform duration-300 group-hover:rotate-90"
+              {/* Кнопка стає графіком.
+
+                  Під курсором підпис іде вгору й гасне, а знизу
+                  виростають свічки — одна за одною, зліва направо, —
+                  і по їхніх вершинах прокреслюється лінія тренду.
+                  Кнопка показує рівно те, що по ній натискають.
+
+                  Свічки без заокруглень і з `shapeRendering
+                  ="crispEdges"` навмисно. Кнопка розтягує полотно по
+                  ширині, тож дробові координати неминучі — а на них
+                  заокруглений кут у два пікселі перетворюється на
+                  розмиту пляму замість кута. Прямий різкий край на
+                  такому розмірі і чіткіший, і чесніше схожий на
+                  свічку.
+
+                  `preserveAspectRatio="none"` — щоб графік ліг рівно
+                  по кнопці, а не лишив поля. Лінію від розтягування
+                  рятує `vectorEffect`, а `pathLength="1"` робить її
+                  довжину одиничною, щоб малювати її одним зсувом. */}
+              <svg
+                className="journal-cta-chart"
+                viewBox="0 0 220 54"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <defs>
+                  <linearGradient id="journalCtaFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--edge-ok, #34d399)" stopOpacity="0.22" />
+                    <stop offset="100%" stopColor="var(--edge-ok, #34d399)" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Заливка під трендом — зʼявляється першою й дає
+                    відчуття, що кнопка наливається знизу. */}
+                <path
+                  className="journal-cta-area"
+                  d="M0,50 L44,42 L94,32 L146,20 L198,10 L220,6 L220,54 L0,54 Z"
+                  fill="url(#journalCtaFill)"
                 />
-                <span className="!whitespace-nowrap">Add Trade</span>
-              </Shine>
+
+                {/* Свічки. Кожна — своя група, щоб рости від власної
+                    основи, а не від краю кнопки. */}
+                <g shapeRendering="crispEdges">
+                  <g className="journal-cta-candle up">
+                    <rect x="14" y="34" width="2" height="18" />
+                    <rect x="8" y="38" width="14" height="10" />
+                  </g>
+                  <g className="journal-cta-candle up">
+                    <rect x="40" y="27" width="2" height="19" />
+                    <rect x="34" y="30" width="14" height="12" />
+                  </g>
+                  <g className="journal-cta-candle down">
+                    <rect x="66" y="30" width="2" height="19" />
+                    <rect x="60" y="33" width="14" height="11" />
+                  </g>
+                  <g className="journal-cta-candle up">
+                    <rect x="92" y="19" width="2" height="21" />
+                    <rect x="86" y="22" width="14" height="14" />
+                  </g>
+                  <g className="journal-cta-candle down">
+                    <rect x="118" y="23" width="2" height="20" />
+                    <rect x="112" y="26" width="14" height="12" />
+                  </g>
+                  <g className="journal-cta-candle up">
+                    <rect x="144" y="11" width="2" height="21" />
+                    <rect x="138" y="14" width="14" height="14" />
+                  </g>
+                  <g className="journal-cta-candle up">
+                    <rect x="170" y="6" width="2" height="22" />
+                    <rect x="164" y="9" width="14" height="15" />
+                  </g>
+                  <g className="journal-cta-candle up">
+                    <rect x="196" y="1" width="2" height="22" />
+                    <rect x="190" y="4" width="14" height="15" />
+                  </g>
+                </g>
+
+                <path
+                  className="journal-cta-line"
+                  pathLength="1"
+                  d="M3,43 L41,36 L67,39 L93,29 L119,32 L145,21 L171,17 L205,12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeOpacity="0.5"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+
+              <span className="journal-cta-label relative flex items-center gap-2 whitespace-nowrap">
+                <CandlestickChart size={17} strokeWidth={2.6} className="shrink-0" style={{ color: T.acc }} />
+                Add Trade
+              </span>
             </Magnetic>
           </div>
         </motion.div>

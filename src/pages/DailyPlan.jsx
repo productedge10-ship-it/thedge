@@ -32,7 +32,6 @@ import { pushRecentAsset } from '../components/trading/AssetSwitcher';
 import { loadTodayPairs } from '../lib/planAssets';
 import { Section, SectionAnchor, WriteBlock } from '../components/trading/PlanPrimitives';
 import WeeklyPlanView from '../components/trading/WeeklyPlanView';
-import PlanBlocksDock from '../components/trading/PlanBlocksDock';
 import { usePlanBlocks } from '../lib/planBlocks';
 import { T, EASE, useEdgeFonts } from '../components/trading/planTheme';
 import useTerminalSkin from '../hooks/useTerminalSkin';
@@ -963,7 +962,7 @@ export default function DailyPlan() {
           {dailyBlocks.phaseVisible('plan') && (
           <SectionAnchor
             id="plan" first
-            label="Plan" sub="Before"
+            label="Plan"
             icon={Crosshair}
             progress={progress.plan}
           />
@@ -1009,7 +1008,7 @@ export default function DailyPlan() {
           {dailyBlocks.phaseVisible('live') && (
           <SectionAnchor
             id="live" first={!dailyBlocks.phaseVisible('plan')}
-            label="Live" sub="During"
+            label="Live"
             icon={Radio}
             progress={progress.live}
           />
@@ -1047,7 +1046,7 @@ export default function DailyPlan() {
           {dailyBlocks.phaseVisible('review') && (
           <SectionAnchor
             id="review" first={!dailyBlocks.phaseVisible('plan') && !dailyBlocks.phaseVisible('live')}
-            label="Review" sub="After"
+            label="Review"
             icon={LineChart}
             progress={progress.review}
           />
@@ -1110,10 +1109,9 @@ export default function DailyPlan() {
             )}
           </div>
 
-          {/* Налаштування блоків — у підвал сторінки. Ними
-              користуються раз на місяць, а бачили щодня першим
-              екраном, відтісняючи сам план униз. */}
-          <PlanBlocksDock mode="daily" />
+          {/* Налаштування блоків переїхало в хедер, до інших
+              службових кнопок: ними користуються раз на місяць, а
+              панель забирала місце на сторінці щодня. */}
         </motion.div>
         </AnimatePresence>
         </>

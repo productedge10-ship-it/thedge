@@ -13,7 +13,16 @@ import { Spotlight } from '../ui/Hovers';
 /* ---------- Якір секції ---------- */
 /* Розділювач між фазами дня. Дає око за що зачепитись при скролі
    і працює як ціль для навігації в доці. */
-export function SectionAnchor({ id, label, sub, icon: Icon, progress = 0, first }) {
+/* Підпис «Before / During / After» звідси прибраний.
+
+   Він пояснював те, що й так сказано порядком: Plan іде перед Live,
+   Live перед Review — на сторінці, яку читають згори вниз, це не
+   потребує другого підпису. А поруч із головною назвою стояло друге
+   слово тим самим капслоком і тим самим розрядженням, тільки
+   блідішим: два ярлики однакової форми в одній плашці, де жоден не
+   головний. Плюс блідий сірий на 12 пікселях давав контраст 2.1:1 —
+   удвічі менше за норму, тобто його й прочитати було важко. */
+export function SectionAnchor({ id, label, icon: Icon, progress = 0, first }) {
   const done = progress >= 1;
   return (
     <div
@@ -34,12 +43,6 @@ export function SectionAnchor({ id, label, sub, icon: Icon, progress = 0, first 
           style={{ fontFamily: T.sans, color: T.text }}
         >
           {label}
-        </span>
-        <span
-          className="text-[12px] font-bold uppercase tracking-[0.14em]"
-          style={{ fontFamily: T.sans, color: T.text4 }}
-        >
-          {sub}
         </span>
       </div>
 

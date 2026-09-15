@@ -9,6 +9,7 @@ import useDeferredField from '../../hooks/useDeferredField';
 import { T, EASE, SPRING } from './planTheme';
 import { tvImage } from '../../lib/imageStore';
 import { detectTimeframe, loadForPixels } from '../../lib/tfDetect';
+import { useSettings } from '../../context/SettingsContext';
 
 /* Визначає, чи світлий графік — щоб автоматично приглушити його.
 
@@ -75,6 +76,11 @@ function OverlayBtn({ icon: Icon, label, onClick, danger, active }) {
 }
 
 function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
+  /* Автовибір таймфрейму можна вимкнути в налаштуваннях. Читаємо з
+     запасним `!== false`: поки налаштування ще не доїхали з бази, поле
+     порожнє, і жорстка перевірка на `true` мовчки вимикала б
+     розпізнавання на першій вставці після входу. */
+  const { autoTf } = useSettings();
   const [full, setFull] = useState(false);
   const [dim, setDim] = useState(isDimmed || false);
   const [dropHot, setDropHot] = useState(false);
@@ -135,8 +141,12 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
     /* Таймфрейм підставляємо тільки в порожнє поле — вибір людини не
        чіпаємо ніколи. І тільки якщо вона за цей час не встигла
        вибрати сама: OCR триває секунду-другу, і за цей час клік по
-       TfSelect цілком можливий. */
-    if (!tf) {
+       TfSelect цілком можливий.
+
+       Вимикач у налаштуваннях перевіряємо саме тут, а не всередині
+       розпізнавання: так модель узагалі не піднімається, і той, хто
+       автовибором не користується, не качає кілька мегабайт даремно. */
+    if (!tf && autoTf !== false) {
       setTfBusy(true);
       detectTimeframe(pixels)
         .then((found) => {

@@ -15,7 +15,7 @@ import {
 } from '../../lib/accountsStore';
 import DateField from '../ui/DateField';
 import BalanceChart from './BalanceChart';
-import { listMt5Snapshots } from '../../lib/mt5Store';
+import { listMt5Snapshots, listMt5AccountTrades } from '../../lib/mt5Store';
 import { supabase as sb } from '../../lib/supabase';
 
 /* ==================================================================
@@ -118,11 +118,23 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [user?.id, acc.id]);
 
+  /* Угоди рахунку, знайдені по привʼязці. Саме з них будується частина
+     кривої до першого знімка — а знімки починаються не з відкриття
+     рахунку, а з дня, коли воркер навчився їх писати. */
+  const [mt5Trades, setMt5Trades] = useState([]);
+
   useEffect(() => {
     if (!acc.mt5_account_id) return undefined;
     let alive = true;
-    listMt5Snapshots(acc.mt5_account_id, 400)
-      .then((rows) => { if (alive) setShots(rows); })
+    Promise.all([
+      listMt5Snapshots(acc.mt5_account_id, 400),
+      listMt5AccountTrades(acc.mt5_account_id),
+    ])
+      .then(([rows, trs]) => {
+        if (!alive) return;
+        setShots(rows);
+        setMt5Trades(trs);
+      })
       /* Мовчки: крива — доповнення, і якщо вона не приїхала, решта
          картки має відкритись як відкривалась. */
       .catch(() => {});
@@ -215,17 +227,95 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
      момент часу. Якби вони лягли в один ряд, підказка на графіку
      показувала б «виплата $0» там, де нічого не відбувалось.
 
-     Тому рахунок із терміналом малюється знімками, решта — подіями. */
+     Тому рахунок із терміналом малюється знімками, решта — подіями.
+
+     ------------------------------------------------------------------
+     Історія до першого знімка
+
+     Знімки існують не з дня відкриття рахунку, а з дня, коли на VPS
+     зʼявився код, що їх пише. Тому крива починалась із середини життя
+     рахунку — «за весь час» показувало два дні, і це виглядало як
+     втрачені дані, хоча дані на місці.
+
+     Вони в угодах. Кожна закрита угода несе `profit_money`, а перший
+     знімок дає точку опори: віднімаємо від нього суму всіх угод, що
+     були до нього, і отримуємо баланс на початку. Далі йдемо вперед,
+     додаючи по угоді.
+
+     Відтворення, а не вимірювання: воно не бачить поповнень і виплат
+     до першого знімка. Але єдина альтернатива — мовчки починати
+     криву з середини, а це гірша неправда. */
   const points = useMemo(() => {
     if (!acc.mt5_account_id || !shots.length) return events;
-    return shots.map((r) => ({
+
+    /* Один знімок на день — останній.
+
+       Воркер знімає баланс кожні пʼятнадцять хвилин, тож за два дні
+       їх набігає за сотню. Поставлені поруч з історією за два роки,
+       вони займали б половину ширини графіка, а вся торгівля до них
+       тулилась би в лівий край. На осі тут не час, а порядок точок:
+       зайва частота знімків не додає жодної інформації, тільки
+       перекошує картину. */
+    const byDay = new Map();
+    for (const r of [...shots].sort((a, b) => String(a.taken_at).localeCompare(String(b.taken_at)))) {
+      byDay.set(String(r.taken_at).slice(0, 10), r);
+    }
+
+    const snap = [...byDay.values()].map((r) => ({
       id: r.taken_at,
       happened_at: String(r.taken_at).slice(0, 10),
-      balance_after: r.balance,
+      balance_after: Number(r.balance) || 0,
       kind: 'snapshot',
       amount: 0,
     }));
-  }, [acc.mt5_account_id, shots, events]);
+
+    /* Тільки `plan_date`. `exit_time` — це час БЕЗ дати («10:02:00»),
+       і перші десять символів з нього дають не день, а сміття: крива
+       починалась «since 10:02:00», а самі угоди при порівнянні дат
+       відсіювались майже всі. */
+    const dayOf = (t) => String(t?.plan_date || '').slice(0, 10);
+    const edge = snap[0].happened_at;
+
+    /* Беремо угоди, знайдені по привʼязці. Список із `fetchAccountTrades`
+       тут не годиться: він шукає за назвою рахунку, а назву можна
+       змінити — після цього він порожній, і крива тихо втрачає всю
+       історію до першого знімка. */
+    const source = mt5Trades.length ? mt5Trades : trades;
+
+    const past = source
+      .filter((t) => Number.isFinite(Number(t.profit_money)))
+      .map((t) => ({ day: dayOf(t), money: Number(t.profit_money), id: t.id }))
+      .filter((t) => t.day && t.day < edge)
+      .sort((a, b) => a.day.localeCompare(b.day));
+
+    if (!past.length) return snap;
+
+    const total = past.reduce((s, t) => s + t.money, 0);
+    let run = snap[0].balance_after - total;
+
+    /* Перша точка — стан ДО найпершої угоди. Без неї крива починалась
+       би вже з результатом першої угоди всередині. */
+    const line = [{
+      id: 'origin',
+      happened_at: past[0].day,
+      balance_after: run,
+      kind: 'snapshot',
+      amount: 0,
+    }];
+
+    for (const t of past) {
+      run += t.money;
+      line.push({
+        id: `trade-${t.id}`,
+        happened_at: t.day,
+        balance_after: run,
+        kind: 'trade',
+        amount: t.money,
+      });
+    }
+
+    return [...line, ...snap];
+  }, [acc.mt5_account_id, shots, events, trades, mt5Trades]);
 
   /* «30д» показує лише свіжі точки, але завжди лишає одну точку
      перед вирізаним вікном — інакше лінія починалась би нізвідки. */

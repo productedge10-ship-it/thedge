@@ -159,10 +159,21 @@ export const GOALS = [
 
 export const goalById = (id) => GOALS.find((g) => g.id === id) || GOALS[0];
 
+/* ---------- автовизначення таймфрейму ----------
+
+   Коли людина вставляє скрін із TradingView, застосунок читає
+   таймфрейм із шапки й підставляє його сам. Це зручно рівно доти,
+   доки вгадує правильно: помилкове значення в полі гірше за порожнє,
+   бо його треба помітити й виправити, а порожнє просто заповнюють.
+
+   Тому вимикач є. Розпізнавання ніколи не перебиває вже зроблений
+   вибір, але той, хто йому не довіряє, має право вимкнути зовсім —
+   разом із завантаженням самої моделі, яка важить кілька мегабайт. */
 export const DEFAULTS = {
   nickname: '',
   theme: 'dark',
   motion: 'full',
+  autoTf: true,
   /* Помірно, а не яскраво: перше враження важить більше, ніж смак
      того, хто вже звик. Кому мало — вмикає в налаштуваннях. */
   fx: 'medium',
@@ -197,6 +208,7 @@ export function normalize(v) {
     fx: FX.some((f) => f.id === v?.fx) ? v.fx : 'medium',
     psyMode: PSY.some((p) => p.id === v?.psyMode) ? v.psyMode : 'full',
     liveBg: typeof v?.liveBg === 'boolean' ? v.liveBg : true,
+    autoTf: typeof v?.autoTf === 'boolean' ? v.autoTf : true,
     /* Ховати можна тільки те, що існує зараз: розділ могли прибрати з
        коду, і його адреса в списку схованих не має нічого ламати. */
     hiddenNav: Array.isArray(v?.hiddenNav) ? v.hiddenNav.filter((x) => known.has(x)) : [],

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { motion, AnimatePresence, useMotionValue, useMotionTemplate } from 'framer-motion';
-import { Search, ArrowUpDown, Loader2, Inbox, Plus, AlertTriangle, X, Layers, Crosshair, Star } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, ArrowUpDown, Loader2, Inbox, PenLine, AlertTriangle, X, Layers, Crosshair, Star, LayoutGrid, Rows3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { loadSearchIndex, buildFuse, searchPlans } from '../lib/planSearch';
@@ -12,8 +12,19 @@ import DelayedTooltip from '../components/ui/DelayedTooltip';
 import PlanTypeToggle from '../components/ui/PlanTypeToggle';
 import { Spotlight } from '../components/ui/Hovers';
 import AnalysisCard, { biasResult } from '../components/analyses/AnalysisCard';
+import AnalysisRow from '../components/analyses/AnalysisRow';
+import RollingText from '../components/ui/RollingText';
 import WeeklyAnalysisCard from '../components/analyses/WeeklyAnalysisCard';
 import PremiumAnalysisHover from '../components/analyses/PremiumAnalysisHover';
+
+/* Трійка для приглушених станів: у T.text3 своєї немає, а прозорість
+   можна будувати тільки з трійки — токен теми це рядок `var(...)`, і
+   дописати до нього hex-альфу не можна, вийде невалідний CSS. */
+const MUTED_RGB = '122,122,133';
+
+/* Вигляд списку памʼятається між заходами: людина обирає його під свою
+   звичку, а не під конкретну сесію. */
+const VIEW_KEY = 'edge_analyses_view';
 
 const MONTHS_UA = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
 
@@ -77,20 +88,17 @@ export default function Analyses() {
   // Реф, який не дає скидати анімацію при найпершому отриманні даних з бази після рендеру кешу
   
   const observerTarget = useRef(null);
+  const [view, setView] = useState(() => {
+    try { return localStorage.getItem(VIEW_KEY) === 'rows' ? 'rows' : 'cards'; } catch { return 'cards'; }
+  });
+
+  const setViewPersisted = (v) => {
+    setView(v);
+    try { localStorage.setItem(VIEW_KEY, v); } catch { /* приватний режим */ }
+  };
+
   const searchRef = useRef(null);
   const plansLengthRef = useRef(0);
-  const globalMouseX = useMotionValue(0);
-  const globalMouseY = useMotionValue(0);
-  const bgTemplate = useMotionTemplate`radial-gradient(800px circle at ${globalMouseX}px ${globalMouseY}px, rgba(139,123,255,0.05), transparent 80%)`;
-
-  // Ключ для повної перезапуску анімації
-
-
-  function handleGlobalMouseMove({ clientX, clientY }) {
-    globalMouseX.set(clientX);
-    globalMouseY.set(clientY);
-  }
-
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
     return () => clearTimeout(timer);
@@ -369,15 +377,17 @@ export default function Analyses() {
   }
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden" onMouseMove={handleGlobalMouseMove}>
-      <div className="fixed inset-0 z-[0] pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[150px]" style={{ background: `rgba(${T.accRgb},0.10)` }}></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[150px]" style={{ background: `rgba(${T.accRgb},0.06)` }}></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_20%,transparent_100%)]"></div>
-        <motion.div className="absolute inset-0 z-10" style={{ background: bgTemplate }} />
-      </div>
+    <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Власного фону тут більше немає.
 
-      <div className="p-4 md:p-8 w-full max-w-7xl mx-auto pb-20 relative z-[10]">
+          Було чотири шари поверх спільного тла застосунку: дві плями
+          з blur(150px), сітка 64×64 і градієнт за курсором. Через них
+          сторінка виглядала світлішою й іншою за кольором, ніж журнал
+          угод, — хоча токени в обох однакові. Тло має бути одне на
+          весь застосунок, його малює Layout, і сперечатись із ним
+          окремим сторінкам не варто. */}
+
+      <div className="relative z-[10] mx-auto w-full max-w-[2200px] px-4 pb-24 pt-5 sm:px-6 lg:w-[92%] lg:px-0 lg:pt-6">
         <div className="mb-8 flex flex-col gap-5 relative z-50">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="min-w-0">
@@ -397,29 +407,94 @@ export default function Analyses() {
               </p>
             </div>
 
+            {/* Кнопка, яка пише сама себе.
+
+                Під курсором відбувається три речі одночасно, і жодна
+                з них не ховає текст — навпаки, текст тут головний:
+
+                1. Підпис ПЕРЕКОЧУЄТЬСЯ. Кожна літера — окреме віконце,
+                   у якому стара літера їде вгору, а знизу приїжджає
+                   нова: «Новий аналіз» → «Почати запис». Хвиля йде
+                   зліва направо, як набір на клавіатурі.
+                2. Під словом від руки прокреслюється лінія — той
+                   самий жест, яким підкреслюють у зошиті.
+                3. По кнопці проходить промінь світла — те саме, що
+                   блиск на металі.
+
+                Ручка при цьому нахиляється, як у момент письма. */}
             <button
               onClick={createNewPlan}
-              className="group inline-flex h-[46px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
+              className="analysis-cta group relative inline-flex h-[46px] shrink-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-xl pl-4 pr-5 text-[14px] font-bold"
               style={{
-                background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans,
-                boxShadow: `0 6px 18px -8px rgba(${T.accRgb},0.6)`,
+                background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
+                border: `1px solid ${T.lineAcc}`,
+                color: T.text,
+                fontFamily: T.sans,
+                boxShadow: `0 8px 22px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`,
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.boxShadow = `0 10px 26px -8px rgba(${T.accRgb},0.75)`)}
-              onMouseLeave={(e) => (e.currentTarget.style.boxShadow = `0 6px 18px -8px rgba(${T.accRgb},0.6)`)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = `0 14px 34px -14px rgba(${T.accRgb},0.8), 0 0 0 3px rgba(${T.accRgb},0.14)`;
+                e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = `0 8px 22px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`;
+                e.currentTarget.style.borderColor = T.lineAcc;
+              }}
             >
-              <Plus size={17} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
-              {planType === 'weekly' ? 'Новий тиждень' : 'Новий аналіз'}
+              {/* Промінь світла, що проходить по кнопці разом із
+                  хвилею літер — те саме, що робить блиск на металі. */}
+              <span aria-hidden="true" className="analysis-cta-sheen" />
+
+              <span className="analysis-cta-row relative flex items-center gap-2">
+                <PenLine size={16} strokeWidth={2.6} className="analysis-cta-icon shrink-0" style={{ color: T.acc }} />
+
+                <RollingText
+                  from={planType === 'weekly' ? 'Новий тиждень' : 'Новий аналіз'}
+                  to={planType === 'weekly' ? 'Почати тиждень' : 'Почати запис'}
+                />
+              </span>
+
+              {/* Підкреслення від руки — під самим словом. */}
+              <svg
+                className="analysis-cta-ink"
+                viewBox="0 0 200 46"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  className="analysis-cta-stroke analysis-cta-stroke-1"
+                  pathLength="1"
+                  d="M38,33 C60,29 78,36 100,32 C122,28 142,35 166,30.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+                <path
+                  className="analysis-cta-stroke analysis-cta-stroke-2"
+                  pathLength="1"
+                  d="M44,37.5 C64,34.5 82,39 104,36 C118,34 128,37 140,35.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeOpacity="0.4"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
             </button>
           </div>
 
           {/* зведення */}
           {plans.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 items-stretch gap-3 sm:grid-cols-4">
               {[
                 {
                   label: planType === 'weekly' ? 'Тижнів' : 'Планів', value: summary.total, icon: Layers,
                   hint: summary.thisMonth ? `${summary.thisMonth} цього місяця` : 'за фільтром',
-                  color: T.acc,
+                  color: T.acc, rgb: T.accRgb,
                   progress: null,
                 },
                 {
@@ -429,6 +504,7 @@ export default function Analyses() {
                     ? `перевірено ${summary.checked}`
                     : planType === 'weekly' ? 'постав фактичний bias по активу' : 'постав фактичний біас',
                   color: summary.accuracy === null ? T.text3 : summary.accuracy >= 60 ? T.ok : summary.accuracy >= 40 ? T.warn : T.bad,
+                  rgb: summary.accuracy === null ? MUTED_RGB : summary.accuracy >= 60 ? T.okRgb : summary.accuracy >= 40 ? T.warnRgb : T.badRgb,
                   progress: summary.accuracy === null ? null : summary.accuracy / 100,
                 },
                 {
@@ -436,6 +512,7 @@ export default function Analyses() {
                   value: summary.rating === null ? '—' : summary.rating.toFixed(1),
                   hint: planType === 'weekly' ? 'із 5 за тиждень' : 'із 5 за виконання',
                   color: summary.rating === null ? T.text3 : summary.rating >= 4 ? T.ok : summary.rating >= 3 ? T.warn : T.bad,
+                  rgb: summary.rating === null ? MUTED_RGB : summary.rating >= 4 ? T.okRgb : summary.rating >= 3 ? T.warnRgb : T.badRgb,
                   progress: summary.rating === null ? null : summary.rating / 5,
                 },
                 {
@@ -443,6 +520,7 @@ export default function Analyses() {
                   value: summary.mistakes,
                   hint: planType === 'weekly' ? 'тиждень без ідеї' : 'позначено в аналізі',
                   color: planType === 'weekly' ? T.text3 : (summary.mistakes ? T.warn : T.ok),
+                  rgb: planType === 'weekly' ? MUTED_RGB : (summary.mistakes ? T.warnRgb : T.okRgb),
                   progress: summary.total ? summary.mistakes / summary.total : null,
                 },
               ].map((s, i) => {
@@ -453,14 +531,15 @@ export default function Analyses() {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: i * 0.04, ease: EASE }}
+                    className="h-full"
                   >
                     <Spotlight
                       clip
                       radius={260}
-                      color={`${s.color}40`}
-                      className="min-w-0 rounded-2xl px-4 py-3.5 transition-colors duration-300"
+                      color={`rgba(${s.rgb},0.25)`}
+                      className="flex h-full min-w-0 flex-col rounded-2xl px-4 py-3.5 transition-colors duration-300"
                       style={{ background: T.surface, border: `1px solid ${T.line}` }}
-                      onMouseEnter={(e) => (e.currentTarget.style.borderColor = `${s.color}44`)}
+                      onMouseEnter={(e) => (e.currentTarget.style.borderColor = `rgba(${s.rgb},0.4)`)}
                       onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
                     >
                       {/* кольорове відлуння, що прокидається під курсором */}
@@ -470,7 +549,7 @@ export default function Analyses() {
                       />
 
                       <div className="flex items-start justify-between gap-2">
-                        <span className="truncate text-[12px] font-semibold uppercase tracking-[0.09em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                        <span className="truncate text-[12px] font-semibold uppercase tracking-[0.09em]" style={{ fontFamily: T.sans, color: T.text3 }}>
                           {s.label}
                         </span>
                         <Icon
@@ -482,15 +561,22 @@ export default function Analyses() {
                       </div>
 
                       <div
-                        className="mt-1.5 truncate text-[26px] font-bold tabular-nums leading-none transition-transform duration-300 group-hover:translate-x-0.5"
+                        className="mt-2 truncate text-[28px] font-bold tabular-nums leading-none"
                         style={{ fontFamily: T.display, color: s.color }}
                       >
                         {s.value}
                       </div>
 
-                      {/* тонка смужка під цифрою — рівень, а не просто число */}
-                      {s.progress !== null && (
-                        <div className="mt-2.5 h-1 overflow-hidden rounded-full" style={{ background: T.sunken }}>
+                      {/* Смужка є завжди, навіть порожня.
+
+                          Саме через неї картки й були різної висоти: у
+                          «Планів» рівня немає взагалі, у «Середній
+                          оцінці» його немає, поки немає оцінок — і два
+                          з чотирьох блоків у рядку виходили нижчими.
+                          Порожня доріжка тримає ритм і заразом чесно
+                          каже «тут буде рівень, коли буде що міряти». */}
+                      <div className="mt-3 h-1 overflow-hidden rounded-full" style={{ background: T.sunken }}>
+                        {s.progress !== null && (
                           <motion.div
                             className="h-full rounded-full"
                             initial={{ width: 0 }}
@@ -498,10 +584,14 @@ export default function Analyses() {
                             transition={{ duration: 0.7, delay: 0.1 + i * 0.05, ease: premiumEasing }}
                             style={{ background: s.color }}
                           />
-                        </div>
-                      )}
+                        )}
+                      </div>
 
-                      <div className="mt-1.5 truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                      {/* mt-auto притискає підказку до низу: рядки
+                          підписів бувають різної довжини, і без цього
+                          вони висіли б на різній висоті навіть при
+                          однаковій висоті карток. */}
+                      <div className="mt-auto truncate pt-2 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
                         {s.hint}
                       </div>
                     </Spotlight>
@@ -627,8 +717,46 @@ export default function Analyses() {
                <DateRangePicker dateFrom={dateFrom} dateTo={dateTo} onChange={(from, to) => { setDateFrom(from); setDateTo(to); }} />
             </div>
 
-            <div className="w-px h-8 bg-white/10 hidden lg:block mx-1"></div>
-            
+            <div className="w-px h-8 hidden lg:block mx-1" style={{ background: T.line }}></div>
+
+            {/* Вигляд списку.
+
+                Картки показують головне й ховають решту в панель, що
+                зʼявляється при наведенні, — добре, коли планів мало й
+                кожен розглядають окремо. Рядки показують геть усе
+                одразу й вирівнюють поля по колонках — добре, коли
+                планів багато й їх порівнюють між собою. Це різні
+                задачі, тому вибір лишаємо людині. */}
+            <div className="flex h-12 shrink-0 items-center gap-1 rounded-xl p-1" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
+              {[
+                { id: 'cards', icon: LayoutGrid, label: 'Картками' },
+                { id: 'rows', icon: Rows3, label: 'Рядками' },
+              ].map((v) => {
+                const on = view === v.id;
+                const Icon = v.icon;
+                return (
+                  <button
+                    key={v.id}
+                    onClick={() => setViewPersisted(v.id)}
+                    title={v.label}
+                    aria-pressed={on}
+                    className="relative grid h-full w-10 place-items-center rounded-lg transition-colors duration-200"
+                    style={{ color: on ? T.acc : T.text3 }}
+                  >
+                    {on && (
+                      <motion.span
+                        layoutId="analyses-view-pill"
+                        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                        className="absolute inset-0 rounded-lg"
+                        style={{ background: `rgba(${T.accRgb},0.13)`, border: `1px solid ${T.accLine}` }}
+                      />
+                    )}
+                    <Icon size={16} strokeWidth={2.3} className="relative" />
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Порядок тепер підписаний — видно, що саме змінилось */}
             <button
               onClick={toggleSortOrder}
@@ -745,20 +873,16 @@ export default function Analyses() {
                 key={`${planType}|${sortOrder}|${selectedPair}|${debouncedSearch}|${dateFrom}|${dateTo}`}
                 className="relative w-full"
               >
-                {/* стрічка по місяцях: зліва тонка лінія з вузлами */}
-                <div className="absolute bottom-2 left-[7px] top-3 hidden w-px lg:block" style={{ background: T.line }} />
+                {/* Лівої стрічки з вузлами тут більше немає.
 
+                    Вона малювала вертикаль через усю сторінку, хоча
+                    нести їй нічого: місяці й так відокремлені
+                    заголовком і відступом у 40 пікселів. Виходила
+                    лінія заради лінії, яка ще й з'їдала ширину зліва
+                    у всіх карток. */}
                 <div className="flex flex-col gap-10">
                   {months.map((month) => (
-                    <section key={month.key} className="relative lg:pl-10">
-                      {/* вузол на лінії */}
-                      <span
-                        className="absolute left-0 top-[9px] hidden h-4 w-4 items-center justify-center lg:flex"
-                        style={{ background: T.bg }}
-                      >
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: T.acc, boxShadow: `0 0 12px rgba(${T.accRgb},0.7)` }} />
-                      </span>
-
+                    <section key={month.key} className="relative">
                       {/* шапка місяця */}
                       <div className="mb-4 flex flex-wrap items-baseline gap-3">
                         <h2
@@ -767,7 +891,7 @@ export default function Analyses() {
                         >
                           {month.label}
                         </h2>
-                        <span className="text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
+                        <span className="text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text3 }}>
                           {planType === 'weekly'
                             ? `${month.list.length} ${month.list.length === 1 ? 'тиждень' : month.list.length < 5 ? 'тижні' : 'тижнів'}`
                             : `${month.list.length} ${month.list.length === 1 ? 'план' : 'планів'}`}
@@ -792,7 +916,34 @@ export default function Analyses() {
                         <span className="ml-auto hidden h-px flex-1 sm:block" style={{ background: `linear-gradient(90deg, ${T.line}, transparent)` }} />
                       </div>
 
-                      <div className="grid w-full grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                      {/* Два вигляди одного списку.
+
+                          Рядками — без ховер-панелі: сенс вигляду саме
+                          в тому, що ховати вже нічого, усе поле видно
+                          одразу. Тижневі плани лишаються картками в
+                          обох режимах: у них інший набір полів, і
+                          вганяти його в ті самі колонки означало б
+                          вигадувати порожні клітинки. */}
+                      {/* Перемикання виглядів — з переходом.
+
+                          Без нього сітка й список підмінялись в один
+                          кадр: розкладка стрибала, і людина щоразу
+                          мусила заново знайти очима, де тепер що.
+                          `mode="wait"` навмисно — старий вигляд
+                          спершу йде, і тільки потім приходить новий;
+                          якщо пустити їх одночасно, у момент
+                          перетину на екрані два різні списки. */}
+                      <AnimatePresence mode="wait" initial={false}>
+                      <motion.div
+                        key={view}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6, transition: { duration: 0.14, ease: EASE } }}
+                        transition={{ duration: 0.26, ease: premiumEasing }}
+                        className={view === 'rows'
+                          ? 'flex w-full flex-col gap-2'
+                          : 'grid w-full grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'}
+                      >
                         {month.list.map((plan, i) => (
                           <motion.div
                             key={plan.id}
@@ -800,13 +951,18 @@ export default function Analyses() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{
                               duration: 0.3,
-                              delay: Math.min(i, 8) * 0.03,
+                              /* Хвиля коротка: у списку рядків їх на
+                                 екрані більше, і довга черга
+                                 перетворює перемикання на чекання. */
+                              delay: Math.min(i, 6) * 0.025,
                               ease: premiumEasing,
                             }}
-                            className="relative z-10 h-full hover:z-[100]"
+                            className={view === 'rows' ? 'relative z-10' : 'relative z-10 h-full hover:z-[100]'}
                           >
                             {plan.plan_type === 'weekly' ? (
                               <WeeklyAnalysisCard plan={plan} onClick={openPlan} onDelete={handleDeleteClick} />
+                            ) : view === 'rows' ? (
+                              <AnalysisRow plan={plan} onClick={openPlan} onDelete={handleDeleteClick} />
                             ) : (
                               <PremiumAnalysisHover planData={plan}>
                                 <AnalysisCard plan={plan} onClick={openPlan} onDelete={handleDeleteClick} />
@@ -814,7 +970,8 @@ export default function Analyses() {
                             )}
                           </motion.div>
                         ))}
-                      </div>
+                      </motion.div>
+                      </AnimatePresence>
                     </section>
                   ))}
                 </div>

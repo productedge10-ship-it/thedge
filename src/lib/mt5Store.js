@@ -321,3 +321,44 @@ export async function pullMt5Trades({ timeoutMs = 25000 } = {}) {
      Угоди все одно віддаємо — просто це ще не оновлені дані. */
   return { trades: trades || [], synced, accounts };
 }
+
+/* ------------------------------------------------------------------
+   Угоди одного підключеного рахунку — по привʼязці, а не по назві.
+
+   Досі історію для картки рахунку брали фільтром
+   `account_name = firm_name`. Збігається це рівно доти, доки людину
+   влаштовує назва: воркер пише в угоди назву з терміналу, а картку
+   можна перейменувати одним кліком. Після цього збіг зникає, і крива
+   мовчки порожніє — без помилки, без жодного сліду.
+
+   `external_id` = «{логін}:{номер позиції}», а логін рахунку ми знаємо
+   точно. Це звʼязок, який перейменування не ламає.
+------------------------------------------------------------------ */
+export async function listMt5AccountTrades(mt5AccountId) {
+  if (!mt5AccountId) return [];
+
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth?.user?.id;
+  if (!uid) return [];
+
+  const { data: acc } = await supabase
+    .from('mt5_accounts')
+    .select('login')
+    .eq('id', mt5AccountId)
+    .eq('user_id', uid)
+    .maybeSingle();
+
+  if (!acc?.login) return [];
+
+  /* Явний user_id, хоч RLS і є: політика `admin_read_all` дозволяє
+     адміну читати чужі рядки, тож фільтр мусить бути свій. */
+  const { data, error } = await supabase
+    .from('trades')
+    .select('id, plan_date, profit_money, external_id')
+    .eq('user_id', uid)
+    .like('external_id', `${acc.login}:%`)
+    .order('plan_date', { ascending: true });
+
+  if (error) return [];
+  return data || [];
+}

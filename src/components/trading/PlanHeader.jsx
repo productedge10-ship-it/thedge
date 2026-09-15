@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
-import { CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2, ChevronDown, Layers } from 'lucide-react';
+import { CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2, ChevronDown, Layers, LayoutGrid } from 'lucide-react';
 import AssetIcon from '../ui/AssetIcon';
 import { T, SPRING, EASE } from './planTheme';
+import { usePlanBlocks, PHASE_LABEL } from '../../lib/planBlocks';
 
 /* ==================================================================
    Хедер плану. Раніше 6 різнокольорових кнопок кричали однаково
@@ -225,6 +226,171 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
   );
 }
 
+/* ------------------------------------------------------------------
+   Блоки плану.
+
+   Раніше це була панель угорі сторінки, під метаданими. Вона мала
+   дві біди, і обидві структурні, а не косметичні.
+
+   Перша: місце. Блоки налаштовують раз на місяць, а панель бачили
+   щодня — і щодня вона відтісняла сам план униз. Навіть згорнута в
+   один рядок вона лишалась першим, що читає око на сторінці, яка
+   взагалі не про налаштування.
+
+   Друга: пунктир означав у ній дві різні речі одночасно. Контейнер
+   був обведений пунктиром просто як оздоба, а вимкнений блок
+   усередині — теж пунктиром, але вже зі змістом «сюди можна додати».
+   Один сигнал, два значення, в одному компоненті: око читає це як
+   недомальоване.
+
+   Тут обидві зникають самі. Налаштування живе серед інших службових
+   кнопок хедера, а на місці пунктиру — звичайний список із
+   галочками, той самий, що в перемикачі планів поруч.
+------------------------------------------------------------------ */
+function BlocksMenu({ mode }) {
+  const { blocks, isVisible, toggle, hidden } = usePlanBlocks(mode);
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const shown = blocks.length - blocks.filter((b) => hidden.includes(b.id)).length;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+
+  const phases = ['plan', 'live', 'review'];
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label="Блоки плану"
+        title="Блоки плану"
+        className="group relative flex h-[38px] items-center gap-2 rounded-xl px-3 transition-all duration-200 active:scale-[0.97]"
+        style={{
+          fontFamily: T.sans,
+          background: open ? T.surfaceHi : T.surface,
+          border: `1px solid ${open ? T.lineAcc : T.line}`,
+        }}
+        onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = T.lineHi; }}
+        onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = T.line; }}
+      >
+        <LayoutGrid size={15} strokeWidth={2.2} style={{ color: open ? T.acc : T.text2 }} />
+        {/* Показуємо лічильник, лише коли щось приховано. Постійне
+            «8 з 8» — це шум: воно не повідомляє нічого, поки людина
+            сама нічого не змінила. */}
+        {shown < blocks.length && (
+          <span
+            className="rounded-md px-1.5 text-[11px] font-bold tabular-nums"
+            style={{ background: `rgba(${T.accRgb},0.14)`, color: T.acc }}
+          >
+            {shown}/{blocks.length}
+          </span>
+        )}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.97 }}
+            transition={{ duration: 0.17, ease: EASE }}
+            className="absolute right-0 top-[calc(100%+8px)] z-[80] w-[264px] overflow-hidden rounded-2xl p-1.5"
+            style={{
+              background: T.surfaceHi,
+              border: `1px solid ${T.lineHi}`,
+              boxShadow: '0 30px 70px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05)',
+            }}
+          >
+            <div
+              className="px-2.5 pb-2 pt-1.5 text-[12px] leading-[17px]"
+              style={{ fontFamily: T.sans, color: T.text3 }}
+            >
+              Залиш тільки те, чим користуєшся. Записи прихованих блоків не зникають.
+            </div>
+
+            <div className="max-h-[52vh] overflow-y-auto">
+              {phases.map((phase) => {
+                const list = blocks.filter((b) => b.phase === phase);
+                if (!list.length) return null;
+                return (
+                  <div key={phase}>
+                    <div
+                      className="px-2.5 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.14em]"
+                      style={{ fontFamily: T.sans, color: T.text3 }}
+                    >
+                      {PHASE_LABEL[phase]}
+                    </div>
+
+                    {list.map((b) => {
+                      const on = isVisible(b.id);
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          role="menuitemcheckbox"
+                          aria-checked={on}
+                          onClick={() => toggle(b.id)}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors duration-150"
+                          onMouseEnter={(e) => { e.currentTarget.style.background = T.surface; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          {/* Стан читається заливкою й галочкою, а не
+                              типом рамки: суцільна проти пунктирної на
+                              двадцяти пікселях не розрізняється зовсім. */}
+                          <span
+                            className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-lg transition-colors duration-200"
+                            style={{
+                              background: on ? `rgba(${T.okRgb},0.16)` : 'transparent',
+                              border: `1px solid ${on ? `rgba(${T.okRgb},0.32)` : T.lineHi}`,
+                              color: on ? T.ok : T.text3,
+                            }}
+                          >
+                            <AnimatePresence mode="wait" initial={false}>
+                              <motion.span
+                                key={on ? 'on' : 'off'}
+                                initial={{ scale: 0.4, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.4, opacity: 0 }}
+                                transition={{ duration: 0.14 }}
+                                className="grid place-items-center"
+                              >
+                                {on ? <Check size={13} strokeWidth={3} /> : <Plus size={13} strokeWidth={2.8} />}
+                              </motion.span>
+                            </AnimatePresence>
+                          </span>
+
+                          <span
+                            className="flex-1 truncate text-[13.5px] font-semibold"
+                            style={{ fontFamily: T.sans, color: on ? T.text2 : T.text3 }}
+                          >
+                            {b.title}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function PlanHeader({
   title,
   pair,
@@ -341,6 +507,7 @@ export default function PlanHeader({
 
           <div className="mx-1 h-6 w-px" style={{ background: T.line }} />
 
+          <BlocksMenu mode={mode} />
           <IconBtn icon={Send}    label="Telegram alert" onClick={onOpenTgAlert} tone={T.info} />
           <ShareBtn onShare={onShare} />
 

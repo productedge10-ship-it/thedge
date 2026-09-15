@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Building2, Wallet, Plus, Trash2, X, Activity,
   Loader2, Pencil, Trophy, ArrowDownToLine, TrendingUp, TrendingDown, ArrowRight, Archive, Lock,
+  Plug,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +13,7 @@ import { T } from '../lib/theme';
 import { money, money2 } from '../lib/accountsStore';
 import { supabase as sb } from '../lib/supabase';
 import AccountDetails from '../components/accounts/AccountDetails';
+import { Mt5Card } from '../components/modals/SettingsModal';
 
 const PREDEFINED_FIRMS = [
   'FTMO', 'Funding Pips', 'Topstep', 'The Funded Trader', 
@@ -120,6 +122,23 @@ export default function Accounts() {
   const [newDailyLoss, setNewDailyLoss] = useState('');
   const [newTotalLoss, setNewTotalLoss] = useState('');
 
+  /* Два способи завести рахунок, одна модалка.
+
+     'manual' — картка, яку людина веде руками: баланс і ліміти вона
+     вписує сама, і ніхто їх не чіпає.
+
+     'mt5' — привʼязка терміналу. Тут ми НЕ створюємо картку: її
+     створить воркер, коли реально зайде в термінал і побачить баланс.
+     Створити її наперед означало б показати людині власноруч введену
+     цифру, яку за хвилину мовчки перепишуть, — а це читається як глюк,
+     не як синхронізація.
+
+     Саму форму не переписуємо, а беремо ту саму картку, що в
+     налаштуваннях. Своя копія полів тут уже була — і браузер одразу
+     підставив у неї пошту й пароль від входу замість логіна
+     терміналу. */
+  const [addMode, setAddMode] = useState('manual');
+
   const [selectedAcc, setSelectedAcc] = useState(null);
   /* «Архів» тут — це вигляд екрана, не окреме поле в БД: перемикає,
      які акаунти показує сітка — активні чи закриті. */
@@ -156,8 +175,8 @@ export default function Accounts() {
     }
   }
 
-  const closeModal = () => { setIsModalOpen(false); setEditingId(null); setNewFirm(''); setNewBalance(''); setNewDailyLoss(''); setNewTotalLoss(''); };
-  const openAddModal = () => { setEditingId(null); setNewFirm(''); setNewBalance(''); setNewDailyLoss(''); setNewTotalLoss(''); setIsModalOpen(true); };
+  const closeModal = () => { setIsModalOpen(false); setEditingId(null); setNewFirm(''); setNewBalance(''); setNewDailyLoss(''); setNewTotalLoss(''); setAddMode('manual'); };
+  const openAddModal = () => { setEditingId(null); setNewFirm(''); setNewBalance(''); setNewDailyLoss(''); setNewTotalLoss(''); setAddMode('manual'); setIsModalOpen(true); };
   const openEditModal = (e, acc) => {
     e.stopPropagation();
     setEditingId(acc.id);
@@ -690,7 +709,66 @@ return (
               </button>
             </div>
 
+            {/* Перемикач способу.
+
+                Показуємо тільки при створенні: редагувати вже
+                створену картку через привʼязку терміналу неможливо,
+                і вибір там був би кнопкою в нікуди. */}
+            {!editingId && (
+              <div className="flex shrink-0 gap-1 px-5 pt-5 sm:px-6">
+                <div className="flex w-full gap-[3px] rounded-[11px] p-[3px]" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
+                  {[
+                    ['manual', 'Enter manually', Building2],
+                    ['mt5', 'Link MT5 terminal', Plug],
+                  ].map(([k, l, Icon]) => {
+                    const on = addMode === k;
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setAddMode(k)}
+                        className="relative flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[12px] font-bold transition-colors duration-150"
+                        style={{ color: on ? T.text : T.text3 }}
+                      >
+                        {on && (
+                          <motion.span
+                            layoutId="acc-add-mode"
+                            transition={{ type: 'spring', stiffness: 520, damping: 38 }}
+                            className="absolute inset-0 rounded-lg"
+                            style={{ background: T.surfaceHi, border: `1px solid ${T.line}` }}
+                          />
+                        )}
+                        <span className="relative z-10 flex items-center gap-2">
+                          <Icon size={13} strokeWidth={2.4} />
+                          {l}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ─────────── Привʼязка терміналу ─────────── */}
+            {addMode === 'mt5' && !editingId && (
+              <div className="overflow-y-auto p-5 sm:p-6">
+                <Mt5Card
+                  fancy
+                  open
+                  faded={false}
+                  onHover={() => {}}
+                  onOpen={() => {}}
+                  onClose={closeModal}
+                  onSaved={() => { closeModal(); fetchAccounts(); }}
+                />
+                <p className="mt-4 text-center text-[12px] leading-[19px] text-[var(--edge-text4)]">
+                  Картка зʼявиться тут сама, щойно сервер зайде в термінал — з реальним балансом і назвою звідти.
+                </p>
+              </div>
+            )}
+
             {/* Форма */}
+            {(addMode === 'manual' || editingId) && (
             <form onSubmit={handleSubmitAccount} className="p-5 sm:p-6 flex flex-col gap-6 sm:gap-8 overflow-y-auto">
               
               {/* Секція: Вибір Фірми */}
@@ -905,6 +983,7 @@ return (
               </motion.button>
 
             </form>
+            )}
           </motion.div>
         </motion.div>
       )}
