@@ -14,12 +14,52 @@ import { T, EASE, SPRING } from './planTheme';
    трейдер бачить результат оцінки одразу, без «Awaiting».
 ================================================================== */
 
-const RATING = [
-  { label: 'Погано',   color: T.bad,  rgb: T.badRgb },
-  { label: 'Слабко',   color: '#fb923c', rgb: '251,146,60' },
-  { label: 'Середньо', color: T.warn, rgb: T.warnRgb },
-  { label: 'Добре',    color: '#a3e635', rgb: '163,230,53' },
-  { label: 'Відмінно', color: T.ok,   rgb: T.okRgb },
+/* Як минув день — одна відповідь із чотирьох.
+
+   Спершу тут була оцінка від 1 до 5, потім список помилок. Обидва
+   промахнулись повз питання. Оцінка — бо шкала живе тільки в голові
+   того, хто ставив: сьогоднішня пʼятірка і завтрашня про різне.
+   Список помилок — бо це розбір ОКРЕМОЇ УГОДИ, а він уже є в картці
+   угоди; день не «пересував стоп», день минув якось.
+
+   Ці чотири відповіді покривають усе, що справді відрізняє один
+   торговий день від іншого: торгував чи ні, і чи тримався свого.
+   Найважливіша з них — «Пропустив своє»: без неї день без угод
+   виглядає однаково і коли сетапу не було, і коли ти його побачив
+   та не зайшов. А це протилежні дні. */
+const DAY_FLOW = [
+  {
+    id: 'plan',
+    label: 'За планом',
+    hint: 'Торгував і робив те, що збирався',
+    color: '#34d399',
+  },
+  {
+    id: 'drift',
+    label: 'З відхиленнями',
+    hint: 'Торгував, але відходив від плану',
+    color: '#fbbf24',
+  },
+  {
+    id: 'flat',
+    label: 'Не торгував',
+    hint: 'Свого сетапу не було — і це правильно',
+    color: T.acc,
+  },
+  {
+    id: 'missed',
+    label: 'Пропустив своє',
+    hint: 'Сетап був, але не зайшов',
+    color: '#fb923c',
+  },
+];
+
+const DAY_STATES = [
+  { id: 'calm',      label: 'Спокій',      color: '#34d399' },
+  { id: 'confident', label: 'Впевненість', color: T.acc },
+  { id: 'anxious',   label: 'Тривога',     color: '#fbbf24' },
+  { id: 'fomo',      label: 'FOMO',        color: '#fb923c' },
+  { id: 'tilt',      label: 'Тільт',       color: '#f87171' },
 ];
 
 function BiasBadge({ value }) {
@@ -120,10 +160,10 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
   const filled = useMemo(() => {
     let n = 0;
     if (planData.actualNarrative) n++;
-    if (planData.sessionRating > 0) n++;
-    if (planData.analysisMistake !== null) n++;
+    if (planData.dayFlow) n++;
+    if (planData.dayState) n++;
     return n;
-  }, [planData.actualNarrative, planData.sessionRating, planData.analysisMistake]);
+  }, [planData.actualNarrative, planData.dayFlow, planData.dayState]);
 
   return (
     <div className="px-5 py-6 sm:px-6">
@@ -205,102 +245,70 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
         </AnimatePresence>
       </Step>
 
-      {/* 02 — Execution */}
-      <Step n="02" title="Якість виконання" hint="Наскільки дисципліновано зайшов, вів і вийшов?">
-        <div className="flex flex-col gap-3.5">
+      {/* 02 — як минув день */}
+      <Step n="02" title="Як минув торговий день" hint="Одна відповідь — та, що ближча до правди">
+        <div className="grid gap-2 sm:grid-cols-2">
+          {DAY_FLOW.map((f) => {
+            const on = planData.dayFlow === f.id;
+            return (
+              <motion.button
+                key={f.id}
+                whileTap={{ scale: 0.985 }}
+                transition={SPRING}
+                onClick={() => updatePlanData({ dayFlow: on ? null : f.id })}
+                className="flex flex-col items-start gap-1 rounded-xl px-4 py-3 text-left transition-all duration-200"
+                style={{
+                  fontFamily: T.sans,
+                  background: on ? `${f.color}14` : T.sunken,
+                  border: `1px solid ${on ? `${f.color}66` : T.line}`,
+                  boxShadow: on ? `0 0 20px -10px ${f.color}` : 'none',
+                }}
+                onMouseEnter={(e) => !on && (e.currentTarget.style.borderColor = T.lineHi)}
+                onMouseLeave={(e) => !on && (e.currentTarget.style.borderColor = T.line)}
+              >
+                <span className="text-[14.5px] font-semibold" style={{ color: on ? f.color : T.text2 }}>
+                  {f.label}
+                </span>
+                <span className="text-[12.5px]" style={{ color: T.text4 }}>
+                  {f.hint}
+                </span>
+              </motion.button>
+            );
+          })}
+        </div>
+      </Step>
+
+      {/* 03 — стан */}
+      <Step n="03" title="Що керувало тобою сьогодні" hint="Один стан — той, що визначав рішення" last>
+        <div className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
-            {RATING.map((r, i) => {
-              const n = i + 1;
-              const active = planData.sessionRating === n;
+            {DAY_STATES.map((st) => {
+              const on = planData.dayState === st.id;
               return (
                 <motion.button
-                  key={n}
-                  whileTap={{ scale: 0.94 }}
+                  key={st.id}
+                  whileTap={{ scale: 0.96 }}
                   transition={SPRING}
-                  onClick={() => updatePlanData({ sessionRating: n })}
-                  className="flex h-11 flex-1 items-center justify-center rounded-xl text-[14px] font-semibold transition-all duration-200 sm:flex-none sm:w-[62px]"
+                  onClick={() => updatePlanData({ dayState: on ? null : st.id })}
+                  className="rounded-xl px-4 py-2 text-[13.5px] font-semibold transition-all duration-200"
                   style={{
-                    background: active ? `rgba(${r.rgb},0.12)` : T.sunken,
-                    border: `1px solid ${active ? `rgba(${r.rgb},0.42)` : T.line}`,
-                    color: active ? r.color : T.text3,
                     fontFamily: T.sans,
-                    boxShadow: active ? `0 0 18px -6px rgba(${r.rgb},0.6)` : 'none',
+                    background: on ? `${st.color}1a` : T.sunken,
+                    border: `1px solid ${on ? `${st.color}66` : T.line}`,
+                    color: on ? st.color : T.text3,
+                    boxShadow: on ? `0 0 18px -8px ${st.color}` : 'none',
                   }}
-                  onMouseEnter={(e) => !active && (e.currentTarget.style.borderColor = T.lineHi)}
-                  onMouseLeave={(e) => !active && (e.currentTarget.style.borderColor = T.line)}
+                  onMouseEnter={(e) => !on && (e.currentTarget.style.borderColor = T.lineHi)}
+                  onMouseLeave={(e) => !on && (e.currentTarget.style.borderColor = T.line)}
                 >
-                  {n}
+                  {st.label}
                 </motion.button>
               );
             })}
           </div>
 
-          <AnimatePresence mode="wait">
-            {planData.sessionRating > 0 && (
-              <motion.div
-                key={planData.sessionRating}
-                initial={{ opacity: 0, y: -3 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 3 }}
-                transition={{ duration: 0.18 }}
-                className="flex items-center gap-2"
-              >
-                <span className="text-[12px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  Оцінка
-                </span>
-                <span
-                  className="text-[15px] font-semibold"
-                  style={{ color: RATING[planData.sessionRating - 1].color, fontFamily: T.sans }}
-                >
-                  {RATING[planData.sessionRating - 1].label}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </Step>
-
-      {/* 03 — Process */}
-      <Step n="03" title="Чистота процесу" hint="Була помилка в читанні структури чи пропущене підтвердження?" last>
-        <div className="flex flex-col gap-4">
-          <div
-            className="flex flex-col justify-between gap-3.5 rounded-xl px-4 py-3.5 sm:flex-row sm:items-center"
-            style={{ background: T.sunken, border: `1px solid ${T.line}` }}
-          >
-            <span className="text-[15px] font-semibold" style={{ color: T.text, fontFamily: T.sans }}>
-              Помилка в аналізі або процесі?
-            </span>
-
-            <div className="flex rounded-lg p-0.5" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
-              {[
-                { key: true,  label: 'Так',  c: T.bad,  rgb: T.badRgb },
-                { key: false, label: 'Ні',   c: T.ok,   rgb: T.okRgb },
-              ].map(({ key, label, c, rgb }) => {
-                const active = planData.analysisMistake === key;
-                return (
-                  <button
-                    key={String(key)}
-                    onClick={() => updatePlanData({ analysisMistake: key })}
-                    className="relative z-10 rounded-md px-6 py-1.5 text-[14px] font-semibold transition-colors duration-200"
-                    style={{ color: active ? c : T.text4, fontFamily: T.sans }}
-                  >
-                    {active && (
-                      <motion.span
-                        layoutId="mistakePill"
-                        className="absolute inset-0 rounded-md"
-                        style={{ background: `rgba(${rgb},0.12)`, border: `1px solid rgba(${rgb},0.30)` }}
-                        transition={SPRING}
-                      />
-                    )}
-                    <span className="relative">{label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           <AnimatePresence initial={false}>
-            {planData.analysisMistake && (
+            {(planData.dayFlow === 'drift' || planData.dayFlow === 'missed') && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}

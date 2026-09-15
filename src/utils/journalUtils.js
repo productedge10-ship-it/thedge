@@ -35,7 +35,24 @@ export const parseDateString = (dateStr) => {
   return new Date(y, m - 1, d);
 };
 
+/* Гроші по угоді.
+
+   Порядок джерел важливий, і саме його тут бракувало.
+
+   1. profit_money — те, що реально порахував брокер: чистий результат
+      з комісією і свопом. Для імпортованих угод це єдина правда, і
+      питати замість неї наш перерахунок «ризик × RR» безглуздо.
+   2. ризик × RR — для угод, заведених руками, де жодних грошей від
+      брокера немає.
+   3. null — коли ризик не заповнений. Саме звідси й бралась дивина:
+      у R угода рахувалась, а в доларах зникала, тож підсумки збігались
+      тільки в тих, хто заповнює ризик завжди. */
 export const getTradeProfit = (trade, accountsMap) => {
+  const money = Number(trade?.profit_money);
+  if (trade?.profit_money !== null && trade?.profit_money !== undefined && Number.isFinite(money)) {
+    return money;
+  }
+
   if (trade.rr === null || trade.rr === undefined) return null;
   const rr = parseFloat(trade.rr);
   if (isNaN(rr)) return null;

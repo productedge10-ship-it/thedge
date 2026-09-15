@@ -39,8 +39,8 @@ const en = {
 
   hero: {
     badge: 'Workspace · Analytics · AI coach',
-    title1: 'Stop hunting for the perfect strategy.',
-    title2: 'Understand the one you have.',
+    title1: 'Stop hunting for the perfect strategy',
+    title2: 'Understand the one you have',
     sub: 'The Edge is a trader’s workspace: your plan, your trade journal, analytics and reviews in one place. It shows which of your decisions make money and which quietly drain it — so you build a system on evidence instead of feel.',
     cta: 'Start free',
     ctaAlt: 'Try the demo',
@@ -337,8 +337,8 @@ const uk = {
 
   hero: {
     badge: 'Робочий простір · Аналітика · AI-коуч',
-    title1: 'Не шукай ідеальну стратегію.',
-    title2: 'Зрозумій свою.',
+    title1: 'Не шукай ідеальну стратегію',
+    title2: 'Зрозумій свою',
     sub: 'The Edge — робочий простір трейдера: план, журнал угод, аналітика й розбори в одному місці. Він показує, які твої рішення приносять гроші, а які їх зʼїдають — щоб ти будував систему на фактах, а не на відчуттях.',
     cta: 'Почати безкоштовно',
     ctaAlt: 'Спробувати демо',
@@ -635,8 +635,8 @@ const ru = {
 
   hero: {
     badge: 'Рабочее пространство · Аналитика · AI-коуч',
-    title1: 'Не ищи идеальную стратегию.',
-    title2: 'Пойми свою.',
+    title1: 'Не ищи идеальную стратегию',
+    title2: 'Пойми свою',
     sub: 'The Edge — рабочее пространство трейдера: план, журнал сделок, аналитика и разборы в одном месте. Он показывает, какие твои решения приносят деньги, а какие их съедают — чтобы ты строил систему на фактах, а не на ощущениях.',
     cta: 'Начать бесплатно',
     ctaAlt: 'Попробовать демо',

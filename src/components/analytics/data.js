@@ -13,8 +13,12 @@ export const ASSETS = ['EURUSD', 'GBPUSD', 'GER40', 'XAUUSD', 'US100', 'USDJPY']
 export const ACCOUNTS = ['FTMO 100K', 'Finding Pips', 'MFF 50K'];
 export const SETUPS = ['Sweep + BOS', 'OB retest', 'FVG fill', 'Trendline break', 'Range fade', 'News spike'];
 export const EMOTIONS = ['calm', 'confident', 'anxious', 'tilt'];
-export const EMOTION_LABEL = { calm: 'Спокій', confident: 'Впевненість', anxious: 'Тривога', tilt: 'Тільт' };
-export const EMOTION_COLOR = { calm: '#34d399', confident: 'var(--edge-acc, #8b7bff)', anxious: '#fbbf24', tilt: '#f87171' };
+/* fomo раніше тут не було, хоча код у кількох місцях уже перевіряв
+   t.emotion === 'fomo' — і такі угоди малювались підписом undefined.
+   Стан реальний і окремий: тільт — це помста після втрати, FOMO —
+   страх лишитись поза рухом. Лікуються вони по-різному. */
+export const EMOTION_LABEL = { calm: 'Спокій', confident: 'Впевненість', anxious: 'Тривога', fomo: 'FOMO', tilt: 'Тільт' };
+export const EMOTION_COLOR = { calm: '#34d399', confident: 'var(--edge-acc, #8b7bff)', anxious: '#fbbf24', fomo: '#fb923c', tilt: '#f87171' };
 export const MISTAKES = [
   'Вхід до підтвердження', 'Наздогнав рух', 'Пересунув стоп',
   'Завеликий обʼєм', 'Торгував поза сесією', 'Не зафіксував по плану',

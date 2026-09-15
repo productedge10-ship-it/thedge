@@ -8,6 +8,7 @@ import {
   User, Target, BookOpen, Palette, Sparkles, LayoutGrid,
   MailCheck, MailWarning, KeyRound, Loader2, Check, Send,
   Plug, HelpCircle, ArrowRight, ChevronDown, Unlink,
+  ShieldCheck, ShieldOff, Copy, Lock,
 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
@@ -21,6 +22,7 @@ import {
   connectMt5, watchMt5Account, readMt5Status, listMt5Accounts, removeMt5Account,
 } from '../../lib/mt5Store';
 import { THEMES } from '../../lib/themes';
+import { BROKERS, brokerById } from '../../lib/brokers';
 
 /* ==================================================================
    Налаштування.
@@ -45,6 +47,7 @@ const TABS = [
   { id: 'goal', label: 'Weekly goal', icon: Target, eyebrow: 'RHYTHM', hint: 'What the “Week” tile on the Launchpad shows' },
   { id: 'journal', label: 'Journal', icon: BookOpen, eyebrow: 'PRACTICE', hint: 'How many questions to ask after every trade' },
   { id: 'connect', label: 'Connections', icon: Plug, eyebrow: 'SYNC', hint: 'Connect your trading account — the trades will sync automatically' },
+  { id: 'security', label: 'Security', icon: ShieldCheck, eyebrow: 'ACCOUNT', hint: 'A second step at sign-in, so a leaked password isn’t enough' },
   { id: 'look', label: 'Theme', icon: Palette, eyebrow: 'APPEARANCE', hint: 'Light or dark — with a diagonal sweep' },
   { id: 'motion', label: 'Motion & glow', icon: Sparkles, eyebrow: 'APPEARANCE', hint: 'How much movement you can stand over six hours at a screen' },
   { id: 'menu', label: 'Sections', icon: LayoutGrid, eyebrow: 'NAVIGATION', hint: 'Hide what you don’t use — the data stays' },
@@ -717,6 +720,27 @@ export default function SettingsModal() {
                       }}
                     >
                       In short mode the rest of the questions stay in the trade behind a toggle — they simply stop being required.
+                    </div>
+
+                    {/* Автовибір таймфрейму.
+
+                        Живе поруч із глибиною розбору, бо питання те
+                        саме: скільки застосунок робить за тебе, поки ти
+                        заповнюєш план. */}
+                    <div style={{ marginTop: 30 }}>
+                      <Head
+                        title="Timeframe from a screenshot"
+                        hint="TradingView writes the timeframe in the header — we can read it and fill the field in"
+                      />
+                      <Toggle
+                        label="Detect the timeframe automatically"
+                        hint="Only fills an empty field — your own choice is never overwritten"
+                        on={s.autoTf !== false}
+                        onClick={() => s.set({ autoTf: s.autoTf === false })}
+                      />
+                      <Note>
+                        Recognition runs in your browser: the screenshot goes nowhere, and neither does anything else.
+                      </Note>
                     </div>
                   </div>
                 )}
@@ -1724,35 +1748,6 @@ function FormField({ label, hint, children }) {
   );
 }
 
-/* Проп-фірми.
-
-   Список потрібен не для краси: у кожного пропа своя збірка терміналу,
-   і тільки вона знає адреси його серверів. Загальний MetaTrader 5 з
-   сайту розробника про «FTMO-Server5» не чув узагалі. Тому вибір пропа
-   тут — це насправді вибір терміналу, який воркер підніме на VPS.
-
-   `tint` — не фірмовий колір, а наша підкладка під монограму, поки
-   логотип не поклали у public/props. Самі логотипи докладає людина:
-   лежать вони як /props/<id>.svg і підтягуються адресою, тож брак
-   файлу нічого не ламає — вмикається монограма. */
-const BROKERS = [
-  { id: 'ftmo',        name: 'FTMO',             tint: '#2f6fdb' },
-  { id: 'fundingpips', name: 'FundingPips',      tint: '#1f9d6b' },
-  { id: 'fundednext',  name: 'FundedNext',       tint: '#e0803a' },
-  { id: 'the5ers',     name: 'The5ers',          tint: '#4a7de0' },
-  { id: 'e8',          name: 'E8 Markets',       tint: '#c9a23f' },
-  { id: 'goat',        name: 'Goat Funded Trader', tint: '#8f5ad6' },
-  { id: 'brightfunded', name: 'BrightFunded',    tint: '#3fb9a8' },
-  { id: 'alphacapital', name: 'Alpha Capital',   tint: '#c2504e' },
-  { id: 'fxify',       name: 'FXIFY',            tint: '#5b73e8' },
-  { id: 'dnafunded',   name: 'DNA Funded',       tint: '#3f9dc9' },
-  { id: 'aquafunded',  name: 'AquaFunded',       tint: '#2f97c4' },
-  { id: 'atlasfunded', name: 'Atlas Funded',     tint: '#b98a4a' },
-  { id: 'other',       name: 'Another firm',     tint: '#6b6b78' },
-];
-
-const brokerById = (id) => BROKERS.find((b) => b.id === id) || BROKERS[BROKERS.length - 1];
-
 /* Знак пропа. Файл або монограма — третього не дано, і саме тому
    картинка ніколи не залишає порожню дірку в рядку списку. */
 function BrokerMark({ broker, size = 26 }) {
@@ -2161,7 +2156,11 @@ function ConnectTab() {
   );
 }
 
-function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved }) {
+/* Експортується навмисно: та сама картка стоїть ще й у модалці нового
+   рахунку на сторінці Accounts. Копія форми там прожила рівно один
+   показ — браузер підставив у неї пошту й пароль від входу, бо поля
+   були чужі й без тих самих атрибутів. Один компонент на два місця. */
+export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved }) {
   const [broker, setBroker] = useState('ftmo');
   const [server, setServer] = useState('');
   const [login, setLogin] = useState('');

@@ -3,7 +3,6 @@ import { Compass, Radio, LineChart, NotebookPen, Layers, Trash2 } from 'lucide-r
 import NarrativeSelect from '../ui/NarrativeSelect';
 import UpdatesList from './UpdatesList';
 import PlanTabs from './PlanTabs';
-import PlanBlocksDock from './PlanBlocksDock';
 import { usePlanBlocks } from '../../lib/planBlocks';
 import TdaGrid from './TdaGrid';
 import { Section, SectionAnchor, FieldLabel, WriteBlock } from './PlanPrimitives';
@@ -184,8 +183,6 @@ export default function WeeklyPlanView({
         overall={overall}
         visiblePhases={phases}
       />
-
-      <PlanBlocksDock mode="weekly" />
 
       <div className="mt-6">
         {/* ═══════════════ PLAN ═══════════════ */}

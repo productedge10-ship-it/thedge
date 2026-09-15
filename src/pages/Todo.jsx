@@ -1,8 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ListTodo, LayoutGrid, CalendarDays, Timer, ChevronDown, CheckCircle2,
+  ListTodo, LayoutGrid, CalendarDays, Timer, ChevronDown, CheckCircle2, Keyboard,
 } from 'lucide-react';
+import {
+  DndContext, DragOverlay, PointerSensor, KeyboardSensor,
+  closestCorners, useSensor, useSensors, useDroppable,
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import {
@@ -98,28 +106,166 @@ export default function Todo() {
 
   /* ---------- групи списку ---------- */
 
+  /* Групи в порядку самого списку, а не за часом.
+
+     Сортування за дедлайном сперечалося б із перетягуванням: людина
+     ставить завдання на друге місце, а список тут-таки повертає його
+     назад «бо о 14:00 пізніше». Порядок тепер тримає рука, а час
+     лишається підписом на рядку. */
   const groups = useMemo(() => {
     const active = tasks.filter((t) => !t.done);
     const t0 = today();
     const t1 = addDays(t0, 1);
 
-    const overdue = active.filter((t) => isOverdue(t));
+    const late = active.filter((t) => isOverdue(t));
     const rest = active.filter((t) => !isOverdue(t));
-    const byTime = (a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99');
 
-    return [
-      { id: 'overdue',  label: 'Прострочене', color: T.bad,   list: [...overdue].sort(byTime) },
-      { id: 'today',    label: 'Сьогодні',    color: T.acc,   list: rest.filter((t) => t.due === t0).sort(byTime) },
-      { id: 'tomorrow', label: 'Завтра',      color: T.text2, list: rest.filter((t) => t.due === t1).sort(byTime) },
-      { id: 'later',    label: 'Пізніше',     color: T.text3, list: rest.filter((t) => t.due && t.due > t1).sort((a, b) => a.due.localeCompare(b.due)) },
-      { id: 'someday',  label: 'Колись',      color: T.text4, list: rest.filter((t) => !t.due) },
-    ].filter((g) => g.list.length);
+    return {
+      overdue:  { id: 'overdue',  label: 'Прострочене', color: T.bad,   list: late },
+      today:    { id: 'today',    label: 'Сьогодні',    color: T.acc,   list: rest.filter((t) => t.due === t0) },
+      tomorrow: { id: 'tomorrow', label: 'Завтра',      color: T.text2, list: rest.filter((t) => t.due === t1) },
+      later:    { id: 'later',    label: 'Пізніше',     color: T.text3, list: rest.filter((t) => t.due && t.due > t1) },
+      someday:  { id: 'someday',  label: 'Колись',      color: T.text4, list: rest.filter((t) => !t.due) },
+    };
   }, [tasks]);
+
+  /* Плаский порядок обходу для клавіатури — рівно той, у якому
+     завдання стоять на екрані: спершу ліва колонка, потім права. */
+  const flat = useMemo(
+    () => ['overdue', 'today', 'tomorrow', 'later', 'someday'].flatMap((k) => groups[k].list),
+    [groups],
+  );
+
+  const anyActive = flat.length > 0;
 
   const doneList = useMemo(
     () => tasks.filter((t) => t.done).sort((a, b) => String(b.doneAt || '').localeCompare(String(a.doneAt || ''))),
     [tasks],
   );
+
+  /* ---------- клавіатура ----------
+
+     Список завдань проходять швидше за все з клавіатури: стрілки —
+     курсор, пробіл — відмітити, t/m — перекинути на сьогодні чи
+     завтра, n — нове завдання. Миша лишається, але вже не обовʼязкова.
+
+     Курсор живе по id, а не по індексу: індекс з'їжджає, щойно
+     завдання відмічене й пішло зі списку. */
+  const [cursor, setCursor] = useState(null);
+  const composerRef = useRef(null);
+
+  const move = useCallback((step) => {
+    if (!flat.length) return;
+    const i = flat.findIndex((t) => t.id === cursor);
+    const next = i < 0 ? 0 : Math.min(flat.length - 1, Math.max(0, i + step));
+    setCursor(flat[next].id);
+  }, [flat, cursor]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      /* У полі вводу клавіші належать полю. Тільки Escape забирає
+         з нього фокус — інакше з композера не вийти без миші. */
+      const tag = e.target?.tagName;
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable;
+      if (typing) {
+        if (e.key === 'Escape') e.target.blur();
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const cur = flat.find((t) => t.id === cursor);
+
+      /* Літери беремо з e.code, а не з e.key: на українській розкладці
+         фізична M дає «ь», T — «е», і за символом жодна буквена
+         клавіша не спрацьовувала б. Стрілки й пробіл однакові скрізь,
+         тому вони лишаються по e.key. */
+      const code = e.code;
+
+      if (e.key === 'ArrowDown' || code === 'KeyJ') { e.preventDefault(); move(1); return; }
+      if (e.key === 'ArrowUp' || code === 'KeyK') { e.preventDefault(); move(-1); return; }
+      if (e.key === 'Escape') { setCursor(null); return; }
+      if (code === 'KeyN') { e.preventDefault(); composerRef.current?.focus(); return; }
+
+      /* Далі — дії над завданням під курсором. Якщо курсора ще немає,
+         беремо перше завдання: інакше перше ж натискання «на завтра»
+         мовчки нічого не робить, і клавіші здаються зламаними. */
+      const target = cur || flat[0];
+      if (!target) return;
+
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setCursor(target.id); toggleTask(target.id); return; }
+      if (code === 'KeyT') { e.preventDefault(); setCursor(target.id); editTask(target.id, { due: today() }); return; }
+      if (code === 'KeyM') { e.preventDefault(); setCursor(target.id); editTask(target.id, { due: addDays(today(), 1) }); return; }
+      if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteTask(target.id); setCursor(null); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [flat, cursor, move]);
+
+  /* ---------- перетягування ----------
+
+     Тягнути можна між групами — і це, власне, головне: перекинути
+     завдання із «Колись» у «Сьогодні» рухом, а не через попап з
+     календарем. Група-приймач сама каже, яку дату поставити. */
+  const [dragId, setDragId] = useState(null);
+  const sensors = useSensors(
+    /* 6 пікселів люфту: без них будь-який клік по рядку рахувався б
+       за початок перетягування, і завдання переставало відмічатись. */
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const dueForGroup = (id, task) => {
+    const t0 = today();
+    switch (id) {
+      case 'today': case 'overdue': return t0;
+      case 'tomorrow': return addDays(t0, 1);
+      /* «Пізніше» — будь-який день після завтра. Якщо завдання вже
+         там, дату не чіпаємо: людина рухала порядок, а не строк. */
+      case 'later': return task.due && task.due > addDays(t0, 1) ? task.due : addDays(t0, 2);
+      case 'someday': return null;
+      default: return task.due;
+    }
+  };
+
+  const groupOf = (id) => ['overdue', 'today', 'tomorrow', 'later', 'someday']
+    .find((k) => groups[k].list.some((t) => t.id === id));
+
+  const onDragEnd = ({ active, over }) => {
+    setDragId(null);
+    if (!over) return;
+
+    const task = tasks.find((t) => t.id === active.id);
+    if (!task) return;
+
+    /* Кинути можна і на саму групу (її порожнє тіло), і на сусіднє
+       завдання — тому ціль шукаємо в обох виглядах. */
+    const target = String(over.id).startsWith('group:')
+      ? String(over.id).slice(6)
+      : groupOf(over.id);
+    if (!target) return;
+
+    const from = groupOf(active.id);
+    const nextDue = dueForGroup(target, task);
+
+    setTasks((list) => {
+      let out = list;
+
+      if (from !== target || (task.due || null) !== nextDue) {
+        out = out.map((t) => (t.id === task.id ? { ...t, due: nextDue } : t));
+      }
+
+      /* Порядок міняємо лише всередині однієї групи: при переїзді в
+         іншу завдання стає першим — саме там його й шукатимуть. */
+      if (active.id !== over.id && !String(over.id).startsWith('group:')) {
+        const oldI = out.findIndex((t) => t.id === active.id);
+        const newI = out.findIndex((t) => t.id === over.id);
+        if (oldI >= 0 && newI >= 0) out = arrayMove(out, oldI, newI);
+      }
+      return out;
+    });
+  };
+
+  const dragTask = dragId ? tasks.find((t) => t.id === dragId) : null;
 
   const stats = useMemo(() => {
     const active = tasks.filter((t) => !t.done);
@@ -224,101 +370,124 @@ export default function Todo() {
             transition={{ duration: 0.22, ease: EASE }}
           >
             {view === 'list' && (
-              <div className="flex flex-col gap-4">
-                <TaskComposer onAdd={addTask} />
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragStart={({ active }) => setDragId(active.id)}
+                onDragCancel={() => setDragId(null)}
+                onDragEnd={onDragEnd}
+              >
+                <div className="flex flex-col gap-4">
+                  <TaskComposer onAdd={addTask} inputRef={composerRef} />
 
-                {groups.length === 0 && doneList.length === 0 && (
-                  <div className="flex flex-col items-center px-5 py-20 text-center">
-                    <div className="mb-6 grid h-16 w-16 place-items-center rounded-2xl" style={{ border: `1px dashed ${T.lineHi}`, color: T.text3 }}>
-                      <ListTodo size={24} strokeWidth={1.7} />
+                  {!anyActive && doneList.length === 0 && (
+                    <div className="flex flex-col items-center px-5 py-20 text-center">
+                      <div className="mb-6 grid h-16 w-16 place-items-center rounded-2xl" style={{ border: `1px dashed ${T.lineHi}`, color: T.text3 }}>
+                        <ListTodo size={24} strokeWidth={1.7} />
+                      </div>
+                      <div className="mb-2.5 text-[21px] font-bold" style={{ fontFamily: T.display, color: T.text }}>Порожньо</div>
+                      <p className="max-w-[420px] text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.7 }}>
+                        Запиши перше завдання вгорі — дату можна просто вписати в текст: «здати звіт завтра о 10».
+                      </p>
                     </div>
-                    <div className="mb-2.5 text-[21px] font-bold" style={{ fontFamily: T.display, color: T.text }}>Порожньо</div>
-                    <p className="max-w-[420px] text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.7 }}>
-                      Запиши перше завдання вгорі. Дедлайн і квадрант можна поставити одразу — або потім у матриці.
-                    </p>
-                  </div>
-                )}
+                  )}
 
-                {groups.map((g, gi) => (
-                  <motion.div
-                    key={g.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: gi * 0.04, ease: EASE }}
-                  >
-                    <SoftCard lift={0} className="overflow-hidden">
-                      <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
-                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: g.color }} />
-                        <span
-                          className="text-[13.5px] font-bold uppercase tracking-[0.12em]"
-                          style={{ fontFamily: T.sans, color: g.id === 'overdue' ? T.bad : T.text3 }}
-                        >
-                          {g.label}
-                        </span>
-                        <span className="text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>{g.list.length}</span>
-                      </div>
+                  {/* Дві колонки. Ліва — те, що робиш зараз: прострочене
+                      й сьогоднішнє. Права — все, що ще не горить.
 
-                      <div className="flex flex-col gap-2 p-3">
-                        <AnimatePresence initial={false} mode="popLayout">
-                          {g.list.map((t) => (
-                            <TaskRow
-                              key={t.id}
-                              task={t}
-                              onToggle={toggleTask}
-                              onEdit={editTask}
-                              onDelete={deleteTask}
-                              onFocus={openPomodoro}
-                            />
-                          ))}
+                      Одним стовпчиком сторінка виглядала порожньою:
+                      три завдання розтягувались на півтори тисячі
+                      пікселів ширини, а під ними лишався екран пустоти.
+                      Тепер важливе займає більшу половину й читається
+                      першим, а решта стоїть поруч, а не під ним. */}
+                  {anyActive && (
+                    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+                      <motion.div layout className="flex min-w-0 flex-col gap-4">
+                        <AnimatePresence initial={false}>
+                        <GroupCard key="overdue" g={groups.overdue} cursor={cursor} setCursor={setCursor} onToggle={toggleTask} onEdit={editTask} onDelete={deleteTask} onFocus={openPomodoro} />
+                        <GroupCard key="today" g={groups.today} cursor={cursor} setCursor={setCursor} onToggle={toggleTask} onEdit={editTask} onDelete={deleteTask} onFocus={openPomodoro} always />
                         </AnimatePresence>
-                      </div>
-                    </SoftCard>
-                  </motion.div>
-                ))}
+                      </motion.div>
 
-                {/* виконане */}
-                {doneList.length > 0 && (
-                  <div>
-                    <button
-                      onClick={() => setShowDone((v) => !v)}
-                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-[13.5px] font-semibold transition-colors duration-200"
-                      style={{ fontFamily: T.sans, color: T.text4 }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = T.text2)}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
-                    >
-                      <motion.span animate={{ rotate: showDone ? 0 : -90 }} transition={{ duration: 0.2, ease: EASE }} className="flex">
-                        <ChevronDown size={15} strokeWidth={2.4} />
-                      </motion.span>
-                      <CheckCircle2 size={15} strokeWidth={2.2} style={{ color: T.ok }} />
-                      Виконано ({doneList.length})
-                    </button>
+                      <motion.div layout className="flex min-w-0 flex-col gap-4">
+                        <AnimatePresence initial={false}>
+                        <GroupCard key="tomorrow" g={groups.tomorrow} cursor={cursor} setCursor={setCursor} onToggle={toggleTask} onEdit={editTask} onDelete={deleteTask} onFocus={openPomodoro} always />
+                        <GroupCard key="later" g={groups.later} cursor={cursor} setCursor={setCursor} onToggle={toggleTask} onEdit={editTask} onDelete={deleteTask} onFocus={openPomodoro} />
+                        <GroupCard key="someday" g={groups.someday} cursor={cursor} setCursor={setCursor} onToggle={toggleTask} onEdit={editTask} onDelete={deleteTask} onFocus={openPomodoro} />
+                        </AnimatePresence>
+                      </motion.div>
+                    </div>
+                  )}
 
-                    <AnimatePresence initial={false}>
-                      {showDone && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.24, ease: EASE }}
-                          className="overflow-hidden"
-                        >
-                          <div className="flex flex-col gap-1 pt-2">
-                            {doneList.map((t) => (
-                              <TaskRow
-                                key={t.id}
-                                task={t}
-                                onToggle={toggleTask}
-                                onEdit={editTask}
-                                onDelete={deleteTask}
-                              />
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )}
-              </div>
+                  {/* виконане */}
+                  {doneList.length > 0 && (
+                    <div>
+                      <button
+                        onClick={() => setShowDone((v) => !v)}
+                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-[13.5px] font-semibold transition-colors duration-200"
+                        style={{ fontFamily: T.sans, color: T.text4 }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = T.text2)}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
+                      >
+                        <motion.span animate={{ rotate: showDone ? 0 : -90 }} transition={{ duration: 0.2, ease: EASE }} className="flex">
+                          <ChevronDown size={15} strokeWidth={2.4} />
+                        </motion.span>
+                        <CheckCircle2 size={15} strokeWidth={2.2} style={{ color: T.ok }} />
+                        Виконано ({doneList.length})
+                      </button>
+
+                      <AnimatePresence initial={false}>
+                        {showDone && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.24, ease: EASE }}
+                            className="overflow-hidden"
+                          >
+                            <div className="grid grid-cols-1 gap-1 pt-2 lg:grid-cols-2">
+                              {doneList.map((t) => (
+                                <TaskRow
+                                  key={t.id}
+                                  task={t}
+                                  onToggle={toggleTask}
+                                  onEdit={editTask}
+                                  onDelete={deleteTask}
+                                />
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  {/* Підказка про клавіші — один тихий рядок унизу.
+                      Клавіатурний прохід нічого не вартий, якщо про
+                      нього ніде не сказано. */}
+                  {anyActive && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 pt-1 text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                      <Keyboard size={13} strokeWidth={2} />
+                      <Key k="↑ ↓" t="курсор" />
+                      <Key k="Space" t="відмітити" />
+                      <Key k="T" t="на сьогодні" />
+                      <Key k="M" t="на завтра" />
+                      <Key k="N" t="нове" />
+                      <Key k="⌫" t="видалити" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Привид під курсором: без нього рядок зникає з місця
+                    й тягнеться порожнеча. */}
+                <DragOverlay dropAnimation={null}>
+                  {dragTask && (
+                    <div className="rounded-xl opacity-95" style={{ background: T.surfaceHi, border: `1px solid ${T.lineAcc}`, boxShadow: '0 24px 60px -20px rgba(0,0,0,0.9)' }}>
+                      <TaskRow task={dragTask} onToggle={() => {}} onEdit={() => {}} onDelete={() => {}} compact />
+                    </div>
+                  )}
+                </DragOverlay>
+              </DndContext>
             )}
 
             {view === 'matrix' && (
@@ -364,5 +533,130 @@ export default function Todo() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/* ---------- підпис клавіші ---------- */
+function Key({ k, t }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <kbd
+        className="rounded px-1.5 py-0.5 text-[11px] font-bold"
+        style={{ fontFamily: T.mono, background: 'rgba(var(--edge-hair-rgb),0.06)', color: T.text3 }}
+      >
+        {k}
+      </kbd>
+      {t}
+    </span>
+  );
+}
+
+/* ---------- завдання, яке можна тягнути ---------- */
+function SortableRow({ task, cursor, setCursor, ...rest }) {
+  const {
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
+  } = useSortable({ id: task.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      onMouseDown={() => setCursor(task.id)}
+    >
+      <TaskRow
+        task={task}
+        selected={cursor === task.id}
+        onSelect={() => setCursor(task.id)}
+        dragging={isDragging}
+        dragHandle={{ ...attributes, ...listeners }}
+        {...rest}
+      />
+    </div>
+  );
+}
+
+/* ---------- одна група ----------
+
+   Приймає перетягування навіть коли порожня: саме порожня група й
+   потрібна найчастіше — щоб перекинути в неї перше завдання. Тому
+   «Сьогодні» і «Завтра» показуються завжди (`always`), навіть без
+   жодного рядка, а решта ховається, поки порожня. */
+function GroupCard({ g, cursor, setCursor, always, ...rest }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `group:${g.id}` });
+  const ids = useMemo(() => g.list.map((t) => t.id), [g.list]);
+
+  if (!g.list.length && !always) return null;
+
+  return (
+    /* layout на самій групі: коли завдання переїжджає, сусідні картки
+       не стрибають на нову висоту, а доїжджають до неї. */
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8, transition: { duration: 0.16 } }}
+      transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+    >
+      <SoftCard lift={0} className="overflow-hidden">
+        <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
+          <motion.span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ background: g.color }}
+            animate={{ scale: isOver ? 1.8 : 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+          />
+          <span
+            className="text-[13.5px] font-bold uppercase tracking-[0.12em]"
+            style={{ fontFamily: T.sans, color: g.id === 'overdue' ? T.bad : T.text3 }}
+          >
+            {g.label}
+          </span>
+          {/* Лічильник міняється стрибком числа — саме тому він
+              перемальовується з новим ключем, а не тихо підмінюється. */}
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+              key={g.list.length}
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18, ease: EASE }}
+              className="text-[13px] tabular-nums"
+              style={{ fontFamily: T.mono, color: T.text4 }}
+            >
+              {g.list.length}
+            </motion.span>
+          </AnimatePresence>
+        </div>
+
+        <motion.div
+          ref={setNodeRef}
+          layout
+          className="flex flex-col gap-2 p-3"
+          animate={{ backgroundColor: isOver ? `rgba(${T.accRgb},0.07)` : 'rgba(0,0,0,0)' }}
+          transition={{ duration: 0.2, ease: EASE }}
+        >
+          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+            <AnimatePresence initial={false} mode="popLayout">
+              {g.list.map((t) => (
+                <SortableRow key={t.id} task={t} cursor={cursor} setCursor={setCursor} {...rest} />
+              ))}
+            </AnimatePresence>
+          </SortableContext>
+
+          {!g.list.length && (
+            <motion.div
+              layout
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, borderColor: isOver ? T.lineAcc : T.line, color: isOver ? T.acc : T.text4 }}
+              transition={{ duration: 0.2, ease: EASE }}
+              className="grid h-[52px] place-items-center rounded-xl text-[13px]"
+              style={{ borderWidth: 1, borderStyle: 'dashed', fontFamily: T.sans }}
+            >
+              перетягни сюди
+            </motion.div>
+          )}
+        </motion.div>
+      </SoftCard>
+    </motion.div>
   );
 }

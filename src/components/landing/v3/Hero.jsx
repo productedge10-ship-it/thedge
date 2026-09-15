@@ -165,7 +165,7 @@ export default function Hero() {
               letterSpacing: '-1.9px', margin: '0 0 24px', color: '#fff', textWrap: 'balance',
             }}
           >
-            Не шукай ідеальну стратегію.{' '}
+            Не шукай ідеальну стратегію{' '}
             <br />
             <span
               style={{
@@ -173,12 +173,13 @@ export default function Hero() {
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}
             >
-              Зрозумій свою.
+              Зрозумій свою
             </span>{' '}
             {/* Описовий рядок у самому <h1>: несе ключі (журнал, угод,
                 MetaTrader, аналітика), яких немає в поетичному заголовку.
                 Дрібніший і приглушений — читається як підзаголовок. */}
             <span
+              className="lp-sub"
               style={{
                 display: 'block', marginTop: 16,
                 fontFamily: F.sans, fontWeight: 600,

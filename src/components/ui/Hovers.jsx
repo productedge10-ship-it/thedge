@@ -169,21 +169,34 @@ export function Magnetic({ children, className = '', style, strength = 4, onClic
   const x = useSpring(0, SPRING);
   const y = useSpring(0, SPRING);
 
-  const move = ({ currentTarget, clientX, clientY }) => {
-    const r = currentTarget.getBoundingClientRect();
-    x.set(((clientX - r.left) / r.width - 0.5) * strength * 2);
-    y.set(((clientY - r.top) / r.height - 0.5) * strength * 2);
+  const move = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    x.set(((e.clientX - r.left) / r.width - 0.5) * strength * 2);
+    y.set(((e.clientY - r.top) / r.height - 0.5) * strength * 2);
+    rest.onMouseMove?.(e);
+  };
+
+  /* Свій обробник і чужий, а не «хтось один».
+
+     Раніше onMouseLeave стояв до {...rest}, тож будь-який переданий
+     ззовні — а його передають, щоб зняти підсвітку, — просто затирав
+     наш. Магніт після цього не повертався в нуль, і кнопка лишалась
+     зміщеною доти, доки на неї не наведуть ще раз. */
+  const leave = (e) => {
+    x.set(0);
+    y.set(0);
+    rest.onMouseLeave?.(e);
   };
 
   return (
     <motion.button
-      onMouseMove={move}
-      onMouseLeave={() => { x.set(0); y.set(0); }}
       onClick={onClick}
       whileTap={{ scale: 0.96 }}
       className={className}
       style={{ ...style, x, y }}
       {...rest}
+      onMouseMove={move}
+      onMouseLeave={leave}
     >
       {children}
     </motion.button>

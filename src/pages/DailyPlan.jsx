@@ -22,15 +22,16 @@ import PlanHeader from '../components/trading/PlanHeader';
 import PlanMetadata from '../components/trading/PlanMetadata';
 import LoadingSyncScreen from '../components/trading/LoadingSyncScreen';
 import TdaGrid from '../components/trading/TdaGrid';
+import { warmUpTf } from '../lib/tfDetect';
 import UpdatesList from '../components/trading/UpdatesList';
 import FloatingActionButtons from '../components/trading/FloatingActionButtons';
 import SavingOverlay from '../components/modals/SavingOverlay';
 import AssetSearchModal from '../components/modals/AssetSearchModal';
 import PlanTabs, { SECTIONS, useScrollSpy, BackToTop } from '../components/trading/PlanTabs';
-import AssetSwitcher, { pushRecentAsset } from '../components/trading/AssetSwitcher';
+import { pushRecentAsset } from '../components/trading/AssetSwitcher';
+import { loadTodayPairs } from '../lib/planAssets';
 import { Section, SectionAnchor, WriteBlock } from '../components/trading/PlanPrimitives';
 import WeeklyPlanView from '../components/trading/WeeklyPlanView';
-import PlanBlocksDock from '../components/trading/PlanBlocksDock';
 import { usePlanBlocks } from '../lib/planBlocks';
 import { T, EASE, useEdgeFonts } from '../components/trading/planTheme';
 import useTerminalSkin from '../hooks/useTerminalSkin';
@@ -67,11 +68,21 @@ export const todayLocal = () => {
 const emptyTda = () => [1, 2, 3, 4].map((id) => ({ id, tf: '', image: null, text: '' }));
 const emptyReview = () => [5, 6].map((id) => ({ id, tf: '', image: null, text: '' }));
 
+/* Квадратики для висновків. Номери 7 і 8 — щоб не перетнутись із
+   TDA (1-4) і розбором (5-6): усі вони зберігаються в одному
+   plan_data, і однаковий id означав би, що один блок затирає інший. */
+const emptyConclusions = () => [7, 8].map((id) => ({ id, tf: '', image: null, text: '' }));
+
 export default function DailyPlan() {
   /* Палітра з термінала — на цій сторінці й у світлій темі */
   useTerminalSkin();
 
   useEdgeFonts();
+
+  /* Піднімаємо розпізнавання таймфрейму заздалегідь, у простої.
+     Саме тут, на плані, і вставляють графіки — до моменту вставки
+     модель уже в браузері, і чекати нічого не доводиться. */
+  useEffect(() => { warmUpTf(); }, []);
 
   const { user } = useAuth();
   const { date: paramDate, pair: paramPair } = useParams();
@@ -130,9 +141,9 @@ export default function DailyPlan() {
   const [planData, setPlanData] = useState({
     title: getUkrainianTitle(targetDateStr), date: targetDateStr, pair: targetPair || '',
     narrative: '',
-    tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(),
-    actualNarrative: '', analysisMistake: null, analysisMistakeText: '',
-    sessionRating: 0, conclusionsText: '',
+    tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(), conclusionBlocks: emptyConclusions(),
+    actualNarrative: '', analysisMistakeText: '',
+    dayFlow: null, dayState: null, conclusionsText: '',
     psyConfident: null, psyFear: null, psyRepeatTrade: null, psyRevenge: null, psyNotes: '',
   });
 
@@ -317,10 +328,32 @@ export default function DailyPlan() {
      було перезавантажити сторінку. Просте перемикання, як і в auto-
      контексті вибору плану, але спершу дописуємо тижневий дебаунс, що
      ще не встиг спрацювати — інакше свіжий текст губився без сліду. */
+  /* Плани цього дня — для швидкого перемикання на лівій рейці.
+     Перечитуємо при зміні дати й активу: новий план створюється
+     саме перемиканням, і список має одразу його показати. */
+  const [dayPlans, setDayPlans] = useState([]);
+
+  useEffect(() => {
+    if (!user?.id || !planData.date) return undefined;
+    let alive = true;
+    loadTodayPairs(user.id, planData.date)
+      .then((pairs) => { if (alive) setDayPlans(pairs); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [user?.id, planData.date, planData.pair]);
+
   const backToDaily = useCallback(async () => {
     if (weekHasUnsaved && !isWeekSaving && !checkIsWeekPlanEmpty(weekData)) await performSaveWeek();
     setMode('daily');
   }, [weekHasUnsaved, isWeekSaving, weekData, performSaveWeek]);
+
+  /* Вхід у тижневий режим прямо з перемикача. Раніше єдиним шляхом
+     була модалка «новий план» — тобто щоб просто подивитись тиждень,
+     треба було вдати, що створюєш щось нове. */
+  const goWeekly = useCallback(() => {
+    setWeekMonday(mondayOf(todayLocal()));
+    setMode('weekly');
+  }, []);
 
   /* ---------- Прогрес по вкладках ---------- */
   const progress = useMemo(() => {
@@ -337,12 +370,12 @@ export default function DailyPlan() {
       ? Math.min(planData.updates.filter((u) => u.image || u.text?.trim()).length / planData.updates.length, 1)
       : 0;
 
-    const reviewFilled = planData.reviewBlocks.filter((b) => b.image || b.text?.trim()).length;
+    const shots = (planData.conclusionBlocks || []).filter((b) => b.image || b.text?.trim()).length;
     const reviewPart = [
-      Math.min(reviewFilled / 1, 1),
+      Math.min(shots / 1, 1),
       planData.actualNarrative ? 1 : 0,
-      planData.sessionRating > 0 ? 1 : 0,
-      planData.analysisMistake !== null ? 1 : 0,
+      planData.dayFlow ? 1 : 0,
+      planData.dayState ? 1 : 0,
       planData.conclusionsText?.trim() ? 1 : 0,
     ];
     const review = reviewPart.reduce((a, b) => a + b, 0) / reviewPart.length;
@@ -514,17 +547,17 @@ export default function DailyPlan() {
           const t = todayLocal();
           setPlan((p) => ({
             ...p, title: getUkrainianTitle(t), date: t, pair: '', narrative: '',
-            tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(),
-            actualNarrative: '', analysisMistake: null, analysisMistakeText: '',
-            sessionRating: 0, conclusionsText: '',
+            tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(), conclusionBlocks: emptyConclusions(),
+            actualNarrative: '', analysisMistakeText: '',
+            dayFlow: null, dayState: null, conclusionsText: '',
           }));
         } else if (date) {
           ignoreNextChangeRef.current = true;
           setPlan((p) => ({
             ...p, title: getUkrainianTitle(date), date, pair: pair || '', narrative: '',
-            tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(),
-            actualNarrative: '', analysisMistake: null, analysisMistakeText: '',
-            sessionRating: 0, conclusionsText: '',
+            tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(), conclusionBlocks: emptyConclusions(),
+            actualNarrative: '', analysisMistakeText: '',
+            dayFlow: null, dayState: null, conclusionsText: '',
           }));
         }
       }
@@ -537,9 +570,10 @@ export default function DailyPlan() {
       /* Пауза згладжує мережеве тремтіння при переході між планами.
          У пісочниці мережі немає — дані вже тут, тож і чекати нема
          навіщо: інакше «Завантаження даних з хмари…» висить дарма. */
-      const smooth = (typeof window !== 'undefined'
-        && window.location.pathname.startsWith('/demo')) ? 0 : 250;
-      setTimeout(() => { setIsInitialLoading(false); setIsSwitching(false); }, smooth);
+      /* Жодної штучної паузи: вона існувала лише щоб затемнення
+         встигли побачити, а затемнення більше немає. */
+      setIsInitialLoading(false);
+      setIsSwitching(false);
     }
   }, [user?.id]);
 
@@ -774,26 +808,44 @@ export default function DailyPlan() {
     navigate(`/plan/${newDate}/${encodeURIComponent(newPair)}`);
   };
 
+  /* Порожній план на сьогодні. Виніс окремо, бо скидати треба в
+     обох випадках, а не лише коли ми вже на «/plan». */
+  const resetToBlankPlan = () => {
+    const today = todayLocal();
+    ignoreNextChangeRef.current = true;
+    setHasUnsavedChanges(false);
+    setLastSaved(null);
+    setLastAction('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setPlan((p) => ({
+      ...p, title: getUkrainianTitle(today), date: today, pair: '', narrative: '',
+      tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(), conclusionBlocks: emptyConclusions(),
+      actualNarrative: '', analysisMistakeText: '',
+      dayFlow: null, dayState: null, conclusionsText: '',
+    }));
+  };
+
   const handleNewPlan = async () => {
     if (canSaveToCloud && hasUnsavedChanges && !isSaving) await performSave();
     localStorage.removeItem('last_edited_plan_id');
     setPlanId(null);
     currentPlanIdRef.current = null;
-    if (paramDate || paramPair) navigate('/plan');
-    else {
-      const today = todayLocal();
-      ignoreNextChangeRef.current = true;
-      setLastSaved(null);
-      setLastAction('');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setPlan((p) => ({
-        ...p, title: getUkrainianTitle(today), date: today, pair: '', narrative: '',
-        tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(),
-        actualNarrative: '', analysisMistake: null, analysisMistakeText: '',
-        sessionRating: 0, conclusionsText: '',
-      }));
-      notify.success('Новий план', 'Можна починати.');
-    }
+
+    /* Скидаємо ЗАВЖДИ, і тільки потім міняємо адресу.
+
+       Раніше на маршруті /plan/:date/:pair кнопка робила рівно одне —
+       navigate('/plan'). Адреса мінялась, ефект бачив, що цілі більше
+       немає й останнього id теж (ми його щойно стерли), і просто
+       нічого не завантажував. А стан форми лишався від попереднього
+       плану: на екрані висів старий актив із старим розбором, і
+       порожній план з'являвся аж після перезавантаження сторінки.
+
+       Гірше того: наступне автозбереження бачило в полях старий актив
+       і заводило під нього ще один план. Саме звідси бралися «нові
+       плани» на актив, вибраний у перемикачі вгорі. */
+    resetToBlankPlan();
+    if (paramDate || paramPair) navigate('/plan', { replace: true });
+    notify.success('Новий план', 'Можна починати.');
   };
 
   const handleAssetSelectModal = (asset) => {
@@ -823,6 +875,7 @@ export default function DailyPlan() {
   const saveTda = useMemo(() => saveInto('tdaBlocks'), [saveInto]);
   const saveUpdate = useMemo(() => saveInto('updates'), [saveInto]);
   const saveReview = useMemo(() => saveInto('reviewBlocks'), [saveInto]);
+  const saveConclusions = useMemo(() => saveInto('conclusionBlocks'), [saveInto]);
 
   if (isInitialLoading) return <LoadingSyncScreen />;
 
@@ -838,6 +891,10 @@ export default function DailyPlan() {
           pair={mode === 'weekly' ? '' : planData.pair}
           mode={mode}
           onBackToDaily={backToDaily}
+          onGoWeekly={goWeekly}
+          plans={dayPlans.map((sym) => ({ symbol: sym, category: flatAssets.find((a) => a.symbol === sym)?.category }))}
+          onPickPlan={(sym) => handleRouteChange(planData.date, sym)}
+          onAddPlan={() => !isLoadingAssets && setIsAssetModalOpen(true)}
           onNewPlan={mode === 'weekly' ? goThisWeek : openPlanTypeModalForNewPlan}
           onShare={handleShare}
           onOpenQuiz={() => setIsQuizModalOpen(true)}
@@ -870,8 +927,6 @@ export default function DailyPlan() {
           onNarrativeChange={(v) => setPlan((p) => ({ ...p, narrative: v }))}
         />
 
-        <PlanBlocksDock mode="daily" />
-
         <div className="mt-6">
           <PlanTabs
             active={activeSection}
@@ -879,23 +934,29 @@ export default function DailyPlan() {
             progress={progress}
             overall={overall}
             visiblePhases={['plan', 'live', 'review'].filter((ph) => dailyBlocks.phaseVisible(ph))}
-            assetSwitcher={
-              <AssetSwitcher
-                currentPair={planData.pair}
-                flatAssets={flatAssets}
-                favorites={favorites}
-                onPick={(symbol, date) => handleRouteChange(date || planData.date, symbol)}
-                onToggleFavorite={handleToggleFavorite}
-                onOpenFullSearch={() => !isLoadingAssets && setIsAssetModalOpen(true)}
-              />
-            }
+
           />
         </div>
 
+        {/* Перехід між планами.
+
+            Раніше тут було затемнення з розмиттям — воно задумувалось
+            як «дані оновлюються», а читалось як «сторінка зависла».
+            Тепер навпаки: старий план не блякне, а йде вгору й
+            поступається місцем новому, який приходить знизу. Ключ на
+            парі «дата + актив» змушує Framer вважати їх різними
+            предметами, а не одним, що перемалювався.
+
+            mode="wait" тут принциповий: два плани не мають накластись
+            один на одного, бо секції в них однакові й на мить вийшло б
+            дві однакові шапки. */}
+        <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          animate={{ opacity: isSwitching ? 0.35 : 1, filter: isSwitching ? 'blur(3px)' : 'blur(0px)' }}
-          transition={{ duration: 0.22, ease: EASE }}
-          className={isSwitching ? 'pointer-events-none' : ''}
+          key={`${planData.date}|${planData.pair}`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.24, ease: EASE }}
         >
           {/* ═══════════════ PLAN ═══════════════ */}
           {dailyBlocks.phaseVisible('plan') && (
@@ -915,14 +976,7 @@ export default function DailyPlan() {
               onHide={() => dailyBlocks.hide('tda')}
               group="plan"
               title="Top-down аналіз"
-              hint="Структура від старших ТФ до молодших"
               done={planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length >= 2}
-              right={
-                <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
-                      style={{ fontFamily: T.sans, color: T.text4 }}>
-                  {planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length}/4
-                </span>
-              }
             >
               <div className="p-5 sm:p-6">
                 <TdaGrid blocks={planData.tdaBlocks} onSave={saveTda} />
@@ -937,7 +991,6 @@ export default function DailyPlan() {
               onHide={() => dailyBlocks.hide('strategy')}
               group="plan"
               title="Стратегія та точки входу"
-              hint="Тригери, стоп, інвалідація"
               done={!!planData.planText?.trim()}
             >
               <WriteBlock
@@ -968,7 +1021,6 @@ export default function DailyPlan() {
             onHide={() => dailyBlocks.hide('updates')}
             group="live"
             title="Апдейти по ходу сесії"
-            hint="Що змінилось відносно плану"
             done={progress.live >= 1 && planData.updates.length > 0}
           >
             <div className="p-5 sm:p-6">
@@ -1001,27 +1053,9 @@ export default function DailyPlan() {
           )}
 
           <div className="flex flex-col gap-5">
-            {dailyBlocks.isVisible('review') && (
-            <Section
-              icon={LineChart}
-              storageKey="review"
-              onHide={() => dailyBlocks.hide('review')}
-              group="review"
-              title="Розбір після сесії"
-              hint="Як усе виглядало по факту"
-              done={planData.reviewBlocks.some((b) => b.image || b.text?.trim())}
-              right={
-                <span className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
-                      style={{ fontFamily: T.sans, color: T.text4 }}>
-                  {planData.reviewBlocks.filter((b) => b.image || b.text?.trim()).length}/2
-                </span>
-              }
-            >
-              <div className="p-5 sm:p-6">
-                <TdaGrid blocks={planData.reviewBlocks} onSave={saveReview} />
-              </div>
-            </Section>
-            )}
+            {/* «Розбір після сесії» прибраний: він і «Висновки» питали
+                те саме двома блоками поспіль — скріншоти з підписами.
+                Лишився один, і тепер він чесно називається ревю дня. */}
 
             {dailyBlocks.isVisible('diagnostics') && (
             <Section
@@ -1030,11 +1064,10 @@ export default function DailyPlan() {
               onHide={() => dailyBlocks.hide('diagnostics')}
               group="review"
               title="Діагностика"
-              hint="Три перевірки перед висновками"
               done={
                 !!planData.actualNarrative &&
-                planData.sessionRating > 0 &&
-                planData.analysisMistake !== null
+                !!planData.dayFlow &&
+                !!planData.dayState
               }
             >
               <PostSessionDiagnostics
@@ -1051,8 +1084,7 @@ export default function DailyPlan() {
               storageKey="conclusions"
               onHide={() => dailyBlocks.hide('conclusions')}
               group="review"
-              title="Висновки"
-              hint="Головний урок дня"
+              title="Ревю дня"
               done={!!planData.conclusionsText?.trim()}
             >
               <WriteBlock
@@ -1062,10 +1094,26 @@ export default function DailyPlan() {
                 hint="Один чіткий висновок вартий десяти розмитих"
                 minRows={8}
               />
+
+              {/* Ті самі квадратики, що в TDA: таймфрейм, скріншот,
+                  підпис. Висновок без картинки через місяць читається
+                  як чужа записка — «поспішив на входi» нічого не
+                  означає, поки не бачиш, де саме. */}
+              <div className="px-5 pb-5 sm:px-6 sm:pb-6">
+                <TdaGrid
+                  blocks={planData.conclusionBlocks || emptyConclusions()}
+                  onSave={saveConclusions}
+                />
+              </div>
             </Section>
             )}
           </div>
+
+          {/* Налаштування блоків переїхало в хедер, до інших
+              службових кнопок: ними користуються раз на місяць, а
+              панель забирала місце на сторінці щодня. */}
         </motion.div>
+        </AnimatePresence>
         </>
         )}
       </div>

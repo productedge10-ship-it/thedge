@@ -1,7 +1,9 @@
-import { motion } from 'framer-motion';
-import { useState } from 'react';
-import { ArrowLeft, CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2 } from 'lucide-react';
-import { T, SPRING } from './planTheme';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2, ChevronDown, Layers, LayoutGrid } from 'lucide-react';
+import AssetIcon from '../ui/AssetIcon';
+import { T, SPRING, EASE } from './planTheme';
+import { usePlanBlocks, PHASE_LABEL } from '../../lib/planBlocks';
 
 /* ==================================================================
    Хедер плану. Раніше 6 різнокольорових кнопок кричали однаково
@@ -89,11 +91,315 @@ function ShareBtn({ onShare }) {
   );
 }
 
+/* Перемикач планів дня.
+
+   Жив на лівій рейці стовпчиком логотипів — і виглядав як чужий
+   елемент, приклеєний збоку. Тут він на своєму місці: поруч із
+   режимом, у рядку службових елементів, і поки не потрібен —
+   займає стільки ж, скільки звичайна кнопка.
+
+   Показуємо тільки плани цього дня. Повний пошук активів лишається
+   окремим пунктом унизу списку: перемкнутись між зробленим і почати
+   новий розбір — різні наміри, і змішувати їх у одному рядку
+   означає щоразу вибирати з десятків непотрібного. */
+function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-[38px] items-center gap-2 rounded-xl pl-2 pr-3 transition-all duration-200"
+        style={{
+          fontFamily: T.sans,
+          background: open ? T.surfaceHi : T.surface,
+          border: `1px solid ${open ? T.lineAcc : T.line}`,
+          color: T.text2,
+        }}
+        onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = T.lineHi; }}
+        onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = T.line; }}
+      >
+        {current ? (
+          <span className="grid w-6 shrink-0 place-items-center">
+            <AssetIcon symbol={current} />
+          </span>
+        ) : (
+          <Layers size={15} strokeWidth={2.3} style={{ color: T.text3, marginLeft: 4 }} />
+        )}
+        <span className="text-[13.5px] font-semibold tabular-nums" style={{ color: current ? T.text : T.text3 }}>
+          {current || 'План'}
+        </span>
+        {plans.length > 1 && (
+          <span
+            className="rounded-md px-1.5 text-[11px] font-bold tabular-nums"
+            style={{ background: `rgba(${T.accRgb},0.14)`, color: T.acc }}
+          >
+            {plans.length}
+          </span>
+        )}
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.22, ease: EASE }} className="flex">
+          <ChevronDown size={13} strokeWidth={2.4} style={{ color: T.text4 }} />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.97 }}
+            transition={{ duration: 0.17, ease: EASE }}
+            className="absolute left-0 top-[calc(100%+8px)] z-[80] w-[232px] overflow-hidden rounded-2xl p-1.5"
+            style={{
+              background: T.surfaceHi,
+              border: `1px solid ${T.lineHi}`,
+              boxShadow: '0 30px 70px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05)',
+            }}
+          >
+            <div className="px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              Плани на сьогодні
+            </div>
+
+            {plans.map((p) => {
+              const on = p.symbol === current;
+              return (
+                <button
+                  key={p.symbol}
+                  type="button"
+                  onClick={() => { setOpen(false); if (!on) onPick?.(p.symbol); }}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors duration-150"
+                  style={{ background: on ? `rgba(${T.accRgb},0.12)` : 'transparent' }}
+                  onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = T.surface; }}
+                  onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span className="grid w-6 shrink-0 place-items-center">
+                    <AssetIcon symbol={p.symbol} category={p.category} />
+                  </span>
+                  <span className="flex-1 truncate text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: on ? T.acc : T.text2 }}>
+                    {p.symbol}
+                  </span>
+                  {on && <Check size={13} strokeWidth={3} style={{ color: T.acc }} />}
+                </button>
+              );
+            })}
+
+            {!plans.length && (
+              <div className="px-2.5 py-2 text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                Сьогодні ще порожньо
+              </div>
+            )}
+
+            <div className="my-1 h-px" style={{ background: T.line }} />
+
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onAdd?.(); }}
+              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors duration-150"
+              onMouseEnter={(e) => { e.currentTarget.style.background = T.surface; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <span className="grid h-6 w-6 place-items-center rounded-lg" style={{ border: `1px dashed ${T.line}` }}>
+                <Plus size={12} strokeWidth={2.6} style={{ color: T.text4 }} />
+              </span>
+              <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>
+                Інший актив…
+              </span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------
+   Блоки плану.
+
+   Раніше це була панель угорі сторінки, під метаданими. Вона мала
+   дві біди, і обидві структурні, а не косметичні.
+
+   Перша: місце. Блоки налаштовують раз на місяць, а панель бачили
+   щодня — і щодня вона відтісняла сам план униз. Навіть згорнута в
+   один рядок вона лишалась першим, що читає око на сторінці, яка
+   взагалі не про налаштування.
+
+   Друга: пунктир означав у ній дві різні речі одночасно. Контейнер
+   був обведений пунктиром просто як оздоба, а вимкнений блок
+   усередині — теж пунктиром, але вже зі змістом «сюди можна додати».
+   Один сигнал, два значення, в одному компоненті: око читає це як
+   недомальоване.
+
+   Тут обидві зникають самі. Налаштування живе серед інших службових
+   кнопок хедера, а на місці пунктиру — звичайний список із
+   галочками, той самий, що в перемикачі планів поруч.
+------------------------------------------------------------------ */
+function BlocksMenu({ mode }) {
+  const { blocks, isVisible, toggle, hidden } = usePlanBlocks(mode);
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const shown = blocks.length - blocks.filter((b) => hidden.includes(b.id)).length;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+
+  const phases = ['plan', 'live', 'review'];
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label="Блоки плану"
+        title="Блоки плану"
+        className="group relative flex h-[38px] items-center gap-2 rounded-xl px-3 transition-all duration-200 active:scale-[0.97]"
+        style={{
+          fontFamily: T.sans,
+          background: open ? T.surfaceHi : T.surface,
+          border: `1px solid ${open ? T.lineAcc : T.line}`,
+        }}
+        onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = T.lineHi; }}
+        onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = T.line; }}
+      >
+        <LayoutGrid size={15} strokeWidth={2.2} style={{ color: open ? T.acc : T.text2 }} />
+        {/* Показуємо лічильник, лише коли щось приховано. Постійне
+            «8 з 8» — це шум: воно не повідомляє нічого, поки людина
+            сама нічого не змінила. */}
+        {shown < blocks.length && (
+          <span
+            className="rounded-md px-1.5 text-[11px] font-bold tabular-nums"
+            style={{ background: `rgba(${T.accRgb},0.14)`, color: T.acc }}
+          >
+            {shown}/{blocks.length}
+          </span>
+        )}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.97 }}
+            transition={{ duration: 0.17, ease: EASE }}
+            className="absolute right-0 top-[calc(100%+8px)] z-[80] w-[264px] overflow-hidden rounded-2xl p-1.5"
+            style={{
+              background: T.surfaceHi,
+              border: `1px solid ${T.lineHi}`,
+              boxShadow: '0 30px 70px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05)',
+            }}
+          >
+            <div
+              className="px-2.5 pb-2 pt-1.5 text-[12px] leading-[17px]"
+              style={{ fontFamily: T.sans, color: T.text3 }}
+            >
+              Залиш тільки те, чим користуєшся. Записи прихованих блоків не зникають.
+            </div>
+
+            <div className="max-h-[52vh] overflow-y-auto">
+              {phases.map((phase) => {
+                const list = blocks.filter((b) => b.phase === phase);
+                if (!list.length) return null;
+                return (
+                  <div key={phase}>
+                    <div
+                      className="px-2.5 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.14em]"
+                      style={{ fontFamily: T.sans, color: T.text3 }}
+                    >
+                      {PHASE_LABEL[phase]}
+                    </div>
+
+                    {list.map((b) => {
+                      const on = isVisible(b.id);
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          role="menuitemcheckbox"
+                          aria-checked={on}
+                          onClick={() => toggle(b.id)}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors duration-150"
+                          onMouseEnter={(e) => { e.currentTarget.style.background = T.surface; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          {/* Стан читається заливкою й галочкою, а не
+                              типом рамки: суцільна проти пунктирної на
+                              двадцяти пікселях не розрізняється зовсім. */}
+                          <span
+                            className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-lg transition-colors duration-200"
+                            style={{
+                              background: on ? `rgba(${T.okRgb},0.16)` : 'transparent',
+                              border: `1px solid ${on ? `rgba(${T.okRgb},0.32)` : T.lineHi}`,
+                              color: on ? T.ok : T.text3,
+                            }}
+                          >
+                            <AnimatePresence mode="wait" initial={false}>
+                              <motion.span
+                                key={on ? 'on' : 'off'}
+                                initial={{ scale: 0.4, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.4, opacity: 0 }}
+                                transition={{ duration: 0.14 }}
+                                className="grid place-items-center"
+                              >
+                                {on ? <Check size={13} strokeWidth={3} /> : <Plus size={13} strokeWidth={2.8} />}
+                              </motion.span>
+                            </AnimatePresence>
+                          </span>
+
+                          <span
+                            className="flex-1 truncate text-[13.5px] font-semibold"
+                            style={{ fontFamily: T.sans, color: on ? T.text2 : T.text3 }}
+                          >
+                            {b.title}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function PlanHeader({
   title,
   pair,
   mode = 'daily',
   onBackToDaily,
+  onGoWeekly,
+  plans,
+  onPickPlan,
+  onAddPlan,
   onNewPlan,
   onShare,
   onOpenQuiz,
@@ -111,53 +417,59 @@ export default function PlanHeader({
           Тепер це один рядок службових елементів, а заголовок унизу
           отримує весь рядок і звучить голосніше сам по собі. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Мітка режиму — кольоровий бейдж з іконкою, а не голий рядок
-            капсом: одразу видно, денний це план чи тижневий. Колір той
-            самий, що в перемикачі режимів: день — фіолетовий, тиждень —
-            синій. На тижневому бейдж лишається виходом назад. */}
+        {/* Перемикач режимів, а не бейдж стану.
+
+            Раніше в денному режимі це був нерухомий прямокутник, і
+            перейти на тиждень можна було лише через модалку «новий
+            план» — тобто найочевидніший елемент на екрані нічого не
+            робив. Тепер це доріжка з двох станів: видно обидва режими
+            одразу, і перехід коштує один клік у будь-який бік. */}
         {(() => {
-          const tone = weekly ? T.info : T.acc;
-          const rgb = weekly ? T.infoRgb : T.accRgb;
-          const Icon = weekly ? CalendarRange : CalendarDays;
-          const inner = (
-            <>
-              {weekly && (
-                <ArrowLeft size={14} strokeWidth={2.6} className="shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" style={{ color: T.text3 }} />
-              )}
-              <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ background: `rgba(${rgb},0.16)`, color: tone }}>
-                <Icon size={17} strokeWidth={2.3} />
-                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full" style={{ background: tone, boxShadow: `0 0 8px rgba(${rgb},0.9)` }} />
-              </span>
-              <span className="flex flex-col leading-none">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: T.text4 }}>Режим</span>
-                <span className="mt-1 text-[16.5px] font-semibold" style={{ color: T.text }}>
-                  {weekly ? 'Weekly plan' : 'Daily plan'}
-                </span>
-              </span>
-            </>
-          );
-          const style = {
-            fontFamily: T.sans,
-            background: `linear-gradient(135deg, rgba(${rgb},0.12), rgba(${rgb},0.03))`,
-            border: `1px solid rgba(${rgb},0.3)`,
-            boxShadow: `0 10px 28px -16px rgba(${rgb},0.7)`,
-          };
-          return weekly ? (
-            <button
-              type="button"
-              onClick={onBackToDaily}
-              title="Повернутись до денного плану"
-              className="group flex items-center gap-2.5 rounded-xl py-1.5 pl-2.5 pr-4 transition-all duration-200 hover:brightness-125"
-              style={style}
+          const MODES = [
+            { id: 'daily', label: 'Daily', icon: CalendarDays, tone: T.acc, rgb: T.accRgb },
+            { id: 'weekly', label: 'Weekly', icon: CalendarRange, tone: T.info, rgb: T.infoRgb },
+          ];
+
+          return (
+            <div
+              className="flex shrink-0 items-center gap-1 rounded-xl p-1"
+              style={{ fontFamily: T.sans, background: T.sunken, border: `1px solid ${T.line}` }}
             >
-              {inner}
-            </button>
-          ) : (
-            <div className="flex items-center gap-2.5 rounded-xl py-1.5 pl-1.5 pr-4" style={style}>
-              {inner}
+              {MODES.map((m) => {
+                const on = (m.id === 'weekly') === weekly;
+                const Icon = m.icon;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => { if (!on) (m.id === 'weekly' ? onGoWeekly : onBackToDaily)?.(); }}
+                    className="relative flex items-center gap-2 rounded-lg px-3 py-2 transition-colors duration-200"
+                    style={{ color: on ? m.tone : T.text4 }}
+                    onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
+                    onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text4; }}
+                  >
+                    {/* Підсвітка спільна на обидві кнопки — тому вона
+                        переїжджає, а не блимає на новому місці. */}
+                    {on && (
+                      <motion.span
+                        layoutId="plan-mode-pill"
+                        className="absolute inset-0 rounded-lg"
+                        style={{ background: `rgba(${m.rgb},0.16)`, border: `1px solid rgba(${m.rgb},0.28)` }}
+                        transition={{ duration: 0.26, ease: EASE }}
+                      />
+                    )}
+                    <Icon size={15} strokeWidth={2.4} className="relative shrink-0" />
+                    <span className="relative text-[13.5px] font-semibold">{m.label}</span>
+                  </button>
+                );
+              })}
             </div>
           );
         })()}
+
+        {!weekly && (
+          <PlanSwitcher plans={plans} current={pair} onPick={onPickPlan} onAdd={onAddPlan} />
+        )}
 
         {/* Diagnostics-квіз про «сьогодні», а не про конкретний план,
             тому лишається однаковим і на денному, і на тижневому масштабі —
@@ -195,6 +507,7 @@ export default function PlanHeader({
 
           <div className="mx-1 h-6 w-px" style={{ background: T.line }} />
 
+          <BlocksMenu mode={mode} />
           <IconBtn icon={Send}    label="Telegram alert" onClick={onOpenTgAlert} tone={T.info} />
           <ShareBtn onShare={onShare} />
 
@@ -229,22 +542,9 @@ export default function PlanHeader({
         >
           {title}
         </h1>
-        {pair && (
-          <motion.span
-            initial={{ opacity: 0, x: -6 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={SPRING}
-            className="rounded-lg px-2.5 py-1 text-[15px] font-semibold tabular-nums"
-            style={{
-              fontFamily: T.sans,
-              background: `rgba(${T.accRgb},0.10)`,
-              border: `1px solid rgba(${T.accRgb},0.22)`,
-              color: T.acc,
-            }}
-          >
-            {pair}
-          </motion.span>
-        )}
+        {/* Бейджа активу тут немає навмисно: він стоїть окремим полем
+            у метаданих нижче, і дублювати його поруч із назвою дня —
+            означало б двічі сказати те саме на одному екрані. */}
       </div>
     </div>
   );

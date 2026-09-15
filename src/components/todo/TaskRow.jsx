@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Clock, Timer, Pencil, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Check, Clock, Timer, Pencil, Trash2, X, AlertTriangle, Sun, ArrowRight, GripVertical } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
-import { QUADRANTS, relativeDay, isOverdue } from '../../lib/todoData';
+import { QUADRANTS, relativeDay, isOverdue, today, addDays } from '../../lib/todoData';
 
 /* ==================================================================
    Рядок завдання.
@@ -13,7 +13,10 @@ import { QUADRANTS, relativeDay, isOverdue } from '../../lib/todoData';
 export const toneColor = (tone) => ({ bad: T.bad, ok: T.ok, warn: T.warn, muted: T.text3 }[tone] || T.acc);
 export const quadrantOf = (id) => QUADRANTS.find((q) => q.id === id);
 
-export default function TaskRow({ task, onToggle, onEdit, onDelete, onFocus, compact }) {
+export default function TaskRow({
+  task, onToggle, onEdit, onDelete, onFocus, compact,
+  selected, dragHandle, dragging, onSelect,
+}) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.text);
   const q = quadrantOf(task.quadrant);
@@ -61,20 +64,36 @@ export default function TaskRow({ task, onToggle, onEdit, onDelete, onFocus, com
 
   return (
     <motion.div
-      layout
+      /* Усередині перетягуваного списку позицію рахує dnd-kit, і
+         власна layout-анімація framer'а сперечалася б із нею —
+         рядок смикався б під курсором. Тому там вона вимкнена. */
+      layout={!dragHandle}
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.14 } }}
       transition={{ duration: 0.22, ease: EASE }}
-      whileHover={{ x: 2 }}
-      className="group relative flex items-center gap-3 overflow-hidden rounded-xl px-3.5 py-2.5 transition-colors duration-300"
+      /* Зсув під курсором прибрано: рядок тепер можна тягнути, і
+         власний рух під мишею сперечався б із перетягуванням. */
+      className="group relative flex items-center gap-2 overflow-hidden rounded-xl py-2.5 pl-1.5 pr-3 transition-colors duration-300"
       style={{
-        background: task.done ? 'transparent' : T.sunken,
-        border: `1px solid ${task.done ? 'transparent' : T.line}`,
+        background: selected ? `rgba(${T.accRgb},0.10)` : task.done ? 'transparent' : T.sunken,
+        border: `1px solid ${selected ? T.lineAcc : task.done ? 'transparent' : T.line}`,
+        opacity: dragging ? 0.4 : 1,
       }}
-      onMouseEnter={(e) => { if (!task.done) e.currentTarget.style.borderColor = T.lineHi; }}
-      onMouseLeave={(e) => { if (!task.done) e.currentTarget.style.borderColor = task.done ? 'transparent' : T.line; }}
+      onMouseEnter={(e) => { if (!task.done && !selected) e.currentTarget.style.borderColor = T.lineHi; }}
+      onMouseLeave={(e) => { if (!task.done && !selected) e.currentTarget.style.borderColor = task.done ? 'transparent' : T.line; }}
     >
+      {/* Ручка перетягування. Окремою кнопкою, а не всім рядком: рядок
+          клікають, щоб відмітити завдання, і випадковий зсув на кілька
+          пікселів не має ставати перетягуванням. */}
+      <span
+        {...(dragHandle || {})}
+        className={`relative z-10 grid h-7 w-5 shrink-0 place-items-center rounded transition-opacity duration-200 ${dragHandle ? 'cursor-grab opacity-0 group-hover:opacity-100 active:cursor-grabbing' : 'opacity-0'}`}
+        style={{ color: T.text4 }}
+        aria-hidden={!dragHandle}
+      >
+        {dragHandle && <GripVertical size={14} strokeWidth={2} />}
+      </span>
       {/* колір квадранта тонкою рискою */}
       <motion.span
         aria-hidden
@@ -113,31 +132,25 @@ export default function TaskRow({ task, onToggle, onEdit, onDelete, onFocus, com
         </AnimatePresence>
       </motion.button>
 
-      {/* текст */}
+      {/* текст.
+
+          Клік по тексту ставить курсор, а не відмічає завдання:
+          відмічає галочка. Інакше не було способу просто вибрати
+          рядок — будь-який дотик одразу закривав завдання, і клавіші
+          «на сьогодні / на завтра» не мали до чого застосуватись. */}
       <button
-        onClick={() => onToggle(task.id)}
+        onClick={() => (onSelect ? onSelect() : onToggle(task.id))}
         className="relative z-10 min-w-0 flex-1 text-left"
       >
         <motion.span
           className="text-[14.5px] leading-snug"
           initial={false}
-          animate={{
-            color: task.done ? T.text4 : T.text,
-            backgroundSize: task.done ? '100% 1.5px' : '0% 1.5px',
-          }}
-          transition={{
-            color: { duration: 0.3, ease: EASE },
-            backgroundSize: { duration: 0.32, ease: [0.65, 0, 0.35, 1] },
-          }}
-          style={{
-            fontFamily: T.sans,
-            display: 'inline',
-            backgroundImage: `linear-gradient(rgba(${T.okRgb},0.55), rgba(${T.okRgb},0.55))`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: '0 62%',
-            WebkitBoxDecorationBreak: 'clone',
-            boxDecorationBreak: 'clone',
-          }}
+          /* Виконане просто тьмяніє. Закреслення читалось як
+             «скасовано», а не «зроблено», і на довгій назві
+             перетворювало рядок на суцільну риску. */
+          animate={{ color: task.done ? T.text4 : T.text }}
+          transition={{ duration: 0.3, ease: EASE }}
+          style={{ fontFamily: T.sans, display: 'inline' }}
         >
           {task.text}
         </motion.span>
@@ -174,6 +187,26 @@ export default function TaskRow({ task, onToggle, onEdit, onDelete, onFocus, com
 
       {/* дії */}
       <span className="relative z-10 flex shrink-0 items-center gap-1">
+        {/* Перенести на сьогодні / завтра одним дотиком. Це дві
+            найчастіші правки завдання, і обидві досі вимагали
+            відкрити попап, знайти день, клікнути, закрити. */}
+        {!task.done && onEdit && (
+          <>
+            <QuickBtn
+              icon={Sun}
+              title="На сьогодні"
+              active={task.due === today()}
+              onClick={() => onEdit(task.id, { due: today() })}
+            />
+            <QuickBtn
+              icon={ArrowRight}
+              title="На завтра"
+              active={task.due === addDays(today(), 1)}
+              onClick={() => onEdit(task.id, { due: addDays(today(), 1) })}
+            />
+          </>
+        )}
+
         {!task.done && onFocus && (
           <button
             onClick={() => onFocus(task)}
@@ -213,5 +246,24 @@ export default function TaskRow({ task, onToggle, onEdit, onDelete, onFocus, com
         )}
       </span>
     </motion.div>
+  );
+}
+
+/* ---------- дрібна кнопка швидкої дії ----------
+   Зʼявляється при наведенні на рядок; уже застосована — лишається
+   видимою й підсвіченою, інакше незрозуміло, чому кнопка «на
+   сьогодні» нічого не змінює. */
+function QuickBtn({ icon: I, title, onClick, active }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`grid h-8 w-8 place-items-center rounded-lg transition-all duration-200 ${active ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+      style={{ color: active ? T.acc : T.text4, background: active ? `rgba(${T.accRgb},0.10)` : 'transparent' }}
+      onMouseEnter={(e) => { if (!active) { e.currentTarget.style.color = T.text; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; } }}
+      onMouseLeave={(e) => { if (!active) { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; } }}
+    >
+      <I size={14} strokeWidth={2.2} />
+    </button>
   );
 }

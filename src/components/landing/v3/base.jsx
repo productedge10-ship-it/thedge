@@ -128,7 +128,9 @@ export const H2 = ({ children, style }) => (
 );
 
 export const Sub = ({ children, style }) => (
-  <p style={{ fontFamily: F.sans, fontSize: 16, lineHeight: 1.55, color: C.text3, margin: '14px 0 0', maxWidth: 620, ...style }}>
+  /* lp-sub — гачок для примірочної шрифтів: усі описи лендінга мусять
+     мінятись разом, а вага в них стоїть інлайном */
+  <p className="lp-sub" style={{ fontFamily: F.sans, fontSize: 16, lineHeight: 1.55, color: C.text3, margin: '14px 0 0', maxWidth: 620, ...style }}>
     {children}
   </p>
 );

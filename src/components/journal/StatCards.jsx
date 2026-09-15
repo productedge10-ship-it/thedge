@@ -214,6 +214,23 @@ export default function StatCards({ stats, chartData }) {
           {stats.totalProfit > 0 ? '+' : stats.totalProfit < 0 ? '−' : ''}
           ${Math.abs(stats.totalProfit).toFixed(2)}
         </span>
+
+        {/* Чесність важливіша за красу підсумку.
+
+            Гроші відомі не по кожній угоді: імпортовані приносять їх
+            від брокера, заведені руками — лише якщо заповнений ризик.
+            Коли покриття неповне, сума в доларах порахована НЕ по тому
+            ж набору, що R поруч, і мовчати про це не можна: саме так
+            «−5.72R» опинявся поруч із «+$191» і виглядав як помилка
+            рахунку, хоча обидва числа правильні кожне про своє. */}
+        {stats.pricedTrades < stats.total && (
+          <span
+            className="mt-1 block text-[11.5px]"
+            style={{ fontFamily: T.sans, color: T.text4 }}
+          >
+            $ рахується по {stats.pricedTrades} з {stats.total} — решта без ризику
+          </span>
+        )}
       </Card>
 
       <Card

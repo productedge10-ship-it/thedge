@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Crosshair, Radio, ClipboardList, ArrowUp, ChevronDown } from 'lucide-react';
 import { T, EASE, SPRING } from './planTheme';
+import AssetIcon from '../ui/AssetIcon';
 
 /* ==================================================================
    Ліва вертикальна рейка-якір. Прилипає до екрану і йде разом
@@ -151,178 +152,13 @@ function useRailLeft() {
    Наведення показує все на мить (попередній перегляд), клік лишає
    розгорнутим, доки не клікнути ще раз — так само, як наведення саме
    лишає її, коли миша йде геть, а клік — ні. */
-function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher, sections = SECTIONS }) {
-  const left = useRailLeft();
-  const [hovered, setHovered] = useState(false);
-  const [pinned, setPinned] = useState(false);
-  const open = hovered || pinned;
-  const current = sections.some((s) => s.id === active) ? active : sections[0]?.id;
-  const visible = open ? sections : sections.filter((s) => s.id === current);
+/* Ліва рейка прибрана.
 
-  return (
-    <div
-      className="fixed top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center xl:flex no-print"
-      style={{ left, filter: 'drop-shadow(0 20px 40px var(--edge-panel-glow, rgba(0,0,0,0.3)))', transition: 'left 0.42s cubic-bezier(0.22,1,0.36,1)' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {/* Перемикач активів — окремою капсулою над навігацією */}
-      {assetSwitcher && (
-        <div
-          className="mb-2.5 rounded-2xl p-2"
-          style={{
-            background: 'var(--edge-panel, rgba(13,13,16,0.90))',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: `1px solid ${T.line}`,
-          }}
-        >
-          {assetSwitcher}
-        </div>
-      )}
-
-      <motion.div
-        layout
-        className="flex flex-col items-center gap-1 rounded-2xl p-2.5"
-        style={{
-          background: 'var(--edge-panel, rgba(13,13,16,0.90))',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: `1px solid ${T.line}`,
-        }}
-        transition={SPRING}
-      >
-        {/* popLayout виводить іконку, що йде, з потоку на час її
-            власної анімації — інакше на мить потрібне місце під ОБИДВІ
-            (стару й нову), капсула сіпається, і це якраз видно під час
-            скролу, коли активна секція міняється сама по собі. */}
-        <AnimatePresence initial={false} mode="popLayout">
-          {visible.map((s, i) => {
-            const isActive = active === s.id;
-            const value = progress?.[s.id] ?? 0;
-            const Icon = s.icon;
-            const isLastVisible = i === visible.length - 1;
-
-            return (
-              <motion.div
-                key={s.id}
-                layout
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.5 }}
-                transition={{ opacity: { duration: 0.15 }, scale: { duration: 0.15 }, layout: SPRING }}
-                className="flex flex-col items-center"
-              >
-                <button
-                  onClick={() => onNavigate(s.id)}
-                  className="group relative flex items-center"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="planRailPill"
-                      className="absolute -inset-1 rounded-xl"
-                      style={{ background: T.surfaceHi, border: `1px solid ${T.lineHi}` }}
-                      transition={SPRING}
-                    />
-                  )}
-
-                  <span className="relative z-10 grid h-10 w-10 place-items-center">
-                    <Ring value={value} active={isActive} />
-                    <Icon
-                      size={14}
-                      strokeWidth={2.4}
-                      className="absolute transition-colors duration-300"
-                      style={{ color: isActive ? T.acc : T.text2 }}
-                    />
-                  </span>
-
-                  {/* флаутер-підказка вправо */}
-                  <span
-                    className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-lg px-3 py-2 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
-                    style={{
-                      transform: 'translateY(-50%) translateX(-4px)',
-                      background: T.surface,
-                      border: `1px solid ${T.lineHi}`,
-                      boxShadow: '0 12px 30px var(--edge-panel-glow, rgba(0,0,0,0.6))',
-                    }}
-                  >
-                    <span className="text-[14px] font-semibold" style={{ fontFamily: T.display, color: T.text }}>
-                      {s.label}
-                    </span>
-                  </span>
-                </button>
-
-                {!isLastVisible && (
-                  <div className="my-1 h-5 w-px overflow-hidden rounded-full" style={{ background: T.line }}>
-                    <motion.div
-                      className="w-full rounded-full"
-                      style={{ background: T.ok, height: '100%' }}
-                      initial={false}
-                      animate={{ opacity: value >= 1 ? 1 : 0 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </motion.div>
-
-      {/* Тумблер розгортання: окремо від навігації, тому клік по іконці
-          завжди веде до фази, а не борюється за той самий клік. */}
-      <motion.button
-        layout
-        onClick={() => setPinned((v) => !v)}
-        title={open ? 'Згорнути' : 'Розгорнути'}
-        className="mt-1 grid h-5 w-9 place-items-center rounded-md transition-colors duration-150"
-        style={{ color: T.text4 }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = T.text2)}
-        onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
-      >
-        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}>
-          <ChevronDown size={12} strokeWidth={2.6} />
-        </motion.span>
-      </motion.button>
-
-      {/* загальний прогрес — вертикальна смуга під кільцями, лише коли розгорнуто */}
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            layout
-            initial={{ opacity: 0, scale: 0.85, y: -6 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.85, y: -6 }}
-            transition={{ duration: 0.2, ease: EASE }}
-            className="mt-1.5 flex flex-col items-center"
-          >
-            <div
-              className="flex flex-col items-center gap-2 rounded-xl px-2 py-2.5"
-              style={{ background: 'var(--edge-panel, rgba(13,13,16,0.90))', backdropFilter: 'blur(20px)', border: `1px solid ${T.line}` }}
-            >
-              <div className="h-14 w-1 overflow-hidden rounded-full" style={{ background: T.line }}>
-                <motion.div
-                  className="w-full rounded-full"
-                  style={{ background: overall >= 1 ? T.ok : T.acc, marginTop: 'auto' }}
-                  initial={false}
-                  animate={{ height: `${Math.round(overall * 100)}%` }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                />
-              </div>
-              <span
-                className="text-[12px] font-semibold tabular-nums"
-                style={{ fontFamily: T.sans, color: overall >= 1 ? T.ok : T.text2, writingMode: 'vertical-rl' }}
-              >
-                {Math.round(overall * 100)}%
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+   Вона тримала навігацію по фазах і кільця прогресу, але сторінка
+   коротка: до фази швидше доїхати колесом, ніж прицілитись у кільце
+   завбільшки з ніготь. Перемикач планів, який жив тут деякий час,
+   переїхав у шапку — там він поруч із рештою службових елементів,
+   а не приклеєний збоку окремим стовпчиком. */
 
 /* ==================================================================
    Мобільний / планшетний фолбек: горизонтальний sticky-док зверху,
@@ -427,18 +263,10 @@ export function BackToTop({ visible, onClick }) {
   );
 }
 
-export default function PlanTabs({ active, onNavigate, progress, overall, assetSwitcher, visiblePhases }) {
+export default function PlanTabs({ active, onNavigate, progress, overall, visiblePhases }) {
   const sections = visiblePhases ? SECTIONS.filter((s) => visiblePhases.includes(s.id)) : SECTIONS;
   return (
     <>
-      <DesktopRail
-        active={active}
-        onNavigate={onNavigate}
-        progress={progress}
-        overall={overall}
-        assetSwitcher={assetSwitcher}
-        sections={sections}
-      />
       <MobileDock active={active} onNavigate={onNavigate} progress={progress} overall={overall} sections={sections} />
     </>
   );

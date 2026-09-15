@@ -70,8 +70,8 @@ export const T = {
      місці — і його підхоплять усі тисячі inline-стилів, не змінюючи
      жодного з них. Значення за замовчуванням лишається в fallback,
      тому без перемикача поводиться рівно як раніше. */
-  display: "var(--edge-display, 'Roboto', system-ui, -apple-system, sans-serif)",
-  sans:    "var(--edge-sans, 'Roboto', system-ui, -apple-system, sans-serif)",
+  display: "var(--edge-display, 'Unbounded', system-ui, -apple-system, sans-serif)",
+  sans:    "var(--edge-sans, 'Golos Text', system-ui, -apple-system, sans-serif)",
   mono:    "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace",
 };
 
@@ -98,7 +98,7 @@ export function useEdgeFonts() {
        сторінки живуть поза Layout, тому без цього рядка «THE EDGE»
        на них падав у системний sans і переставав бути знаком. */
     css.href =
-      'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Space+Grotesk:wght@500;700;800&display=swap';
+      'https://fonts.googleapis.com/css2?family=Unbounded:wght@300..900&family=Golos+Text:wght@400..900&family=Space+Grotesk:wght@500;700;800&display=swap';
     document.head.append(pre1, pre2, css);
   }, []);
 }

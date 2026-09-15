@@ -4,7 +4,7 @@ import { Type, X, RotateCcw } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
 import {
-  FONTS, SHIFTS, applyFonts, byId, loadPreviewFonts, readChoice, writeChoice,
+  BASE, FONTS, SHIFTS, applyFonts, byId, loadPreviewFonts, readChoice, writeChoice,
 } from '../../lib/fontLab';
 
 /* ==================================================================
@@ -144,7 +144,7 @@ export default function FontLab() {
                 Шрифти
               </span>
               <button
-                onClick={() => setChoice({ display: 'main', sans: 'main', headWeight: 0, textShift: 0 })}
+                onClick={() => setChoice({ ...BASE })}
                 className="ml-auto grid h-7 w-7 place-items-center rounded-lg"
                 style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text3 }}
                 title="Повернути як було"
@@ -175,6 +175,20 @@ export default function FontLab() {
                 {/* А текст не задаємо, а зсуваємо: у ньому побудована
                     ієрархія, і одна вага на все її стерла б */}
                 <Chips
+                  items={[{ id: 0, name: 'як є' }, ...(byId(choice.sans).weights || []).map((w) => ({ id: w, name: String(w) }))]}
+                  value={choice.textWeight}
+                  onPick={(v) => setChoice((c) => ({ ...c, textWeight: v }))}
+                  render={(it) => (
+                    <span style={{ fontFamily: byId(choice.sans).stack, fontWeight: it.id || 400 }}>
+                      {it.name}
+                    </span>
+                  )}
+                />
+
+                {/* А всередині застосунку ту саму вагу задавати не можна:
+                    там ієрархія побудована класами, і одне число її стерло б.
+                    Тому для нього — зсув усієї шкали. */}
+                <Chips
                   items={SHIFTS}
                   value={choice.textShift}
                   onPick={(v) => setChoice((c) => ({ ...c, textShift: v }))}
@@ -186,9 +200,9 @@ export default function FontLab() {
               className="mt-4 text-[11.5px]"
               style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.5 }}
             >
-              Вибір зберігається в браузері й діє на весь сайт. Заголовкам вага
-              задається напряму, тексту — зсувається вся шкала, щоб не втратити
-              різницю між рівнями. Etude Noire запрацює, щойно покладемо файл
+              Вибір зберігається в браузері й діє на весь сайт. Заголовкам і
+              описам лендінга вага задається напряму; другий ряд під текстом —
+              зсув усієї шкали для застосунку, щоб не втратити різницю між рівнями. Etude Noire запрацює, щойно покладемо файл
               шрифта в проєкт.
             </p>
           </motion.div>

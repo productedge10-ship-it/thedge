@@ -231,7 +231,10 @@ export async function removeEvent(userId, event) {
 export async function fetchAccountTrades(userId, firmName) {
   const { data, error } = await supabase
     .from('trades')
-    .select('id, plan_date, result, rr, risk, followed_plan, has_mistake')
+    /* `profit_money` і `exit_time` потрібні кривій балансу: знімки з
+       терміналу існують лише з дня, коли воркер навчився їх писати, а
+       все, що було раніше, відтворюється саме з угод. */
+    .select('id, plan_date, result, rr, risk, followed_plan, has_mistake, profit_money, exit_time')
     .eq('user_id', userId)
     .eq('account_name', firmName)
     .order('plan_date', { ascending: true });
