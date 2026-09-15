@@ -127,8 +127,11 @@ function ShotsField({ shots, setShots, entryId }) {
     return () => document.removeEventListener('paste', onPaste);
   });
 
+  /* Колонка, а не просто блок: дропзона забирає всю висоту, що
+     лишилась під текстом і підказками, замість вузької смужки з
+     порожнечею під нею до самого низу вікна. */
   return (
-    <div className="mt-4">
+    <div className="mt-4 flex min-h-0 flex-1 flex-col">
       <input
         ref={input}
         type="file"
@@ -142,7 +145,7 @@ function ShotsField({ shots, setShots, entryId }) {
         /* Видалення живе на самій картинці, поруч із лупою й
            фулскріном: список «кадр 1 · кадр 2» під слайдером змушував
            тримати в голові, який із них зараз показано. */
-        <div className="mb-2.5">
+        <div className="mb-2.5 flex-none">
           <ImageSlider
             images={shots}
             containerClassName="h-[200px] rounded-[14px]"
@@ -158,7 +161,7 @@ function ShotsField({ shots, setShots, entryId }) {
         onDragOver={(e) => { e.preventDefault(); setHov(true); }}
         onDragLeave={() => setHov(false)}
         onDrop={(e) => { e.preventDefault(); setHov(false); add(e.dataTransfer.files); }}
-        className="flex cursor-pointer items-center gap-3 rounded-[14px] p-3"
+        className="flex min-h-[112px] flex-1 cursor-pointer flex-col items-center justify-center gap-3.5 rounded-[14px] p-5 text-center"
         style={{
           border: `1.5px dashed ${hov ? A(0.55) : 'var(--edge-line)'}`,
           background: hov ? A(0.07) : 'rgba(var(--edge-hair-rgb),0.015)',
@@ -166,22 +169,23 @@ function ShotsField({ shots, setShots, entryId }) {
         }}
       >
         <span
-          className="grid h-[38px] w-[38px] flex-none place-items-center rounded-xl"
+          className="grid h-[46px] w-[46px] flex-none place-items-center rounded-2xl"
           style={{
             background: hov ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.04)',
             border: `1px solid ${hov ? A(0.44) : 'var(--edge-line)'}`,
             color: hov ? 'var(--edge-acc)' : 'var(--edge-text3)',
+            transform: hov ? 'translateY(-2px)' : 'none',
             transition: 'all .2s',
           }}
         >
-          {busy > 0 ? <Loader2 size={17} className="animate-spin" /> : <ImageIcon size={17} strokeWidth={1.7} />}
+          {busy > 0 ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} strokeWidth={1.7} />}
         </span>
 
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0">
           <span className="block text-[14.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
             {busy > 0 ? `Завантажую ${busy}…` : shots.length ? 'Додати ще скрін' : 'Скріни графіка'}
           </span>
-          <span className="mt-[3px] block text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
+          <span className="mt-[5px] block text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
             Перетягни, клікни або встав із буфера
           </span>
         </span>
@@ -240,7 +244,7 @@ function ReasonPanel({ value, onChange, invalid }) {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="px-5 pb-3.5 pt-5">
         <Cap
-          hint={picked.length ? `обрано ${picked.length}` : 'можна кілька'}
+          hint={picked.length ? `обрано ${picked.length}` : undefined}
           tone={invalid ? 'var(--edge-bad)' : undefined}
         >
           Причина
@@ -565,13 +569,13 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
               <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1fr_396px]">
                 {/* ліворуч: те, що людина пише сама */}
                 <div
-                  className="min-w-0 overflow-y-auto px-[22px] pb-[18px] pt-5"
+                  className="flex min-w-0 flex-col overflow-y-auto px-[22px] pb-[18px] pt-5"
                   style={{ borderRight: '1px solid var(--edge-line)' }}
                 >
                   <Cap>Пара</Cap>
                   <div
                     onClick={() => setAssetOpen(true)}
-                    className="mt-2.5 flex h-[46px] cursor-pointer items-center justify-between gap-2.5 rounded-[13px] px-4"
+                    className="mt-2.5 flex h-[46px] shrink-0 cursor-pointer items-center justify-between gap-2.5 rounded-[13px] px-4"
                     style={{ background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', transition: 'all .16s' }}
                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line)'; }}
@@ -587,7 +591,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                     <Search size={15} strokeWidth={1.8} style={{ color: 'var(--edge-text3)', flex: 'none' }} />
                   </div>
 
-                  <div className="mt-5">
+                  <div className="mt-5 shrink-0">
                     <Cap
                       hint={bad(missDesc) ? '⚠ без опису запис не піддається розбору' : len ? `${len} символів` : undefined}
                       tone={bad(missDesc) ? 'var(--edge-bad)' : len > 40 ? 'var(--edge-ok)' : undefined}
@@ -620,7 +624,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                   {/* Підказки дописують заготовку в кінець тексту:
                       порожнє поле — головна причина, чому розбір
                       відкладають «на потім» і не повертаються. */}
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2">
                     <span
                       className="mr-0.5 text-[11.5px] font-bold uppercase"
                       style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}
@@ -671,7 +675,7 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                       : missReason ? 'Обери причину' : 'Опиши, що сталось')
                     : (form.reasons || []).length
                       ? `обрано ${(form.reasons || []).length}`
-                      : 'можна кілька'}
+                      : ''}
                 </span>
 
                 <div className="flex items-center gap-2.5">

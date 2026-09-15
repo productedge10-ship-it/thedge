@@ -24,6 +24,7 @@ import AssetIcon from '../ui/AssetIcon';
 import ImageSlider from '../ui/ImageSlider';
 import Popover from '../ui/Popover';
 import useCachedList, { listCache } from '../../hooks/useCachedList';
+import useImageAttach, { filesFromPaste, imageFiles } from '../../hooks/useImageAttach';
 
 /* ==================================================================
    Запис угоди — «Ledger»: редакційна одноколонна форма. Підпис зліва,
@@ -1023,6 +1024,13 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
 
   const scrollRef = useRef(null);
 
+  /* Тека для скрінів ще не збереженої угоди: id у неї зʼявиться лише
+     після вставки, а складати все в спільний «new» — це втратити
+     можливість прибрати файли однієї угоди одним префіксом. */
+  const [draftId] = useState(() => (globalThis.crypto?.randomUUID
+    ? crypto.randomUUID()
+    : `draft-${Date.now().toString(36)}`));
+
   /* ---------- завантаження ---------- */
 
   useEffect(() => {
@@ -1147,28 +1155,27 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
     return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
   }, [isOpen, onClose, composerOpen]);
 
-  /* ---------- вставка картинок ---------- */
+  /* ---------- вставка картинок ----------
 
-  const pasteInto = (setter) => (e) => {
+     Скрін летить у сховище стиснутим, а в угоді лишається посилання.
+     Посилання з TradingView не чіпаємо взагалі: воно вже лежить на
+     їхньому CDN і важить нуль. */
+  const attach = useImageAttach({ folder: `trade-${existingTrade?.id || draftId}` });
+
+  const pasteInto = (setList) => (e) => {
     const text = e.clipboardData.getData('text');
     if (text && text.startsWith('http')) {
       e.preventDefault();
-      setter(text);
+      setList((p) => [...p, text]);
       return;
     }
-    const items = e.clipboardData.items;
-    for (let i = 0; i < items.length; i += 1) {
-      if (items[i].type.indexOf('image') !== -1) {
-        e.preventDefault();
-        const reader = new FileReader();
-        reader.onload = (ev) => setter(ev.target.result);
-        reader.readAsDataURL(items[i].getAsFile());
-        return;
-      }
-    }
+    const files = filesFromPaste(e);
+    if (!files.length) return;
+    e.preventDefault();
+    attach.addToList(files, setList);
   };
 
-  const pasteMistake = pasteInto((src) => setMistakeImages((p) => [...p, src]));
+  const pasteMistake = pasteInto(setMistakeImages);
   const removeMistakeImage = (i) => setMistakeImages((p) => p.filter((_, idx) => idx !== i));
 
   /* Скрін сетапу — приймає і те, і те: звичайний скріншот
@@ -1176,14 +1183,18 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const removeTradeImage = (i) => setTradeImages((p) => p.filter((_, idx) => idx !== i));
   const [setupDropHot, setSetupDropHot] = useState(false);
 
-  const pasteSetup = pasteInto((src) => setTradeImages((p) => [...p, src]));
+  const pasteSetup = pasteInto(setTradeImages);
 
+  /* Перетягнути можна і посилання, і сам файл: раніше файл тут
+     відхилявся, бо класти його було нікуди. */
   const dropSetup = (e) => {
     e.preventDefault();
     setSetupDropHot(false);
+    const files = imageFiles(e.dataTransfer.files);
+    if (files.length) { attach.addToList(files, setTradeImages); return; }
     const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text');
     if (url && url.startsWith('http')) setTradeImages((p) => [...p, url]);
-    else notify.error('Не вийшло', 'Перетягни посилання, а не файл.');
+    else notify.error('Не вийшло', 'Перетягни картинку або посилання.');
   };
 
   /* ---------- перевірки ---------- */
@@ -1237,11 +1248,24 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
     }
     if (psyMissing) return setErrorMsg('Дай відповідь на всі питання розбору — саме вони роблять журнал корисним.');
     if (hasMistake && !mistakeText.trim()) return setErrorMsg('Опиши помилку — інакше за місяць не згадаєш.');
+    /* Поки скрін летить у сховище, у стані лежить blob-посилання. Воно
+       живе лише в цій вкладці, і в базі перетворилось би на порожню
+       рамку після перезавантаження. */
+    if (attach.busy) return setErrorMsg('Скрін ще вантажиться — секунду.');
 
     setErrorMsg('');
     setLoading(true);
 
     try {
+      /* Скріни зі старих угод лежать як base64 — переносимо їх у
+         сховище мовчки, при першому ж збереженні такої угоди. */
+      const [shots, mistakeShots] = await Promise.all([
+        attach.migrate(tradeImages),
+        attach.migrate(mistakeImages),
+      ]);
+      setTradeImages(shots);
+      setMistakeImages(mistakeShots);
+
       const payload = {
         plan_date: tradeDate, plan_pair: selectedPair, account_name: account, risk,
         rr: rr ? parseFloat(String(rr).replace(',', '.')) : null,
@@ -1250,10 +1274,10 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
         entry_time: entryTime || null,
         exit_time: exitTime || null,
         trade_description: tradeDescription,
-        trade_image: tradeImages[0] || null,
-        trade_images: tradeImages.length ? tradeImages : null,
+        trade_image: shots[0] || null,
+        trade_images: shots.length ? shots : null,
         followed_plan: followedPlan, rushed, has_mistake: hasMistake,
-        mistake_description: mistakeText, mistake_images: mistakeImages,
+        mistake_description: mistakeText, mistake_images: mistakeShots,
         psy_confident: psyConfident, psy_fear: psyFear, psy_repeat: psyRepeat,
         psy_revenge: psyRevenge, psy_notes: psyNotes,
       };
@@ -1427,10 +1451,11 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       >
                         {tradeImages.length > 0 && (
                           <span
-                            className="pointer-events-none absolute left-[14px] top-[14px] z-[3] rounded-lg px-2.5 py-[5px] text-[11.5px] uppercase"
+                            className="pointer-events-none absolute left-[14px] top-[14px] z-[3] flex items-center gap-2 rounded-lg px-2.5 py-[5px] text-[11.5px] uppercase"
                             style={{ fontFamily: MONO, letterSpacing: '0.14em', color: ACCENT, background: 'var(--edge-panel, rgba(10,10,14,0.85))', border: `1px solid ${line(0.1)}` }}
                           >
-                            {`Скрін ${tradeImages.length}`}
+                            {attach.busy && <Loader2 size={11} strokeWidth={3} className="animate-spin" />}
+                            {attach.busy ? 'Вантажу' : `Скрін ${tradeImages.length}`}
                           </span>
                         )}
 
@@ -1703,7 +1728,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                     ) : (
                       <button
                         type="submit"
-                        disabled={loading || !submitReady}
+                        disabled={loading || !submitReady || attach.busy}
                         className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-[13px] px-[22px] text-[14.5px] font-semibold transition-all duration-200"
                         style={{
                           fontFamily: T.sans,

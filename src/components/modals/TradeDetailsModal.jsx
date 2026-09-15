@@ -56,9 +56,9 @@ const SESSION_COLORS = {
 
 /* ---------- примітиви ---------- */
 
-function Eyebrow({ children }) {
+function Eyebrow({ children, tone }) {
   return (
-    <span className="block text-[12px] font-bold uppercase tracking-[0.13em]" style={{ fontFamily: MONO, color: T.text4 }}>
+    <span className="block text-[12px] font-bold uppercase tracking-[0.13em]" style={{ fontFamily: MONO, color: tone || T.text4 }}>
       {children}
     </span>
   );
@@ -269,15 +269,28 @@ function Editable({ value, onChange, editing, placeholder, minRows = 4, maxRows 
    редагується», що й у решті картки. */
 const RISK_PRESETS = ['0.25%', '0.5%', '1%', '2%'];
 
+/* Пунктирна рамка читалась як заготовка, а не як поле, яке чекає
+   введення. Тепер це звичайний інпут: заглиблення, суцільний кант і
+   виразний фокус — видно, що саме зараз правиш. */
 function StripInput({ value, onChange, placeholder, suffix, color, width = 104 }) {
+  const [focus, setFocus] = useState(false);
   return (
     <label
-      className="flex h-[38px] items-center gap-1.5 rounded-lg px-2.5"
-      style={{ width, background: T.sunken, border: `1px dashed ${T.lineAcc}`, cursor: 'text' }}
+      className="flex h-[38px] items-center gap-1.5 rounded-[10px] px-3"
+      style={{
+        width,
+        background: T.sunken,
+        border: `1px solid ${focus ? T.acc : T.line}`,
+        boxShadow: focus ? `0 0 0 3px rgba(${T.accRgb},0.12)` : 'none',
+        transition: 'border-color .18s, box-shadow .18s',
+        cursor: 'text',
+      }}
     >
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocus(true)}
+        onBlur={() => setFocus(false)}
         placeholder={placeholder}
         inputMode="decimal"
         className="min-w-0 flex-1 bg-transparent text-[19px] font-bold tabular-nums outline-none"
@@ -304,8 +317,14 @@ function AccountSelect({ value, options, onChange }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-[38px] w-full min-w-[160px] items-center justify-between gap-2 rounded-lg px-3"
-        style={{ background: T.sunken, border: `1px dashed ${T.lineAcc}`, color: T.text }}
+        className="flex h-[38px] w-full min-w-[160px] items-center justify-between gap-2 rounded-[10px] px-3"
+        style={{
+          background: T.sunken,
+          border: `1px solid ${open ? T.acc : T.line}`,
+          boxShadow: open ? `0 0 0 3px rgba(${T.accRgb},0.12)` : 'none',
+          color: T.text,
+          transition: 'border-color .18s, box-shadow .18s',
+        }}
       >
         <span className="truncate text-[15px] font-semibold" style={{ fontFamily: MONO }}>{value || 'Select account'}</span>
         <ChevronDown size={14} style={{ color: T.text4, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
@@ -613,6 +632,26 @@ export default function TradeDetailsModal({
     return riskValue > 0 ? riskValue * rr : null;
   }, [d, balances]);
 
+  /* Скільки це в грошах. «1%» саме по собі нічого не каже — ризик стає
+     відчутним тільки коли видно суму, якою платиш за помилку. Рахуємо
+     тією ж логікою, що й профіт вище: відсоток від балансу акаунта, а
+     число з «$» беремо як є. */
+  const riskMoney = useMemo(() => {
+    const s = String(d?.risk || '').trim();
+    if (!s) return null;
+    const bal = balances[d?.account_name] || 0;
+    const num = parseFloat(s.replace(/[^0-9.]/g, ''));
+    if (!Number.isFinite(num) || num <= 0) return null;
+    if (s.includes('$')) return num;
+    if (s.includes('%')) return bal ? bal * (num / 100) : null;
+    /* Голе число: до 10 — це відсотки, більше — уже сума. */
+    return num <= 10 ? (bal ? bal * (num / 100) : null) : num;
+  }, [d?.risk, d?.account_name, balances]);
+
+  const riskMoneyLabel = riskMoney != null
+    ? `$${Math.round(riskMoney).toLocaleString('en-US')}`
+    : null;
+
   async function save() {
     setSaving(true);
     try {
@@ -878,56 +917,86 @@ export default function TradeDetailsModal({
           </div>
 
           <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
-          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: editing ? 1.3 : 1 }}>
-            <Eyebrow>RISK</Eyebrow>
+          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: editing ? 1.7 : 1 }}>
+            <Eyebrow tone={editing ? T.acc : undefined}>RISK</Eyebrow>
             {editing ? (
-              /* Один сегментований контрол замість поля й чотирьох окремих
-                 кнопок, що переносились на другий рядок: пресети й власне
-                 значення в одній доріжці, висотою як інпут R поруч. */
-              <div
-                className="flex h-[38px] w-fit max-w-full items-center gap-0.5 rounded-lg p-[3px]"
-                style={{ background: T.sunken, border: `1px dashed ${T.lineAcc}` }}
-              >
-                {RISK_PRESETS.map((r) => {
-                  const on = String(d.risk || '').replace(/\s/g, '') === r;
-                  return (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => set({ risk: r })}
-                      className="h-full rounded-md px-2 text-[13px] font-semibold tabular-nums transition-colors"
-                      style={{
-                        fontFamily: MONO,
-                        background: on ? `rgba(${T.accRgb},0.18)` : 'transparent',
-                        color: on ? T.acc : T.text3,
+              /* Ризик — єдине поле тут, ціна помилки в якому вимірюється
+                 грішми, тому воно й виглядає інакше за сусідів: власне
+                 значення стоїть першим і великим, пресети — поруч як
+                 швидкий набір, а під ними сума, якою платиш. */
+              <div className="flex flex-col gap-1.5">
+                <div
+                  className="flex h-[38px] w-fit max-w-full items-center gap-1 rounded-[10px] p-[3px]"
+                  style={{
+                    background: `rgba(${T.accRgb},0.07)`,
+                    border: `1px solid rgba(${T.accRgb},0.34)`,
+                    boxShadow: `0 0 0 3px rgba(${T.accRgb},0.07)`,
+                  }}
+                >
+                  <label
+                    className="flex h-full items-center gap-0.5 rounded-[7px] pl-2.5 pr-2"
+                    style={{ background: T.sunken, cursor: 'text' }}
+                  >
+                    <input
+                      value={String(d.risk ?? '').replace('%', '')}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(',', '.').replace(/[^0-9.$]/g, '');
+                        set({ risk: v === '' ? '' : v.includes('$') ? v : `${v}%` });
                       }}
-                      onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text; }}
-                      onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
-                    >
-                      {r.replace('%', '')}
-                    </button>
-                  );
-                })}
-                <span className="mx-1 h-4 w-px shrink-0" style={{ background: T.line }} />
-                <label className="flex h-full items-center gap-0.5 pr-1.5" style={{ cursor: 'text' }}>
-                  <input
-                    value={String(d.risk ?? '').replace('%', '')}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(',', '.').replace(/[^0-9.$]/g, '');
-                      set({ risk: v === '' ? '' : v.includes('$') ? v : `${v}%` });
-                    }}
-                    placeholder="—"
-                    inputMode="decimal"
-                    className="w-[38px] bg-transparent text-right text-[15px] font-bold tabular-nums outline-none"
-                    style={{ fontFamily: MONO, color: T.text }}
-                  />
-                  {!String(d.risk ?? '').includes('$') && (
-                    <span className="text-[13px] font-semibold" style={{ fontFamily: MONO, color: T.text4 }}>%</span>
-                  )}
-                </label>
+                      placeholder="—"
+                      inputMode="decimal"
+                      className="w-[42px] bg-transparent text-right text-[17px] font-bold tabular-nums outline-none"
+                      style={{ fontFamily: MONO, color: T.acc }}
+                    />
+                    {!String(d.risk ?? '').includes('$') && (
+                      <span className="text-[13px] font-bold" style={{ fontFamily: MONO, color: T.acc, opacity: 0.6 }}>%</span>
+                    )}
+                  </label>
+
+                  <span className="mx-0.5 h-4 w-px shrink-0" style={{ background: `rgba(${T.accRgb},0.24)` }} />
+
+                  {RISK_PRESETS.map((r) => {
+                    const on = String(d.risk || '').replace(/\s/g, '') === r;
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => set({ risk: r })}
+                        className="h-full rounded-[7px] px-2 text-[13px] font-semibold tabular-nums transition-colors"
+                        style={{
+                          fontFamily: MONO,
+                          background: on ? `rgba(${T.accRgb},0.22)` : 'transparent',
+                          color: on ? T.acc : T.text3,
+                        }}
+                        onMouseEnter={(e) => { if (!on) { e.currentTarget.style.background = `rgba(${T.accRgb},0.10)`; e.currentTarget.style.color = T.text2; } }}
+                        onMouseLeave={(e) => { if (!on) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+                      >
+                        {r.replace('%', '')}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Підказка каже саме те, чого бракує: без ризику — одне,
+                    без балансу акаунта — інше. Спільне «обери акаунт»
+                    брехало б у половині випадків. */}
+                <span className="text-[12.5px] font-semibold tabular-nums" style={{ fontFamily: MONO, color: riskMoneyLabel ? T.text2 : T.text4 }}>
+                  {riskMoneyLabel
+                    ? `${riskMoneyLabel} на угоду`
+                    : String(d.risk ?? '').trim()
+                      ? 'у акаунта немає балансу'
+                      : 'вкажи ризик'}
+                </span>
               </div>
             ) : (
-              <span className="truncate text-[21.5px] font-bold tabular-nums" style={{ fontFamily: MONO, color: T.text2 }}>{d.risk || '—'}</span>
+              <div className="flex flex-col gap-0.5">
+                <span className="truncate text-[21.5px] font-bold tabular-nums" style={{ fontFamily: MONO, color: T.text2 }}>{d.risk || '—'}</span>
+                {riskMoneyLabel && (
+                  <span className="text-[12.5px] font-semibold tabular-nums" style={{ fontFamily: MONO, color: T.text4 }}>
+                    {riskMoneyLabel}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 

@@ -901,7 +901,7 @@ export default function DailyPlan() {
           {dailyBlocks.phaseVisible('plan') && (
           <SectionAnchor
             id="plan" first
-            label="Plan" sub="Before"
+            label="Plan"
             icon={Crosshair}
             progress={progress.plan}
           />
@@ -955,7 +955,7 @@ export default function DailyPlan() {
           {dailyBlocks.phaseVisible('live') && (
           <SectionAnchor
             id="live" first={!dailyBlocks.phaseVisible('plan')}
-            label="Live" sub="During"
+            label="Live"
             icon={Radio}
             progress={progress.live}
           />
@@ -994,7 +994,7 @@ export default function DailyPlan() {
           {dailyBlocks.phaseVisible('review') && (
           <SectionAnchor
             id="review" first={!dailyBlocks.phaseVisible('plan') && !dailyBlocks.phaseVisible('live')}
-            label="Review" sub="After"
+            label="Review"
             icon={LineChart}
             progress={progress.review}
           />

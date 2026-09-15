@@ -11,6 +11,7 @@ import {
 } from '../lib/systemDoc';
 import BlockEditor from '../components/system/BlockEditor';
 import SearchModal from '../components/system/SearchModal';
+import useImageAttach from '../hooks/useImageAttach';
 
 /* ==================================================================
    Торгова система.
@@ -442,13 +443,15 @@ export default function TradingSystem() {
     setConfirm(null);
   };
 
-  /* ---------- обкладинка ---------- */
+  /* ---------- обкладинка ----------
+     Обкладинці 2560px ні до чого — вона малюється смугою у ~300px
+     заввишки, тож бере вужчий профіль стиснення. */
+
+  const coverAttach = useImageAttach({ folder: `system-cover-${page?.id || 'new'}`, maxWidth: 1600, quality: 0.85 });
 
   const readCover = (file) => {
-    if (!file || !file.type?.startsWith('image/') || !page) return;
-    const r = new FileReader();
-    r.onload = () => patchPage(page.id, { cover: r.result });
-    r.readAsDataURL(file);
+    if (!page) return;
+    coverAttach.attachOne(file, (cover) => patchPage(page.id, { cover }));
   };
 
   /* ---------- гарячі клавіші ---------- */

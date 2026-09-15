@@ -189,7 +189,7 @@ export default function WeeklyPlanView({
 
       <div className="mt-6">
         {/* ═══════════════ PLAN ═══════════════ */}
-        {blocks.phaseVisible('plan') && <SectionAnchor id="plan" first label="Plan" sub="Before" icon={Compass} progress={progress.plan} />}
+        {blocks.phaseVisible('plan') && <SectionAnchor id="plan" first label="Plan" icon={Compass} progress={progress.plan} />}
 
         <div className="flex flex-col gap-5">
           {/* Один розбір — своя окрема секція, а не картка всередині
@@ -270,7 +270,7 @@ export default function WeeklyPlanView({
         </div>
 
         {/* ═══════════════ LIVE ═══════════════ */}
-        {blocks.phaseVisible('live') && <SectionAnchor id="live" first={!blocks.phaseVisible('plan')} label="Live" sub="During" icon={Radio} progress={progress.live} />}
+        {blocks.phaseVisible('live') && <SectionAnchor id="live" first={!blocks.phaseVisible('plan')} label="Live" icon={Radio} progress={progress.live} />}
 
         {blocks.isVisible('week-updates') && (
         <Section
@@ -289,7 +289,7 @@ export default function WeeklyPlanView({
         )}
 
         {/* ═══════════════ REVIEW ═══════════════ */}
-        {blocks.phaseVisible('review') && <SectionAnchor id="review" first={!blocks.phaseVisible('plan') && !blocks.phaseVisible('live')} label="Review" sub="After" icon={LineChart} progress={progress.review} />}
+        {blocks.phaseVisible('review') && <SectionAnchor id="review" first={!blocks.phaseVisible('plan') && !blocks.phaseVisible('live')} label="Review" icon={LineChart} progress={progress.review} />}
 
         <div className="flex flex-col gap-5">
           {blocks.isVisible('week-outcome') && (

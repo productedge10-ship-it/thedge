@@ -1052,10 +1052,16 @@ export default function Layout() {
 
       {/* ===================== DESKTOP SIDEBAR ===================== */}
       {/* На ноутбуках лишаємо ті самі 264px, але поля вужчі — інакше
-         на 1280px екрані контенту лишається мало. */}
+         на 1280px екрані контенту лишається мало.
+
+         Праворуч поля немає: сторінки з власним тлом на всю ширину
+         (розділ AI в аналітиці) лишали в цьому проміжку смугу тла
+         застосунку, і вона читалась як темна щілина між сайдбаром і
+         вмістом. Контент від цього не зсувається — проміжок забирає
+         сама панель. */}
       <motion.div
         id="edge-app-sidebar"
-        className="hidden md:block shrink-0 h-full p-2.5 lg:p-4 relative z-[60]"
+        className="hidden md:block shrink-0 h-full p-2.5 lg:p-4 pr-0 lg:pr-0 relative z-[60]"
         initial={false}
         animate={{ width: collapsed ? RAIL_W + 20 : SIDEBAR_W + 20 }}
         transition={{ duration: 0.42, ease: EASE }}

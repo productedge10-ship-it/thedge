@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ImagePlus, Maximize2, X } from 'lucide-react';
 import { T, EASE } from '../../../lib/theme';
+import useImageAttach, { filesFromPaste } from '../../../hooks/useImageAttach';
 
 /* ==================================================================
    Картинка.
@@ -16,18 +17,18 @@ export default function ImageBlock({ block, onChange, onFullscreen }) {
   const fileRef = useRef(null);
   const wrapRef = useRef(null);
 
-  const readFile = (file) => {
-    if (!file || !file.type?.startsWith('image/')) return;
-    const r = new FileReader();
-    r.onload = () => onChange({ src: r.result });
-    r.readAsDataURL(file);
-  };
+  /* Картинка блоку йде у сховище стиснутою: документ системи
+     редагують довго й вставляють у нього багато, а сам документ
+     зберігається цілим блоком JSON. */
+  const attach = useImageAttach({ folder: `system-${block.id || 'block'}` });
+
+  const readFile = (file) => attach.attachOne(file, (src) => onChange({ src }));
 
   const onPaste = (e) => {
     const text = e.clipboardData?.getData('text');
     if (text && /^https?:\/\//.test(text.trim())) { onChange({ src: text.trim() }); e.preventDefault(); return; }
-    const item = Array.from(e.clipboardData?.items || []).find((i) => i.type.indexOf('image') !== -1);
-    if (item) { e.preventDefault(); readFile(item.getAsFile()); }
+    const [file] = filesFromPaste(e);
+    if (file) { e.preventDefault(); readFile(file); }
   };
 
   /* тягнемо за край — рахуємо ширину у відсотках від колонки тексту */

@@ -9,6 +9,7 @@ import ImageSlider from '../ui/ImageSlider';
 import { allSetups, customSetups, addCustomSetup, removeCustomSetup } from '../../lib/backtestSetups';
 import AssetPicker from './AssetPicker';
 import AssetIcon from '../ui/AssetIcon';
+import useImageAttach, { filesFromPaste } from '../../hooks/useImageAttach';
 
 /* ==================================================================
    Деталі угоди бектесту.
@@ -216,6 +217,8 @@ export default function TradeSheet({
      натиснули «Редагувати». Далі по формі дивимось саме на locked. */
   const locked = readOnly || !editing;
   const fileRef = useRef(null);
+  /* Тека для скрінів ще не збереженої угоди бектесту */
+  const [draftId] = useState(() => (globalThis.crypto?.randomUUID ? crypto.randomUUID() : `draft-${Date.now().toString(36)}`));
   const set = (p) => setF((s) => ({ ...s, ...p }));
 
   useEffect(() => {
@@ -229,24 +232,24 @@ export default function TradeSheet({
   const addShot = (src) => { if (src) setF((s) => ({ ...s, shots: [...s.shots, src] })); };
   const dropShot = (i) => setF((s) => ({ ...s, shots: s.shots.filter((_, idx) => idx !== i) }));
 
-  const readFiles = (files) => {
-    Array.from(files || [])
-      .filter((file) => file && file.type?.startsWith('image/'))
-      .forEach((file) => {
-        const r = new FileReader();
-        r.onload = () => addShot(r.result);
-        r.readAsDataURL(file);
-      });
-  };
+  /* Скріни йдуть у сховище стиснутими — у бектесті їх набирається
+     більше, ніж деінде, і саме тут base64 роздував рядки найшвидше. */
+  const attach = useImageAttach({ folder: `backtest-${f.id || draftId}` });
+  const setShots = (updater) => setF((s) => ({
+    ...s,
+    shots: typeof updater === 'function' ? updater(s.shots || []) : updater,
+  }));
+
+  const readFiles = (files) => attach.addToList(files, setShots);
 
   const onPaste = (e) => {
     if (locked) return;
     const text = e.clipboardData?.getData('text');
     if (text && /^https?:\/\//.test(text.trim())) { addShot(text.trim()); e.preventDefault(); return; }
-    const items = Array.from(e.clipboardData?.items || []).filter((i) => i.type.indexOf('image') !== -1);
-    if (items.length) {
+    const files = filesFromPaste(e);
+    if (files.length) {
       e.preventDefault();
-      readFiles(items.map((i) => i.getAsFile()));
+      attach.addToList(files, setShots);
     }
   };
 
@@ -310,6 +313,9 @@ export default function TradeSheet({
   }, [editing]);
 
   const submit = () => {
+    /* Поки скрін летить у сховище, у стані лежить blob-посилання —
+       воно живе тільки в цій вкладці. */
+    if (attach.busy) return;
     const next = payloadOf(f);
     /* Нова угода зберігається завжди — навіть незмінені значення за
        замовчуванням це осмислений запис. */
@@ -892,7 +898,7 @@ export default function TradeSheet({
                 </button>
                 <button
                   onClick={submit}
-                  disabled={saving}
+                  disabled={saving || attach.busy}
                   className="flex h-11 items-center gap-2.5 whitespace-nowrap rounded-xl px-6 text-[14.5px] font-semibold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
                   style={{
                     fontFamily: T.sans, color: '#fff',

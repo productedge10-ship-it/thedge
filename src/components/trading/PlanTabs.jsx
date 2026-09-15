@@ -10,9 +10,9 @@ import { T, EASE, SPRING } from './planTheme';
 ================================================================== */
 
 export const SECTIONS = [
-  { id: 'plan',   label: 'Plan',   sub: 'Before', icon: Crosshair },
-  { id: 'live',   label: 'Live',   sub: 'During', icon: Radio },
-  { id: 'review', label: 'Review', sub: 'After',  icon: ClipboardList },
+  { id: 'plan',   label: 'Plan',   icon: Crosshair },
+  { id: 'live',   label: 'Live',   icon: Radio },
+  { id: 'review', label: 'Review', icon: ClipboardList },
 ];
 
 export const SCROLL_OFFSET = 40;
@@ -247,13 +247,8 @@ function DesktopRail({ active, onNavigate, progress, overall, assetSwitcher, sec
                       boxShadow: '0 12px 30px var(--edge-panel-glow, rgba(0,0,0,0.6))',
                     }}
                   >
-                    <span className="flex items-center gap-2">
-                      <span className="text-[14px] font-semibold" style={{ fontFamily: T.display, color: T.text }}>
-                        {s.label}
-                      </span>
-                      <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        {s.sub}
-                      </span>
+                    <span className="text-[14px] font-semibold" style={{ fontFamily: T.display, color: T.text }}>
+                      {s.label}
                     </span>
                   </span>
                 </button>

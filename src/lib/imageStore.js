@@ -91,14 +91,21 @@ const canvasToBlob = (canvas, type, quality) => new Promise((resolve, reject) =>
    від анімації один кадр, а «стиснув» у такому вигляді — це
    зіпсував.
 ------------------------------------------------------------------ */
-export async function compress(file) {
+export async function compress(file, opts = {}) {
   if (file.type === 'image/gif') {
     return { blob: file, ext: 'gif', type: 'image/gif' };
   }
 
+  /* Профіль під призначення: графіку потрібні всі 2560px, бо сітка й
+     тонкі лінії сиплються першими, а обкладинці сторінки, яку малюють
+     смугою в 300px заввишки, вистачає вдвічі менше. */
+  const maxW = opts.maxWidth || MAX_W;
+  const maxH = opts.maxHeight || opts.maxWidth || MAX_H;
+  const quality = opts.quality || QUALITY;
+
   const img = await loadBitmap(await readAsDataUrl(file));
 
-  const scale = Math.min(1, MAX_W / img.width, MAX_H / img.height);
+  const scale = Math.min(1, maxW / img.width, maxH / img.height);
   const w = Math.max(1, Math.round(img.width * scale));
   const h = Math.max(1, Math.round(img.height * scale));
 
@@ -113,7 +120,7 @@ export async function compress(file) {
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, 0, 0, w, h);
 
-  const blob = await canvasToBlob(canvas, 'image/webp', QUALITY);
+  const blob = await canvasToBlob(canvas, 'image/webp', quality);
 
   /* Буває, що вихід важчий за вхід: маленький PNG-скрін інтерфейсу
      WebP не стискає, а роздуває. Тоді лишаємо оригінал. */
@@ -133,10 +140,10 @@ const randomName = () => (globalThis.crypto?.randomUUID
   ? crypto.randomUUID()
   : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
 
-export async function uploadImage(userId, noteId, file) {
+export async function uploadImage(userId, noteId, file, opts) {
   if (!userId) throw new Error('Немає користувача');
 
-  const { blob, ext, type } = await compress(file);
+  const { blob, ext, type } = await compress(file, opts);
   /* note_id у шляху — щоб потім можна було прибрати картинки
      видаленої нотатки одним префіксом, не тримаючи окремого
      реєстру файлів. */
@@ -155,11 +162,11 @@ export async function uploadImage(userId, noteId, file) {
 /* Base64, що лишився в старих нотатках. Переносимо мовчки при
    першому ж збереженні такої нотатки: окрема кнопка «мігрувати»
    вимагала б від людини розуміти, що взагалі сталось. */
-export async function uploadDataUrl(userId, noteId, dataUrl) {
+export async function uploadDataUrl(userId, noteId, dataUrl, opts) {
   const res = await fetch(dataUrl);
   const blob = await res.blob();
   const file = new File([blob], 'note.png', { type: blob.type || 'image/png' });
-  return uploadImage(userId, noteId, file);
+  return uploadImage(userId, noteId, file, opts);
 }
 
 /* ------------------------------------------------------------------
