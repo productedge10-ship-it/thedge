@@ -157,7 +157,9 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
 
   return (
     <div
-      className="w-[440px] overflow-hidden rounded-2xl"
+      /* 440px ширші за телефон — панель просто не влазила. Тепер це
+         стеля, а не фіксована ширина. */
+      className="w-full max-w-[440px] overflow-hidden rounded-2xl"
       style={{ background: 'var(--edge-surface)', border: '1px solid var(--edge-line-hi)', boxShadow: `0 28px 60px -20px #000, 0 0 0 1px ${A(0.1)}` }}
     >
       {/* ─── мова ─── */}

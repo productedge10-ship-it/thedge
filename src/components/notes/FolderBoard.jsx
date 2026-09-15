@@ -630,7 +630,7 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
         backdropFilter: 'blur(10px)',
       }}
     >
-      <div className="flex min-h-full items-center justify-center px-6 py-8">
+      <div className="flex min-h-full items-start justify-center px-3 py-4 sm:items-center sm:px-6 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: 14, scale: 0.985 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -652,7 +652,7 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
           />
 
           {/* ─── шапка ─── */}
-          <div className="flex items-center justify-between gap-5 py-4 pl-[22px] pr-[18px]" style={{ borderBottom: '1px solid var(--edge-line)' }}>
+          <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3.5 sm:py-4 sm:pl-[22px] sm:pr-[18px]" style={{ borderBottom: '1px solid var(--edge-line)' }}>
             <div className="flex min-w-0 items-center gap-3">
               <span
                 className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[11px] text-[16px]"
@@ -682,10 +682,16 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
             </button>
           </div>
 
-          <div className="grid" style={{ gridTemplateColumns: '1fr 268px' }}>
+          {/* Прев'ю папки йде під поля, а не збоку: 268px поруч на
+              телефоні накривали саму форму, і колір із іконкою
+              вибирались наосліп. */}
+          <div className="grid lg:grid-cols-[1fr_268px]">
 
             {/* ─────────── поля ─────────── */}
-            <div className="min-w-0 px-[22px] pb-5 pt-[22px]" style={{ borderRight: '1px solid var(--edge-line)' }}>
+            <div
+              className="min-w-0 border-b px-4 pb-5 pt-5 sm:px-[22px] sm:pt-[22px] lg:border-b-0 lg:border-r"
+              style={{ borderColor: 'var(--edge-line)' }}
+            >
               <DialogLabel>Назва</DialogLabel>
 
               <div
@@ -714,8 +720,9 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                   onFocus={() => setNameFocus(true)}
                   onBlur={() => setNameFocus(false)}
                   placeholder="Розбори тижня"
-                  className="min-w-0 flex-1 border-none bg-transparent outline-none"
-                  style={{ fontFamily: T.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.7px', color: 'var(--edge-text)' }}
+                  /* На вузькому екрані 22px з'їдають поле за пів слова */
+                  className="min-w-0 flex-1 border-none bg-transparent text-[18px] outline-none sm:text-[22px]"
+                  style={{ fontFamily: T.display, fontWeight: 700, letterSpacing: '-0.7px', color: 'var(--edge-text)' }}
                 />
 
                 <span className="shrink-0 text-[11px]" style={{ fontFamily: T.mono, color: named.length >= NAME_MAX ? 'var(--edge-bad)' : 'var(--edge-text3)' }}>
@@ -1202,7 +1209,7 @@ export default function FolderBoard({
           <NewCard onClick={onCreate} compact />
         </div>
       ) : (
-        <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(292px,1fr))', gap: 18 }}>
+        <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(292px,100%),1fr))', gap: 18 }}>
           {list.map((f) => <Card key={f.id} {...propsOf(f, false)} />)}
           {loose && <Card key={NO_FOLDER} {...propsOf(loose, true)} />}
           <NewCard onClick={onCreate} />

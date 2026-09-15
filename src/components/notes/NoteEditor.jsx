@@ -580,7 +580,9 @@ export default function NoteEditor({
     >
       {/* Обгортка на всю висоту: тільки так вікно стоїть рівно по
           центру, але прокручується, коли не влазить. */}
-      <div className="flex min-h-full items-center justify-center px-6 py-8">
+      {/* items-start на вузькому: коли модалка вища за екран,
+          центрування зрізає їй верх — шапку з назвою вже не дістати. */}
+      <div className="flex min-h-full items-start justify-center px-3 py-4 sm:items-center sm:px-6 sm:py-8">
       <motion.div
         initial={{ opacity: 0, y: 16, scale: 0.99 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -612,10 +614,13 @@ export default function NoteEditor({
 
         {/* ─── шапка ─── */}
         <div
-          className="flex items-center justify-between gap-5 py-4 pl-6 pr-5"
+          className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3.5 sm:py-4 sm:pl-6 sm:pr-5"
           style={{ borderBottom: '1px solid var(--edge-line)' }}
         >
-          <div className="flex min-w-0 items-center gap-3">
+          {/* min-w-0 не рятував: підпис «нічого ще не збережено» не
+              обрізався, а ламався об кнопку «Фокус». Тепер він займає
+              свій рядок, а не лізе під сусіда. */}
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <span
               className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[11px]"
               style={{ background: A(0.12), border: `1px solid ${A(0.3)}`, boxShadow: `inset 0 1px 0 ${A(0.33)}`, color: 'var(--edge-acc)' }}
@@ -627,7 +632,7 @@ export default function NoteEditor({
               <div className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.2px', color: 'var(--edge-acc)' }}>
                 {form.id ? 'Редагування' : 'Нова нотатка'}
               </div>
-              <div className="mt-1 flex items-center gap-[7px] text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
+              <div className="mt-1 flex items-center gap-[7px] truncate text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                 <span
                   className="h-[5px] w-[5px] rounded-full"
                   style={{ background: busy ? 'var(--edge-warn)' : 'var(--edge-ok)', boxShadow: `0 0 8px 1px ${busy ? 'rgba(var(--edge-warn-rgb),0.60)' : 'rgba(var(--edge-ok-rgb),0.60)'}` }}
@@ -674,10 +679,16 @@ export default function NoteEditor({
           </div>
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: focusMode ? '1fr 288px' : '1fr 288px' }}>
+        {/* Бічна колонка з папкою, деталями й виглядом стає нижнім
+            поверхом: 288px поруч із текстом на телефоні лишали письму
+            смужку, в якій слова падали по одному в рядок. */}
+        <div className="grid lg:grid-cols-[1fr_288px]">
 
           {/* ─────────── письмо ─────────── */}
-          <div className="min-w-0 px-6 pb-5 pt-[22px]" style={{ borderRight: '1px solid var(--edge-line)' }}>
+          <div
+            className="min-w-0 border-b px-4 pb-5 pt-5 sm:px-6 sm:pt-[22px] lg:border-b-0 lg:border-r"
+            style={{ borderColor: 'var(--edge-line)' }}
+          >
             {!form.id && (
               <div className="flex flex-wrap items-center gap-[7px]">
                 <span className="mr-1 text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}>
@@ -712,11 +723,13 @@ export default function NoteEditor({
               value={form.title}
               onChange={(e) => patch({ title: e.target.value })}
               placeholder="Про що ця нотатка?"
-              className="mt-[18px] w-full border-none bg-transparent outline-none"
-              style={{ fontFamily: T.display, fontSize: 30, fontWeight: 700, letterSpacing: '-1px', color: 'var(--edge-text)' }}
+              className="mt-[18px] w-full border-none bg-transparent text-[21px] outline-none sm:text-[26px] lg:text-[30px]"
+              style={{ fontFamily: T.display, fontWeight: 700, letterSpacing: '-1px', color: 'var(--edge-text)' }}
             />
 
-            <div className="mt-3.5 flex items-center gap-1.5 pb-3" style={{ borderBottom: '1px solid var(--edge-line)' }}>
+            {/* Переноситься, а не виїжджає за край: на телефоні
+                форматування, голос і прев'ю в один рядок не стають. */}
+            <div className="mt-3.5 flex flex-wrap items-center gap-1.5 pb-3" style={{ borderBottom: '1px solid var(--edge-line)' }}>
               {TOOLS.map((tool) => (
                 <ToolButton key={tool.label} tool={tool} onClick={() => applyTool(tool)} />
               ))}
@@ -730,7 +743,7 @@ export default function NoteEditor({
                   type="button"
                   title="Продиктувати"
                   onClick={() => { setVoiceOpen((v) => !v); setLookOpen(false); setTradeOpen(false); }}
-                  className="flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold"
+                  className="flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold"
                   style={{
                     background: voiceOpen ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.03)',
                     border: `1px solid ${voiceOpen ? A(0.5) : 'var(--edge-line)'}`,
@@ -772,7 +785,9 @@ export default function NoteEditor({
                 }}
               >
                 <Eye size={13} strokeWidth={1.9} />
-                {preview ? 'Писати далі' : 'Як виглядатиме'}
+                {/* «Як виглядатиме» на телефоні з'їдає пів рядка */}
+                <span className="lg:hidden">{preview ? 'Писати' : 'Вигляд'}</span>
+                <span className="hidden lg:inline">{preview ? 'Писати далі' : 'Як виглядатиме'}</span>
               </button>
 
               <span className="flex-1" />
@@ -1402,10 +1417,12 @@ export default function NoteEditor({
 
         {/* ─── дії ─── */}
         <div
-          className="flex items-center justify-between gap-5 py-3.5 pl-6 pr-5"
+          className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3.5 sm:pl-6 sm:pr-5"
           style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)', borderRadius: '0 0 24px 24px' }}
         >
-          <div className="hidden items-center gap-3.5 sm:flex">
+          {/* Підказки гарячих клавіш ховаються вузько: там і без них
+              тісно, а мишею їх усе одно не натискають. */}
+          <div className="hidden items-center gap-3.5 lg:flex">
             {[{ k: '⌘↵', t: form.id ? 'зберегти' : 'створити' }, { k: 'esc', t: 'закрити' }].map(({ k, t }) => (
               <span key={k} className="flex items-center gap-[7px] text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                 <span
@@ -1419,7 +1436,7 @@ export default function NoteEditor({
             ))}
           </div>
 
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto flex shrink-0 items-center gap-2.5">
             <button
               type="button"
               onClick={onCancel}

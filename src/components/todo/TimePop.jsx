@@ -61,7 +61,7 @@ function Column({ items, value, onPick, label }) {
   );
 }
 
-export default function TimePop({ value, onChange, align = 'left' }) {
+export default function TimePop({ value, onChange, align = 'left', z }) {
   const [hh, mm] = (value || '').split(':');
 
   const set = (h, m) => onChange(`${h || '12'}:${m || '00'}`);
@@ -69,6 +69,7 @@ export default function TimePop({ value, onChange, align = 'left' }) {
   return (
     <Popover
       align={align}
+      {...(z ? { z } : {})}
       renderTrigger={({ open, toggle }) => (
         <button
           onClick={toggle}

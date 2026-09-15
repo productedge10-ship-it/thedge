@@ -23,6 +23,7 @@ import ErrorComposerModal from '../errors/ErrorComposerModal';
 import AssetIcon from '../ui/AssetIcon';
 import ImageSlider from '../ui/ImageSlider';
 import Popover from '../ui/Popover';
+import TimePop from '../todo/TimePop';
 import useCachedList, { listCache } from '../../hooks/useCachedList';
 import useImageAttach, { filesFromPaste, imageFiles } from '../../hooks/useImageAttach';
 
@@ -1122,6 +1123,23 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const hasR = !Number.isNaN(rNum);
   const rColor = !hasR ? 'var(--edge-text)' : rNum > 0 ? GREEN : rNum < 0 ? BAD : 'var(--edge-text)';
 
+  /* Тривалість — з різниці входу й виходу, а не окреме поле: людина
+     вводить дві точки в часі, а не рахує сама. Вихід раніше входу
+     означає, що угода перейшла через північ, а не помилку — тому
+     тут же й додаємо добу. */
+  const tradeMinutes = (() => {
+    if (!entryTime || !exitTime) return null;
+    const [eh, em] = entryTime.split(':').map(Number);
+    const [xh, xm] = exitTime.split(':').map(Number);
+    if ([eh, em, xh, xm].some(Number.isNaN)) return null;
+    let diff = (xh * 60 + xm) - (eh * 60 + em);
+    if (diff < 0) diff += 24 * 60;
+    return diff;
+  })();
+  const tradeDuration = tradeMinutes == null ? null
+    : tradeMinutes < 60 ? `${tradeMinutes}хв`
+      : `${Math.floor(tradeMinutes / 60)}г${tradeMinutes % 60 ? ` ${tradeMinutes % 60}хв` : ''}`;
+
   /* Значення семи питань розбору, в порядку QUESTIONS */
   const psyValues = { followedPlan, rushed, hasMistake, psyConfident, psyFear, psyRepeat, psyRevenge };
   const psySetters = {
@@ -1466,6 +1484,29 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                           <span className="text-[13.5px] font-semibold" style={{ fontFamily: MONO, color: hasR ? rColor : txt(0.35) }}>
                             {hasR ? `${rNum > 0 ? '+' : ''}${rNum.toFixed(2)}R` : '—'}
                           </span>
+                        </span>
+                      </div>
+
+                      {/* Час угоди — за замовчуванням порожній: більшість
+                          записує угоду вже після факту, і хвилина входу
+                          в неї не завжди в голові. Тому це не поле форми
+                          з зірочкою, а можливість — заповнив дві точки,
+                          отримав тривалість, ні — просто немає смуги
+                          цифр праворуч. */}
+                      <div
+                        className="flex items-center gap-2.5 rounded-[12px] px-3 py-2"
+                        style={{ background: line(0.02), border: `1px solid ${line(0.07)}` }}
+                      >
+                        <span className="shrink-0 text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: txt(0.4) }}>
+                          Час
+                        </span>
+
+                        <TimePop value={entryTime || null} onChange={(v) => setEntryTime(v || '')} align="left" z={600} />
+                        <span className="shrink-0 text-[12px]" style={{ fontFamily: MONO, color: txt(0.3) }}>→</span>
+                        <TimePop value={exitTime || null} onChange={(v) => setExitTime(v || '')} align="left" z={600} />
+
+                        <span className="ml-auto shrink-0 text-[12.5px]" style={{ fontFamily: MONO, color: tradeDuration ? txt(0.55) : txt(0.3) }}>
+                          {tradeDuration || '—'}
                         </span>
                       </div>
 

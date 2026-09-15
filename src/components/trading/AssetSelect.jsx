@@ -17,16 +17,18 @@ export default function AssetSelect({ options, value, onChange }) {
 
   return (
     <div className="relative w-full sm:w-auto shrink-0" ref={dropdownRef}>
-      <button 
+      <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full sm:w-[160px] bg-[var(--edge-hair)] hover:bg-[var(--edge-hair)] border border-[var(--edge-hair)] hover:border-[var(--edge-hair-strong)] px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-300"
+        className={`group flex items-center justify-between w-full sm:w-[160px] border px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
+          isOpen ? 'bg-[var(--edge-hair-strong)] border-[var(--edge-hair-strong)]' : 'bg-[var(--edge-hair)] hover:bg-[var(--edge-hair-strong)] border-[var(--edge-hair)] hover:border-[var(--edge-hair-strong)]'
+        }`}
       >
         <div className="flex items-center gap-2.5 text-[var(--edge-text)]">
-          <Filter size={14} className="text-blue-500/80" />
+          <Filter size={14} className="text-blue-500/80 transition-colors duration-200 group-hover:text-blue-400" />
           <span className="text-xs font-bold tracking-wide">{value === 'All' ? 'All Assets' : value}</span>
         </div>
-        <ChevronDown size={14} className={`text-[var(--edge-text3)] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={14} className={`text-[var(--edge-text3)] transition-all duration-200 group-hover:text-[var(--edge-text2)] ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>

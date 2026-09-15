@@ -258,7 +258,7 @@ export default function NoteReader({
         backdropFilter: 'blur(10px)',
       }}
     >
-      <div className="flex min-h-full items-center justify-center px-6 py-8">
+      <div className="flex min-h-full items-start justify-center px-3 py-4 sm:items-center sm:px-6 sm:py-8">
         <motion.article
           initial={{ opacity: 0, y: 16, scale: 0.99 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -279,7 +279,7 @@ export default function NoteReader({
           />
 
           {/* ─── шапка ─── */}
-          <div className="flex items-center justify-between gap-5 py-4 pl-[22px] pr-[18px]" style={{ borderBottom: '1px solid var(--edge-line)' }}>
+          <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3.5 sm:py-4 sm:pl-[22px] sm:pr-[18px]" style={{ borderBottom: '1px solid var(--edge-line)' }}>
             <div className="flex min-w-0 items-center gap-3">
               <span
                 className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl text-[17px]"
@@ -337,12 +337,21 @@ export default function NoteReader({
             </div>
           </div>
 
-          <div className="grid" style={{ gridTemplateColumns: '1fr 232px' }}>
+          {/* Права колонка з довідкою про нотатку йде під текст, а не
+              поруч: на телефоні 232px забирали дві третини ширини, і
+              сам текст лишався стовпчиком по слову в рядок. */}
+          <div className="grid lg:grid-cols-[1fr_232px]">
 
             {/* ─────────── сам запис ─────────── */}
-            <div className="min-w-0 px-[30px] pb-[26px] pt-7" style={{ borderRight: '1px solid var(--edge-line)' }}>
+            {/* Коли колонки стають поверхами, вертикальна межа має
+                лягти горизонтально — інакше вона висить збоку ні до
+                чого. */}
+            <div
+              className="min-w-0 border-b px-4 pb-6 pt-6 sm:px-[30px] sm:pb-[26px] sm:pt-7 lg:border-b-0 lg:border-r"
+              style={{ borderColor: 'var(--edge-line)' }}
+            >
               <h1
-                className="text-[30px] font-bold sm:text-[38px]"
+                className="text-[24px] font-bold sm:text-[30px] lg:text-[38px]"
                 style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-1.6px', lineHeight: 1.06 }}
               >
                 {note.title || 'Без назви'}

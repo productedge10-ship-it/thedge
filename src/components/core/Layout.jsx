@@ -720,16 +720,19 @@ export const DEMO_ROUTES = ['/plan', '/journal', '/analytics', '/accounts'];
 export const inDemo = () => typeof window !== 'undefined'
   && window.location.pathname.startsWith('/demo');
 
-function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick, isDanger, tour }) {
+function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick, isDanger, tour, soon }) {
   const Inner = ({ isActive }) => (
     <div
-      className={`group relative flex items-center ${collapsed ? 'justify-center w-11 h-11 mx-auto' : 'h-11 px-3 w-full'} rounded-[12px] transition-colors duration-200 cursor-pointer ${
-        isActive 
-          ? 'text-[var(--edge-nav-active)]' 
-          : isDanger 
-            ? 'text-[var(--edge-nav)] hover:text-[#e0484f] hover:bg-[rgba(255,99,99,0.09)]'
-            : 'text-[var(--edge-nav)] hover:text-[var(--edge-nav-active)] hover:bg-[var(--edge-nav-hover)]'
+      className={`group relative flex items-center ${collapsed ? 'justify-center w-11 h-11 mx-auto' : 'h-11 px-3 w-full'} rounded-[12px] transition-colors duration-200 ${
+        soon
+          ? 'cursor-default text-[var(--edge-nav-dim)] hover:text-[var(--edge-nav)]'
+          : `cursor-pointer ${isActive
+            ? 'text-[var(--edge-nav-active)]'
+            : isDanger
+              ? 'text-[var(--edge-nav)] hover:text-[#e0484f] hover:bg-[rgba(255,99,99,0.09)]'
+              : 'text-[var(--edge-nav)] hover:text-[var(--edge-nav-active)] hover:bg-[var(--edge-nav-hover)]'}`
       }`}
+      style={soon ? { background: `rgba(${ACCENT},0.04)`, boxShadow: `inset 0 0 0 1px rgba(${ACCENT},0.10)` } : undefined}
     >
       {isActive && (
         <motion.div
@@ -751,7 +754,21 @@ function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick
       )}
 
       <div className={`${collapsed ? '' : 'w-[32px]'} flex shrink-0 items-center justify-center relative z-10`}>
-        <Icon size={19} style={{ color: isActive ? ACCENT_HEX : 'currentColor' }} className="transition-colors duration-250" />
+        <Icon
+          size={19}
+          style={soon
+            ? { color: ACCENT_HEX, animation: 'edgeSoonTwinkle 3.4s ease-in-out infinite' }
+            : { color: isActive ? ACCENT_HEX : 'currentColor' }}
+          className={`transition-colors duration-250 ${soon ? 'edge-soon-anim' : ''}`}
+        />
+        {/* У згорнутій рейці мітці нема де стояти, тому «скоро» каже
+            крапка на іконці — той самий сигнал, що й бейдж задач. */}
+        {soon && collapsed && (
+          <span
+            className="absolute -right-1 -top-1 h-[7px] w-[7px] rounded-full"
+            style={{ background: ACCENT_HEX, boxShadow: `0 0 8px rgba(${ACCENT},0.9)` }}
+          />
+        )}
         {badge && (
           <span className="absolute -top-1 -right-1 w-[7px] h-[7px] pointer-events-none">
             <span className="absolute inset-0 rounded-full bg-[var(--edge-bad)] opacity-60 animate-ping" />
@@ -765,13 +782,39 @@ function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick
           {label}
         </span>
       )}
-      {collapsed && <RailTooltip>{label}</RailTooltip>}
+
+      {soon && !collapsed && (
+        <span
+          className="relative z-10 ml-1.5 inline-flex h-[17px] shrink-0 items-center overflow-hidden rounded-[5px] px-1.5 text-[9px] font-bold uppercase"
+          style={{
+            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            letterSpacing: '0.1em',
+            color: ACCENT_HEX,
+            background: `rgba(${ACCENT},0.13)`,
+            boxShadow: `inset 0 0 0 1px rgba(${ACCENT},0.24)`,
+          }}
+        >
+          скоро
+          <span
+            aria-hidden
+            className="edge-soon-anim pointer-events-none absolute inset-y-0 left-0 w-1/2"
+            style={{
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+              animation: 'edgeSoonSweep 3.8s ease-in-out infinite',
+            }}
+          />
+        </span>
+      )}
+
+      {collapsed && <RailTooltip>{soon ? `${label} · скоро` : label}</RailTooltip>}
     </div>
   );
 
   if (onClick) {
+    /* Розділ, якого ще немає, не реагує на клік: відкривати порожнє
+       вікно гірше, ніж чесно промовчати. */
     return (
-      <div onClick={onClick} data-tour={tour} className="block outline-none select-none">
+      <div onClick={soon ? undefined : onClick} data-tour={tour} className="block outline-none select-none">
         <Inner isActive={false} />
       </div>
     );
@@ -890,7 +933,7 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
               це дії над акаунтом, якого в демо просто не існує. */}
           {!inDemo() && (
             <>
-              <NavItem collapsed={collapsed} onClick={openOnboarding} icon={Sparkles} label="Про тебе" tour="about" />
+              <NavItem collapsed={collapsed} onClick={openOnboarding} icon={Sparkles} label="Про тебе" tour="about" soon />
               <NavItem collapsed={collapsed} onClick={openSettings} icon={Settings} label="Settings" tour="settings" />
             </>
           )}

@@ -59,16 +59,18 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
 
   return (
     <div className="relative w-full sm:w-auto shrink-0" ref={dropdownRef}>
-      <button 
+      <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full sm:w-[210px] bg-[var(--edge-hair)] hover:bg-[var(--edge-hair)] border border-[var(--edge-hair)] hover:border-[var(--edge-hair-strong)] px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-300"
+        className={`group flex items-center justify-between w-full sm:w-[210px] border px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
+          isOpen ? 'bg-[var(--edge-hair-strong)] border-[var(--edge-hair-strong)]' : 'bg-[var(--edge-hair)] hover:bg-[var(--edge-hair-strong)] border-[var(--edge-hair)] hover:border-[var(--edge-hair-strong)]'
+        }`}
       >
         <div className="flex items-center gap-2.5 text-zinc-200 overflow-hidden">
-          <CalendarDays size={14} className="text-blue-500/80 shrink-0" />
+          <CalendarDays size={14} className="text-blue-500/80 shrink-0 transition-colors duration-200 group-hover:text-blue-400" />
           <span className="text-xs font-bold tracking-wide truncate">{getDisplayText()}</span>
         </div>
-        <ChevronDown size={14} className={`text-zinc-500 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={14} className={`text-zinc-500 shrink-0 transition-all duration-200 group-hover:text-[var(--edge-text2)] ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>

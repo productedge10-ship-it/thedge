@@ -1100,9 +1100,13 @@ export default function Notes() {
                 кнопки — у правій, і вирівнювались вони по нижньому
                 краю блоків різної висоти: на око це читалось як
                 «майже на одній лінії», що гірше за явно різні рівні. */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            {/* На вузькому екрані це не один ряд, а два поверхи: числа
+                зверху на всю ширину, інструменти під ними. Раніше ряд
+                не переносився, і кнопка «Нова папка» просто обрізалась
+                краєм — не «виїжджала за край», а ставала недосяжною. */}
+            <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-4">
               <div
-                className="flex h-11 items-center overflow-hidden rounded-[14px]"
+                className="flex h-11 w-full items-center overflow-hidden rounded-[14px] lg:w-auto"
                 style={{
                   background: 'linear-gradient(180deg,rgba(var(--edge-hair-rgb),0.05),rgba(var(--edge-hair-rgb),0.02))',
                   border: '1px solid var(--edge-line)',
@@ -1113,24 +1117,31 @@ export default function Notes() {
                 {[
                   { v: folders.length, t: plural(folders.length, 'папка', 'папки', 'папок'), c: 'var(--edge-text)', icon: FolderIcon },
                   { v: active.length, t: plural(active.length, 'запис', 'записи', 'записів'), c: 'var(--edge-text)', icon: NotebookPen },
-                  { v: `+${weekCount}`, t: 'за тиждень', c: 'var(--edge-ok)', icon: TrendingUp },
-                ].map(({ v, t, c, icon: I }, i) => (
-                  <div key={t} className="flex h-full items-center">
-                    {i > 0 && <span className="h-5 w-px" style={{ background: 'var(--edge-line)' }} />}
-                    <span className="flex items-center gap-2 px-4">
+                  /* На телефоні «за тиждень» не влазить і обрізається
+                     трьома крапками — там коротший підпис. */
+                  { v: `+${weekCount}`, t: 'за тиждень', tShort: 'тиждень', c: 'var(--edge-ok)', icon: TrendingUp },
+                ].map(({ v, t, tShort, c, icon: I }, i) => (
+                  /* На телефоні три клітинки ділять ширину порівну й
+                     центруються, на ширшому екрані — тиснуться вліво
+                     по вмісту, як було. */
+                  <div key={t} className="flex h-full min-w-0 flex-1 items-center lg:flex-none">
+                    {i > 0 && <span className="h-5 w-px shrink-0" style={{ background: 'var(--edge-line)' }} />}
+                    <span className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2.5 lg:flex-none lg:justify-start lg:gap-2 lg:px-4">
                       <I size={13} strokeWidth={1.9} style={{ color: c === 'var(--edge-text)' ? 'var(--edge-text3)' : c, flex: 'none' }} />
                       <span className="text-[16px] font-bold leading-none" style={{ fontFamily: T.display, color: c }}>{v}</span>
-                      <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>{t}</span>
+                      <span className="truncate text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
+                        {tShort ? <><span className="lg:hidden">{tShort}</span><span className="hidden lg:inline">{t}</span></> : t}
+                      </span>
                     </span>
                   </div>
                 ))}
               </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex w-full items-center gap-2.5 lg:w-auto">
               <div
                 onMouseEnter={() => setShelfHover(true)}
                 onMouseLeave={() => setShelfHover(false)}
-                className="flex h-11 w-[270px] items-center gap-2.5 rounded-[13px] py-0 pl-[15px] pr-2"
+                className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-[13px] py-0 pl-[15px] pr-2 lg:w-[270px] lg:flex-none"
                 style={{
                   /* Ховер — той самий стан, що й фокус, тільки в
                      піввсили: поле має відгукнутись на наближення
@@ -1170,7 +1181,7 @@ export default function Notes() {
                   збиралась із власних відступів і виходила на три
                   пікселі нижчою — рівно стільки, щоб рядок виглядав
                   зібраним недбало. */}
-              <div className="flex h-11 items-center rounded-[13px] p-[3px]" style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)' }}>
+              <div className="flex h-11 shrink-0 items-center rounded-[13px] p-[3px]" style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)' }}>
                 {[{ k: 'grid', I: LayoutGrid, t: 'Плиткою' }, { k: 'list', I: Rows3, t: 'Списком' }].map(({ k, I, t }) => (
                   <button
                     key={k}
@@ -1434,7 +1445,7 @@ export default function Notes() {
                   </SectionRule>
                 </div>
 
-                <div className="mt-[18px] grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))' }}>
+                <div className="mt-[18px] grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(min(320px,100%),1fr))' }}>
                   {recent.map((n) => (
                     <RecentCard
                       key={n.id}
@@ -1512,7 +1523,7 @@ export default function Notes() {
             /* Рядок сітки фіксований: інакше «висока» картка тягла б за
                собою всіх сусідів по рядку, і вибір однієї нотатки
                міняв би вигляд решти. */
-            style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gridAutoRows: '214px' }}
+            style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(min(300px,100%),1fr))', gridAutoRows: '214px' }}
           >
             {filtered.map((n) => (
               <NoteTile

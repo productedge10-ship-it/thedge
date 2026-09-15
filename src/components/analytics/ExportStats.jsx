@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
+import { useSettings } from '../../context/SettingsContext';
 import { notify } from '../../utils/notify';
 import { T, SPRING } from '../../lib/theme';
 import {
@@ -24,6 +25,7 @@ import {
 
 export default function ExportStats({ open, onClose, stats, period }) {
   const { user } = useAuth();
+  const { nickname } = useSettings();
 
   const [picked, setPicked] = useState(DEFAULT_METRICS);
   /* Картка англійською — її показують у X і Discord, де українські
@@ -44,6 +46,17 @@ export default function ExportStats({ open, onClose, stats, period }) {
 
   /* нове відкриття — чистий стан, щоб не тягнути минулий лінк */
   useEffect(() => { if (open) setLink(null); }, [open]);
+
+  /* Підпис за замовчуванням — нік із налаштувань. Людина вже обрала
+     там, як її звати; вписувати це саме вручну на кожен експорт —
+     робота, якої можна не робити.
+
+     Тільки в порожнє поле: якщо для цієї картки підписались інакше,
+     нік не має затирати свідомий вибір. */
+  useEffect(() => {
+    if (open && nickname && !author.trim()) setAuthor(nickname);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [open, nickname]);
 
   const card = useMemo(
     () => buildCard(stats, { title, period, metrics: picked, author }),

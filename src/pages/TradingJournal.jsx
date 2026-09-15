@@ -59,10 +59,29 @@ const PAGE_DEFAULT = 10;
 ================================================================== */
 
 function FieldTrigger({ label, value, icon, active, open, onClick, minWidth = 168 }) {
+  /* .field-trigger:hover у index.css сюди не дістає — той самий
+     background/border стоїть інлайном, і інлайн завжди переважає
+     клас, навіть на :hover. Тому підсвічуємо руками — тим самим
+     акцентним бордером і сяйвом, що й на «Add Trade» поруч: три
+     кнопки в одному рядку мають світитись однією мовою. Без бекграунда
+     й без анімації — тут це зайве, кнопка маленька й не головна. */
+  const hover = (e) => {
+    if (open || active) return;
+    e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
+    e.currentTarget.style.boxShadow = `0 12px 30px -14px rgba(${T.accRgb},0.5), 0 0 0 3px rgba(${T.accRgb},0.10)`;
+  };
+  const unhover = (e) => {
+    if (open || active) return;
+    e.currentTarget.style.borderColor = T.line;
+    e.currentTarget.style.boxShadow = 'none';
+  };
+
   return (
     <motion.button
       type="button"
       onClick={onClick}
+      onMouseEnter={hover}
+      onMouseLeave={unhover}
       aria-label={label}
       aria-expanded={open}
       whileTap={{ scale: 0.985 }}

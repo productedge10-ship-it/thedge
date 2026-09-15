@@ -217,31 +217,6 @@ export default function Analytics() {
   const active = NAV.find((n) => n.id === tab) || NAV[0];
   const activeLabel = active.label;
 
-  /* ---------- показник розділу ----------
-     Праворуч у рядку вкладок стояла назва активного розділу — те саме
-     слово, що вже підсвічене у вкладці за два сантиметри лівіше. Тепер
-     там цифра, якої на екрані ще немає: головне число саме цього
-     розділу. Воно міняється разом із вкладкою й каже щось нове. */
-  const glance = useMemo(() => {
-    const r = (v) => `${v > 0 ? '+' : ''}${r1(v)}R`;
-    switch (tab) {
-      case 'Performance':
-        return { label: 'Профіт-фактор', value: Number.isFinite(s.pf) ? s.pf.toFixed(2) : '∞', tone: s.pf >= 1 ? T.ok : T.bad };
-      case 'Psychology':
-        return { label: 'Дисципліна', value: `${s.adherence}%`, tone: s.adherence >= 70 ? T.ok : T.warn };
-      case 'Assets':
-        return { label: 'Активів', value: String(s.byAsset.length), tone: T.text2 };
-      case 'Simulator':
-        return { label: 'На угоду', value: r(s.expectancy), tone: s.expectancy >= 0 ? T.ok : T.bad };
-      case 'History':
-        return { label: 'Угод', value: String(s.trades.length), tone: T.text2 };
-      case 'AI':
-        return { label: 'Модель', value: 'вчиться', tone: T.acc };
-      default:
-        return { label: 'Чистий R', value: r(s.net), tone: s.net >= 0 ? T.ok : T.bad };
-    }
-  }, [tab, s]);
-
   /* ---------- рухома пігулка під вкладками ----------
      Позицію не рахуємо з відступів, а міряємо саму кнопку: підписи
      різної довжини, а на вузькому екрані рядок ще й переноситься —
@@ -540,22 +515,6 @@ export default function Analytics() {
                   })}
                 </div>
 
-                {/* Головне число розділу — воно й міняється разом із
-                    вкладкою, і не повторює того, що вже написано поруч. */}
-                <div key={tab} className="an-anim ml-auto flex items-baseline gap-2.5 px-1.5" style={{ animation: 'an-slide-in .3s ease' }}>
-                  <span
-                    className="text-[9px] font-medium uppercase"
-                    style={{ fontFamily: T.mono, letterSpacing: '0.26em', color: T.text2 }}
-                  >
-                    {glance.label}
-                  </span>
-                  <span
-                    className="text-[15px] font-bold tabular-nums"
-                    style={{ fontFamily: T.mono, letterSpacing: '-0.02em', color: glance.tone }}
-                  >
-                    {glance.value}
-                  </span>
-                </div>
               </div>
             </div>
           </div>
