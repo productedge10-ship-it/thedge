@@ -179,3 +179,29 @@ Python-воркер, що крутиться на VPS із встановлен�
 `peekTradeCandles` / `prefetchTradeCandles` / `getTradeCandles`, `pullMt5Trades`, `removeMt5Account`.
 UI — `components/accounts/LinkedTerminal.jsx`, `components/trading/LoadingSyncScreen.jsx`,
 `components/landing/Mt5Import.jsx` + `landing/v3/AutoImport.jsx`.
+
+## 10. Telegram-бот (Windows-VPS, у репо його НЕМАЄ)
+
+Коду бота в цьому репозиторії немає навмисно: він живе тільки на VPS. Крутиться поруч із MT5-воркером у `C:\mt\bot\`, читає той самий `C:\mt\.env`,
+ходить у Supabase під `service_role` — тобто **кожен запит фільтрує `user_id` сам**.
+Один процес, long polling; друга копія красла б оновлення в першої.
+
+| Файл | Що робить |
+| --- | --- |
+| `main.py` | цикл: `getUpdates` → `handlers.handle`, раз на `ALERT_TICK` — чотири розсилки |
+| `handlers.py` | маршрути кнопок і колбеків; `tr:` гортання, `td:` картка угоди, `pl:` вибір/картка плану, `hour:` ранок, `unlink:` |
+| `views.py` | усі тексти й клавіатури; `plan_card`, `trade_card`, `stats_text`, `alert_text(source)` |
+| `db.py` | PostgREST: угоди, плани, черга `tg_alerts`, `tg_sent`, привʼязка |
+| `alerts.py` | таймери з черги, нові угоди з MT5, підсумок дня, ранкове нагадування |
+| `card.py` | PNG аналітики на Pillow (вінрейт, угоди, net R, profit factor) |
+| `tg.py` | HTTP до Telegram: `send`, `send_photo`, `edit`, `answer_callback` |
+
+Домовленості:
+1. Будь-який id із `callback_data` читається з бази **тільки разом із `user_id`** чату.
+2. Кнопки на сайт — `web_app` на https (відкривається всередині Telegram), `url` на http.
+   Порожній/локальний `SITE_URL` → кнопки немає взагалі: інакше 400 на все повідомлення.
+3. Картинка — прикраса. Не намалювалась → ті самі цифри йдуть текстом.
+4. `tg_alerts` — спільна черга трьох джерел: `manual` (таймер із плану), `news`, `todo`.
+   Фронт пише (`lib/newsTgAlerts.js`, `lib/todoTgAlerts.js`), бот лише вичерпує.
+   Один рядок на сутність тримає унікальний індекс `(user_id, source, source_id)`.
+5. Ранкове нагадування — `user_settings.tg_morning_hour` (8/9/10), вікно 3 години.

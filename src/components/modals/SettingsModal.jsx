@@ -7,7 +7,7 @@ import {
   X, RotateCcw, Eye, EyeOff, Moon, Sun, ZapOff,
   User, Target, BookOpen, Palette, Sparkles, LayoutGrid,
   MailCheck, MailWarning, KeyRound, Loader2, Check, Send,
-  Plug, HelpCircle, ArrowRight, ChevronDown, Unlink,
+  Plug, HelpCircle, ArrowRight, ChevronDown, Unlink, Clock,
 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
@@ -2306,6 +2306,23 @@ function TelegramTab() {
     }
   };
 
+  /* Година окремо від перемикачів: у них значення булеве й
+     «протилежне», а тут — конкретне число, і «повернути як було» при
+     помилці треба знати наперед. */
+  const pickHour = async (h) => {
+    if (!state || !state.linked) return;
+    const prev = state.morningHour ?? 9;
+    if (prev === h) return;
+
+    setState((s) => ({ ...s, morningHour: h }));
+    try {
+      await setTelegramPref('morningHour', h);
+    } catch (e) {
+      setState((s) => ({ ...s, morningHour: prev }));
+      notify.error('Не збереглось', e?.message || 'Спробуй ще раз.');
+    }
+  };
+
   const flip = async (key) => {
     if (!state) return;
     const next = !state[key];
@@ -2466,6 +2483,95 @@ function TelegramTab() {
           disabled={!state.linked}
           onClick={() => flip('plan')}
         />
+
+        {/* Час нагадування.
+
+            Зʼявляється тільки коли саме нагадування ввімкнене: питати
+            «о котрій», коли відповідь нікому не потрібна, — це рядок
+            налаштувань, який нічого не налаштовує.
+
+            Три варіанти, а не поле вводу з годинником. Нагадування про
+            план має сенс лише в вузькому вікні — до відкриття Лондона;
+            усе інше або надто рано, або вже пізно. Вибір із трьох
+            робиться одним рухом, поле вводу — чотирма. */}
+        <AnimatePresence initial={false}>
+          {state.plan && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.24, ease: EASE }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div
+                className="flex flex-wrap items-center"
+                style={{
+                  gap: 12,
+                  marginTop: 10,
+                  padding: '14px 18px',
+                  borderRadius: 14,
+                  background: T.sunken,
+                  border: `1px solid ${T.line}`,
+                }}
+              >
+                <span className="flex items-center" style={{ gap: 9, fontFamily: T.sans, fontSize: 13.5, color: T.text2 }}>
+                  <Clock size={14} strokeWidth={2.2} style={{ color: T.text3 }} />
+                  О котрій нагадати
+                </span>
+
+                <div
+                  className="flex items-center"
+                  style={{ gap: 4, marginLeft: 'auto', padding: 4, borderRadius: 12, background: 'rgba(var(--edge-hair-rgb),0.05)' }}
+                >
+                  {[8, 9, 10].map((h) => {
+                    const on = (state.morningHour ?? 9) === h;
+                    return (
+                      <button
+                        key={h}
+                        type="button"
+                        disabled={!state.linked}
+                        onClick={() => pickHour(h)}
+                        className="relative"
+                        style={{
+                          fontFamily: T.sans,
+                          padding: '7px 14px',
+                          borderRadius: 9,
+                          fontSize: 13.5,
+                          fontWeight: 700,
+                          color: on ? T.acc : T.text3,
+                          cursor: state.linked ? 'pointer' : 'default',
+                          transition: 'color .18s',
+                        }}
+                      >
+                        {on && (
+                          <motion.span
+                            layoutId="tg-hour-pill"
+                            transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              borderRadius: 9,
+                              background: `rgba(${T.accRgb},0.13)`,
+                              border: `1px solid ${T.accLine}`,
+                            }}
+                          />
+                        )}
+                        <span style={{ position: 'relative' }}>{h}:00</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <span
+                  className="w-full"
+                  style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text3, lineHeight: 1.5 }}
+                >
+                  За київським часом. У вихідні не турбуємо.
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

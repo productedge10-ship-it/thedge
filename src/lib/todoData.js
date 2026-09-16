@@ -278,6 +278,10 @@ export const normalizeTasks = (list) => {
     quadrant: t.quadrant || null,
     pomodoros: Number(t.pomodoros) || 0,
     note: t.note || '',
+    /* Прапорець нагадування в Telegram. Перелічуємо поле явно, як і
+       решту: нормалізатор навмисно збирає завдання з нуля, і все, чого
+       тут немає, зникає при першому ж перечитуванні з бази. */
+    remind: !!t.remind,
   })).filter((t) => t.text);
 };
 

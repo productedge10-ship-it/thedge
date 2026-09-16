@@ -41,6 +41,8 @@ import {
   askNotifyPermission,
   startNewsWatcher,
 } from "../lib/newsAlerts";
+import { notify } from '../utils/notify';
+import { syncNewsAlert, dropNewsAlert } from "../lib/newsTgAlerts";
 import {
   flagSrc,
   warmFlags,
@@ -1595,6 +1597,11 @@ export default function News() {
   const setWatch = async (ev, lead) => {
     if (lead === null) {
       setAlerts((s) => s.filter((a) => a.id !== ev.id));
+      /* Телеграм не чекає на відповідь: дзвіночок має згаснути
+         одразу, а черга — прибратись своїм темпом. Якщо мережа лягла,
+         гірше за все буде одне зайве нагадування, і це помітно менша
+         біда, ніж кнопка, що думає секунду. */
+      dropNewsAlert(ev.id).catch(() => {});
       return;
     }
 
@@ -1611,6 +1618,25 @@ export default function News() {
         lead,
       },
     ]);
+
+    /* Той самий дзвіночок кладе рядок у чергу бота. Браузерне
+       сповіщення лишається як було — воно спрацює, якщо вкладка
+       відкрита; телеграмне прийде в будь-якому разі.
+
+       Відповідь показуємо: «за годину» до події, до якої лишилось
+       сорок хвилин, поставити неможливо, і мовчазна відмова тут
+       читається як зламана кнопка. */
+    syncNewsAlert(ev, lead)
+      .then((state) => {
+        if (state === 'queued') {
+          notify.success('Нагадаємо в Telegram',
+            lead > 0 ? `За ${lead} хв до події.` : 'У момент виходу.');
+        } else if (state === 'past') {
+          notify.error('Цей момент уже минув',
+            'До події лишилось менше часу — обери коротше попередження.');
+        }
+      })
+      .catch(() => {});
   };
 
   const toggleWatch = (ev) =>

@@ -16,9 +16,11 @@ import { T, EASE, useEdgeFonts } from '../lib/theme';
 import {
   KEYS, SEED_TASKS, DEFAULT_SETTINGS, newId,
   normalizeTasks, normalizeSessions, normalizeSettings,
-  today, addDays, isOverdue, todayPomodoros, dayKey,
+  today, addDays, isOverdue, todayPomodoros, dayKey, relativeDay,
 } from '../lib/todoData';
 import useCloudState from '../hooks/useCloudState';
+import { syncTodoAlert, dropTodoAlert, telegramLinked } from '../lib/todoTgAlerts';
+import { notify } from '../utils/notify';
 import { SoftCard } from '../components/ui/Hovers';
 import TaskRow from '../components/todo/TaskRow';
 import TaskComposer from '../components/todo/TaskComposer';
@@ -63,21 +65,68 @@ export default function Todo() {
 
   const addTask = ({ text, due, dueTime, quadrant }) =>
     setTasks((s) => [
-      { id: newId(), text, done: false, doneAt: null, createdAt: today(), due, dueTime, quadrant, pomodoros: 0, note: '' },
+      { id: newId(), text, done: false, doneAt: null, createdAt: today(), due, dueTime, quadrant, pomodoros: 0, note: '', remind: false },
       ...s,
     ]);
 
-  const editTask = (id, patch) => setTasks((s) => s.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  /* ---------- нагадування в Telegram ----------
 
-  const toggleTask = (id) =>
+     Черга `tg_alerts` живе в базі, а не в цій вкладці, тому запис
+     робиться поруч зі зміною завдання, а не замість неї: завдання
+     має зберегтись навіть тоді, коли мережа підвела саме нагадування.
+
+     Переставили годину — рядок у черзі перезаписується сам (унікальний
+     індекс по (user_id, source, source_id)). Зняли годину, відмітили
+     виконаним, видалили — рядок прибирається: нагадування про те, що
+     вже зроблено, дратує сильніше, ніж відсутнє. */
+  const queueRemind = (next, prev) => {
+    const wasOn = !!prev?.remind;
+    const isOn = !!next?.remind;
+    if (!wasOn && !isOn) return;
+
+    syncTodoAlert(next)
+      .then(async (queued) => {
+        if (queued && !wasOn) {
+          const linked = await telegramLinked();
+          notify.success(
+            'Нагадаємо',
+            linked
+              ? `${relativeDay(next.due)} о ${next.dueTime} — повідомлення прилетить у Telegram.`
+              : 'Лишилось підключити Telegram у налаштуваннях — інакше повідомленню нікуди йти.',
+          );
+        } else if (!queued && wasOn) {
+          notify.success('Нагадування знято', 'Більше нічого про це завдання не прийде.');
+        }
+      })
+      .catch(() => {});
+  };
+
+  const editTask = (id, patch) => {
+    const prev = tasks.find((t) => t.id === id);
+    setTasks((s) => s.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    if (prev) queueRemind({ ...prev, ...patch }, prev);
+  };
+
+  const toggleTask = (id) => {
+    const prev = tasks.find((t) => t.id === id);
     setTasks((s) => s.map((t) => (t.id === id
       ? { ...t, done: !t.done, doneAt: !t.done ? today() : null }
       : t)));
 
+    /* Виконане нагадувати нема сенсу. Знімаємо тихо, без тосту:
+       людина щойно закрила завдання, і підтвердження про побічний
+       ефект тут читалось би як «щось пішло не так». */
+    if (prev && prev.remind && !prev.done) dropTodoAlert(id).catch(() => {});
+    if (prev && prev.remind && prev.done) syncTodoAlert({ ...prev, done: false }).catch(() => {});
+  };
+
   const completeTask = (id) =>
     setTasks((s) => s.map((t) => (t.id === id ? { ...t, done: true, doneAt: today() } : t)));
 
-  const deleteTask = (id) => setTasks((s) => s.filter((t) => t.id !== id));
+  const deleteTask = (id) => {
+    setTasks((s) => s.filter((t) => t.id !== id));
+    dropTodoAlert(id).catch(() => {});
+  };
 
   const moveTask = (id, quadrant) => editTask(id, { quadrant });
 

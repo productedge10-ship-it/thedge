@@ -43,7 +43,7 @@ export async function readTelegram() {
 
   const { data, error } = await supabase
     .from('user_settings')
-    .select('tg_chat_id, tg_username, tg_alerts_on, tg_trades_on, tg_daily_on, tg_plan_on')
+    .select('tg_chat_id, tg_username, tg_alerts_on, tg_trades_on, tg_daily_on, tg_plan_on, tg_morning_hour')
     .eq('user_id', uid)
     .maybeSingle();
 
@@ -58,6 +58,9 @@ export async function readTelegram() {
     alerts: data?.tg_alerts_on ?? true,
     trades: data?.tg_trades_on ?? true,
     daily: data?.tg_daily_on ?? true,
+    /* Година ранкового нагадування. Дев'ята — бо це початок робочого
+       дня в Києві: план ще можна написати до відкриття Лондона. */
+    morningHour: data?.tg_morning_hour ?? 9,
     plan: data?.tg_plan_on ?? false,
   };
 }
@@ -111,6 +114,7 @@ const PREF_COLUMN = {
   trades: 'tg_trades_on',
   daily: 'tg_daily_on',
   plan: 'tg_plan_on',
+  morningHour: 'tg_morning_hour',
 };
 
 export async function setTelegramPref(key, value) {

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Clock, Timer, Pencil, Trash2, X, AlertTriangle, Sun, ArrowRight, GripVertical } from 'lucide-react';
+import { Check, Clock, Timer, Pencil, Trash2, X, AlertTriangle, Sun, ArrowRight, GripVertical, Bell, BellOff } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { QUADRANTS, relativeDay, isOverdue, today, addDays } from '../../lib/todoData';
+import { canRemind } from '../../lib/todoTgAlerts';
 
 /* ==================================================================
    Рядок завдання.
@@ -190,6 +191,22 @@ export default function TaskRow({
         {/* Перенести на сьогодні / завтра одним дотиком. Це дві
             найчастіші правки завдання, і обидві досі вимагали
             відкрити попап, знайти день, клікнути, закрити. */}
+        {/* Нагадування в Telegram.
+
+            Показуємо тільки там, де є що нагадувати: без години
+            неможливо сказати, о котрій дзвонити, і кнопка обіцяла б
+            те, чого не станеться. Коли година є, а дзвіночок
+            вимкнений — він блідий, але на місці: саме так видно, що
+            таке взагалі можливо. */}
+        {canRemind(task) && onEdit && (
+          <QuickBtn
+            icon={task.remind ? Bell : BellOff}
+            title={task.remind ? 'Нагадаємо в Telegram' : 'Нагадати в Telegram'}
+            active={!!task.remind}
+            onClick={() => onEdit(task.id, { remind: !task.remind })}
+          />
+        )}
+
         {!task.done && onEdit && (
           <>
             <QuickBtn
