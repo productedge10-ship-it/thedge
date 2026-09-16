@@ -8,7 +8,6 @@ import {
   User, Target, BookOpen, Palette, Sparkles, LayoutGrid,
   MailCheck, MailWarning, KeyRound, Loader2, Check, Send,
   Plug, HelpCircle, ArrowRight, ChevronDown, Unlink,
-  ShieldCheck, ShieldOff, Copy, Lock,
 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
@@ -20,9 +19,14 @@ import { openVerifyEmail } from '../../lib/emailGate';
 import { NAV, MOTION, FX, PSY, HIDEABLE, GOALS, goalById, OPEN_EVENT } from '../../lib/settings';
 import {
   connectMt5, watchMt5Account, readMt5Status, listMt5Accounts, removeMt5Account,
+  countMt5Accounts, MT5_LIMIT,
 } from '../../lib/mt5Store';
 import { THEMES } from '../../lib/themes';
 import { BROKERS, brokerById } from '../../lib/brokers';
+import {
+  BOT_NAME, readTelegram, createLinkCode, unlinkTelegram,
+  setTelegramPref, watchTelegramLink,
+} from '../../lib/telegramStore';
 
 /* ==================================================================
    Налаштування.
@@ -47,7 +51,11 @@ const TABS = [
   { id: 'goal', label: 'Weekly goal', icon: Target, eyebrow: 'RHYTHM', hint: 'What the “Week” tile on the Launchpad shows' },
   { id: 'journal', label: 'Journal', icon: BookOpen, eyebrow: 'PRACTICE', hint: 'How many questions to ask after every trade' },
   { id: 'connect', label: 'Connections', icon: Plug, eyebrow: 'SYNC', hint: 'Connect your trading account — the trades will sync automatically' },
-  { id: 'security', label: 'Security', icon: ShieldCheck, eyebrow: 'ACCOUNT', hint: 'A second step at sign-in, so a leaked password isn’t enough' },
+  { id: 'telegram', label: 'Telegram', icon: Send, eyebrow: 'NOTIFY', hint: 'Alerts, new trades and the daily wrap — straight to your chat' },
+  /* «Security» звідси прибрано до того часу, поки не буде готова сама
+     двофакторка. Вкладка була, вміст до неї — ні, тож вона показувала
+     порожню панель. Пункт меню, який нічого не відкриває, гірший за
+     відсутній: людина думає, що зламалось саме в неї. */
   { id: 'look', label: 'Theme', icon: Palette, eyebrow: 'APPEARANCE', hint: 'Light or dark — with a diagonal sweep' },
   { id: 'motion', label: 'Motion & glow', icon: Sparkles, eyebrow: 'APPEARANCE', hint: 'How much movement you can stand over six hours at a screen' },
   { id: 'menu', label: 'Sections', icon: LayoutGrid, eyebrow: 'NAVIGATION', hint: 'Hide what you don’t use — the data stays' },
@@ -185,6 +193,23 @@ export default function SettingsModal() {
     return () => window.removeEventListener(OPEN_EVENT, onOpen);
   }, []);
 
+  /* Закрили — повертаємось на «Profile».
+
+     Початкове значення й так було 'profile', але воно спрацьовувало
+     рівно один раз за життя компонента. Далі вкладка лишалась там,
+     де її покинули: зайшов у «Connections», закрив вікно — і завтра
+     воно відкривається на «Connections». Виглядає як памʼять про твій
+     вибір, а насправді це просто невимкнений стан: вибору ніхто не
+     робив, людина просто востаннє щось дивилась.
+
+     Скидаємо саме на закритті, а не на відкритті. Відкрити вікно
+     можна з кількох місць, а «з Accounts одразу в Connections» саме й
+     задає вкладку перед показом — скидання на відкритті затирало б
+     цей намір. */
+  useEffect(() => {
+    if (!open) setTab('profile');
+  }, [open]);
+
   useEffect(() => {
     if (!open) return undefined;
     const prev = document.body.style.overflow;
@@ -198,7 +223,15 @@ export default function SettingsModal() {
   }, [open]);
 
   const hiddenCount = s.hiddenNav.length;
-  const head = TABS.find((t) => t.id === tab);
+  /* Запобіжник: невідома вкладка не має права дати порожнє вікно.
+
+     Саме це й сталось, коли в рейці лишився пункт без вмісту. Але
+     причина може бути й інша — стара адреса, друкарська помилка в
+     `openSettings('conect')`. Хай у будь-якому такому разі
+     відкривається «Profile», а не порожнеча, з якої немає виходу,
+     крім хрестика. */
+  const head = TABS.find((t) => t.id === tab) || TABS[0];
+  const safeTab = head.id;
 
   const goalType = s.goal?.type || 'clean';
   const goalMax = goalById(goalType).max;
@@ -268,7 +301,7 @@ export default function SettingsModal() {
 
               <div className="flex flex-col" style={{ gap: 3 }}>
                 {TABS.map((t) => {
-                  const on = tab === t.id;
+                  const on = safeTab === t.id;
                   return (
                     <button
                       key={t.id}
@@ -469,7 +502,7 @@ export default function SettingsModal() {
                 style={{ borderBottom: `1px solid ${T.line}` }}
               >
                 {TABS.map((t) => {
-                  const on = tab === t.id;
+                  const on = safeTab === t.id;
                   return (
                     <button
                       key={t.id}
@@ -493,7 +526,7 @@ export default function SettingsModal() {
                 style={{ padding: '32px 40px 40px 40px' }}
               >
                 {/* ================= Профіль ================= */}
-                {tab === 'profile' && (
+                {safeTab === 'profile' && (
                   <div className="flex flex-col" style={{ gap: 30, maxWidth: 760 }}>
                     <div>
                       <Label>What we should call you</Label>
@@ -612,7 +645,7 @@ export default function SettingsModal() {
                 )}
 
                 {/* ================= Ціль тижня ================= */}
-                {tab === 'goal' && (
+                {safeTab === 'goal' && (
                   <div style={{ maxWidth: 900 }}>
                     <Head
                       title="Goal for the week"
@@ -685,7 +718,7 @@ export default function SettingsModal() {
                 )}
 
                 {/* ================= Журнал ================= */}
-                {tab === 'journal' && (
+                {safeTab === 'journal' && (
                   <div style={{ maxWidth: 900 }}>
                     <Head
                       title="Trade review"
@@ -746,10 +779,13 @@ export default function SettingsModal() {
                 )}
 
                 {/* ================= Підключення ================= */}
-                {tab === 'connect' && <ConnectTab />}
+                {safeTab === 'connect' && <ConnectTab />}
+
+                {/* ================= Telegram ================= */}
+                {safeTab === 'telegram' && <TelegramTab />}
 
                 {/* ================= Тема ================= */}
-                {tab === 'look' && (
+                {safeTab === 'look' && (
                   <div style={{ maxWidth: 900 }}>
                     <Head
                       title="Theme"
@@ -796,7 +832,7 @@ export default function SettingsModal() {
                 )}
 
                 {/* ================= Рух і світло ================= */}
-                {tab === 'motion' && (
+                {safeTab === 'motion' && (
                   <div className="flex flex-col" style={{ maxWidth: 900, gap: 34 }}>
                     <div>
                       <Head
@@ -922,7 +958,7 @@ export default function SettingsModal() {
                 )}
 
                 {/* ================= Розділи ================= */}
-                {tab === 'menu' && (
+                {safeTab === 'menu' && (
                   <div style={{ maxWidth: 940 }}>
                     <Head
                       title="Sections in the menu"
@@ -1750,12 +1786,77 @@ function FormField({ label, hint, children }) {
 
 /* Знак пропа. Файл або монограма — третього не дано, і саме тому
    картинка ніколи не залишає порожню дірку в рядку списку. */
-function BrokerMark({ broker, size = 26 }) {
-  const [broken, setBroken] = useState(false);
+/* Знак пропа — сходинки вниз, доки щось не спрацює.
 
-  /* Скидаємо помилку при зміні пропа: інакше один відсутній логотип
-     назавжди вимикав би картинку для всіх наступних. */
-  useEffect(() => setBroken(false), [broker.id]);
+   1. `/props/<id>.svg` — офіційний логотип, покладений руками.
+   2. unavatar — віддає найбільшу картинку з тих, що є в сайта.
+   3. фавікон від Google — надійніший, але дрібніший.
+   4. Монограма з двох літер.
+
+   Малювати логотипи руками не можна й не треба: це чужі торгові
+   марки, і «схожа» версія гірша за відсутню — вона й виглядає гірше,
+   і претензію збирає швидше. Усе вище — це оригінали, які фірма сама
+   віддає браузерам.
+
+   ------------------------------------------------------------------
+   Чому підкладка світла
+
+   Спершу логотип лежав на темній плашці — і був нечитабельний. Не
+   через роздільність, як здавалося: просто майже всі фірмові знаки
+   темні самі по собі, бо їх малювали під білий сайт. Темне на
+   темному не читається за жодного розміру.
+
+   Біла плашка — те, під що ці логотипи й створені. Поруч із темним
+   інтерфейсом вона ще й працює як рамка: знак вирізняється з рядка,
+   а не тоне в ньому.
+   ------------------------------------------------------------------ */
+const MARK_SOURCES = [
+  /* Свій файл завжди головніший: поклав вектор — він і показується. */
+  (b) => `/props/${b.id}.svg`,
+  /* Далі те, що вказано для цієї конкретної фірми. Спільного правила
+     тут навмисно немає — див. коментар у brokers.js. */
+  (b) => b.icon || null,
+];
+
+function BrokerMark({ broker, size = 26 }) {
+  const [step, setStep] = useState(0);
+
+  /* Скидаємо при зміні пропа: інакше один відсутній логотип назавжди
+     вимикав би картинку для всіх наступних. */
+  useEffect(() => setStep(0), [broker.id]);
+
+  /* Наступне джерело, яке взагалі має що дати. Пропи без домену
+     проскакують одразу до монограми, не витрачаючи двох запитів у
+     нікуди. */
+  const src = (() => {
+    for (let i = step; i < MARK_SOURCES.length; i += 1) {
+      const url = MARK_SOURCES[i](broker);
+      if (url) return { url, at: i };
+    }
+    return null;
+  })();
+
+  if (!src) {
+    return (
+      <span
+        className="grid shrink-0 place-items-center"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size * 0.3,
+          background: `${broker.tint}22`,
+          border: `1px solid ${broker.tint}55`,
+          fontFamily: T.sans,
+          fontSize: size * 0.42,
+          fontWeight: 800,
+          letterSpacing: '-.02em',
+          color: broker.tint,
+        }}
+      >
+        {broker.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase()}
+      </span>
+    );
+  }
 
   return (
     <span
@@ -1764,30 +1865,29 @@ function BrokerMark({ broker, size = 26 }) {
         width: size,
         height: size,
         borderRadius: size * 0.3,
-        background: broken ? `${broker.tint}22` : T.sunken,
-        border: `1px solid ${broken ? `${broker.tint}55` : T.line}`,
+        background: broker.plate === 'light' ? '#fff' : T.sunken,
+        border: `1px solid ${broker.plate === 'light' ? 'rgba(255,255,255,0.12)' : T.line}`,
       }}
     >
-      {broken ? (
-        <span
-          style={{
-            fontFamily: T.sans,
-            fontSize: size * 0.42,
-            fontWeight: 800,
-            letterSpacing: '-.02em',
-            color: broker.tint,
-          }}
-        >
-          {broker.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase()}
-        </span>
-      ) : (
-        <img
-          src={`/props/${broker.id}.svg`}
-          alt=""
-          onError={() => setBroken(true)}
-          style={{ width: size - 8, height: size - 8, objectFit: 'contain', display: 'block' }}
-        />
-      )}
+      <img
+        key={src.at}
+        src={src.url}
+        alt=""
+        loading="lazy"
+        onError={() => setStep(src.at + 1)}
+        style={{
+          /* Світлий знак майже на всю плашку: у таких логотипів уже є
+             власні поля, і додавати до них наші означає отримати
+             крихітну цятку посеред білого квадрата.
+
+             Темна плашка — навпаки, як було: там знак уже має власний
+             фон, і впритул до країв він виглядав би обрізаним. */
+          width: broker.plate === 'light' ? size - 5 : size - 8,
+          height: broker.plate === 'light' ? size - 5 : size - 8,
+          objectFit: 'contain',
+          display: 'block',
+        }}
+      />
     </span>
   );
 }
@@ -1934,6 +2034,22 @@ function LinkedAccounts({ tick }) {
       className="flex flex-col"
       style={{ gap: 6 }}
     >
+      {/* Скільки з скількох. Показуємо завжди, а не тільки на межі:
+          побачити «4 з 5» за крок до стелі корисніше, ніж упертись у
+          неї несподівано. */}
+      <div
+        className="flex items-center justify-between"
+        style={{ fontFamily: T.sans, padding: '2px 4px 4px', fontSize: 12, color: T.text3 }}
+      >
+        <span>Підключені термінали</span>
+        <span
+          className="tabular-nums"
+          style={{ fontWeight: 700, color: rows.length >= MT5_LIMIT ? T.warn : T.text3 }}
+        >
+          {rows.length} з {MT5_LIMIT}
+        </span>
+      </div>
+
       {rows.map((r) => (
         <LinkedRow
           key={r.id}
@@ -1965,7 +2081,21 @@ function LinkedRow({ row, onGone }) {
       setAsking(false);
     }
   };
-  const st = LINK_STATE[row.status] || LINK_STATE.pending;
+  /* «checking» чесне перші хвилини, далі перетворюється на неправду.
+
+     Воркер забирає рахунок із черги за секунди. Якщо рядок висить у
+     `pending` третю хвилину, значить сервер до нього не дійшов — і
+     сказати про це прямо краще, ніж крутити вічне «перевіряємо». Різні
+     слова означають різні речі: «checking» це «зараз дізнаємось»,
+     «waiting for server» це «ми в черзі, і черга стоїть». */
+  const waiting = row.status === 'pending'
+    && row.created_at
+    && Date.now() - new Date(row.created_at).getTime() > 3 * 60 * 1000;
+
+  const st = waiting
+    ? { c: T.warn, label: 'waiting for server' }
+    : (LINK_STATE[row.status] || LINK_STATE.pending);
+
   const broker = brokerById(row.broker);
 
   /* Світло йде за курсором, сам рядок лишається на місці. Рух дрібного
@@ -2110,6 +2240,237 @@ function LinkedRow({ row, onGone }) {
   );
 }
 
+/* ==================================================================
+   Telegram.
+
+   Привʼязка одноразовим кодом, а не вставленим вручну chat_id. Стара
+   схема була і незручна — свій chat_id ще треба десь дізнатись, — і
+   дірява: вставивши чужий, можна було отримувати чужі сповіщення.
+
+   Кнопка відкриває бота з кодом у посиланні, і далі все стається
+   само. Поки людина в Telegram, вікно тихо опитує базу й перемикається
+   на «підключено» в ту саму мить, коли бот запише chat_id.
+================================================================== */
+function TelegramTab() {
+  const [state, setState] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState(null);
+  const watchRef = useRef(null);
+
+  const load = () => readTelegram().then(setState).catch(() => setState(null));
+
+  useEffect(() => {
+    load();
+    /* Спостерігач лишається жити, якщо вкладку закрили посеред
+       привʼязки — інакше він тримав би таймер до кінця сесії. */
+    return () => { if (watchRef.current) watchRef.current(); };
+  }, []);
+
+  const connect = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const link = await createLinkCode();
+      setCode(link.code);
+
+      /* Відкриваємо ДО того, як почнемо чекати: якщо браузер заблокує
+         вкладку, людина принаймні побачить код і посилання поруч. */
+      window.open(link.url, '_blank', 'noopener');
+
+      if (watchRef.current) watchRef.current();
+      watchRef.current = watchTelegramLink((next) => {
+        setState(next);
+        setCode(null);
+        notify.success('Telegram підключено', 'Сповіщення приходитимуть у чат.');
+      });
+    } catch (e) {
+      notify.error('Не вдалось створити код', e?.message || 'Спробуй ще раз.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const drop = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await unlinkTelegram();
+      setCode(null);
+      if (watchRef.current) { watchRef.current(); watchRef.current = null; }
+      await load();
+      notify.success('Відключено', 'Бот більше нічого не надсилатиме.');
+    } catch (e) {
+      notify.error('Не вдалось відключити', e?.message || 'Спробуй ще раз.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const flip = async (key) => {
+    if (!state) return;
+    const next = !state[key];
+    setState((s) => ({ ...s, [key]: next }));   // одразу, без очікування бази
+    try {
+      await setTelegramPref(key, next);
+    } catch (e) {
+      setState((s) => ({ ...s, [key]: !next })); // не вийшло — повертаємо
+      notify.error('Не збереглось', e?.message || 'Спробуй ще раз.');
+    }
+  };
+
+  if (!state) {
+    return (
+      <div style={{ maxWidth: 900 }}>
+        <Head title="Telegram" hint="Читаю стан підключення…" />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: 900 }}>
+      <Head
+        title="Telegram"
+        hint="Таймери з плану, нові угоди з терміналу й підсумок дня — у твій чат"
+      />
+
+      {/* ---------- стан ---------- */}
+      <div
+        className="flex items-center"
+        style={{
+          marginTop: 20,
+          gap: 16,
+          padding: '18px 22px',
+          borderRadius: 16,
+          border: `1px solid ${state.linked ? `rgba(${T.okRgb},0.24)` : T.line}`,
+          background: state.linked ? `rgba(${T.okRgb},0.06)` : T.surfaceHi,
+        }}
+      >
+        <span
+          className="grid shrink-0 place-items-center"
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            background: state.linked ? `rgba(${T.okRgb},0.12)` : `rgba(${T.accRgb},0.10)`,
+            border: `1px solid ${state.linked ? `rgba(${T.okRgb},0.26)` : T.lineAcc}`,
+            color: state.linked ? T.ok : T.acc,
+          }}
+        >
+          <Send size={17} strokeWidth={2.2} />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div style={{ fontFamily: T.sans, fontSize: 15.5, fontWeight: 600, color: T.text }}>
+            {state.linked ? 'Підключено' : 'Не підключено'}
+          </div>
+          <div style={{ fontFamily: T.sans, marginTop: 3, fontSize: 13, color: state.linked ? T.ok : T.text3 }}>
+            {state.linked
+              ? (state.username ? `@${state.username}` : 'чат прив’язано')
+              : `Бот @${BOT_NAME}`}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={state.linked ? drop : connect}
+          disabled={busy}
+          className="shrink-0"
+          style={{
+            fontFamily: T.sans,
+            padding: '10px 16px',
+            borderRadius: 11,
+            fontSize: 13.5,
+            fontWeight: 700,
+            cursor: busy ? 'default' : 'pointer',
+            opacity: busy ? 0.6 : 1,
+            background: state.linked ? 'transparent' : `rgba(${T.accRgb},0.14)`,
+            border: `1px solid ${state.linked ? T.line : T.lineAcc}`,
+            color: state.linked ? T.text3 : T.acc,
+            transition: 'all .18s',
+          }}
+        >
+          {state.linked ? 'Відключити' : 'Підключити'}
+        </button>
+      </div>
+
+      {/* ---------- код, поки чекаємо ---------- */}
+      {!state.linked && code && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: '16px 20px',
+            borderRadius: 14,
+            border: `1px solid ${T.lineAcc}`,
+            background: `rgba(${T.accRgb},0.05)`,
+          }}
+        >
+          <div style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text2 }}>
+            Відкрилась вкладка з ботом — натисни там <b>Start</b>.
+          </div>
+
+          {/* Код показуємо не для набору руками, а на випадок, коли
+              браузер заблокував вкладку: тоді людина відкриє бота сама
+              й надішле /start із цим кодом. */}
+          <div
+            className="tabular-nums"
+            style={{
+              fontFamily: T.mono,
+              marginTop: 10,
+              fontSize: 20,
+              fontWeight: 700,
+              letterSpacing: '4px',
+              color: T.acc,
+            }}
+          >
+            {code}
+          </div>
+
+          <div style={{ fontFamily: T.sans, marginTop: 8, fontSize: 12.5, color: T.text3 }}>
+            Код живе 15 хвилин. Чекаю на бота…
+          </div>
+        </div>
+      )}
+
+      {/* ---------- що саме слати ---------- */}
+      <div style={{ marginTop: 30, opacity: state.linked ? 1 : 0.45 }}>
+        <Head
+          title="Що приходить у чат"
+          hint={state.linked ? undefined : 'Стане доступним після підключення'}
+        />
+
+        <Toggle
+          label="Таймери з плану"
+          hint="Нагадування, які ти сам ставиш під час сесії"
+          on={state.alerts}
+          disabled={!state.linked}
+          onClick={() => flip('alerts')}
+        />
+        <Toggle
+          label="Нові угоди з MT5"
+          hint="Щойно воркер забрав угоду з термінала"
+          on={state.trades}
+          disabled={!state.linked}
+          onClick={() => flip('trades')}
+        />
+        <Toggle
+          label="Підсумок дня"
+          hint="Увечері: скільки угод, підсумок у R, чи були помилки"
+          on={state.daily}
+          disabled={!state.linked}
+          onClick={() => flip('daily')}
+        />
+        <Toggle
+          label="Нагадати про план"
+          hint="Вранці в будні, якщо плану на сьогодні ще немає"
+          on={state.plan}
+          disabled={!state.linked}
+          onClick={() => flip('plan')}
+        />
+      </div>
+    </div>
+  );
+}
+
 function ConnectTab() {
   const s = useSettings();
   const fancy = (s.motion || 'full') === 'full';
@@ -2176,6 +2537,28 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
      піти, ніж крутити спінер, який нічого не означає. */
   const [phase, setPhase] = useState('form');
   const [failMsg, setFailMsg] = useState('');
+
+  /* Скільки рахунків уже привʼязано.
+
+     Читаємо тут, а не в батька: ця сама картка стоїть і в
+     налаштуваннях, і в модалці нового рахунку на сторінці Accounts.
+     Хай кожна копія знає про стелю сама, ніж передавати її двома
+     різними шляхами й одного разу забути.
+
+     `null` до відповіді — і саме тому перевірка нижче на `>=`, а не
+     на «не менше»: поки число невідоме, картка поводиться як зазвичай.
+     Хибно заблокувати єдиний спосіб підключитись гірше, ніж на секунду
+     пізніше показати ліміт. */
+  const [used, setUsed] = useState(null);
+  const full = used !== null && used >= MT5_LIMIT;
+
+  useEffect(() => {
+    let alive = true;
+    countMt5Accounts()
+      .then((n) => { if (alive) setUsed(n); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [open]);
 
   const watchRef = useRef(null);
   const timerRef = useRef(null);
@@ -2253,6 +2636,21 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
 
     try {
       const id = await connectMt5({ broker, server, login, password: pass });
+
+      /* Оновлюємо список ОДРАЗУ, а не після вердикту сервера.
+
+         Рядок уже в базі — його записав `connectMt5` зі статусом
+         `pending`. Раніше `onSaved` кликали тільки з `settle()`, тобто
+         лише коли воркер відповість «active». Наслідок був дивний:
+         людина підключила рахунок, він лежить у базі, але в списку
+         порожньо — рівно доти, доки не ввімкнеться VPS. Виглядало як
+         втрачені дані, хоча дані на місці.
+
+         Тепер рядок зʼявляється негайно й чесно показує, що він у
+         черзі. Коли воркер дійде — статус сам перемкнеться на
+         «connected» через той самий канал. */
+      onSaved?.();
+
       setPhase('checking');
       stopWatch();
       watchRef.current = watchMt5Account(id, settle);
@@ -2290,7 +2688,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
           за ховер. Якби layout і scale жили на одному елементі, вони
           билися б за transform, і картка сіпалась би при відкритті. */}
       <motion.div
-        onClick={open ? undefined : onOpen}
+        onClick={open || full ? undefined : onOpen}
         onMouseMove={onMove}
         onMouseEnter={enter}
         onMouseLeave={rest}
@@ -2302,7 +2700,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
         transition={HOVER_SPRING}
         style={{
           borderRadius: 20,
-          cursor: open ? 'default' : 'pointer',
+          cursor: open || full ? 'default' : 'pointer',
           rotateX: srx,
           rotateY: sry,
           transformPerspective: 1100,
@@ -2363,9 +2761,36 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
             >
               MetaTrader 5
             </div>
-            <div style={{ fontFamily: T.sans, marginTop: 5, fontSize: 13.5, color: T.text3 }}>
-              Login, password and server
+            <div style={{ fontFamily: T.sans, marginTop: 5, fontSize: 13.5, color: full ? T.warn : T.text3 }}>
+              {full
+                ? `Ліміт вичерпано — ${used} з ${MT5_LIMIT}`
+                : 'Login, password and server'}
             </div>
+
+            {/* Причина, а не самий заборонний знак.
+
+                Стеля тут не примха: кожен рахунок означає окремий вхід
+                у термінал на сервері, і десяток рахунків в однієї
+                людини перетворюється на чергу, у якій чекають усі
+                інші. Людина має бачити, що робити далі, а не впиратись
+                у мовчазну кнопку, яка не натискається. */}
+            {full && !open && (
+              <div
+                style={{
+                  fontFamily: T.sans,
+                  marginTop: 14,
+                  padding: '10px 12px',
+                  borderRadius: 12,
+                  background: `rgba(${T.warnRgb},0.08)`,
+                  border: `1px solid rgba(${T.warnRgb},0.22)`,
+                  fontSize: 12.5,
+                  lineHeight: '18px',
+                  color: T.text2,
+                }}
+              >
+                Відключи один зі старих рахунків нижче, щоб звільнити місце.
+              </div>
+            )}
           </motion.div>
         </motion.div>
 

@@ -70,11 +70,62 @@ export async function sealSecret(plain) {
    далі не існує: у базу йде тільки `secret`, а сам рядок лишається
    в пам'яті рівно до кінця цієї функції. Нікуди не логуємо — рядок
    у console.log живе рівно стільки ж, скільки відкрита вкладка. */
+/* ------------------------------------------------------------------
+   Скільки терміналів можна привʼязати
+
+   Стеля не вигадана: кожен рахунок означає окремий вхід у термінал на
+   VPS, а це секунди процесорного часу й сотні мегабайтів памʼяті на
+   кожен прохід. Десять рахунків в однієї людини — це десять хвилин
+   черги, які чекають усі інші.
+
+   Число живе тут, але СПРАВЖНЯ перевірка стоїть у базі, тригером.
+   Тутешня потрібна лише для того, щоб сказати людині зрозумілими
+   словами замість помилки з Postgres. Покладатись на неї не можна:
+   клієнт легко обійти, і той, хто захоче, обійде.
+------------------------------------------------------------------ */
+export const MT5_LIMIT = 5;
+
+export async function countMt5Accounts() {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth?.user?.id;
+  if (!uid) return 0;
+
+  const { count, error } = await supabase
+    .from('mt5_accounts')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', uid);
+
+  if (error) return 0;
+  return count || 0;
+}
+
 export async function connectMt5({ broker = 'other', server, login, password }) {
   const secret = await sealSecret(password);
 
   const { data, error: authError } = await supabase.auth.getUser();
   if (authError || !data?.user) throw new Error('Session expired — sign in again.');
+
+  /* Перевіряємо ліміт тільки для НОВОГО рахунку. Перепривʼязка вже
+     наявного логіна (змінили пароль, рахунок упав) не має впиратись у
+     стелю: кількість від неї не росте. */
+  const trimmedLogin = String(login).trim();
+  const { data: existing } = await supabase
+    .from('mt5_accounts')
+    .select('id')
+    .eq('user_id', data.user.id)
+    .eq('platform', 'mt5')
+    .eq('login', trimmedLogin)
+    .maybeSingle();
+
+  if (!existing) {
+    const used = await countMt5Accounts();
+    if (used >= MT5_LIMIT) {
+      throw new Error(
+        `Досягнуто ліміт: ${MT5_LIMIT} підключених рахунків. `
+        + 'Відключи один зі старих, щоб додати новий.',
+      );
+    }
+  }
 
   const { data: row, error } = await supabase
     .from('mt5_accounts')
@@ -87,7 +138,7 @@ export async function connectMt5({ broker = 'other', server, login, password }) 
            про «FTMO-Server5» не знає взагалі. */
         broker,
         server: server.trim(),
-        login: login.trim(),
+        login: trimmedLogin,
         secret,
         key_version: KEY_VERSION,
         /* pending, а не active: активним рахунок робить VPS, коли

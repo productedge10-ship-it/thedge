@@ -8,7 +8,7 @@ import {
 import { getCat, reasonLabel, REASON_GROUPS } from './utils';
 import { T } from '../../lib/theme';
 import { notify } from '../../utils/notify';
-import ImageSlider from '../ui/ImageSlider';
+import ChartShot from '../ui/ChartShot';
 import RuleFromErrorModal from './RuleFromErrorModal';
 
 /* ==================================================================
@@ -226,8 +226,14 @@ export default function ErrorDetailDrawer({
               className="relative flex w-full flex-col overflow-hidden"
               style={{
                 pointerEvents: 'auto',
-                maxWidth: 1000,
-                maxHeight: '92vh',
+                /* Вікно розбору — найбільше в застосунку, і це не
+                   примха. Тут дивляться на графік і перечитують власний
+                   висновок; і те, і те потребує місця. На 1000 пікселях
+                   графік стискався до смужки, а вікно посеред
+                   двадцятидюймового екрана виглядало запискою. */
+                maxWidth: 1440,
+                width: '100%',
+                height: 'min(94vh, 940px)',
                 borderRadius: 24,
                 /* Два шари, а не один градієнт: перша зупинка
                    `${color}14` — це колір із альфою 8%, і там, де
@@ -243,10 +249,9 @@ export default function ErrorDetailDrawer({
             >
               <style>{ROW_CSS}</style>
 
-              <span
-                className="pointer-events-none absolute inset-x-0 top-0 h-px"
-                style={{ background: `linear-gradient(90deg,transparent,${color}cc 28%,rgba(var(--edge-acc-rgb),0.80) 72%,transparent)` }}
-              />
+              {/* Світна смужка вгорі прибрана — так само, як у вікні
+                  запису. Вона тягла погляд у верхній край, де нема
+                  чого робити: тут головне графік і власний висновок. */}
 
               {/* ---------- шапка ---------- */}
               <div
@@ -291,8 +296,14 @@ export default function ErrorDetailDrawer({
               </div>
 
               {/* ---------- дві колонки ---------- */}
-              <div className="grid min-h-0 flex-1 overflow-auto lg:grid-cols-[1fr_292px]">
-                <div className="min-w-0 px-7 pb-6 pt-6" style={{ borderRight: '1px solid var(--edge-line)' }}>
+              {/* Крутиться кожна колонка окремо, а не вікно цілком:
+                  інакше, щоб дістатись до графіка, доводиться прогортати
+                  повз бічну панель, а вона при цьому їде за край. */}
+              <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1fr_340px]">
+                <div
+                  className="flex min-h-0 min-w-0 flex-col overflow-y-auto px-7 pb-6 pt-6"
+                  style={{ borderRight: '1px solid var(--edge-line)' }}
+                >
                   <div className="flex flex-wrap items-center gap-3.5">
                     <span style={{ fontFamily: T.display, fontSize: 40, fontWeight: 700, letterSpacing: '-1.6px', lineHeight: 1, color: 'var(--edge-text)' }}>
                       {selected.pair || 'Без пари'}
@@ -380,12 +391,23 @@ export default function ErrorDetailDrawer({
                     </div>
                   </div>
 
-                  <div className="mt-6">
+                  {/* Графік забирає всю висоту, що лишилась.
+
+                      Він тут головний доказ: причини й висновок можна
+                      перечитати за десять секунд, а на свічки дивляться
+                      довго. Фіксовані 280 пікселів робили з нього
+                      ілюстрацію до тексту, хоча насправді все навпаки —
+                      текст пояснює те, що видно на графіку.
+
+                      `flex-1` замість висоти числом: у високому вікні
+                      графік росте сам, у низькому — чесно стискається,
+                      але не менше ніж до 320. */}
+                  <div className="mt-6 flex min-h-0 flex-1 flex-col">
                     <Cap hint={shots.length > 1 ? `${shots.length} кадри` : 'скрін на момент входу'}>Графік</Cap>
 
                     {shots.length ? (
-                      <div className="mt-3">
-                        <ImageSlider images={shots} containerClassName="h-[280px] rounded-2xl" />
+                      <div className="mt-3 min-h-[320px] flex-1">
+                        <ChartShot images={shots} height="100%" className="h-full" />
                       </div>
                     ) : (
                       <div
@@ -412,7 +434,7 @@ export default function ErrorDetailDrawer({
                 </div>
 
                 {/* ---------- рейка ---------- */}
-                <div className="flex min-w-0 flex-col gap-5 px-5 pb-5 pt-6" style={{ background: 'rgba(var(--edge-hair-rgb),0.02)' }}>
+                <div className="flex min-h-0 min-w-0 flex-col gap-5 overflow-y-auto px-5 pb-5 pt-6" style={{ background: 'rgba(var(--edge-hair-rgb),0.02)' }}>
                   <button
                     onClick={() => onResolve(selected)}
                     onMouseEnter={() => setCtaHover(true)}

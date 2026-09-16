@@ -4,7 +4,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useVelocity, useAnimationFrame } from 'framer-motion';
 import {
   History, BookOpen, FileText, BarChart2, Users,
-  Activity, AlertTriangle, LogOut, CheckSquare, BrainCircuit,
+  Activity, AlertTriangle, CheckSquare, BrainCircuit,
   HelpCircle, Target, Menu, X, ClipboardCheck, Calculator,
   NotebookPen, ChevronLeft, LayoutGrid, Sparkles, Settings, CalendarClock
 } from 'lucide-react';
@@ -720,10 +720,43 @@ export const DEMO_ROUTES = ['/plan', '/journal', '/analytics', '/accounts'];
 export const inDemo = () => typeof window !== 'undefined'
   && window.location.pathname.startsWith('/demo');
 
-function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick, isDanger, tour, soon }) {
+/* Той самий значок, що lucide-івський LogOut, але двома частинами:
+   двері окремо, стрілка окремо. Інакше вийти крізь них нікому —
+   цілісний svg рухається тільки весь разом.
+
+   Малюємо самі, а не патчимо lucide: його шляхи лежать в одному
+   плоскому списку без груп, і зачепитись за саму стрілку немає за
+   що. Координати ті самі, тож на вигляд значок не змінився. */
+function SignOutIcon({ size = 19, style, className }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={style}
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path className="edge-signout-door" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <g className="edge-signout-step">
+        <path d="M16 17l5-5-5-5" />
+        <path d="M21 12H9" />
+      </g>
+    </svg>
+  );
+}
+
+function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick, isDanger, tour, soon, fx }) {
+
   const Inner = ({ isActive }) => (
     <div
-      className={`group relative flex items-center ${collapsed ? 'justify-center w-11 h-11 mx-auto' : 'h-11 px-3 w-full'} rounded-[12px] transition-colors duration-200 ${
+      className={`group relative flex items-center edge-nav-item ${isDanger ? 'edge-signout ' : ''}${fx ? `${fx} ` : ''}${collapsed ? 'justify-center w-11 h-11 mx-auto' : 'h-11 px-3 w-full'} rounded-[12px] transition-colors duration-200 ${
         soon
           ? 'cursor-default text-[var(--edge-nav-dim)] hover:text-[var(--edge-nav)]'
           : `cursor-pointer ${isActive
@@ -753,7 +786,7 @@ function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick
         </motion.div>
       )}
 
-      <div className={`${collapsed ? '' : 'w-[32px]'} flex shrink-0 items-center justify-center relative z-10`}>
+      <div className={`edge-nav-ico ${collapsed ? '' : 'w-[32px]'} flex shrink-0 items-center justify-center relative z-10`}>
         <Icon
           size={19}
           style={soon
@@ -778,7 +811,7 @@ function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick
       </div>
 
       {!collapsed && (
-        <span className="relative z-10 flex-1 whitespace-nowrap text-[13.5px] font-semibold tracking-[0.1px] ml-1 select-none truncate">
+        <span className={`relative z-10 flex-1 whitespace-nowrap text-[13.5px] font-semibold tracking-[0.1px] ml-1 select-none truncate ${isDanger ? 'edge-signout-label' : ''}`}>
           {label}
         </span>
       )}
@@ -934,12 +967,12 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
           {!inDemo() && (
             <>
               <NavItem collapsed={collapsed} onClick={openOnboarding} icon={Sparkles} label="Про тебе" tour="about" soon />
-              <NavItem collapsed={collapsed} onClick={openSettings} icon={Settings} label="Settings" tour="settings" />
+              <NavItem collapsed={collapsed} onClick={openSettings} icon={Settings} label="Settings" tour="settings" fx="nx-gear" />
             </>
           )}
           <NavItem collapsed={collapsed} to="/faq" icon={HelpCircle} label="FAQ / Help" />
           {!inDemo() && (
-            <NavItem collapsed={collapsed} onClick={signOut} icon={LogOut} label="Sign out" isDanger />
+            <NavItem collapsed={collapsed} onClick={signOut} icon={SignOutIcon} label="Sign out" isDanger />
           )}
         </div>
         

@@ -49,9 +49,19 @@ h1, h2, h3, h4, h5, h6 {
    Через box-shadow, а не outline: outline не вміє радіуса в старих
    рушіях і ріже кути на заокруглених кнопках.
 ================================================================== */
+/* Поля вводу сюди НЕ входять.
+
+   Спершу входили — і це було видно одразу: майже кожне поле в
+   застосунку лежить усередині власної оформленої обгортки, яка сама
+   малює рамку й реагує на фокус. Кільце від цього правила лягало
+   поверх неї другим контуром, обтягуючи сам текст, — виглядало як
+   зайва рамка невідомо звідки.
+
+   Для полів фокус і так видно двома способами: миготливою кареткою
+   всередині й зміною кольору рамки обгортки. Третій був зайвим. */
 :where(a, button, [role='button'], [role='switch'], [role='menuitem'],
        [role='menuitemcheckbox'], [tabindex]:not([tabindex='-1']),
-       input, select, textarea, summary):focus-visible {
+       summary):focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px var(--edge-bg, #0A0A0C),
@@ -62,8 +72,6 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 20;
 }
 
-/* Поля вводу вже мають власну підсвітку рамки, тож їм досить тонкого
-   кільця — подвійне поверх бордера виглядає як помилка рендера. */
 /* ==================================================================
    «Add Trade» — крива, що проростає крізь кнопку.
 
@@ -217,9 +225,9 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--edge-surface-hi, #18181C);
 }
 
-:where(input, select, textarea):focus-visible {
-  box-shadow: 0 0 0 2px rgba(var(--edge-acc-rgb, 139, 123, 255), 0.55);
-}
+/* Полю вводу власного кільця не даємо зовсім: його обгортка вже
+   показує фокус кольором рамки, а каретка — самим фактом, що курсор
+   усередині. */
 
 @media (prefers-reduced-motion: reduce) {
   :where(a, button, [role='button']):focus-visible { transition: none; }
@@ -1080,6 +1088,546 @@ h1, h2, h3, h4, h5, h6 {
 /* Світло за курсором на «Аналізах» — прикраса, а не інформація, тож у
    режимі без анімацій його просто немає. */
 .edge-no-motion .analyses-cursor-glow { opacity: 0 !important; }
+
+/* ==================================================================
+   «Зафіксувати помилку» — кнопка, що заварює тріщину.
+
+   Третя кнопка одного роду. У журналі кнопка стає графіком, в
+   аналізах — пише сама себе, тут — лагодить себе. Спільна в них
+   тільки мова: темна заливка, акцентна рамка, ореол знизу. Історія
+   у кожної своя, і саме вона каже, в якому ти розділі, ще до того,
+   як прочитав підпис.
+
+   Що відбувається під курсором. По кнопці різко йде злам — ламаною,
+   з відгалуженнями, як тріскається скло. Слідом тим самим шляхом
+   іде акцентний шов і заварює його: червоне гасне під ним, лишається
+   світла лінія, на місцях зламу спалахують іскри. Значок при цьому
+   перевертається з «увага» на «під захистом».
+
+   Це рівно те, що обіцяє сторінка у себе під заголовком: помилка,
+   яку записано й розібрано, більше не повторюється. Кнопка показує
+   обіцянку, а не дію «відкрити форму».
+
+   Червоного в спокої немає навмисно. Це головна дія розділу, а не
+   небезпечна: постійна червона рамка читалась би як «видалити». Злам
+   живе рівно стільки, скільки триває анімація.
+================================================================== */
+
+@keyframes errorsCtaDraw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* Тріщина гасне не сама по собі, а під швом: поки шов доходить до
+   кінця, від неї вже нічого не лишається. */
+@keyframes errorsCtaCrackFade {
+  0%, 34% { opacity: 1; }
+  100%    { opacity: 0; }
+}
+
+/* Іскра з-під шва: спалахує й одразу опадає. Довша була б схожа на
+   частинки заради частинок. */
+@keyframes errorsCtaSpark {
+  0%   { transform: scale(0) rotate(45deg); opacity: 0; }
+  35%  { transform: scale(1.5) rotate(45deg); opacity: 1; }
+  100% { transform: scale(.5) rotate(45deg); opacity: 0; }
+}
+
+/* Підпис розʼїжджається по тій самій тріщині, що йде під ним, і
+   сходиться назад, коли шов доганяє.
+
+   Тут три різні рухи в одній анімації, тому кожен відрізок має власну
+   криву: розхід — різкий, як сам злам; утримання — рівне; повернення —
+   з легким перельотом, наче половинки клацнули на місце.
+
+   Зсув переважно горизонтальний: злам іде поперек кнопки, тож саме
+   вздовж нього половинки й посуваються. Вертикаль мінімальна — вона
+   лише підказує, що це розрив, а не просто розʼїзд літер. */
+@keyframes errorsCtaSplitTop {
+  0%   { transform: none; animation-timing-function: cubic-bezier(.85, 0, .15, 1); }
+  14%  { transform: translate(-2.5px, -1px); animation-timing-function: linear; }
+  48%  { transform: translate(-2.5px, -1px); animation-timing-function: cubic-bezier(.34, 1.35, .5, 1); }
+  100% { transform: none; }
+}
+
+@keyframes errorsCtaSplitBottom {
+  0%   { transform: none; animation-timing-function: cubic-bezier(.85, 0, .15, 1); }
+  14%  { transform: translate(2.5px, 1px); animation-timing-function: linear; }
+  48%  { transform: translate(2.5px, 1px); animation-timing-function: cubic-bezier(.34, 1.35, .5, 1); }
+  100% { transform: none; }
+}
+
+.errors-cta {
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .22s ease, border-color .22s ease;
+}
+
+.errors-cta-fracture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+
+/* Обидві лінії сховані власною ж довжиною: pathLength="1" робить її
+   одиничною, тож зсув на одиницю ховає лінію цілком. */
+.errors-cta-crack,
+.errors-cta-seam {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.errors-cta-crack { stroke: var(--edge-bad, #f87171); }
+
+/* Шов світиться — інакше він просто друга лінія поверх першої, а не
+   те, що її закриває. */
+.errors-cta-seam {
+  stroke: var(--edge-acc, #8b7bff);
+  filter: drop-shadow(0 0 3px rgba(var(--edge-acc-rgb, 139, 123, 255), .85));
+}
+
+.errors-cta-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0) rotate(45deg);
+  opacity: 0;
+  fill: var(--edge-acc, #8b7bff);
+}
+
+.errors-cta-row { position: relative; z-index: 1; perspective: 220px; }
+
+/* Підпис у двох копіях, зрізаних по горизонталі: верхня половина літер
+   і нижня. У спокої вони лежать одна в одній і читаються як один
+   текст — рівно тому обидві мають однакові розміри й позицію.
+
+   Половинки перекриваються на пів пікселя навмисно: комплементарні
+   inset(0 0 50%) та inset(50% 0 0) на дробовій висоті лишають між
+   собою волосяний просвіт від округлення, і по тексту йде світла
+   риска. Перекриття її знімає, а розійтись на 2.5px воно не заважає. */
+.errors-cta-text {
+  position: relative;
+  display: inline-block;
+}
+
+.errors-cta-text-top {
+  display: block;
+  clip-path: inset(0 0 calc(50% - 0.5px) 0);
+}
+
+.errors-cta-text-bottom {
+  position: absolute;
+  inset: 0;
+  display: block;
+  clip-path: inset(calc(50% - 0.5px) 0 0 0);
+}
+
+/* Значок перевертається, а не підмінюється: підміна читалась би як
+   збій відмальовки, а оберт — як те, що це той самий предмет іншим
+   боком. Саме так воно й задумано: одна річ у двох станах. */
+.errors-cta-ico {
+  position: relative;
+  display: block;
+  width: 17px;
+  height: 17px;
+  flex: none;
+  transform-style: preserve-3d;
+  transition: transform .46s cubic-bezier(.5, 0, .2, 1) .2s;
+}
+
+/* Кожна сторона — span навколо значка, а не сам svg: Safari до
+   недавнього часу ігнорував backface-visibility на svg, і тоді обидві
+   сторони світились одночасно — виходила каша з трикутника й щита. */
+.errors-cta-ico-face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.errors-cta-ico-back { transform: rotateY(180deg); }
+
+/* ---------- сам ховер ---------- */
+
+.errors-cta:hover .errors-cta-fracture,
+.errors-cta:focus-visible .errors-cta-fracture { opacity: 1; }
+
+/* Різке сповільнення в кінці: скло не тріскається плавно. */
+.errors-cta:hover .errors-cta-crack,
+.errors-cta:focus-visible .errors-cta-crack {
+  animation:
+    errorsCtaDraw .26s cubic-bezier(.85, 0, .15, 1) forwards,
+    errorsCtaCrackFade .62s linear forwards;
+}
+
+/* Відгалуження відходять від основної лінії, а не разом із нею:
+   спершу пройшов злам, потім від нього поповзло. */
+.errors-cta:hover .errors-cta-branch,
+.errors-cta:focus-visible .errors-cta-branch {
+  animation:
+    errorsCtaDraw .16s cubic-bezier(.85, 0, .15, 1) forwards,
+    errorsCtaCrackFade .5s linear .12s forwards;
+}
+.errors-cta:hover .errors-cta-branch:nth-of-type(1),
+.errors-cta:focus-visible .errors-cta-branch:nth-of-type(1) { animation-delay: .08s, .2s; }
+.errors-cta:hover .errors-cta-branch:nth-of-type(2),
+.errors-cta:focus-visible .errors-cta-branch:nth-of-type(2) { animation-delay: .13s, .25s; }
+.errors-cta:hover .errors-cta-branch:nth-of-type(3),
+.errors-cta:focus-visible .errors-cta-branch:nth-of-type(3) { animation-delay: .17s, .29s; }
+.errors-cta:hover .errors-cta-branch:nth-of-type(4),
+.errors-cta:focus-visible .errors-cta-branch:nth-of-type(4) { animation-delay: .21s, .33s; }
+
+/* Шов іде слідом за зламом і повільніше за нього: тріскається швидко,
+   заварюється довго. */
+.errors-cta:hover .errors-cta-seam,
+.errors-cta:focus-visible .errors-cta-seam {
+  animation: errorsCtaDraw .44s cubic-bezier(.4, 0, .25, 1) .24s forwards;
+}
+
+/* Іскри спалахують під швом, тому їхні затримки повторюють його хід
+   зліва направо. */
+.errors-cta:hover .errors-cta-spark,
+.errors-cta:focus-visible .errors-cta-spark {
+  animation: errorsCtaSpark .4s ease-out forwards;
+}
+.errors-cta:hover .errors-cta-spark:nth-of-type(1),
+.errors-cta:focus-visible .errors-cta-spark:nth-of-type(1) { animation-delay: .3s; }
+.errors-cta:hover .errors-cta-spark:nth-of-type(2),
+.errors-cta:focus-visible .errors-cta-spark:nth-of-type(2) { animation-delay: .38s; }
+.errors-cta:hover .errors-cta-spark:nth-of-type(3),
+.errors-cta:focus-visible .errors-cta-spark:nth-of-type(3) { animation-delay: .46s; }
+.errors-cta:hover .errors-cta-spark:nth-of-type(4),
+.errors-cta:focus-visible .errors-cta-spark:nth-of-type(4) { animation-delay: .54s; }
+.errors-cta:hover .errors-cta-spark:nth-of-type(5),
+.errors-cta:focus-visible .errors-cta-spark:nth-of-type(5) { animation-delay: .62s; }
+
+.errors-cta:hover .errors-cta-ico,
+.errors-cta:focus-visible .errors-cta-ico { transform: rotateY(180deg); }
+
+/* Довжина підібрана під шов: половинки сходяться рівно тоді, коли він
+   доходить до правого краю. Розходяться вони на 14% — це 0.11 с, тобто
+   момент, коли злам якраз проходить під текстом. */
+.errors-cta:hover .errors-cta-text-top,
+.errors-cta:focus-visible .errors-cta-text-top {
+  animation: errorsCtaSplitTop .78s forwards;
+}
+.errors-cta:hover .errors-cta-text-bottom,
+.errors-cta:focus-visible .errors-cta-text-bottom {
+  animation: errorsCtaSplitBottom .78s forwards;
+}
+
+/* Без руху лишається сам підпис: ламатись і заварюватись нема чому,
+   якщо анімації вимкнені — статична тріщина на кнопці читалась би як
+   поламана верстка. */
+.edge-no-motion .errors-cta:hover .errors-cta-fracture,
+.edge-no-motion .errors-cta:focus-visible .errors-cta-fracture { opacity: 0; }
+.edge-no-motion .errors-cta-crack,
+.edge-no-motion .errors-cta-branch,
+.edge-no-motion .errors-cta-seam,
+.edge-no-motion .errors-cta-spark,
+.edge-no-motion .errors-cta-text-top,
+.edge-no-motion .errors-cta-text-bottom { animation: none !important; }
+.edge-no-motion .errors-cta-ico { transition: none !important; transform: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .errors-cta:hover .errors-cta-fracture,
+  .errors-cta:focus-visible .errors-cta-fracture { opacity: 0; }
+  .errors-cta-ico { transition: none !important; transform: none !important; }
+  .errors-cta-text-top,
+  .errors-cta-text-bottom { animation: none !important; }
+}
+
+/* ==================================================================
+   «Sign out» — вихід крізь двері.
+
+   Рядок у підвалі рейки, який висить перед очима весь час і який
+   зачіпають курсором випадково. Тому все тут тихіше за кнопки
+   розділів: жодного світла на пів панелі, жодного руху самого рядка.
+   Рухається рівно те, що описує дію, і рівно один раз.
+
+   Значок logout — це вже двері зі стрілкою назовні. Ми лише
+   розділяємо їх: стрілка виходить праворуч і зникає, а потім
+   заходить з-за лівого краю й стає на місце. Двері при цьому ледь
+   прочиняються їй назустріч.
+
+   Назва й косяк підтримують той самий напрямок: підпис хилиться
+   вправо, а біля правого краю рядка наростає червона риска —
+   дзеркало тієї смужки, якою в цій же рейці позначений активний
+   розділ. Там вона зліва й каже «ти тут», тут справа й каже «тобі
+   туди».
+================================================================== */
+
+/* Прискорення на виході й гальмування на вході: так читається крок
+   геть, а не гойдання туди-сюди. Стрибок на 46% невидимий — обидва
+   кадри навколо нього прозорі. */
+@keyframes edgeSignoutStep {
+  0%   { transform: translateX(0);   opacity: 1; animation-timing-function: cubic-bezier(.6, 0, .9, .4); }
+  42%  { transform: translateX(8px); opacity: 0; animation-timing-function: steps(1, end); }
+  46%  { transform: translateX(-7px); opacity: 0; animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  100% { transform: translateX(0);   opacity: 1; }
+}
+
+@keyframes edgeSignoutDoor {
+  0%, 100% { transform: translateX(0); }
+  46%      { transform: translateX(-1.5px); }
+}
+
+.edge-signout-step,
+.edge-signout-door { transform-box: fill-box; }
+
+.edge-signout:hover .edge-signout-step {
+  animation: edgeSignoutStep .72s forwards;
+}
+
+.edge-signout:hover .edge-signout-door {
+  animation: edgeSignoutDoor .72s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* Підпис хилиться до дверей. Transition, а не keyframes: поки курсор
+   на рядку, він має лишатись нахиленим, а не відіграти й повернутись. */
+.edge-signout-label {
+  transition: transform .34s cubic-bezier(.34, 1.2, .5, 1);
+}
+.edge-signout:hover .edge-signout-label { transform: translateX(3px); }
+
+.edge-no-motion .edge-signout:hover .edge-signout-step,
+.edge-no-motion .edge-signout:hover .edge-signout-door { animation: none !important; }
+.edge-no-motion .edge-signout-label { transition: none !important; transform: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .edge-signout:hover .edge-signout-step,
+  .edge-signout:hover .edge-signout-door { animation: none !important; }
+  .edge-signout-label { transition: none !important; transform: none !important; }
+}
+
+/* ==================================================================
+   Значки рейки під курсором.
+
+   Одне підняття на всіх — і все. Тут була ціла система жестів, по
+   одному на розділ: щось малювалось, щось оберталось, щось пробігало
+   хвилею. На папері виглядало доречно, живцем — ні. Рейка висить
+   перед очима весь час, курсор проходить по ній десятки разів на
+   день і зачіпає рядки мимохідь, а кожен такий дотик запускав власну
+   виставу. Замість підказки «ось цей розділ» виходив шум.
+
+   Лишилось те, що робить рядок живим і нічого не розповідає: значок
+   підводиться на два пікселі. Цього досить, щоб рух відчувався, і
+   замало, щоб його розглядали.
+
+   Два винятки. Шестерня налаштувань і двері виходу — це не розділи,
+   а дії над застосунком, вони стоять окремо в підвалі й виконують
+   кожна свій жест. Там він доречний саме тому, що більше ніде його
+   немає.
+================================================================== */
+
+.edge-nav-ico {
+  transition: transform .26s cubic-bezier(.33, 0, .2, 1);
+}
+
+/* Підняття — усім, окрім двох із власним жестом. Значок, який
+   одночасно піднімається й крутиться, читається як два різні рухи,
+   що збіглись випадково: шестерня при цьому ще й з'їжджає з осі
+   обертання, і оберт перестає бути обертом. */
+.edge-nav-item:not(.nx-gear):not(.edge-signout):hover .edge-nav-ico {
+  transform: translateY(-2px);
+}
+
+/* Шестерня доводиться повним обертом — довго й рівно, як механізм,
+   а не як смик. */
+@keyframes nxGear { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.nx-gear:hover svg { animation: nxGear 1.15s cubic-bezier(.35, 0, .2, 1); }
+
+.edge-no-motion .edge-nav-ico { transition: none !important; transform: none !important; }
+.edge-no-motion .nx-gear:hover svg { animation: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .edge-nav-ico { transition: none !important; transform: none !important; }
+  .nx-gear:hover svg { animation: none !important; }
+}
+
+/* ==================================================================
+   «New plan» — кнопка розставляє рівні.
+
+   Та сама родина, що «Add Trade» у журналі, «Новий аналіз» в
+   аналізах і «Зафіксувати помилку» в помилках: підпис відступає, і
+   кнопка показує те, заради чого на неї тиснуть. Тут це розмітка
+   угоди — ціль, вхід і стоп, — між якими наливаються дві зони:
+   прибуток зверху, ризик знизу. Рівно те, що трейдер малює на
+   графіку перед входом, тільки завбільшки з кнопку.
+
+   Кнопка біла, і це вирішує всю палітру. Зелений і червоний на
+   білому лишаються собою, тому нічого приглушувати не довелось — на
+   відміну від журнальної кнопки, де заради тих самих кольорів
+   довелося брати темну заливку.
+
+   Чому нічого не вилітає за межі. Кнопка стоїть крайньою праворуч у
+   тісному хедері: будь-що за її межами або накриває сусідні кнопки,
+   або тікає за край екрана. Тому overflow: hidden, і вся розповідь
+   вкладається в 140×38.
+
+   Порядок навмисний: спершу вхід — точка, від якої рахується все
+   інше, — потім ціль і стоп розходяться від нього, і аж тоді
+   заливаються зони. Саме так розмітку й ставлять.
+================================================================== */
+
+@keyframes planCtaDraw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* Зона наливається від входу назовні, а не з краю: вона описує
+   відстань від входу до рівня, і рости має звідти ж. */
+@keyframes planCtaZoneUp {
+  from { clip-path: inset(100% 0 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+@keyframes planCtaZoneDown {
+  from { clip-path: inset(0 0 100% 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+/* ==================================================================
+   «New plan» — кнопка стає кресленням.
+
+   Три спроби до цього били повз, і причина щоразу була та сама: вони
+   малювали дрібний значок усередині кнопки. Рівні, панелі, компас —
+   усе це мотиви в кутку. А в тріщини на «зафіксувати помилку» працює
+   інше: вона рве кнопку від краю до краю, тобто перетворює весь
+   предмет. Саме масштаб жесту й дає те «вау».
+
+   Тут жест того ж масштабу. По кнопці зліва направо прокочується
+   сітка — вона стає міліметрівкою, тим самим папером, на якому
+   креслять. Поверх сітки лягає маршрут, і в кінці спалахує ціль.
+
+   Креслення обрано не випадково: план — єдине місце в застосунку, де
+   малюють те, чого ще не сталося. Журнал показує результат, помилки —
+   злам. Тут — намір.
+================================================================== */
+
+.plan-cta { transition: box-shadow .22s ease, border-color .22s ease; }
+
+.plan-cta-chart {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+
+.plan-cta-label {
+  transition: opacity .18s ease, transform .3s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* Сітка відкривається однією хвилею, а не десятьма окремими лініями.
+   Десять анімацій із затримками читаються як метушня; одна хвиля —
+   як рух руки, що проводить по паперу. */
+@keyframes planBlueprintSweep {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes planBlueprintDraw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes planBlueprintTarget {
+  from { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.35); opacity: 1; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* Кільце розходиться й тане — те саме, що робить ціль на графіку,
+   коли до неї дійшли. */
+@keyframes planBlueprintPing {
+  from { transform: scale(.5); opacity: .85; }
+  to   { transform: scale(2.6); opacity: 0; }
+}
+
+.plan-bp-grid {
+  clip-path: inset(0 100% 0 0);
+  stroke: rgba(var(--edge-acc-rgb, 139, 123, 255), 0.30);
+  stroke-width: .7;
+}
+
+.plan-bp-route {
+  stroke: var(--edge-acc, #8b7bff);
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 5px rgba(var(--edge-acc-rgb, 139, 123, 255), 0.85));
+}
+
+.plan-bp-target {
+  fill: var(--edge-ok, #34d399);
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0);
+  opacity: 0;
+}
+
+.plan-bp-ping {
+  fill: none;
+  stroke: var(--edge-ok, #34d399);
+  stroke-width: 1.4;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(.5);
+  opacity: 0;
+}
+
+/* ---------- сам ховер ---------- */
+
+.plan-cta:hover .plan-cta-chart,
+.plan-cta:focus-visible .plan-cta-chart { opacity: 1; }
+
+.plan-cta:hover .plan-bp-grid,
+.plan-cta:focus-visible .plan-bp-grid {
+  animation: planBlueprintSweep .34s cubic-bezier(.35, 0, .2, 1) forwards;
+}
+
+/* Маршрут стартує ще до того, як сітка добігла до правого краю:
+   пауза між ними розбиває жест на два окремі, а має бути один. */
+.plan-cta:hover .plan-bp-route,
+.plan-cta:focus-visible .plan-bp-route {
+  animation: planBlueprintDraw .42s cubic-bezier(.35, 0, .2, 1) .18s forwards;
+}
+
+.plan-cta:hover .plan-bp-target,
+.plan-cta:focus-visible .plan-bp-target {
+  animation: planBlueprintTarget .3s cubic-bezier(.34, 1.5, .5, 1) .56s forwards;
+}
+
+.plan-cta:hover .plan-bp-ping,
+.plan-cta:focus-visible .plan-bp-ping {
+  animation: planBlueprintPing .7s cubic-bezier(.2, .7, .3, 1) .6s forwards;
+}
+
+.plan-cta:hover .plan-cta-label,
+.plan-cta:focus-visible .plan-cta-label {
+  opacity: 0;
+  transform: translateY(-8px) scale(.96);
+}
+
+/* ---------- вимкнення руху ---------- */
+
+.edge-no-motion .plan-cta:hover .plan-cta-chart,
+.edge-no-motion .plan-cta:focus-visible .plan-cta-chart { opacity: 0; }
+.edge-no-motion .plan-cta:hover .plan-cta-label,
+.edge-no-motion .plan-cta:focus-visible .plan-cta-label { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-cta:hover .plan-cta-chart,
+  .plan-cta:focus-visible .plan-cta-chart { opacity: 0; }
+  .plan-cta:hover .plan-cta-label,
+  .plan-cta:focus-visible .plan-cta-label { opacity: 1; transform: none; }
+}
 
 /* ==================================================================
    Розділ, якого ще немає.

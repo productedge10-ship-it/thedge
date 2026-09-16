@@ -10,7 +10,7 @@ import AssetSelect from '../components/trading/AssetSelect';
 import DateRangePicker from '../components/trading/DateRangePicker';
 import DelayedTooltip from '../components/ui/DelayedTooltip';
 import PlanTypeToggle from '../components/ui/PlanTypeToggle';
-import { Spotlight } from '../components/ui/Hovers';
+import { Spotlight, Magnetic } from '../components/ui/Hovers';
 import AnalysisCard, { biasResult } from '../components/analyses/AnalysisCard';
 import AnalysisRow from '../components/analyses/AnalysisRow';
 import RollingText from '../components/ui/RollingText';
@@ -422,8 +422,14 @@ export default function Analyses() {
                    блиск на металі.
 
                 Ручка при цьому нахиляється, як у момент письма. */}
-            <button
+            <Magnetic
               onClick={createNewPlan}
+              /* strength=0 — магніт вимкнено, лишається тільки стиск
+                 при натисканні. Те саме рішення, що й на кнопці
+                 журналу: головні дії застосунку мають однаково
+                 відгукуватись на палець, а тягнутись за курсором цій
+                 кнопці нема куди — вона стоїть у рядку з фільтрами. */
+              strength={0}
               className="analysis-cta group relative inline-flex h-[46px] shrink-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-xl pl-4 pr-5 text-[14px] font-bold"
               style={{
                 background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
@@ -484,7 +490,7 @@ export default function Analyses() {
                   vectorEffect="non-scaling-stroke"
                 />
               </svg>
-            </button>
+            </Magnetic>
           </div>
 
           {/* зведення */}
