@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import lottie from 'lottie-web';
 import {
   Search, X, Plus, ArrowDownUp, LayoutGrid, Rows3, Pencil, Link as LinkIcon, Pin,
   NotebookPen, Trash2, Image as ImageIcon, Loader2, AudioLines,
@@ -151,6 +152,134 @@ function GradientCta({ onClick, children }) {
       <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-hair-rgb),0.60),transparent)' }} />
       <Plus size={15} strokeWidth={2.4} style={{ color: 'var(--edge-text)' }} />
       <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: 'var(--edge-text)', letterSpacing: '-0.1px' }}>{children}</span>
+    </button>
+  );
+}
+
+/* Справжні анімовані емодзі Google (Noto), а не растрова картинка чи
+   символ шрифту: думка й ліхтарик мають самі «грати», а не просто
+   з'явитись. Програвач ставиться один раз при монтуванні й лежить
+   на паузі (autoplay:false) — а `playing` ззовні лише каже, грати
+   зараз чи стояти на першому кадрі. Так одна й та сама морока з
+   lottie-web не дублюється у двох місцях кнопки. */
+function EmojiLottie({ src, size = 20, playing, loop = false, speed = 0.85 }) {
+  const hostRef = useRef(null);
+  const animRef = useRef(null);
+
+  useEffect(() => {
+    const anim = lottie.loadAnimation({
+      container: hostRef.current,
+      renderer: 'svg',
+      loop,
+      autoplay: false,
+      path: src,
+    });
+    anim.setSpeed(speed);
+    animRef.current = anim;
+    return () => anim.destroy();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, loop]);
+
+  useEffect(() => {
+    const anim = animRef.current;
+    if (!anim) return;
+    if (playing) anim.goToAndPlay(0, true);
+    else anim.goToAndStop(0, true);
+  }, [playing]);
+
+  return <div ref={hostRef} style={{ width: size, height: size, pointerEvents: 'none' }} />;
+}
+
+const EMOJI_THINKING = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f914/lottie.json';
+const EMOJI_BULB = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a1/lottie.json';
+
+/* «Нова папка» — та сама база, що в «Новий бектест»: темний градієнт,
+   лавандова рамка й світіння знизу.
+
+   Ховер — сцена в три кроки: «думка» крутиться, поки курсор на кнопці,
+   іскра-ідея летить дугою через кнопку (~0.58с по одному суцільному
+   offset-path, зі слідом із двох менших іскор, носом за напрямком
+   польоту — не вгору), і лише коли вона майже долетіла, розкривається
+   ліхтарик і засвічується (з коротким спалахом) уже після того, як
+   літачок розчинився.
+
+   Тайминг тримає JS (`setTimeout`), не CSS transition-delay: нам
+   однаково потрібен JS-стан, щоб керувати програванням двох lottie
+   (`hover` — «думка» в циклі; `lit` — ліхтарик один раз), тож простіше
+   тим самим станом підпалити й CSS-клас, ніж тримати дві незалежні
+   таймлінії (JS-таймер для lottie і CSS-затримки для іскри) й
+   сподіватись, що вони не розійдуться. */
+function NewFolderCta({ onClick, children }) {
+  const [hover, setHover] = useState(false);
+  const [lit, setLit] = useState(false);
+  const litTimer = useRef(null);
+
+  const enter = () => {
+    setHover(true);
+    clearTimeout(litTimer.current);
+    litTimer.current = setTimeout(() => setLit(true), 580);
+  };
+  const leave = () => {
+    clearTimeout(litTimer.current);
+    setHover(false);
+    setLit(false);
+  };
+
+  useEffect(() => () => clearTimeout(litTimer.current), []);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={enter}
+      onMouseLeave={leave}
+      onFocus={enter}
+      onBlur={leave}
+      className={`folder-cta inline-flex h-[54px] shrink-0 items-center justify-center gap-2.5 rounded-2xl pl-6 pr-7 text-[14.5px] font-bold${hover ? ' is-hover' : ''}${lit ? ' is-lit' : ''}`}
+      style={{
+        background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
+        border: '1px solid rgba(139,123,255,0.5)',
+        color: '#fff',
+        fontFamily: T.sans,
+        boxShadow: '0 10px 28px -12px rgba(139,123,255,0.4)',
+      }}
+    >
+      <span className="folder-cta-arc" aria-hidden="true">
+        <svg viewBox="0 0 166 54" preserveAspectRatio="none">
+          <path d="M 34 28 Q 92 8, 148 25" />
+        </svg>
+      </span>
+
+      <span className="folder-cta-spark folder-cta-spark-1" aria-hidden="true" />
+      <span className="folder-cta-spark folder-cta-spark-2" aria-hidden="true" />
+
+      <svg
+        className="folder-cta-plane"
+        viewBox="0 0 24 24"
+        fill="rgba(251,191,36,0.35)"
+        stroke="#fde68a"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M22 2L11 13" />
+        <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+      </svg>
+
+      <span className="folder-cta-icon" aria-hidden="true">
+        <Plus size={16} strokeWidth={2.6} className="folder-cta-plus" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
+        <span className="folder-cta-emoji">
+          <EmojiLottie src={EMOJI_THINKING} size={20} playing={hover} loop speed={0.8} />
+        </span>
+      </span>
+
+      <span className="folder-cta-label whitespace-nowrap">{children}</span>
+
+      <span className="folder-cta-bulb-burst" aria-hidden="true" />
+      <span className="folder-cta-bulb" aria-hidden="true">
+        <EmojiLottie src={EMOJI_BULB} size={20} playing={lit} speed={0.9} />
+      </span>
     </button>
   );
 }
@@ -1200,7 +1329,7 @@ export default function Notes() {
                 ))}
               </div>
 
-              <GradientCta onClick={addFolder}>Нова папка</GradientCta>
+              <NewFolderCta onClick={addFolder}>Нова папка</NewFolderCta>
               </div>
             </div>
           </motion.div>

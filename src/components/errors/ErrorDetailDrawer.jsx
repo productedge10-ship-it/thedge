@@ -42,12 +42,12 @@ const MON = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип
 const Cap = ({ children, hint }) => (
   <div className="flex items-baseline justify-between gap-2.5">
     <span
-      className="text-[11.5px] font-bold uppercase"
+      className="text-[11.5px] font-bold uppercase xl:text-[12.5px]"
       style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: 'var(--edge-text2)' }}
     >
       {children}
     </span>
-    {hint && <span className="text-[13px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>{hint}</span>}
+    {hint && <span className="text-[13px] xl:text-[14px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>{hint}</span>}
   </div>
 );
 
@@ -98,10 +98,10 @@ function ActionRow({ icon: Icon, label, hint, onClick }) {
     <button
       onClick={onClick}
       title={hint}
-      className="err-act flex h-[42px] w-full items-center gap-2.5 rounded-[11px] px-3"
+      className="err-act flex h-[42px] w-full items-center gap-2.5 rounded-[11px] px-3 xl:h-[46px] xl:px-3.5"
     >
-      <Icon size={15} strokeWidth={1.8} className="err-act-ico shrink-0" />
-      <span className="min-w-0 flex-1 text-left text-[14px] font-semibold" style={{ fontFamily: T.sans }}>
+      <Icon size={15} strokeWidth={1.8} className="err-act-ico shrink-0 xl:h-4 xl:w-4" />
+      <span className="min-w-0 flex-1 text-left text-[14px] font-semibold xl:text-[15px]" style={{ fontFamily: T.sans }}>
         {label}
       </span>
       <ChevronRight size={14} strokeWidth={2} style={{ flex: 'none', opacity: 0.7 }} />
@@ -223,10 +223,9 @@ export default function ErrorDetailDrawer({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.98 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative flex w-full flex-col overflow-hidden"
+              className="relative flex w-full max-w-[1000px] flex-col overflow-hidden xl:max-w-[1200px] 2xl:max-w-[1360px]"
               style={{
                 pointerEvents: 'auto',
-                maxWidth: 1000,
                 maxHeight: '92vh',
                 borderRadius: 24,
                 /* Два шари, а не один градієнт: перша зупинка
@@ -250,22 +249,22 @@ export default function ErrorDetailDrawer({
 
               {/* ---------- шапка ---------- */}
               <div
-                className="flex flex-none items-center justify-between gap-5 py-4 pl-[22px] pr-[18px]"
+                className="flex flex-none items-center justify-between gap-5 py-4 pl-[22px] pr-[18px] xl:py-5 xl:pl-7 xl:pr-6"
                 style={{ borderBottom: '1px solid var(--edge-line)' }}
               >
                 <div className="flex min-w-0 items-center gap-3.5">
                   <span
-                    className="grid h-[38px] w-[38px] flex-none place-items-center rounded-xl"
+                    className="grid h-[38px] w-[38px] flex-none place-items-center rounded-xl xl:h-11 xl:w-11"
                     style={{ background: `${color}20`, border: `1px solid ${color}5e`, boxShadow: `inset 0 1px 0 ${color}4d`, color: 'var(--edge-acc)' }}
                   >
-                    <AlertTriangle size={17} strokeWidth={1.9} />
+                    <AlertTriangle size={17} strokeWidth={1.9} className="xl:h-[19px] xl:w-[19px]" />
                   </span>
 
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2.5">
                       {cat && (
                         <span
-                          className="flex items-center gap-2 rounded-full px-3.5 py-[6px] text-[13px] font-bold"
+                          className="flex items-center gap-2 rounded-full px-3.5 py-[6px] text-[13px] font-bold xl:text-[14px]"
                           style={{ fontFamily: T.sans, background: `${catColor}1f`, border: `1px solid ${catColor}4d`, color: `${catColor}f2` }}
                         >
                           <span className="h-1.5 w-1.5 rounded-full" style={{ background: catColor, boxShadow: `0 0 8px 1px ${catColor}cc` }} />
@@ -273,7 +272,7 @@ export default function ErrorDetailDrawer({
                         </span>
                       )}
                       <span
-                        className="text-[12px] uppercase"
+                        className="text-[12px] uppercase xl:text-[13px]"
                         style={{ fontFamily: T.mono, letterSpacing: '1.2px', color: 'var(--edge-text3)' }}
                       >
                         {stamp}
@@ -291,14 +290,14 @@ export default function ErrorDetailDrawer({
               </div>
 
               {/* ---------- дві колонки ---------- */}
-              <div className="grid min-h-0 flex-1 overflow-auto lg:grid-cols-[1fr_292px]">
-                <div className="min-w-0 px-7 pb-6 pt-6" style={{ borderRight: '1px solid var(--edge-line)' }}>
+              <div className="grid min-h-0 flex-1 overflow-auto lg:grid-cols-[1fr_292px] xl:grid-cols-[1fr_324px] 2xl:grid-cols-[1fr_352px]">
+                <div className="min-w-0 px-7 pb-6 pt-6 xl:px-9 xl:pb-8 xl:pt-8" style={{ borderRight: '1px solid var(--edge-line)' }}>
                   <div className="flex flex-wrap items-center gap-3.5">
-                    <span style={{ fontFamily: T.display, fontSize: 40, fontWeight: 700, letterSpacing: '-1.6px', lineHeight: 1, color: 'var(--edge-text)' }}>
+                    <span style={{ fontFamily: T.display, fontSize: 'clamp(40px, 3vw, 52px)', fontWeight: 700, letterSpacing: '-1.6px', lineHeight: 1, color: 'var(--edge-text)' }}>
                       {selected.pair || 'Без пари'}
                     </span>
                     <span
-                      className="flex items-center gap-2 rounded-full px-4 py-[8px] text-[13.5px] font-bold"
+                      className="flex items-center gap-2 rounded-full px-4 py-[8px] text-[13.5px] font-bold xl:text-[14.5px]"
                       style={{
                         fontFamily: T.sans,
                         background: selected.resolved ? 'rgba(var(--edge-ok-rgb),0.09)' : A(0.16),
@@ -322,13 +321,13 @@ export default function ErrorDetailDrawer({
                   {reasons.length > 0 && (
                     <>
                       <Cap>Причини</Cap>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <div className="mt-3 flex flex-wrap items-center gap-2 xl:gap-2.5">
                         {reasons.map((id) => {
                           const rc = reasonColor(id);
                           return (
                             <span
                               key={id}
-                              className="flex items-center gap-2 rounded-full px-4 py-[8px] text-[13.5px] font-semibold"
+                              className="flex items-center gap-2 rounded-full px-4 py-[8px] text-[13.5px] font-semibold xl:px-[18px] xl:py-[9px] xl:text-[14.5px]"
                               style={{ fontFamily: T.sans, background: `${rc}1c`, border: `1px solid ${rc}42`, color: `${rc}f2` }}
                             >
                               <span className="h-[5px] w-[5px] rounded-full" style={{ background: rc, boxShadow: `0 0 8px 1px ${rc}99` }} />
@@ -347,7 +346,7 @@ export default function ErrorDetailDrawer({
                   <div className="mt-6">
                     <Cap>Розбір</Cap>
                     <div
-                      className="relative mt-3 overflow-hidden py-[18px] pl-6 pr-6"
+                      className="relative mt-3 overflow-hidden py-[18px] pl-6 pr-6 xl:py-6 xl:pl-7 xl:pr-7"
                       style={{
                         borderRadius: '4px 16px 16px 4px',
                         background: `linear-gradient(100deg, ${color}17, ${color}08 34%, transparent 78%)`,
@@ -359,19 +358,19 @@ export default function ErrorDetailDrawer({
                       />
                       <span
                         className="pointer-events-none absolute select-none"
-                        style={{ right: 14, top: -14, fontFamily: T.display, fontSize: 88, fontWeight: 700, lineHeight: 1, color, opacity: 0.1 }}
+                        style={{ right: 14, top: -14, fontFamily: T.display, fontSize: 'clamp(88px, 6vw, 104px)', fontWeight: 700, lineHeight: 1, color, opacity: 0.1 }}
                       >
                         ”
                       </span>
 
-                      <p className="relative text-[16px]" style={{ fontFamily: T.sans, lineHeight: 1.68, color: 'var(--edge-text)' }}>
+                      <p className="relative text-[16px] xl:text-[17.5px]" style={{ fontFamily: T.sans, lineHeight: 1.68, color: 'var(--edge-text)' }}>
                         {selected.desc}
                       </p>
 
                       <div className="relative mt-3.5 flex items-center gap-2.5">
                         <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${color}3d, transparent)` }} />
                         <span
-                          className="whitespace-nowrap text-[11.5px] uppercase"
+                          className="whitespace-nowrap text-[11.5px] uppercase xl:text-[12.5px]"
                           style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}
                         >
                           мій висновок · {short}
@@ -385,24 +384,24 @@ export default function ErrorDetailDrawer({
 
                     {shots.length ? (
                       <div className="mt-3">
-                        <ImageSlider images={shots} containerClassName="h-[280px] rounded-2xl" />
+                        <ImageSlider images={shots} containerClassName="h-[280px] rounded-2xl xl:h-[330px] 2xl:h-[370px]" />
                       </div>
                     ) : (
                       <div
-                        className="mt-3 flex items-center gap-3.5 rounded-2xl px-4 py-3.5"
+                        className="mt-3 flex items-center gap-3.5 rounded-2xl px-4 py-3.5 xl:px-5 xl:py-4"
                         style={{ border: '1.5px dashed var(--edge-line)', background: 'rgba(var(--edge-hair-rgb),0.015)' }}
                       >
                         <span
-                          className="grid h-10 w-10 flex-none place-items-center rounded-xl"
+                          className="grid h-10 w-10 flex-none place-items-center rounded-xl xl:h-11 xl:w-11"
                           style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)' }}
                         >
-                          <ImageIcon size={18} strokeWidth={1.7} />
+                          <ImageIcon size={18} strokeWidth={1.7} className="xl:h-5 xl:w-5" />
                         </span>
                         <span className="min-w-0">
-                          <span className="block text-[14.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
+                          <span className="block text-[14.5px] font-semibold xl:text-[15.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
                             Скріна ще немає
                           </span>
-                          <span className="mt-[3px] block text-[13px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
+                          <span className="mt-[3px] block text-[13px] xl:text-[14px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                             Додати можна через редагування запису
                           </span>
                         </span>
@@ -412,12 +411,12 @@ export default function ErrorDetailDrawer({
                 </div>
 
                 {/* ---------- рейка ---------- */}
-                <div className="flex min-w-0 flex-col gap-5 px-5 pb-5 pt-6" style={{ background: 'rgba(var(--edge-hair-rgb),0.02)' }}>
+                <div className="flex min-w-0 flex-col gap-5 px-5 pb-5 pt-6 xl:gap-6 xl:px-6 xl:pb-6 xl:pt-7" style={{ background: 'rgba(var(--edge-hair-rgb),0.02)' }}>
                   <button
                     onClick={() => onResolve(selected)}
                     onMouseEnter={() => setCtaHover(true)}
                     onMouseLeave={() => setCtaHover(false)}
-                    className="flex h-12 items-center justify-center gap-2.5 rounded-[13px] text-[14.5px] font-bold"
+                    className="flex h-12 items-center justify-center gap-2.5 rounded-[13px] text-[14.5px] font-bold xl:h-[54px] xl:text-[15.5px]"
                     style={selected.resolved
                       ? { fontFamily: T.sans, background: 'rgba(var(--edge-ok-rgb),0.09)', border: '1px solid rgba(var(--edge-ok-rgb),0.30)', color: 'var(--edge-ok)', transition: 'all .2s' }
                       : {
@@ -442,11 +441,11 @@ export default function ErrorDetailDrawer({
                       {facts.map(([k, v], i) => (
                         <div
                           key={k}
-                          className="flex items-center justify-between gap-2.5 rounded-[9px] px-2.5 py-2"
+                          className="flex items-center justify-between gap-2.5 rounded-[9px] px-2.5 py-2 xl:py-2.5"
                           style={{ background: i % 2 ? 'transparent' : 'rgba(var(--edge-hair-rgb),0.02)' }}
                         >
-                          <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>{k}</span>
-                          <span className="flex-none text-[13px]" style={{ fontFamily: T.mono, color: 'var(--edge-text)' }}>{v}</span>
+                          <span className="text-[13.5px] xl:text-[14.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>{k}</span>
+                          <span className="flex-none text-[13px] xl:text-[14px]" style={{ fontFamily: T.mono, color: 'var(--edge-text)' }}>{v}</span>
                         </div>
                       ))}
                     </div>
@@ -456,7 +455,7 @@ export default function ErrorDetailDrawer({
                     <div>
                       <Cap>Ця категорія</Cap>
                       <div
-                        className="relative mt-2.5 overflow-hidden rounded-[15px] px-4 py-4"
+                        className="relative mt-2.5 overflow-hidden rounded-[15px] px-4 py-4 xl:px-5 xl:py-5"
                         style={{ background: `linear-gradient(165deg, ${catColor}14, var(--edge-sunken))`, border: `1px solid ${catColor}3d` }}
                       >
                         <span
@@ -465,10 +464,10 @@ export default function ErrorDetailDrawer({
                         />
 
                         <div className="relative flex items-baseline gap-2">
-                          <span style={{ fontFamily: T.display, fontSize: 34, fontWeight: 700, letterSpacing: '-1.4px', lineHeight: 1, color: catColor }}>
+                          <span style={{ fontFamily: T.display, fontSize: 'clamp(34px, 2.4vw, 40px)', fontWeight: 700, letterSpacing: '-1.4px', lineHeight: 1, color: catColor }}>
                             {stats.count}
                           </span>
-                          <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
+                          <span className="text-[13.5px] xl:text-[14.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
                             {stats.count === 1 ? 'запис' : stats.count < 5 ? 'записи' : 'записів'}
                           </span>
                         </div>
@@ -484,7 +483,7 @@ export default function ErrorDetailDrawer({
                           />
                         </div>
 
-                        <p className="relative mt-2.5 text-[13.5px]" style={{ fontFamily: T.sans, lineHeight: 1.5, color: 'var(--edge-text2)' }}>
+                        <p className="relative mt-2.5 text-[13.5px] xl:text-[14.5px]" style={{ fontFamily: T.sans, lineHeight: 1.5, color: 'var(--edge-text2)' }}>
                           {stats.pct}% усіх твоїх записів у журналі.
                           {stats.count > 2 ? ' Це вже система, а не випадковість.' : ''}
                         </p>
@@ -522,10 +521,10 @@ export default function ErrorDetailDrawer({
 
               {/* ---------- підвал ---------- */}
               <div
-                className="flex flex-none flex-wrap items-center justify-between gap-4 py-3 pl-[22px] pr-[18px]"
+                className="flex flex-none flex-wrap items-center justify-between gap-4 py-3 pl-[22px] pr-[18px] xl:py-3.5 xl:pl-7 xl:pr-6"
                 style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)' }}
               >
-                <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
+                <span className="text-[13.5px] xl:text-[14px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                   {selected.resolved ? 'Розбір закритий — запис більше не в черзі' : 'Запис у черзі на розбір'}
                 </span>
 
@@ -535,7 +534,7 @@ export default function ErrorDetailDrawer({
                       onClick={onPrev}
                       disabled={!onPrev}
                       title="Попередня помилка"
-                      className="flex h-9 items-center gap-2 rounded-[10px] px-3.5 text-[13px] font-semibold"
+                      className="flex h-9 items-center gap-2 rounded-[10px] px-3.5 text-[13px] font-semibold xl:h-10 xl:px-4 xl:text-[14px]"
                       style={{
                         fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)',
                         color: onPrev ? 'var(--edge-text)' : 'var(--edge-text4)', opacity: onPrev ? 1 : 0.5, transition: 'all .16s',
@@ -548,7 +547,7 @@ export default function ErrorDetailDrawer({
                       onClick={onNext}
                       disabled={!onNext}
                       title="Наступна помилка"
-                      className="flex h-9 items-center gap-2 rounded-[10px] px-3.5 text-[13px] font-semibold"
+                      className="flex h-9 items-center gap-2 rounded-[10px] px-3.5 text-[13px] font-semibold xl:h-10 xl:px-4 xl:text-[14px]"
                       style={{
                         fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)',
                         color: onNext ? 'var(--edge-text)' : 'var(--edge-text4)', opacity: onNext ? 1 : 0.5, transition: 'all .16s',

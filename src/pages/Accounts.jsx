@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Building2, Wallet, Plus, Trash2, X, Activity,
+  Building2, Wallet, Trash2, X, Activity,
   Loader2, Pencil, Trophy, ArrowDownToLine, TrendingUp, TrendingDown, ArrowRight, Archive, Lock,
   Plug,
 } from 'lucide-react';
@@ -13,6 +13,7 @@ import { T } from '../lib/theme';
 import { money, money2 } from '../lib/accountsStore';
 import { supabase as sb } from '../lib/supabase';
 import AccountDetails from '../components/accounts/AccountDetails';
+import AssetIcon from '../components/ui/AssetIcon';
 import { Mt5Card } from '../components/modals/SettingsModal';
 
 const PREDEFINED_FIRMS = [
@@ -101,6 +102,50 @@ function AccCard({ children, hue = T.accRgb, onClick, hoverable = false, classNa
       )}
       {children}
     </motion.div>
+  );
+}
+
+/* ==================================================================
+   «Add Account» — гаманці віялом, монети вилітають з-під них.
+
+   За основою користувача: стос із трьох гаманців на наведенні
+   розходиться віялом, а з-під кожного випурхує своя монета — BTC,
+   золото, ETH, тими самими іконками, що скрізь у застосунку малює
+   AssetIcon (не нові SVG, символ той самий, яким актив і так
+   впізнають). Загальний вигляд кнопки — фон, рамка, тінь — лишився
+   недоторканим; сама анімація, паузи й криві — у index.css
+   (.acc-burst-glimmer / .acc-wallet-* / .acc-fly-*). */
+function AddAccountCta({ onClick }) {
+  return (
+    <button
+      type="button"
+      data-tour="acc-add"
+      onClick={onClick}
+      className="acc-burst inline-flex h-[48px] flex-1 shrink-0 items-center justify-center gap-2 rounded-2xl px-4 text-[13.5px] font-bold sm:h-[54px] sm:ml-1 sm:px-6 sm:text-[14.5px] md:flex-none"
+      style={{
+        background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
+        border: '1px solid rgba(139,123,255,0.5)',
+        color: '#fff',
+        fontFamily: T.sans,
+        boxShadow: '0 10px 28px -12px rgba(139,123,255,0.4)',
+      }}
+    >
+      <span className="acc-wallet-stage relative h-4 w-4 shrink-0">
+        <span className="acc-fly-coin acc-fly-btc"><AssetIcon symbol="BTC" size={12} category="crypto" /></span>
+        <span className="acc-fly-coin acc-fly-gold"><AssetIcon symbol="XAU" size={12} /></span>
+        <span className="acc-fly-coin acc-fly-eth"><AssetIcon symbol="ETH" size={12} category="crypto" /></span>
+
+        {/* Задні гаманці — світліші, а не просто прозоріші: на темній
+            панелі однаковий колір трьох силуетів, що йдуть внахлест,
+            зливається в одну пляму. Освітлення дає їм читатись окремо
+            одне від одного, а не лише формою. */}
+        <Wallet size={16} strokeWidth={1.8} className="acc-wallet acc-wallet-3" style={{ color: 'color-mix(in srgb, var(--edge-acc, #8b7bff) 45%, white)' }} />
+        <Wallet size={16} strokeWidth={2} className="acc-wallet acc-wallet-2" style={{ color: 'color-mix(in srgb, var(--edge-acc, #8b7bff) 70%, white)' }} />
+        <Wallet size={16} strokeWidth={2.4} className="acc-wallet acc-wallet-1" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
+      </span>
+      <span className="acc-burst-label whitespace-nowrap">Add Account</span>
+      <span className="acc-burst-glimmer" aria-hidden="true" />
+    </button>
   );
 }
 
@@ -321,10 +366,6 @@ return (
         stroke-dasharray: 100 0;
       }
 
-      /* Кнопка «Add Account» живе в index.css під іменем
-         .edge-add-btn: той самий вигляд потрібен і на розборах, а цей
-         блок стилів існує лише поки змонтована сторінка рахунків. */
-
       /* Кнопка «Archive» — та сама скляна панель, що інші преміальні
          блоки: градієнтне тло, іконка в колі, м'який ховер. */
       .acc-archive-btn {
@@ -433,15 +474,7 @@ return (
             )}
           </button>
 
-          <button
-            data-tour="acc-add"
-            onClick={openAddModal}
-            className="edge-add-btn inline-flex h-[48px] flex-1 shrink-0 items-center justify-center gap-2 rounded-2xl px-4 text-[13.5px] font-bold sm:h-[54px] sm:ml-1 sm:px-6 sm:text-[14.5px] md:flex-none"
-            style={{ color: '#fff', fontFamily: T.sans }}
-          >
-            <Plus size={16} strokeWidth={3} className="shrink-0" />
-            <span className="whitespace-nowrap">Add Account</span>
-          </button>
+          <AddAccountCta onClick={openAddModal} />
         </div>
       </motion.div>
 

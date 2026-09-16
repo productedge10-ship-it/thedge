@@ -136,7 +136,10 @@ function FloatField({ label, value, onChange, onKeyDown, placeholder, autoFocus,
           /* Плейсхолдер лише коли підпис уже вгорі, інакше два сірі
              рядки стоять один на одному. */
           placeholder={up ? placeholder : ''}
-          className="min-w-0 flex-1 bg-transparent outline-none"
+          /* edge-field-input знімає внутрішнє кільце фокуса: рамка
+             поля вже сама світлішає (див. style контейнера вище),
+             друге кільце поверх неї виглядало як подвійний бордер. */
+          className="edge-field-input min-w-0 flex-1 bg-transparent outline-none"
           style={{
             paddingLeft: prefix && up ? 8 : 0,
             transition: `padding-left ${FLOAT_MS}ms ${FLOAT_EASE}`,
