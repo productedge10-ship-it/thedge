@@ -2,15 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Search, Plus, Check, AlertTriangle, Image as ImageIcon, Loader2,
+  X, Search, Plus, Check, AlertTriangle, Link as LinkIcon,
 } from 'lucide-react';
 import { REASON_GROUPS, REASONS, reasonLabel } from './utils';
 import { T } from '../../lib/theme';
-import { useAuth } from '../../context/AuthContext';
-import { uploadImage } from '../../lib/imageStore';
-import { notify } from '../../utils/notify';
+import { tvImage } from '../../lib/imageStore';
 import AssetPickerModal from '../modals/AssetPickerModal';
-import ImageSlider from '../ui/ImageSlider';
+import ChartShot from '../ui/ChartShot';
 
 /* ==================================================================
    Композер помилки.
@@ -55,11 +53,6 @@ const GROUP_TITLE = {
   Preparation: 'Підготовка',
 };
 
-const PROMPTS = [
-  { name: 'Що я побачив', text: 'Що я побачив: ' },
-  { name: 'Чому зайшов', text: '\nЧому зайшов: ' },
-  { name: 'Правило на майбутнє', text: '\nПравило на майбутнє: ' },
-];
 
 const Cap = ({ children, hint, tone }) => (
   <div className="flex items-baseline justify-between gap-2.5">
@@ -81,112 +74,101 @@ const Cap = ({ children, hint, tone }) => (
    Скріни графіка.
 
    Кілька, а не один: розбір майже завжди складається з двох картинок
-   — як виглядало на вході і чим закінчилось. Перегляд той самий, що
-   в картці угоди: лупа на наведення, стрілки між кадрами, фулскрін
-   по кліку. Свій переглядач тут був би четвертим у застосунку.
+   — як виглядало на вході і чим закінчилось. Показ той самий, що в
+   блоках плану: приглушення світлого графіка, фулскрін, карусель.
 ------------------------------------------------------------------ */
-function ShotsField({ shots, setShots, entryId }) {
-  const { user } = useAuth();
+function ShotsField({ shots, setShots }) {
   const [hov, setHov] = useState(false);
-  const [busy, setBusy] = useState(0);
-  const input = useRef(null);
 
-  const add = async (files) => {
-    const list = [...files].filter((f) => f.type.startsWith('image/'));
-    if (!list.length) return;
+  /* Тільки посилання з TradingView — файли більше не приймаються.
 
-    if (!user?.id) {
-      notify.error('Спершу увійди', 'Скрін нема куди завантажити без акаунта.');
-      return;
-    }
+     Так само влаштовані блоки плану, і причина та сама: знімок у
+     TradingView уже лежить на їхньому сервері, має власну адресу й
+     живе там роками. Завантажувати ту саму картинку вдруге до нас —
+     це платити сховищем і трафіком за копію того, що вже є.
 
-    setBusy((n) => n + list.length);
-    for (const file of list) {
-      try {
-        /* Послідовно, а не Promise.all: паралельне завантаження
-           чотирьох картинок з телефонної мережі частіше падає
-           цілком, ніж встигає швидше. */
-        const url = await uploadImage(user.id, `err-${entryId || 'new'}`, file);
-        setShots((prev) => [...prev, url]);
-      } catch (e) {
-        notify.error('Скрін не завантажився', e?.message || 'Сховище відмовило.');
-      } finally {
-        setBusy((n) => n - 1);
-      }
-    }
+     Рядок Ctrl+V лишається головним способом: з TradingView знімок
+     копіюють кнопкою «Copy link to the chart image», тобто посилання
+     вже в буфері, і найкоротший шлях — просто вставити його. */
+  const addUrl = (raw) => {
+    const text = String(raw || '').trim();
+    if (!/^https?:\/\//i.test(text)) return false;
+
+    /* Розгортаємо сторінку знімка в пряму адресу png: інакше <img>
+       отримає HTML і покаже битий значок. */
+    const url = tvImage(text);
+    setShots((prev) => (prev.includes(url) ? prev : [...prev, url]));
+    return true;
   };
 
-  /* Ctrl+V працює, поки відкрита модалка: скрін графіка майже
-     завжди щойно зроблений і лежить у буфері, а не у файлах. */
   useEffect(() => {
     const onPaste = (e) => {
-      const files = [...(e.clipboardData?.files || [])];
-      if (files.length) { e.preventDefault(); add(files); }
+      const text = e.clipboardData?.getData('text') || '';
+      if (addUrl(text)) e.preventDefault();
     };
     document.addEventListener('paste', onPaste);
     return () => document.removeEventListener('paste', onPaste);
   });
 
-  /* Колонка, а не просто блок: дропзона забирає всю висоту, що
-     лишилась під текстом і підказками, замість вузької смужки з
-     порожнечею під нею до самого низу вікна. */
+  /* Колонка, а не просто блок: зона вставки забирає всю висоту, що
+     лишилась під текстом, замість вузької смужки з порожнечею під нею
+     до самого низу вікна. */
   return (
     <div className="mt-4 flex min-h-0 flex-1 flex-col">
-      <input
-        ref={input}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={(e) => { add(e.target.files); e.target.value = ''; }}
-      />
-
       {shots.length > 0 && (
-        /* Видалення живе на самій картинці, поруч із лупою й
-           фулскріном: список «кадр 1 · кадр 2» під слайдером змушував
-           тримати в голові, який із них зараз показано. */
+        /* Той самий показ скріна, що в блоках плану: приглушення
+           світлого графіка, фулскрін, карусель на кілька кадрів.
+           Раніше тут стояв загальний ImageSlider — він уміє менше й
+           виглядав інакше, ніж те саме місце в плані. */
         <div className="mb-2.5 flex-none">
-          <ImageSlider
+          <ChartShot
             images={shots}
-            containerClassName="h-[200px] rounded-[14px]"
-            onDelete={(url) => setShots((prev) => prev.filter((x) => x !== url))}
+            height={320}
+            onRemove={(url) => setShots((prev) => prev.filter((x) => x !== url))}
           />
         </div>
       )}
 
+      {/* Зона вставки. Кліком нічого не відкриває — відкривати нічого:
+          єдиний спосіб додати скрін це вставити посилання. Тому й
+          курсор звичайний, а не «палець»: кнопкою вона не є. */}
       <div
-        onClick={() => input.current?.click()}
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
         onDragOver={(e) => { e.preventDefault(); setHov(true); }}
         onDragLeave={() => setHov(false)}
-        onDrop={(e) => { e.preventDefault(); setHov(false); add(e.dataTransfer.files); }}
-        className="flex min-h-[112px] flex-1 cursor-pointer flex-col items-center justify-center gap-3.5 rounded-[14px] p-5 text-center"
+        onDrop={(e) => {
+          /* Перетягнути посилання прямо з вкладки TradingView теж
+             можна — браузер кладе його в dataTransfer як текст. */
+          e.preventDefault();
+          setHov(false);
+          addUrl(e.dataTransfer.getData('text'));
+        }}
+        className="flex min-h-[112px] flex-1 flex-col items-center justify-center gap-3.5 rounded-[14px] p-5 text-center"
         style={{
-          border: `1.5px dashed ${hov ? A(0.55) : 'var(--edge-line)'}`,
-          background: hov ? A(0.07) : 'rgba(var(--edge-hair-rgb),0.015)',
+          border: `1.5px dashed ${hov ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
+          background: hov ? 'rgba(var(--edge-hair-rgb),0.04)' : 'rgba(var(--edge-hair-rgb),0.015)',
           transition: 'all .2s',
         }}
       >
         <span
           className="grid h-[46px] w-[46px] flex-none place-items-center rounded-2xl"
           style={{
-            background: hov ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.04)',
-            border: `1px solid ${hov ? A(0.44) : 'var(--edge-line)'}`,
-            color: hov ? 'var(--edge-acc)' : 'var(--edge-text3)',
-            transform: hov ? 'translateY(-2px)' : 'none',
+            background: 'rgba(var(--edge-hair-rgb),0.04)',
+            border: `1px solid ${hov ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
+            color: hov ? 'var(--edge-text2)' : 'var(--edge-text3)',
             transition: 'all .2s',
           }}
         >
-          {busy > 0 ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} strokeWidth={1.7} />}
+          <LinkIcon size={19} strokeWidth={1.9} />
         </span>
 
         <span className="min-w-0">
           <span className="block text-[14.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
-            {busy > 0 ? `Завантажую ${busy}…` : shots.length ? 'Додати ще скрін' : 'Скріни графіка'}
+            {hov ? 'Відпусти посилання' : shots.length ? 'Додати ще скрін' : 'Скрін графіка'}
           </span>
           <span className="mt-[5px] block text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
-            Перетягни, клікни або встав із буфера
+            Встав лінк з TradingView — Ctrl+V
           </span>
         </span>
       </div>
@@ -254,8 +236,11 @@ function ReasonPanel({ value, onChange, invalid }) {
           className="mt-2.5 flex h-10 items-center gap-2.5 rounded-xl pl-3.5 pr-2"
           style={{
             background: focus ? 'rgba(var(--edge-hair-rgb),0.07)' : 'rgba(var(--edge-hair-rgb),0.03)',
-            border: `1px solid ${invalid ? 'rgba(var(--edge-bad-rgb),0.55)' : focus ? A(0.5) : 'var(--edge-line)'}`,
-            boxShadow: focus ? `0 0 0 4px ${A(0.11)}` : 'none',
+            /* Те саме, що й у полі опису: світліша рамка замість
+               фіолетового ореолу. */
+            border: `1px solid ${invalid
+              ? 'rgba(var(--edge-bad-rgb),0.55)'
+              : focus ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
             transition: 'all .2s',
           }}
         >
@@ -472,11 +457,6 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
     onSave();
   };
 
-  const addPrompt = (text) => setForm({
-    ...form,
-    desc: (form.desc ? form.desc.replace(/\s*$/, '') : '') + text,
-  });
-
   const body = (
     <AnimatePresence>
       {isOpen && (
@@ -503,8 +483,12 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
               className="err-modal relative flex w-full flex-col overflow-hidden"
               style={{
                 pointerEvents: 'auto',
-                maxWidth: 1040,
-                height: 'min(92vh, 760px)',
+                /* Ширше й вище. Ліворуч текст і скріни, праворуч
+                   довгий список причин — при 1040 обидві колонки були
+                   тісні, і список причин прокручувався по чотири
+                   пункти за раз. */
+                maxWidth: 1320,
+                height: 'min(94vh, 900px)',
                 borderRadius: 24,
                 backgroundColor: 'var(--edge-sunken)',
                 backgroundImage: 'linear-gradient(170deg,var(--edge-surface),var(--edge-sunken))',
@@ -512,10 +496,13 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                 boxShadow: `0 50px 110px -40px #000, 0 0 0 1px ${A(0.08)}`,
               }}
             >
-              <span
-                className="pointer-events-none absolute inset-x-0 top-0 h-px"
-                style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-bad-rgb),0.70) 26%,rgba(var(--edge-acc-rgb),0.80) 72%,transparent)' }}
-              />
+              {/* Світна смужка вгорі прибрана.
+
+                  Вона була градієнтом із червоного в фіолетовий і
+                  тягла погляд у верхній край вікна — тобто туди, де
+                  нема чого робити. У модалці, де головне це вибрати
+                  причину справа й написати текст зліва, найяскравіший
+                  елемент не має права бути декорацією. */}
 
               {/* Плейсхолдери за замовчуванням майже зливаються з
                   фоном — на яскравому екрані їх не видно взагалі. */}
@@ -566,7 +553,12 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                   тексту: щоб дістатись до останньої групи, доводилось
                   прогортати повз власний опис, а шапка й кнопка
                   «Зберегти» їхали за край екрана. */}
-              <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1fr_396px]">
+              {/* Права колонка ширша: 396 пікселів на список причин
+                  означали по одному чіпу в рядок, і тридцять причин
+                  перетворювались на довгий сувій. На 560 в рядок
+                  лягає два-три, і більшість груп видно без прокрутки
+                  взагалі. */}
+              <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1fr_560px]">
                 {/* ліворуч: те, що людина пише сама */}
                 <div
                   className="flex min-w-0 flex-col overflow-y-auto px-[22px] pb-[18px] pt-5"
@@ -604,8 +596,15 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                       style={{
                         height: 186,
                         background: bodyFocus ? 'rgba(var(--edge-hair-rgb),0.04)' : 'rgba(var(--edge-hair-rgb),0.02)',
-                        border: `1px solid ${bad(missDesc) ? 'rgba(var(--edge-bad-rgb),0.55)' : bodyFocus ? A(0.45) : 'var(--edge-line)'}`,
-                        boxShadow: bodyFocus ? `0 0 0 4px ${A(0.11)}` : 'none',
+                        /* Фокус позначаємо світлішою рамкою, а не
+                           фіолетовим ореолом. Акцентний колір тут
+                           нічого не означав: він не попереджав і не
+                           підказував, просто світився. А поруч із
+                           фіолетовою кнопкою «Зберегти» ще й змагався
+                           з нею за увагу. */
+                        border: `1px solid ${bad(missDesc)
+                          ? 'rgba(var(--edge-bad-rgb),0.55)'
+                          : bodyFocus ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
                         transition: 'all .2s',
                       }}
                     >
@@ -621,29 +620,16 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                     </div>
                   </div>
 
-                  {/* Підказки дописують заготовку в кінець тексту:
-                      порожнє поле — головна причина, чому розбір
-                      відкладають «на потім» і не повертаються. */}
-                  <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2">
-                    <span
-                      className="mr-0.5 text-[11.5px] font-bold uppercase"
-                      style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}
-                    >
-                      Підказки
-                    </span>
-                    {PROMPTS.map((p) => (
-                      <button
-                        key={p.name}
-                        onClick={() => addPrompt(p.text)}
-                        className="rounded-full px-3.5 py-[7px] text-[13px] font-semibold"
-                        style={{ fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', transition: 'all .16s' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.5); e.currentTarget.style.color = 'var(--edge-text)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line)'; e.currentTarget.style.color = 'var(--edge-text2)'; }}
-                      >
-                        {p.name}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Рядок «Підказки» прибраний.
+
+                      Заготовки дописували в текст шаблон на кшталт
+                      «Що я побачив: ». Задум був зрозумілий — порожнє
+                      поле лякає, — але на ділі вони займали смугу під
+                      найважливішим полем модалки й тіснили скріни
+                      вниз. А причину людина й так вибирає справа: там
+                      той самий зміст, тільки списком.
+
+                      Місце віддано полю тексту й скрінам. */}
 
                   <ShotsField
                     shots={shots}

@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Loader2, Search } from 'lucide-react';
+import {
+  Plus, Loader2, Search, AlertTriangle, ShieldCheck,
+} from 'lucide-react';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
+import { Magnetic } from '../components/ui/Hovers';
 import { notify } from '../utils/notify';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -13,6 +16,143 @@ import ErrorFilters from '../components/errors/ErrorFilters';
 import ErrorGrid from '../components/errors/ErrorGrid';
 import ErrorDetailDrawer from '../components/errors/ErrorDetailDrawer';
 import ErrorComposerModal from '../components/errors/ErrorComposerModal';
+
+/* ==================================================================
+   Головна дія розділу.
+
+   Та сама родина, що «Add Trade» у журналі й «Новий аналіз» в
+   аналізах: темна заливка, акцентна рамка, ореол знизу. Спільна мова
+   потрібна, щоб головну дію було видно однаково на будь-якій
+   сторінці, не вчитуючись.
+
+   Своя в кожної — історія під курсором, і вона каже, в якому ти
+   розділі. Тут кнопка тріскається й заварює себе акцентним швом:
+   рівно те, що сторінка обіцяє під заголовком. Уся анімація живе в
+   CSS (`.errors-cta-*` в index.css) — вона суто декоративна, і
+   тягнути заради неї стан у React нема сенсу.
+
+   Вся розмітка зламу схована від читачів екрана: людині, яка слухає
+   сторінку, потрібен підпис кнопки, а не опис тріщини.
+================================================================== */
+function ErrorCta({ onClick, children, className = '' }) {
+  const rest = `0 12px 30px -14px rgba(${T.accRgb},0.6), inset 0 1px 0 rgba(255,255,255,0.05)`;
+  const hover = `0 18px 42px -14px rgba(${T.accRgb},0.85), 0 0 0 3px rgba(${T.accRgb},0.14)`;
+
+  return (
+    <Magnetic
+      onClick={onClick}
+      /* strength=0 — магніт вимкнено, лишається тільки стиск при
+         натисканні. Той самий компонент, що на кнопках журналу й
+         аналізів: головні дії застосунку мають однаково відгукуватись
+         на палець. Тягнутись за курсором цій кнопці нема куди — вона
+         стоїть у шапці сторінки. */
+      strength={0}
+      className={`errors-cta group relative inline-flex h-[46px] shrink-0 items-center justify-center gap-2.5 overflow-hidden whitespace-nowrap rounded-[13px] px-[22px] text-[14.5px] font-bold ${className}`}
+      style={{
+        fontFamily: T.sans,
+        color: 'var(--edge-text)',
+        background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
+        border: `1px solid ${T.lineAcc}`,
+        boxShadow: rest,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = hover;
+        e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = rest;
+        e.currentTarget.style.borderColor = T.lineAcc;
+      }}
+    >
+      {/* Злам і шов.
+
+          `preserveAspectRatio="none"` — щоб тріщина лягла по всій
+          кнопці, а не лишила поля з боків. Від розтягування лінії
+          рятує `vectorEffect`, а `pathLength="1"` робить довжину
+          кожної одиничною, щоб малювати їх одним зсувом.
+
+          Ламана виходить за краї полотна з обох боків навмисно: злам,
+          що акуратно починається й закінчується всередині кнопки,
+          читається як намальована загогулина, а не як тріщина
+          наскрізь. */}
+      <svg
+        className="errors-cta-fracture"
+        viewBox="0 0 220 46"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          className="errors-cta-crack"
+          pathLength="1"
+          d="M-6,24 L20,15 L29,30 L53,18 L63,32 L87,19 L97,33 L123,17 L133,31 L159,16 L171,29 L197,18 L226,25"
+          fill="none"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+
+        {/* Відгалуження — те, що відрізняє тріщину від зигзага.
+            Окремою групою, щоб nth-of-type у CSS рахував саме їх, а
+            не всі лінії поспіль. */}
+        <g>
+          <path className="errors-cta-crack errors-cta-branch" pathLength="1" d="M29,30 L22,42" fill="none" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+          <path className="errors-cta-crack errors-cta-branch" pathLength="1" d="M53,18 L47,5" fill="none" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+          <path className="errors-cta-crack errors-cta-branch" pathLength="1" d="M97,33 L105,45" fill="none" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+          <path className="errors-cta-crack errors-cta-branch" pathLength="1" d="M171,29 L164,41" fill="none" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+        </g>
+
+        {/* Шов іде тим самим шляхом, що й основний злам — тому й
+            видно, що він саме заварює його, а не малює щось поруч. */}
+        <path
+          className="errors-cta-seam"
+          pathLength="1"
+          d="M-6,24 L20,15 L29,30 L53,18 L63,32 L87,19 L97,33 L123,17 L133,31 L159,16 L171,29 L197,18 L226,25"
+          fill="none"
+          strokeWidth="2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+
+        {/* Іскри — на зламах ламаної, тобто там, де метал опирався б
+            найбільше. */}
+        <g>
+          <rect className="errors-cta-spark" x="27" y="28" width="4" height="4" rx="1" />
+          <rect className="errors-cta-spark" x="61" y="30" width="4" height="4" rx="1" />
+          <rect className="errors-cta-spark" x="95" y="31" width="4" height="4" rx="1" />
+          <rect className="errors-cta-spark" x="131" y="29" width="4" height="4" rx="1" />
+          <rect className="errors-cta-spark" x="169" y="27" width="4" height="4" rx="1" />
+        </g>
+      </svg>
+
+      <span className="errors-cta-row inline-flex items-center gap-2.5">
+        {/* Дві сторони одного значка: «увага» і «під захистом». Це і
+            є весь шлях запису на цій сторінці, згорнутий в один
+            оберт. */}
+        <span className="errors-cta-ico" aria-hidden="true">
+          <span className="errors-cta-ico-face">
+            <AlertTriangle size={17} strokeWidth={2.6} style={{ color: 'var(--edge-bad)' }} />
+          </span>
+          <span className="errors-cta-ico-face errors-cta-ico-back">
+            <ShieldCheck size={17} strokeWidth={2.6} style={{ color: T.acc }} />
+          </span>
+        </span>
+
+        {/* Підпис у двох копіях: верхня половина літер і нижня. Під
+            курсором вони розʼїжджаються по тріщині й сходяться назад,
+            коли шов доганяє.
+
+            Друга копія схована від читачів екрана — вона тут суто
+            заради розрізу, і озвучувати підпис двічі не треба. */}
+        <span className="errors-cta-text">
+          <span className="errors-cta-text-top">{children}</span>
+          <span className="errors-cta-text-bottom" aria-hidden="true">{children}</span>
+        </span>
+      </span>
+    </Magnetic>
+  );
+}
 
 export default function ErrorLog() {
   useEdgeFonts();
@@ -29,8 +169,6 @@ export default function ErrorLog() {
   const [composerOpen, setComposerOpen] = useState(false);
   /* id запису, який зараз редагують. null — створюємо новий. */
   const [editingId, setEditingId] = useState(null);
-  const [ctaHover, setCtaHover] = useState(false);
-  const [emptyHover, setEmptyHover] = useState(false);
   const [form, setForm] = useState({ pair: '', desc: '', tvLink: '', reasons: [], cats: [], shots: [] });
 
   /* Завантаження з бази. Заразом одноразово переносимо те, що
@@ -258,7 +396,14 @@ export default function ErrorLog() {
         @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
       `}</style>
 
-      <div className="relative z-10 mx-auto w-full max-w-[1180px] px-4 pb-24 pt-5 sm:px-6 lg:pt-8">
+      {/* 1800, як у Аналітики й Бектесту.
+
+          Було 1180 — вужче за решту розділів, і на широкому екрані
+          сторінка стояла вузькою колонкою посеред порожнечі. Помилки
+          читають списком і порівнюють між собою, тож вузька колонка
+          тут шкодить удвічі: у рядок влазить менше, а прокручувати
+          доводиться більше. */}
+      <div className="relative z-10 mx-auto w-full max-w-[1800px] px-4 pb-24 pt-5 sm:px-6 lg:pt-8">
 
         {/* ─────────── Шапка ─────────── */}
         <motion.div
@@ -326,31 +471,9 @@ export default function ErrorLog() {
             )}
           </div>
 
-          {/* Кнопка градієнтна, як на макеті: це єдина дія сторінки,
-              і вона має виглядати як єдина. */}
-          <button
-            onClick={() => setComposerOpen(true)}
-            onMouseEnter={() => setCtaHover(true)}
-            onMouseLeave={() => setCtaHover(false)}
-            className="group relative inline-flex h-[46px] shrink-0 items-center gap-2.5 overflow-hidden whitespace-nowrap rounded-[13px] px-[22px] text-[14.5px] font-bold"
-            style={{
-              fontFamily: T.sans,
-              color: 'var(--edge-text)',
-              background: `linear-gradient(180deg, ${ctaHover ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
-              boxShadow: ctaHover
-                ? `0 18px 40px -12px rgba(${T.accRgb},0.85), inset 0 1px 0 rgba(var(--edge-text-rgb),0.3)`
-                : `0 12px 30px -12px rgba(${T.accRgb},0.7), inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
-              transform: `translateY(${ctaHover ? '-2px' : '0'})`,
-              transition: 'transform .3s cubic-bezier(.22,1.2,.36,1), box-shadow .24s, background .18s',
-            }}
-          >
-            <span
-              className="pointer-events-none absolute inset-x-0 top-0 h-px"
-              style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-text-rgb),0.6),transparent)' }}
-            />
-            <Plus size={17} strokeWidth={2.8} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+          <ErrorCta onClick={() => setComposerOpen(true)}>
             Зафіксувати помилку
-          </button>
+          </ErrorCta>
         </motion.div>
 
         <ErrorStats entries={entries} />
@@ -413,28 +536,9 @@ export default function ErrorLog() {
               Зафіксуй помилку, поки памʼятаєш, що саме відчував.
             </p>
 
-            <button
-              onClick={() => setComposerOpen(true)}
-              onMouseEnter={() => setEmptyHover(true)}
-              onMouseLeave={() => setEmptyHover(false)}
-              className="relative mt-6 inline-flex h-[46px] items-center gap-2.5 overflow-hidden rounded-[13px] px-[22px] text-[14.5px] font-bold"
-              style={{
-                fontFamily: T.sans,
-                color: 'var(--edge-text)',
-                background: `linear-gradient(180deg, ${emptyHover ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
-                boxShadow: emptyHover
-                  ? `0 18px 40px -12px rgba(${T.accRgb},0.85), inset 0 1px 0 rgba(var(--edge-text-rgb),0.3)`
-                  : `0 12px 30px -12px rgba(${T.accRgb},0.7), inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
-                transform: `translateY(${emptyHover ? '-2px' : '0'})`,
-                transition: 'transform .3s cubic-bezier(.22,1.2,.36,1), box-shadow .24s, background .18s',
-              }}
-            >
-              <span
-                className="pointer-events-none absolute inset-x-0 top-0 h-px"
-                style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-text-rgb),0.6),transparent)' }}
-              />
+            <ErrorCta onClick={() => setComposerOpen(true)} className="mt-6">
               Зафіксувати першу
-            </button>
+            </ErrorCta>
           </motion.div>
         ) : filteredEntries.length === 0 ? (
           <motion.div

@@ -895,13 +895,13 @@ export default function DailyPlan() {
           plans={dayPlans.map((sym) => ({ symbol: sym, category: flatAssets.find((a) => a.symbol === sym)?.category }))}
           onPickPlan={(sym) => handleRouteChange(planData.date, sym)}
           onAddPlan={() => !isLoadingAssets && setIsAssetModalOpen(true)}
+          onOpenTgAlert={() => setIsTgModalOpen(true)}
           onNewPlan={mode === 'weekly' ? goThisWeek : openPlanTypeModalForNewPlan}
           onShare={handleShare}
           onOpenQuiz={() => setIsQuizModalOpen(true)}
           isQuizFullyCompleted={quizDone}
           quizCompletedCount={quizCount}
           onAddTrade={() => setIsTradeModalOpen(true)}
-          onOpenTgAlert={() => setIsTgModalOpen(true)}
         />
 
         {mode === 'weekly' && (

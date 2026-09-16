@@ -11,6 +11,33 @@ import { usePlanBlocks, PHASE_LABEL } from '../../lib/planBlocks';
    підписи з'являються на hover.
 ================================================================== */
 
+/* Оболонка головної кнопки — спільна для обох варіантів анімації.
+
+   Була біла. Задум зрозумілий: поруч зелена «Add trade» і бурштиновий
+   «Quiz», і фіолетовий з ними бився. Але біле на темному це не
+   «нейтрально», а найгучніше, що можна поставити — у хедері вона
+   читалась як чужий предмет. Тепер темна плашка, а фіолетовим
+   світиться рамка, не заливка: із сусідами вона так не свариться. */
+const CTA_STYLE = {
+  fontFamily: T.sans,
+  color: T.text,
+  background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.sunken})`,
+  border: `1px solid ${T.lineAcc}`,
+  boxShadow: `0 10px 26px -14px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`,
+};
+
+/* Ховер світлом, без зсуву: кнопка стоїть крайньою в тісному рядку,
+   і будь-який рух тягне сусідів за собою. */
+const ctaIn = (e) => {
+  e.currentTarget.style.boxShadow = `0 16px 36px -14px rgba(${T.accRgb},0.8), 0 0 0 3px rgba(${T.accRgb},0.13)`;
+  e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
+};
+
+const ctaOut = (e) => {
+  e.currentTarget.style.boxShadow = CTA_STYLE.boxShadow;
+  e.currentTarget.style.borderColor = T.lineAcc;
+};
+
 function IconBtn({ icon: Icon, label, onClick, tone }) {
   const color = tone || T.text2;
   return (
@@ -401,12 +428,12 @@ export default function PlanHeader({
   onPickPlan,
   onAddPlan,
   onNewPlan,
+  onOpenTgAlert,
   onShare,
   onOpenQuiz,
   isQuizFullyCompleted,
   quizCompletedCount,
   onAddTrade,
-  onOpenTgAlert,
 }) {
   const weekly = mode === 'weekly';
   return (
@@ -508,27 +535,79 @@ export default function PlanHeader({
           <div className="mx-1 h-6 w-px" style={{ background: T.line }} />
 
           <BlocksMenu mode={mode} />
-          <IconBtn icon={Send}    label="Telegram alert" onClick={onOpenTgAlert} tone={T.info} />
+          {/* Нагадування, а не «Telegram alert».
+
+              Вікно робило дві різні речі одразу: привʼязувало акаунт до
+              бота і ставило таймер. Привʼязка переїхала в налаштування —
+              її роблять один раз і назавжди, а в шапці плану лишились
+              тільки щоденні дії.
+
+              Назва теж змінилась: «Telegram» називало канал доставки, а
+              людина в цю мить думає не про канал, а про те, що хоче, аби
+              їй нагадали. */}
+          <IconBtn icon={Send} label="Нагадування" onClick={onOpenTgAlert} tone={T.info} />
           <ShareBtn onShare={onShare} />
 
-          {/* Головна дія хедера. Магнітний ефект прибрано — кнопка їхала
-              з-під курсора; колір нейтральний, бо поруч уже є зелена
-              «Add trade» і бурштиновий «Quiz», і фіолетовий з ними бився. */}
+          {/* Головна дія хедера. */}
           <button
             data-tour="plan-new"
             onClick={onNewPlan}
-            className="group ml-1 inline-flex h-[38px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-            style={{
-              background: T.text,
-              color: 'var(--edge-bg, #0A0A0C)',
-              fontFamily: T.sans,
-              boxShadow: '0 8px 22px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 12px 28px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))')}
-            onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 8px 22px -10px var(--edge-panel-glow, rgba(0,0,0,0.5))')}
+            className="plan-cta group relative ml-1 inline-flex h-[38px] shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-xl px-4 text-[14px] font-bold active:scale-[0.98]"
+            style={CTA_STYLE}
+            onMouseEnter={ctaIn}
+            onMouseLeave={ctaOut}
           >
-            <Plus size={15} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
-            {weekly ? 'New week' : 'New plan'}
+            {/* `preserveAspectRatio="none"` — щоб креслення лягло по всій
+                кнопці, а не лишило поля: підпис «New week» ширший за
+                «New plan», і фіксована пропорція дала б різний вигляд у
+                двох режимах. Лінії від розтягування рятує
+                `vectorEffect`, а `pathLength="1"` робить довжину
+                маршруту одиничною, щоб малювати його одним зсувом. */}
+            <svg
+              className="plan-cta-chart"
+              viewBox="0 0 140 38"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              {/* Міліметрівка. Однією групою, бо відкривається вона
+                  однією хвилею — десять окремих анімацій читались би
+                  як метушня, а не як рух руки по паперу. */}
+              <g className="plan-bp-grid" fill="none" vectorEffect="non-scaling-stroke">
+                  <path d="M14 4V34" />
+                  <path d="M28 4V34" />
+                  <path d="M42 4V34" />
+                  <path d="M56 4V34" />
+                  <path d="M70 4V34" />
+                  <path d="M84 4V34" />
+                  <path d="M98 4V34" />
+                  <path d="M112 4V34" />
+                  <path d="M126 4V34" />
+                  <path d="M6 11H134" />
+                  <path d="M6 19H134" />
+                  <path d="M6 27H134" />
+              </g>
+
+              {/* Маршрут — те, заради чого сітка й зʼявилась. */}
+              <path
+                className="plan-bp-route"
+                pathLength="1"
+                d="M8 27 L34 22 L58 28 L84 14 L110 19 L126 9"
+                fill="none"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+
+              <circle className="plan-bp-ping" cx="126" cy="9" r="4" vectorEffect="non-scaling-stroke" />
+              <circle className="plan-bp-target" cx="126" cy="9" r="3.4" />
+            </svg>
+
+            <span className="plan-cta-label relative flex items-center gap-2">
+              <Plus size={15} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+              {weekly ? 'New week' : 'New plan'}
+            </span>
           </button>
         </div>
       </div>

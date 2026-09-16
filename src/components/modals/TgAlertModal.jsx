@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // 2. Іконки (Lucide)
-import { Send, X, Clock, Loader2, AlertCircle, Timer, Key, ExternalLink } from 'lucide-react';
+import { Send, X, Clock, Loader2, AlertCircle, Timer } from 'lucide-react';
 
 // 3. База даних та Контекст (шляхи оновлено під нову папку)
 import { supabase } from '../../lib/supabase';
@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 
 // 4. Утиліти
 import { notify } from '../../utils/notify';
+import { openSettings } from '../../lib/settings';
 
 const PRESETS = [
   { label: '10s (Тест)', ms: 10 * 1000 },
@@ -31,9 +32,6 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
   const [delayMs, setDelayMs] = useState(30 * 60 * 1000);
   const [isCustom, setIsCustom] = useState(false);
   const [customMinutes, setCustomMinutes] = useState('');
-
-  // Стан для введення ключа
-  const [inputKey, setInputKey] = useState('');
 
   useEffect(() => {
     if (isOpen) checkConnection();
@@ -56,30 +54,6 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
     }
   }
 
-  const handleConnect = async (e) => {
-    e.preventDefault();
-    if (!inputKey.trim()) return;
-    
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({ 
-          user_id: user.id, 
-          tg_chat_id: inputKey.trim(),
-          updated_at: new Date()
-        });
-
-      if (error) throw error;
-      
-      setHasChatId(true);
-      notify.success('Підключено', 'Тепер ви можете ставити алерти!');
-    } catch (err) {
-      notify.error('Помилка', err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSaveAlert = async (e) => {
     e.preventDefault();
@@ -126,46 +100,33 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
               <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center">Синхронізація з базою...</span>
             </div>
           ) : !hasChatId ? (
-            // ==========================================
-            // КРОК 1: ПІДКЛЮЧЕННЯ (Якщо немає Chat ID)
-            // ==========================================
-            <div className="space-y-6">
-              <div className="flex flex-col items-center text-center gap-4">
-                <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/20 text-blue-500 shadow-lg shadow-blue-500/5">
-                  <Key size={32} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-[var(--edge-text)] uppercase tracking-tight mb-2">Підключення Telegram</h3>
-                  <p className="text-sm text-gray-400 font-medium leading-relaxed">Для отримання сповіщень потрібно прив'язати бота до вашого акаунта.</p>
-                </div>
+            /* Підключення переїхало в налаштування.
+
+               Тут воно просило вставити свій chat_id руками — і це було
+               незручно (його ще треба десь дізнатись) та діряво
+               (вставивши чужий, можна було отримувати чужі сповіщення).
+               Тепер привʼязка робиться одноразовим кодом у
+               «Налаштування → Telegram», а звідси туди просто ведемо. */
+            <div className="flex flex-col items-center gap-5 py-4 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-500">
+                <Send size={28} />
               </div>
 
-              <div className="bg-[var(--edge-surface-hi)] border border-[#333] rounded-2xl p-4 space-y-4">
-                <a 
-                  href="https://t.me/EdgeCore_Radar_Bot" 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="flex items-center justify-between group bg-blue-600/10 border border-blue-500/20 hover:border-blue-500/50 p-3 rounded-xl transition-all"
-                >
-                  <span className="text-xs font-bold text-blue-400">1. Перейти до бота</span>
-                  <ExternalLink size={14} className="text-blue-500 group-hover:scale-110 transition-transform" />
-                </a>
-                <p className="text-[10px] text-gray-500 uppercase font-bold px-1">2. Натисніть "Отримати ключ" та вставте його нижче:</p>
-                <input 
-                  type="text" 
-                  value={inputKey}
-                  onChange={(e) => setInputKey(e.target.value)}
-                  placeholder="Ваш ключ (напр. 2044624712)"
-                  className="w-full bg-[#0A0A0A] border border-[#333] rounded-xl px-4 py-3 text-sm text-[var(--edge-text)] outline-none focus:border-blue-500 transition-all font-mono"
-                />
+              <div>
+                <h3 className="mb-2 text-xl font-black uppercase tracking-tight text-[var(--edge-text)]">
+                  Telegram не підключений
+                </h3>
+                <p className="text-sm font-medium leading-relaxed text-gray-400">
+                  Нагадування приходять у чат — спершу треба привʼязати бота
+                  до акаунта. Це робиться один раз і займає пів хвилини.
+                </p>
               </div>
 
-              <button 
-                onClick={handleConnect}
-                disabled={loading || !inputKey.trim()}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-[var(--edge-text)] font-black uppercase py-4 rounded-xl text-xs transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50"
+              <button
+                onClick={() => { onClose(); openSettings('telegram'); }}
+                className="w-full rounded-xl bg-blue-600 py-4 text-xs font-black uppercase text-[var(--edge-text)] shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 active:scale-95"
               >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : 'Активувати сповіщення'}
+                Відкрити налаштування
               </button>
             </div>
           ) : (
