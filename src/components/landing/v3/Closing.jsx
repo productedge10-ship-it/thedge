@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ArrowRight, Ban, Check, ChevronDown, TriangleAlert } from 'lucide-react';
-import { C, F, A, reducedMotion, SHELL } from './base';
+import { ArrowRight, Ban, Check, ChevronDown, Gift, TriangleAlert } from 'lucide-react';
+import { C, F, A, reducedMotion, SHELL, SoonTag, PriceRoll } from './base';
 
 /* ==================================================================
    Хвіст сторінки: ритм дня, чого ми не робимо, ціни, питання, футер.
@@ -36,10 +36,10 @@ export function Rhythm() {
       </div>
 
       <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(26px,2.3vw,44px)', letterSpacing: '-1.6px', lineHeight: 1.1, margin: '0 0 12px', color: '#fff' }}>
-        Три дотики за день.
+        Три дотики за день
       </h2>
       <p style={{ fontFamily: F.sans, fontSize: 16.5, lineHeight: 1.5, color: '#8a8a9c', margin: '0 0 30px', maxWidth: 680 }}>
-        Журнал не забирає час. Він забирає рішення, які ти й так приймаєш — і залишає їх на папері.
+        Журнал не забирає час. Він забирає рішення, які ти й так приймаєш — і залишає їх на папері
       </p>
 
       <div style={{ position: 'relative' }}>
@@ -71,7 +71,7 @@ export function Rhythm() {
       </div>
 
       <div style={{ textAlign: 'center', fontFamily: F.sans, fontSize: 14.5, fontWeight: 700, color: C.accSoft, marginTop: 26 }}>
-        Разом — менше десяти хвилин на день.
+        Разом — менше десяти хвилин на день
       </div>
     </section>
   );
@@ -96,10 +96,10 @@ export function NotDoing() {
             </div>
 
             <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(26px,2.3vw,44px)', letterSpacing: '-1.6px', lineHeight: 1.1, margin: '0 0 12px', color: '#fff' }}>
-              Чого ми не робимо.
+              Чого ми не робимо
             </h2>
             <p style={{ fontFamily: F.sans, fontSize: 15, lineHeight: 1.6, color: '#c4a882', margin: 0, maxWidth: 380 }}>
-              Журнал не заробляє замість тебе. Він показує, де ти вже заробляєш, а де ні.
+              Журнал не заробляє замість тебе. Він показує, де ти вже заробляєш, а де ні
             </p>
           </div>
 
@@ -125,7 +125,17 @@ export function NotDoing() {
 /* ---------- ціни ---------- */
 
 const FREE = ['План на день', 'Журнал без обмежень', 'Діагностика перед сесією', 'Задачі й чекліст', 'Документи торгової системи'];
-const PRO = ['Повна аналітика', 'AI-коуч на твоїх угодах', 'Бектести', 'Автоімпорт MT5', 'Пропрахунки з виплатами', 'Картки статистики'];
+/* `soon` — це не позначка «колись». Поки функції немає, вона не має
+   виглядати частиною того, за що людина платить сьогодні: інакше
+   перший же тиждень підписки закінчується питанням «а де AI». */
+const PRO = [
+  'Повна аналітика',
+  'Бектести',
+  'Автоімпорт MT5',
+  'Пропрахунки з виплатами',
+  'Картки статистики',
+  { text: 'AI-коуч на твоїх угодах', soon: true },
+];
 const COMPARE = [
   ['Всі угоди в одному місці', true],
   ['Рахує R і профіт-фактор', false],
@@ -141,20 +151,36 @@ export function Pricing() {
   const [yearly, setYearly] = useState(false);
   const reduced = reducedMotion();
 
+  /* Кнопка більше не має власного фону. Підсвітка — одна плашка, що
+     їздить під ними: коли фон просто гасне в одній кнопці й
+     зʼявляється в іншій, перемикач читається як дві лампочки, а не як
+     один перемикач із двома положеннями.
+
+     Обидві кнопки однакової ширини — інакше плашка мусила б міряти
+     текст, а «Місяць» і «Рік» різної довжини. */
   const tab = (on) => ({
-    border: 0, borderRadius: 999, padding: '9px 20px', fontFamily: F.sans, fontSize: 13.5, fontWeight: 700,
-    cursor: 'pointer', transition: 'background .2s ease,color .2s ease', whiteSpace: 'nowrap',
-    background: on ? A(0.16) : 'transparent', color: on ? '#fff' : '#8a8a9c',
+    position: 'relative', zIndex: 1, border: 0, background: 'transparent',
+    borderRadius: 999, padding: '9px 0', width: 92, textAlign: 'center',
+    fontFamily: F.sans, fontSize: 13.5, fontWeight: 700,
+    cursor: 'pointer', transition: 'color .22s ease', whiteSpace: 'nowrap',
+    color: on ? '#fff' : '#8a8a9c',
   });
 
   const feat = (list, color, textColor) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 11, marginBottom: 26 }}>
-      {list.map((f) => (
-        <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
-          <Check size={14} strokeWidth={2.6} color={color} style={{ flexShrink: 0, marginTop: 3 }} />
-          <span style={{ fontFamily: F.sans, fontSize: 14, lineHeight: 1.45, color: textColor }}>{f}</span>
-        </div>
-      ))}
+      {list.map((f) => {
+        const soon = typeof f === 'object' && f.soon;
+        const label = typeof f === 'object' ? f.text : f;
+        return (
+          <div key={label} style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+            <Check size={14} strokeWidth={2.6} color={soon ? C.text4 : color} style={{ flexShrink: 0, marginTop: 3 }} />
+            <span style={{ fontFamily: F.sans, fontSize: 14, lineHeight: 1.45, color: soon ? '#7d7d90' : textColor }}>
+              {label}
+              {soon && <SoonTag />}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 
@@ -167,13 +193,22 @@ export function Pricing() {
             <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>ЦІНИ</span>
           </div>
           <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 10px', color: '#fff' }}>
-            Дешевше за одну погану угоду.
+            Дешевше за одну погану угоду
           </h2>
-          <p style={{ fontFamily: F.sans, fontSize: 16.5, color: '#8a8a9c', margin: 0 }}>Почни безкоштовно і залиш журнал назавжди.</p>
+          <p style={{ fontFamily: F.sans, fontSize: 16.5, color: '#8a8a9c', margin: 0 }}>Почни безкоштовно і залиш журнал назавжди</p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 13, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.09)', borderRadius: 999, padding: 4 }}>
+          <div style={{ position: 'relative', display: 'flex', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.09)', borderRadius: 999, padding: 4 }}>
+            <span
+              aria-hidden
+              style={{
+                position: 'absolute', top: 4, bottom: 4, left: 4, width: 92,
+                borderRadius: 999, background: A(0.18), border: `1px solid ${A(0.32)}`,
+                transform: `translateX(${yearly ? 92 : 0}px)`,
+                transition: reduced ? 'none' : 'transform .38s cubic-bezier(.34,1.3,.5,1)',
+              }}
+            />
             <button type="button" onClick={() => setYearly(false)} style={tab(!yearly)}>Місяць</button>
             <button type="button" onClick={() => setYearly(true)} style={tab(yearly)}>Рік</button>
           </div>
@@ -188,7 +223,7 @@ export function Pricing() {
             <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}>$0</span>
             <span style={{ fontFamily: F.sans, fontSize: 15, color: '#7d7d90' }}>назавжди</span>
           </div>
-          <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22 }}>Усе, щоб виробити звичку.</div>
+          <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22 }}>Усе, щоб виробити звичку</div>
           {feat(FREE, C.text4, '#b8b8c8')}
           <a
             href="/auth"
@@ -211,12 +246,32 @@ export function Pricing() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 10 }}>
-            <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}>{yearly ? '$8.25' : '$12'}</span>
+            <PriceRoll
+              value={yearly ? '$12' : '$15'}
+              size={46}
+              style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}
+            />
             <span style={{ fontFamily: F.sans, fontSize: 15, color: '#7d7d90' }}>/ місяць</span>
           </div>
 
-          <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22 }}>
-            {yearly ? '$99 на рік.' : 'Усе з Free, плюс те, що змінює поведінку.'}
+          <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22, minHeight: 21 }}>
+            {/* `key` змушує React перемонтувати рядок, і анімація
+                програється заново. Без нього текст міняється миттєво
+                посеред того, як ціна ще котиться — і два різні темпи в
+                одному русі виглядають як збій.
+
+                `minHeight` тримає висоту: рядки різної довжини на
+                вузькій картці переносяться по-різному, і без нього
+                кнопка внизу підстрибувала б на кожен клік. */}
+            <span
+              key={yearly ? 'y' : 'm'}
+              style={{
+                display: 'inline-block',
+                animation: reduced ? 'none' : 'lnSubIn .42s cubic-bezier(.4,0,.2,1) .16s both',
+              }}
+            >
+              {yearly ? '$144 на рік — на $36 дешевше' : 'Усе з Free, плюс те, що змінює поведінку'}
+            </span>
           </div>
 
           {feat(PRO, C.acc, '#dcdce8')}
@@ -229,6 +284,17 @@ export function Pricing() {
           >
             Почати безкоштовно
           </a>
+
+          {/* Обіцянка раннім підписникам. Стоїть під кнопкою, а не над
+              ціною: спершу людина вирішує, чи вартий продукт грошей, і
+              лише потім дізнається, що отримає ще й бонус. Навпаки це
+              читалось би як спроба доплатити за недоробленість. */}
+          <div style={{ marginTop: 14, display: 'flex', gap: 9, alignItems: 'flex-start', borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: 14 }}>
+            <Gift size={15} strokeWidth={2.2} color={C.accSoft} style={{ flexShrink: 0, marginTop: 2 }} />
+            <span style={{ fontFamily: F.sans, fontSize: 13, lineHeight: 1.5, color: '#9a9ab0' }}>
+              Оформив підписку до виходу AI-коуча — отримаєш <b style={{ color: '#fff' }}>два тижні нейромережі в подарунок</b> у день запуску
+            </span>
+          </div>
         </div>
       </div>
 
@@ -255,7 +321,7 @@ export function Pricing() {
       </div>
 
       <div style={{ fontFamily: F.sans, fontSize: 13.5, color: C.text5, marginTop: 18 }}>
-        Скасувати можна будь-коли. Дані твої — експорт у CSV в один клік.
+        Скасувати можна будь-коли. Дані твої — експорт у CSV в один клік
       </div>
     </section>
   );
@@ -264,12 +330,12 @@ export function Pricing() {
 /* ---------- фінал + питання ---------- */
 
 const FAQ = [
-  { chip: 'БЕЗПЕКА', q: 'Логін інвестора — це безпечно?', a: 'Так. Логін інвестора дає лише читання: подивитись історію й баланс. Торгувати, виводити кошти чи змінювати налаштування з ним неможливо технічно, на рівні самого MetaTrader.' },
-  { chip: 'ЧАС', q: 'Скільки часу це забирає щодня?', a: 'Двадцять секунд на угоду, дві хвилини на план і п’ять на вечірній розбір. Цифри й результат приїжджають з MT5 самі — руками ти дописуєш тільки причину входу й стан.' },
-  { chip: 'КОУЧ', q: 'Чим коуч відрізняється від ChatGPT?', a: 'Він не радить абстрактно, а працює з твоєю вибіркою: дисципліна, час входів, серії після стопу, ціна кожної звички в R. Порада завжди привʼязана до конкретних угод, які можна відкрити й перевірити.' },
-  { chip: 'ПРОП', q: 'А якщо я торгую на пропфірмі?', a: 'Проп-рахунки ведуться окремо: ліміт денної просадки, загальна просадка, прогрес до виплати й історія самих виплат. Один журнал тримає особисті й проп-рахунки одночасно.' },
-  { chip: 'ДАНІ', q: 'Мої угоди йдуть на навчання моделей?', a: 'Ні. Дані замкнені на твій акаунт на рівні бази й не використовуються для тренування. Публічним стає лише те, на що ти сам створиш посилання.' },
-  { chip: 'ОПЛАТА', q: 'Що буде, якщо я перестану платити?', a: 'Журнал і вся історія лишаються на безкоштовному плані — вимикаються тільки можливості Pro. Експорт у CSV доступний завжди, в один клік.' },
+  { chip: 'БЕЗПЕКА', q: 'Логін інвестора — це безпечно?', a: 'Так. Логін інвестора дає лише читання: подивитись історію й баланс. Торгувати, виводити кошти чи змінювати налаштування з ним неможливо технічно, на рівні самого MetaTrader' },
+  { chip: 'ЧАС', q: 'Скільки часу це забирає щодня?', a: 'Двадцять секунд на угоду, дві хвилини на план і п’ять на вечірній розбір. Цифри й результат приїжджають з MT5 самі — руками ти дописуєш тільки причину входу й стан' },
+  { chip: 'КОУЧ', q: 'Чим коуч відрізняється від ChatGPT?', a: 'Він не радить абстрактно, а працює з твоєю вибіркою: дисципліна, час входів, серії після стопу, ціна кожної звички в R. Порада завжди привʼязана до конкретних угод, які можна відкрити й перевірити' },
+  { chip: 'ПРОП', q: 'А якщо я торгую на пропфірмі?', a: 'Проп-рахунки ведуться окремо: ліміт денної просадки, загальна просадка, прогрес до виплати й історія самих виплат. Один журнал тримає особисті й проп-рахунки одночасно' },
+  { chip: 'ДАНІ', q: 'Мої угоди йдуть на навчання моделей?', a: 'Ні. Дані замкнені на твій акаунт на рівні бази й не використовуються для тренування. Публічним стає лише те, на що ти сам створиш посилання' },
+  { chip: 'ОПЛАТА', q: 'Що буде, якщо я перестану платити?', a: 'Журнал і вся історія лишаються на безкоштовному плані — вимикаються тільки можливості Pro. Експорт у CSV доступний завжди, в один клік' },
 ];
 
 export function FinalFaq() {
@@ -291,10 +357,10 @@ export function FinalFaq() {
 
           <div style={{ position: 'relative' }}>
             <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.07, margin: '0 0 16px', color: '#fff', textWrap: 'balance' }}>
-              Стратегія в тебе вже є. Бракує доказів, що вона працює.
+              Стратегія в тебе вже є. Бракує доказів, що вона працює
             </h2>
             <p style={{ fontFamily: F.sans, fontSize: 16.5, lineHeight: 1.55, color: '#8a8a9c', margin: '0 0 28px', maxWidth: 420 }}>
-              Тридцять днів чесних записів — і ти побачиш, які рішення тебе годують, а які коштують.
+              Тридцять днів чесних записів — і ти побачиш, які рішення тебе годують, а які коштують
             </p>
 
             <a
@@ -308,7 +374,7 @@ export function FinalFaq() {
             </a>
 
             <div style={{ fontFamily: F.sans, fontSize: 13, color: C.text5, marginTop: 16 }}>
-              Три хвилини на підключення. Картка не потрібна.
+              Три хвилини на підключення. Картка не потрібна
             </div>
           </div>
         </div>

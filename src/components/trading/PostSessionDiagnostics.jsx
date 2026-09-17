@@ -1,66 +1,32 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Check } from 'lucide-react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { useAuth } from '../../context/AuthContext';
 import { fetchErrorForPlan } from '../../lib/errorsStore';
 import { CATS } from '../errors/utils';
 import ErrorComposerModal from '../errors/ErrorComposerModal';
 import NarrativeSelect from '../ui/NarrativeSelect';
+import {
+  FLOW, STATES, HARD, REASON_TITLE, ASKS_WHY,
+  asList, toggleWith, reasonsFor, pruneReasons, stateWithReason,
+  reviewFilled, REVIEW_STEPS,
+} from '../../lib/dayReview';
 import { T, EASE, SPRING } from './planTheme';
 
 /* ==================================================================
-   Пост-сесійна діагностика.
-   Розкладено на три пронумеровані кроки з живими вердиктами —
-   трейдер бачить результат оцінки одразу, без «Awaiting».
+   Розбір дня.
+
+   Пʼять кроків на вертикальній лінії. Лінія тут не прикраса: вечірній
+   розбір — це послідовність, і кожен наступний крок має сенс лише
+   після попереднього. Вузол горить, коли на крок відповіли, тож
+   скільки лишилось, видно без лічильника.
+
+   Відповідей на крок може бути кілька. Один день рідко буває
+   однорідним, і змушувати вибрати одне означає отримати неправду.
+   Несумісні відповіді не забороняються, а витісняють одна одну —
+   правила лежать у `lib/dayReview.js`.
 ================================================================== */
-
-/* Як минув день — одна відповідь із чотирьох.
-
-   Спершу тут була оцінка від 1 до 5, потім список помилок. Обидва
-   промахнулись повз питання. Оцінка — бо шкала живе тільки в голові
-   того, хто ставив: сьогоднішня пʼятірка і завтрашня про різне.
-   Список помилок — бо це розбір ОКРЕМОЇ УГОДИ, а він уже є в картці
-   угоди; день не «пересував стоп», день минув якось.
-
-   Ці чотири відповіді покривають усе, що справді відрізняє один
-   торговий день від іншого: торгував чи ні, і чи тримався свого.
-   Найважливіша з них — «Пропустив своє»: без неї день без угод
-   виглядає однаково і коли сетапу не було, і коли ти його побачив
-   та не зайшов. А це протилежні дні. */
-const DAY_FLOW = [
-  {
-    id: 'plan',
-    label: 'За планом',
-    hint: 'Торгував і робив те, що збирався',
-    color: '#34d399',
-  },
-  {
-    id: 'drift',
-    label: 'З відхиленнями',
-    hint: 'Торгував, але відходив від плану',
-    color: '#fbbf24',
-  },
-  {
-    id: 'flat',
-    label: 'Не торгував',
-    hint: 'Свого сетапу не було — і це правильно',
-    color: T.acc,
-  },
-  {
-    id: 'missed',
-    label: 'Пропустив своє',
-    hint: 'Сетап був, але не зайшов',
-    color: '#fb923c',
-  },
-];
-
-const DAY_STATES = [
-  { id: 'calm',      label: 'Спокій',      color: '#34d399' },
-  { id: 'confident', label: 'Впевненість', color: T.acc },
-  { id: 'anxious',   label: 'Тривога',     color: '#fbbf24' },
-  { id: 'fomo',      label: 'FOMO',        color: '#fb923c' },
-  { id: 'tilt',      label: 'Тільт',       color: '#f87171' },
-];
 
 function BiasBadge({ value }) {
   if (!value) return <span className="text-[15px] font-medium" style={{ color: T.text4 }}>Не вказано</span>;
@@ -80,30 +46,145 @@ function BiasBadge({ value }) {
   );
 }
 
-function Step({ n, title, hint, children, last }) {
+function Step({ n, title, hint, done, children, last }) {
   return (
-    <div className="relative pl-10 sm:pl-12" style={{ paddingBottom: last ? 0 : 32 }}>
-      {/* маркер + лінія */}
-      <div className="absolute left-0 top-0 flex h-full w-7 flex-col items-center">
-        <div
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[12px] font-bold"
-          style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text3, fontFamily: T.sans }}
+    <div className="relative pl-11 sm:pl-14" style={{ paddingBottom: last ? 0 : 30 }}>
+      <div className="absolute left-0 top-0 flex h-full w-8 flex-col items-center">
+        {/* Вузол, а не плашка з цифрою. Заповнений крок гасить номер і
+            показує галочку — так скільки лишилось, видно з самої лінії,
+            без погляду на лічильник угорі. */}
+        <motion.div
+          className="relative z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full text-[12px] font-bold"
+          initial={false}
+          animate={{
+            backgroundColor: done ? `rgba(${T.okRgb},0.14)` : T.sunken,
+            borderColor: done ? `rgba(${T.okRgb},0.45)` : T.line,
+            color: done ? T.ok : T.text3,
+          }}
+          transition={{ duration: 0.32, ease: EASE }}
+          style={{ borderWidth: 1, borderStyle: 'solid', fontFamily: T.sans }}
         >
-          {n}
-        </div>
-        {!last && <div className="mt-2 w-px flex-1" style={{ background: T.line }} />}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={done ? 'v' : 'n'}
+              initial={{ scale: 0.4, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.4, opacity: 0 }}
+              transition={{ duration: 0.16, ease: EASE }}
+              className="flex"
+            >
+              {done ? <Check size={14} strokeWidth={3.2} /> : n}
+            </motion.span>
+          </AnimatePresence>
+        </motion.div>
+
+        {!last && (
+          <div className="relative mt-1.5 w-px flex-1" style={{ background: T.line }}>
+            <motion.div
+              className="absolute inset-x-0 top-0 origin-top"
+              initial={false}
+              animate={{ scaleY: done ? 1 : 0 }}
+              transition={{ duration: 0.4, ease: EASE }}
+              style={{ height: '100%', background: `rgba(${T.okRgb},0.5)` }}
+            />
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3.5">
         <div>
-          <h4 className="text-[14px] font-semibold leading-tight" style={{ fontFamily: T.display, color: T.text }}>
+          <h4 className="text-[15px] font-bold leading-tight" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
             {title}
           </h4>
-          <p className="mt-1 text-[14px] font-medium" style={{ color: T.text3 }}>{hint}</p>
+          <p className="mt-1 text-[13.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>{hint}</p>
         </div>
         {children}
       </div>
     </div>
+  );
+}
+
+/* Картка відповіді. Кружечок зліва — єдине, що каже «можна вибрати
+   кілька»: у списку з галочками це очевидно, у списку з підсвіткою —
+   ні, і людина не пробує натиснути друге. */
+function Card({ def, on, onClick }) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.985 }}
+      transition={SPRING}
+      onClick={onClick}
+      className="flex items-start gap-3 rounded-xl px-3.5 py-3 text-left transition-colors duration-200"
+      style={{
+        fontFamily: T.sans,
+        background: on ? `rgba(${def.rgb},0.09)` : T.sunken,
+        border: `1px solid ${on ? `rgba(${def.rgb},0.4)` : T.line}`,
+      }}
+      onMouseEnter={(e) => { if (!on) e.currentTarget.style.borderColor = T.lineHi; }}
+      onMouseLeave={(e) => { if (!on) e.currentTarget.style.borderColor = T.line; }}
+    >
+      <motion.span
+        className="mt-[1px] grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full"
+        initial={false}
+        animate={{
+          backgroundColor: on ? `rgb(${def.rgb})` : 'rgba(0,0,0,0)',
+          borderColor: on ? `rgb(${def.rgb})` : T.lineHi,
+        }}
+        transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+        style={{ borderWidth: 1.5, borderStyle: 'solid' }}
+      >
+        <AnimatePresence>
+          {on && (
+            <motion.span
+              initial={{ scale: 0.3, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.3, opacity: 0 }}
+              className="flex"
+            >
+              <Check size={11} strokeWidth={3.6} style={{ color: '#0A0A0C' }} />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.span>
+
+      <span className="min-w-0">
+        <span className="block text-[14.5px] font-semibold" style={{ color: on ? `rgb(${def.rgb})` : T.text2 }}>
+          {def.label}
+        </span>
+        {def.hint && (
+          <span className="mt-0.5 block text-[12.5px]" style={{ color: T.text4 }}>{def.hint}</span>
+        )}
+      </span>
+    </motion.button>
+  );
+}
+
+function Chip({ def, on, onClick }) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.96 }}
+      transition={SPRING}
+      onClick={onClick}
+      className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13.5px] font-semibold transition-colors duration-200"
+      style={{
+        fontFamily: T.sans,
+        background: on ? `rgba(${def.rgb || T.accRgb},0.14)` : T.sunken,
+        border: `1px solid ${on ? `rgba(${def.rgb || T.accRgb},0.42)` : T.line}`,
+        color: on ? `rgb(${def.rgb || T.accRgb})` : T.text3,
+      }}
+      onMouseEnter={(e) => { if (!on) e.currentTarget.style.borderColor = T.lineHi; }}
+      onMouseLeave={(e) => { if (!on) e.currentTarget.style.borderColor = T.line; }}
+    >
+      <motion.span
+        className="h-[7px] w-[7px] rounded-full"
+        initial={false}
+        animate={{
+          backgroundColor: on ? `rgb(${def.rgb || T.accRgb})` : T.line,
+          scale: on ? 1 : 0.7,
+        }}
+        transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+      />
+      {def.label}
+    </motion.button>
   );
 }
 
@@ -157,13 +238,39 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
   const matched    = planData.narrative && planData.actualNarrative && planData.narrative === planData.actualNarrative;
   const mismatched = planData.narrative && planData.actualNarrative && planData.narrative !== planData.actualNarrative;
 
-  const filled = useMemo(() => {
-    let n = 0;
-    if (planData.actualNarrative) n++;
-    if (planData.dayFlow) n++;
-    if (planData.dayState) n++;
-    return n;
-  }, [planData.actualNarrative, planData.dayFlow, planData.dayState]);
+  const filled = useMemo(() => reviewFilled(planData), [planData]);
+
+  const flow  = asList(planData.dayFlow);
+  const state = asList(planData.dayState);
+  const hard  = asList(planData.dayHard);
+  const why   = asList(planData.dayWhy);
+
+  /* Зміна гілки тягне за собою причини: інакше знята відповідь
+     лишає по собі «набридло чекати», що висить саме по собі, ніби
+     день усе ще про неї. */
+  const pickFlow = (id) => {
+    const next = toggleWith(flow, id, FLOW);
+    updatePlanData({ dayFlow: next, dayWhy: pruneReasons(why, next) });
+  };
+
+  /* Причина сама проставляє стан. Це і є сенс кроку: людина
+     відповідає на конкретне питання про конкретну дію, а «що мною
+     керувало» виводиться з відповіді, а не згадується окремо.
+
+     Знімаємо причину — стан лишається. Він міг бути поставлений
+     руками, і прибирати чужу відмітку побічним ефектом чужого кліку
+     форма права не має. */
+  const pickReason = (id) => {
+    const on = why.includes(id);
+    updatePlanData({
+      dayWhy: on ? why.filter((x) => x !== id) : [...why, id],
+      ...(on ? {} : { dayState: stateWithReason(state, id) }),
+    });
+  };
+
+  /* Питаємо «чому» лише там, де є що пояснювати. `flat` мовчить:
+     сетапу не було, пояснювати нічого. */
+  const whyGroups = flow.filter((id) => ASKS_WHY.includes(id));
 
   return (
     <div className="px-5 py-6 sm:px-6">
@@ -172,22 +279,22 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
         <div className="h-1 flex-1 overflow-hidden rounded-full" style={{ background: T.line }}>
           <motion.div
             className="h-full rounded-full"
-            style={{ background: filled === 3 ? T.ok : T.acc }}
+            style={{ background: filled === REVIEW_STEPS ? T.ok : T.acc }}
             initial={false}
-            animate={{ width: `${(filled / 3) * 100}%` }}
+            animate={{ width: `${(filled / REVIEW_STEPS) * 100}%` }}
             transition={{ duration: 0.5, ease: EASE }}
           />
         </div>
         <span
           className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
-          style={{ fontFamily: T.sans, color: filled === 3 ? T.ok : T.text3 }}
+          style={{ fontFamily: T.sans, color: filled === REVIEW_STEPS ? T.ok : T.text3 }}
         >
-          {filled}/3
+          {filled}/{REVIEW_STEPS}
         </span>
       </div>
 
       {/* 01 — Bias */}
-      <Step n="01" title="Напрямок ринку" hint="Ринок підтвердив твоє читання?">
+      <Step n="01" title="Напрямок ринку" hint="Ринок підтвердив твоє читання?" done={!!planData.actualNarrative}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex flex-1 flex-col gap-2">
             <span className="text-[12px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
@@ -246,159 +353,198 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
       </Step>
 
       {/* 02 — як минув день */}
-      <Step n="02" title="Як минув торговий день" hint="Одна відповідь — та, що ближча до правди">
+      <Step
+        n="02"
+        title="Як минув торговий день"
+        hint="Можна кілька — день рідко буває однорідним"
+        done={flow.length > 0}
+      >
         <div className="grid gap-2 sm:grid-cols-2">
-          {DAY_FLOW.map((f) => {
-            const on = planData.dayFlow === f.id;
-            return (
-              <motion.button
-                key={f.id}
-                whileTap={{ scale: 0.985 }}
-                transition={SPRING}
-                onClick={() => updatePlanData({ dayFlow: on ? null : f.id })}
-                className="flex flex-col items-start gap-1 rounded-xl px-4 py-3 text-left transition-all duration-200"
-                style={{
-                  fontFamily: T.sans,
-                  background: on ? `${f.color}14` : T.sunken,
-                  border: `1px solid ${on ? `${f.color}66` : T.line}`,
-                  boxShadow: on ? `0 0 20px -10px ${f.color}` : 'none',
-                }}
-                onMouseEnter={(e) => !on && (e.currentTarget.style.borderColor = T.lineHi)}
-                onMouseLeave={(e) => !on && (e.currentTarget.style.borderColor = T.line)}
-              >
-                <span className="text-[14.5px] font-semibold" style={{ color: on ? f.color : T.text2 }}>
-                  {f.label}
-                </span>
-                <span className="text-[12.5px]" style={{ color: T.text4 }}>
-                  {f.hint}
-                </span>
-              </motion.button>
-            );
-          })}
+          {FLOW.map((f) => (
+            <Card key={f.id} def={f} on={flow.includes(f.id)} onClick={() => pickFlow(f.id)} />
+          ))}
         </div>
+
+        {/* Чому саме так.
+
+            Сам факт «відійшов від плану» нічого не пояснює — важить
+            причина. Питання стоїть тут, під своєю відповіддю, а не
+            окремим кроком у кінці: «чому не зайшов» має сенс рівно
+            тоді, коли перед очима ще стоїть «був сетап, не торгував». */}
+        <AnimatePresence initial={false}>
+          {whyGroups.length > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: EASE }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-col gap-4 pt-1">
+                {whyGroups.map((fid) => {
+                  const def = FLOW.find((f) => f.id === fid);
+                  return (
+                    <div key={fid} className="flex flex-col gap-2">
+                      <span
+                        className="text-[11.5px] font-bold uppercase tracking-[0.14em]"
+                        style={{ fontFamily: T.sans, color: `rgba(${def.rgb},0.85)` }}
+                      >
+                        {REASON_TITLE[fid]}
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {reasonsFor(fid).map((r) => (
+                          <Chip
+                            key={r.id}
+                            def={{ ...r, rgb: def.rgb }}
+                            on={why.includes(r.id)}
+                            onClick={() => pickReason(r.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Чесно попереджаємо, що клік має наслідок. Мовчазна
+                    зміна чужого кроку — найшвидший спосіб змусити
+                    людину не довіряти формі. */}
+                <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                  Обрана причина сама проставить стан у кроці 03 — його можна змінити руками
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Текстовий розбір лишається тільки там, де щось пішло не
+            так: у дні за планом це поле питало б про помилку, якої
+            не було. */}
+        <AnimatePresence initial={false}>
+          {(flow.includes('drift') || flow.includes('missed')) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: EASE }}
+              className="overflow-hidden"
+            >
+              <div
+                className="relative overflow-hidden rounded-xl"
+                style={{ background: `rgba(${T.badRgb},0.04)`, border: `1px solid rgba(${T.badRgb},0.16)` }}
+              >
+                <span
+                  aria-hidden
+                  className="absolute bottom-3 left-0 top-3 w-[2px] rounded-full"
+                  style={{ background: T.bad, opacity: 0.5 }}
+                />
+                <TextareaAutosize
+                  value={planData.analysisMistakeText}
+                  onChange={(e) => updatePlanData({ analysisMistakeText: e.target.value })}
+                  placeholder="Що саме сталося? Яку структуру пропустив, де зрізав кут?"
+                  minRows={3}
+                  spellCheck={false}
+                  className="w-full resize-none border-none bg-transparent px-4 py-3.5 outline-none"
+                  style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.7, color: T.text }}
+                />
+
+                <div
+                  className="flex flex-wrap items-center gap-2 px-4 py-2.5"
+                  style={{ borderTop: `1px solid rgba(${T.badRgb},0.12)` }}
+                >
+                  {errDraft?.cats?.length > 0 ? (
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      {errDraft.cats.map((id) => {
+                        const c = CATS.find((x) => x.id === id);
+                        if (!c) return null;
+                        return (
+                          <span
+                            key={id}
+                            className="rounded-md px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.08em]"
+                            style={{
+                              fontFamily: T.sans,
+                              color: c.color,
+                              background: `${c.color}1a`,
+                              border: `1px solid ${c.color}38`,
+                            }}
+                          >
+                            {c.label}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  ) : (
+                    <span className="text-[12.5px] font-medium" style={{ fontFamily: T.sans, color: T.text4 }}>
+                      Полетить у Журнал помилок
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setErrForm({
+                        pair: errDraft?.pair || planData.pair || '',
+                        desc: planData.analysisMistakeText || '',
+                        reasons: errDraft?.reasons || [],
+                        tvLink: errDraft?.tvLink || '',
+                        cats: errDraft?.cats?.length ? errDraft.cats : [],
+                      });
+                      setComposerOpen(true);
+                    }}
+                    className="ml-auto flex h-8 items-center rounded-lg px-3 text-[12.5px] font-bold transition-colors"
+                    style={{
+                      fontFamily: T.sans,
+                      background: 'transparent',
+                      border: `1px solid rgba(${T.badRgb},0.3)`,
+                      color: T.bad,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.1)`; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {errDraft ? 'Змінити розбір' : 'Розібрати детально'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Step>
 
       {/* 03 — стан */}
-      <Step n="03" title="Що керувало тобою сьогодні" hint="Один стан — той, що визначав рішення" last>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-2">
-            {DAY_STATES.map((st) => {
-              const on = planData.dayState === st.id;
-              return (
-                <motion.button
-                  key={st.id}
-                  whileTap={{ scale: 0.96 }}
-                  transition={SPRING}
-                  onClick={() => updatePlanData({ dayState: on ? null : st.id })}
-                  className="rounded-xl px-4 py-2 text-[13.5px] font-semibold transition-all duration-200"
-                  style={{
-                    fontFamily: T.sans,
-                    background: on ? `${st.color}1a` : T.sunken,
-                    border: `1px solid ${on ? `${st.color}66` : T.line}`,
-                    color: on ? st.color : T.text3,
-                    boxShadow: on ? `0 0 18px -8px ${st.color}` : 'none',
-                  }}
-                  onMouseEnter={(e) => !on && (e.currentTarget.style.borderColor = T.lineHi)}
-                  onMouseLeave={(e) => !on && (e.currentTarget.style.borderColor = T.line)}
-                >
-                  {st.label}
-                </motion.button>
-              );
-            })}
-          </div>
+      <Step
+        n="03"
+        title="Що керувало тобою сьогодні"
+        hint="Частину проставлять відповіді вище — лишається перевірити й доповнити"
+        done={state.length > 0}
+      >
+        <div className="flex flex-wrap gap-2">
+          {STATES.map((st) => (
+            <Chip
+              key={st.id}
+              def={st}
+              on={state.includes(st.id)}
+              onClick={() => updatePlanData({ dayState: toggleWith(state, st.id, STATES) })}
+            />
+          ))}
+        </div>
+      </Step>
 
-          <AnimatePresence initial={false}>
-            {(planData.dayFlow === 'drift' || planData.dayFlow === 'missed') && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3, ease: EASE }}
-                className="overflow-hidden"
-              >
-                <div
-                  className="relative overflow-hidden rounded-xl"
-                  style={{ background: `rgba(${T.badRgb},0.04)`, border: `1px solid rgba(${T.badRgb},0.16)` }}
-                >
-                  <span
-                    aria-hidden
-                    className="absolute left-0 top-3 bottom-3 w-[2px] rounded-full"
-                    style={{ background: T.bad, opacity: 0.5 }}
-                  />
-                  <TextareaAutosize
-                    value={planData.analysisMistakeText}
-                    onChange={(e) => updatePlanData({ analysisMistakeText: e.target.value })}
-                    placeholder="Яку структуру пропустив? Де зрізав кут з підтвердженням?"
-                    minRows={3}
-                    spellCheck={false}
-                    className="w-full resize-none border-none bg-transparent px-4 py-3.5 outline-none"
-                    style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.7, color: T.text }}
-                  />
-
-                  {/* Підвал: куди це поїде і чим його можна доповнити.
-                      Рядок про журнал важливіший за кнопку — він
-                      відповідає на питання «а що з цим буде далі»,
-                      яке інакше лишається без відповіді. */}
-                  <div
-                    className="flex flex-wrap items-center gap-2 px-4 py-2.5"
-                    style={{ borderTop: `1px solid rgba(${T.badRgb},0.12)` }}
-                  >
-                    {errDraft?.cats?.length > 0 ? (
-                      <span className="flex flex-wrap items-center gap-1.5">
-                        {errDraft.cats.map((id) => {
-                          const c = CATS.find((x) => x.id === id);
-                          if (!c) return null;
-                          return (
-                            <span
-                              key={id}
-                              className="rounded-md px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.08em]"
-                              style={{
-                                fontFamily: T.sans,
-                                color: c.color,
-                                background: `${c.color}1a`,
-                                border: `1px solid ${c.color}38`,
-                              }}
-                            >
-                              {c.label}
-                            </span>
-                          );
-                        })}
-                      </span>
-                    ) : (
-                      <span className="text-[12.5px] font-medium" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        Полетить у Журнал помилок
-                      </span>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setErrForm({
-                          pair: errDraft?.pair || planData.pair || '',
-                          desc: planData.analysisMistakeText || '',
-                          reasons: errDraft?.reasons || [],
-                          tvLink: errDraft?.tvLink || '',
-                          cats: errDraft?.cats?.length ? errDraft.cats : [],
-                        });
-                        setComposerOpen(true);
-                      }}
-                      className="ml-auto flex h-8 items-center rounded-lg px-3 text-[12.5px] font-bold transition-colors"
-                      style={{
-                        fontFamily: T.sans,
-                        background: 'transparent',
-                        border: `1px solid rgba(${T.badRgb},0.3)`,
-                        color: T.bad,
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.1)`; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      {errDraft ? 'Змінити розбір' : 'Розібрати детально'}
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+      {/* 04 — навичка */}
+      <Step
+        n="04"
+        title="Що далося найважче"
+        hint="Питання про дію, а не про почуття — з нього видно, якої навички бракує"
+        done={hard.length > 0}
+        last
+      >
+        <div className="flex flex-wrap gap-2">
+          {HARD.map((h) => (
+            <Chip
+              key={h.id}
+              def={h}
+              on={hard.includes(h.id)}
+              onClick={() => updatePlanData({ dayHard: toggleWith(hard, h.id, HARD) })}
+            />
+          ))}
         </div>
       </Step>
 

@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import {
   Activity, AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, Clock, Cpu, Crosshair, Droplet,
-  Flame, Gauge, Info, Layers, Radar as RadarIcon, ShieldCheck, Sparkles, Target, XCircle,
+  Compass, Flame, Gauge, Hand, Info, Layers, NotebookPen, Radar as RadarIcon, ScanEye, ShieldCheck, Sparkles, Target, XCircle,
 } from 'lucide-react';
 import { Delta, ChartTip, axis } from '../ui';
 import { F } from '../overview/theme';
@@ -161,17 +161,404 @@ const revengeCost = (trades) => {
   return { n, cost: +cost.toFixed(1) };
 };
 
+/* Стовпчик списку розбору: підпис, смуга й кількість днів.
+
+   Смуга рахується від найчастішої відповіді в СВОЄМУ списку, а не від
+   кількості днів узагалі. Якщо «страх» траплявся тричі за десять
+   днів, він має виглядати як головна причина серед причин — а не як
+   майже порожня смуга, бо решту сім днів питання просто не ставилось. */
+function ReviewList({ title, items, empty, tone }) {
+  const top = Math.max(1, ...items.map((x) => x.days));
+
+  return (
+    <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <span
+        className="text-[10.5px] font-bold uppercase tracking-[0.14em]"
+        style={{ fontFamily: F.sans, color: 'var(--edge-text4, #4A4A52)' }}
+      >
+        {title}
+      </span>
+
+      {items.length === 0 ? (
+        <span className="text-[12.5px]" style={{ fontFamily: F.sans, color: 'var(--edge-text4, #4A4A52)' }}>
+          {empty}
+        </span>
+      ) : (
+        items.slice(0, 6).map((x) => (
+          <div key={x.id} className="flex flex-col gap-1">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="truncate text-[12.5px]" style={{ fontFamily: F.sans, color: 'var(--edge-text2, #B4B4BD)' }}>
+                {x.label}
+              </span>
+              <span
+                className="shrink-0 text-[12px] font-bold tabular-nums"
+                style={{ fontFamily: F.mono, color: x.rgb ? `rgb(${x.rgb})` : tone }}
+              >
+                {x.days}
+              </span>
+            </div>
+            <div className="h-[3px] overflow-hidden rounded-full" style={{ background: 'var(--edge-line, #26262c)' }}>
+              <motion.div
+                className="h-full rounded-full"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: x.days / top }}
+                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                style={{ originX: 0, background: x.rgb ? `rgb(${x.rgb})` : tone }}
+              />
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/* Обгортка «ще не працює».
+
+   Блок не видаляємо й не ховаємо: він уже стоїть у чиїхось збережених
+   розкладках, і зникнути посеред дошки — гірше, ніж чесно сказати, що
+   він поки порожній. Тому вміст глушиться й накривається бейджем,
+   а кліки крізь нього не проходять — інакше кнопка всередині
+   обіцяла б те, чого не станеться. */
+function SoonWrap({ children }) {
+  return (
+    <div className="relative flex h-full min-h-0 flex-col">
+      <div
+        className="pointer-events-none flex h-full min-h-0 flex-col"
+        style={{ opacity: 0.32, filter: 'grayscale(1)' }}
+      >
+        {children}
+      </div>
+
+      <span
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full px-3.5 py-1.5 text-[10.5px] font-black uppercase tracking-[0.18em]"
+        style={{
+          fontFamily: F.mono,
+          color: 'var(--edge-text2, #B4B4BD)',
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid var(--edge-line-hi, #33333f)',
+          backdropFilter: 'blur(4px)',
+        }}
+      >
+        Soon
+      </span>
+    </div>
+  );
+}
+
+/* Спільний вигляд для пари «одне проти іншого».
+
+   Три блоки психології відповідають на однакове за формою питання:
+   дві групи днів чи угод, і скільки кожна дає. Тримати три майже
+   однакові розмітки означало б, що вони почнуть розходитись у
+   дрібницях — і читатись як три різні інструменти замість одного. */
+function Duel({ rows, note, unit = 'R' }) {
+  const top = Math.max(1, ...rows.map((r) => Math.abs(r.value)));
+
+  return (
+    <div className="flex h-full flex-col justify-between gap-3 pt-1">
+      <div className="flex flex-col gap-3">
+        {rows.map((r) => (
+          <div key={r.id} className="flex flex-col gap-1.5">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 truncate text-[12.5px]" style={{ fontFamily: F.sans, color: 'var(--edge-text2, #B4B4BD)' }}>
+                {r.label}
+                {r.sub && (
+                  <span className="ml-1.5 text-[11.5px]" style={{ color: 'var(--edge-text4, #4A4A52)' }}>{r.sub}</span>
+                )}
+              </span>
+              <span className="shrink-0 text-[14px] font-extrabold tabular-nums" style={{ fontFamily: F.mono, color: r.c }}>
+                {signed(r.value, 2)}{unit}
+              </span>
+            </div>
+            <div className="h-[5px] overflow-hidden rounded-full" style={{ background: 'var(--edge-line, #26262c)' }}>
+              <motion.div
+                className="h-full rounded-full"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: Math.abs(r.value) / top }}
+                transition={{ duration: 0.55, ease: premiumEasing }}
+                style={{ originX: 0, background: r.c }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Висновок словами — і тільки якщо вибірка на нього дає право.
+          Фраза «рука коштує тобі 0.4R» на трьох угодах звучить так
+          само впевнено, як на трьохстах, і саме тому небезпечна. */}
+      <div
+        className="rounded-xl px-3.5 py-2.5 text-[12.5px] leading-[1.5]"
+        style={{
+          fontFamily: F.sans,
+          color: 'var(--edge-text2, #B4B4BD)',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid var(--edge-line, #26262c)',
+        }}
+      >
+        {note}
+      </div>
+    </div>
+  );
+}
+
+function Empty({ title, hint }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
+      <span className="text-[13px] font-semibold" style={{ fontFamily: F.sans, color: 'var(--edge-text3, #7A7A85)' }}>
+        {title}
+      </span>
+      <span className="text-[12px]" style={{ fontFamily: F.sans, color: 'var(--edge-text4, #4A4A52)' }}>
+        {hint}
+      </span>
+    </div>
+  );
+}
+
 const ALL_PSYCH_WIDGETS = {
+  /* Читання ринку і гроші.
+
+     Питання не про точність прогнозу — прогнозувати ринок ніхто не
+     зобовʼязаний. Питання психологічне: що ти робиш у день, коли
+     читання не справдилось. */
+  biasmoney: {
+    title: 'Коли читання не справдилось',
+    hint: 'Що ти робиш у дні, коли ринок пішов проти твого bias',
+    icon: Compass, group: 'Психологія', tone: '#60a5fa', shape: 'bars', defaultW: 2, defaultH: 2,
+    render: ({ s }) => {
+      const b = s.biasMoney;
+      if (!b) {
+        return <Empty title="Немає звірених днів" hint="Постав фактичний bias у розборі дня — і тут зʼявиться порівняння" />;
+      }
+
+      const thin = b.right.days < 3 || b.wrong.days < 3;
+      const gap = b.right.perDay - b.wrong.perDay;
+
+      return (
+        <Duel
+          rows={[
+            { id: 'right', label: 'Читання збіглось', sub: `${b.right.days} дн · ${r1(b.right.tradesPerDay)} угод/день`, value: b.right.perDay, c: '#34d399' },
+            { id: 'wrong', label: 'Читання не спрацювало', sub: `${b.wrong.days} дн · ${r1(b.wrong.tradesPerDay)} угод/день`, value: b.wrong.perDay, c: '#f87171' },
+          ]}
+          note={thin ? (
+            <>Потрібно хоча б по три дні кожного типу. Поки збіглось {b.rate}% із {b.days}</>
+          ) : (
+            <>
+              Читання збігається в <b style={{ color: 'var(--edge-text, #FAFAFA)' }}>{b.rate}%</b> днів.
+              У дні помилки ти береш{' '}
+              <b style={{ color: b.wrong.tradesPerDay > b.right.tradesPerDay ? '#f87171' : '#34d399' }}>
+                {r1(b.wrong.tradesPerDay)}
+              </b>{' '}
+              угод проти {r1(b.right.tradesPerDay)}, а різниця в результаті —{' '}
+              <b style={{ color: gap >= 0 ? '#34d399' : '#f87171' }}>{r2(Math.abs(gap))}R</b> на день
+            </>
+          )}
+        />
+      );
+    },
+  },
+
+  /* Слово проти діла. */
+  conflict: {
+    title: 'Слово проти діла',
+    hint: 'Дні, де вечірня відповідь розійшлась із журналом',
+    icon: ScanEye, group: 'Психологія', tone: '#fbbf24', shape: 'list', defaultW: 2, defaultH: 3,
+    render: ({ s }) => {
+      const list = s.conflicts || [];
+
+      if (!list.length) {
+        return (
+          <Empty
+            title="Розбіжностей немає"
+            hint="Вечірні відповіді сходяться з тим, що в журналі — це найкращий результат цього блоку"
+          />
+        );
+      }
+
+      return (
+        <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto pr-1 pt-1">
+          <span className="text-[12px]" style={{ fontFamily: F.sans, color: 'var(--edge-text3, #7A7A85)' }}>
+            Увечері здавалось одне, у журналі стоїть інше. Саме ці дні варто перечитати
+          </span>
+
+          {list.slice(0, 12).map((c, i) => (
+            <div
+              key={`${c.date}-${i}`}
+              className="flex flex-col gap-1 rounded-xl px-3 py-2.5"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--edge-line, #26262c)' }}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[12.5px] font-semibold" style={{ fontFamily: F.sans, color: c.tone }}>
+                  «{c.said}»
+                </span>
+                <span className="shrink-0 text-[11px] tabular-nums" style={{ fontFamily: F.mono, color: 'var(--edge-text4, #4A4A52)' }}>
+                  {c.date.slice(5).replace('-', '.')}
+                </span>
+              </div>
+              <span className="text-[12.5px]" style={{ fontFamily: F.sans, color: 'var(--edge-text2, #B4B4BD)' }}>
+                {c.real}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    },
+  },
+
+
+  /* Ціна виходу руками.
+
+     Стоп і тейк поставлені ДО входу, холодною головою. Рішення
+     закрити руками приймається посеред угоди, коли емоція вже
+     працює. Різниця в середньому R між цими групами — буквально ціна
+     одного такого рішення, порахована на власних грошах.
+
+     Це найсильніше, що ми зараз уміємо сказати про психологію з
+     чистих даних: тут нічого не треба відмічати вручну, термінал
+     сказав усе сам. */
+  handcost: {
+    title: 'Ціна виходу руками',
+    hint: 'Скільки коштує рішення закрити позицію самому замість ордера',
+    icon: Hand, group: 'Психологія', tone: '#fbbf24', shape: 'bars', defaultW: 2, defaultH: 2,
+    render: ({ s }) => {
+      const h = s.hand || { known: 0 };
+      if (!h.known) {
+        return <Empty title="Немає даних від термінала" hint="Причину виходу приносить автоімпорт MT5 — у ручних угодах її немає" />;
+      }
+
+      const thin = h.hand.n < 5 || h.order.n < 5;
+      const costs = h.delta < 0;
+
+      return (
+        <Duel
+          rows={[
+            { id: 'order', label: 'Закрив ордер', sub: `тейк або стоп · ${h.order.n}`, value: h.order.avg, c: '#34d399' },
+            { id: 'hand', label: 'Закрив руками', sub: `по ринку · ${h.hand.n}`, value: h.hand.avg, c: '#fbbf24' },
+          ]}
+          note={thin ? (
+            <>Замало виходів для висновку — потрібно хоча б по пʼять у кожній групі</>
+          ) : (
+            <>
+              Кожен вихід руками {costs ? 'коштує' : 'дає'}{' '}
+              <b style={{ color: costs ? '#f87171' : '#34d399' }}>{r2(Math.abs(h.delta))}R</b>{' '}
+              {costs ? 'проти ордера' : 'понад ордер'}
+            </>
+          )}
+        />
+      );
+    },
+  },
+
+  /* Дні за планом проти днів з відхиленнями.
+
+     Звʼязка вечірнього розбору з грошима: сам розбір каже, як день
+     минув, а це — скільки він коштував. По днях, а не по угодах:
+     рішення відійти від плану приймається раз на сесію. */
+  flowmoney: {
+    title: 'Дисципліна в грошах',
+    hint: 'Скільки дають дні за планом проти днів з відхиленнями',
+    icon: ShieldCheck, group: 'Психологія', tone: '#34d399', shape: 'bars', defaultW: 2, defaultH: 2,
+    render: ({ s }) => {
+      const f = s.flowMoney;
+      if (!f || (!f.plan.days && !f.drift.days)) {
+        return <Empty title="Розборів ще замало" hint="Відмічай у плані, як минув день — і тут зʼявиться його ціна" />;
+      }
+
+      const thin = f.plan.days < 3 || f.drift.days < 3;
+      const gap = f.plan.perDay - f.drift.perDay;
+
+      return (
+        <Duel
+          rows={[
+            { id: 'plan', label: 'За планом', sub: `${f.plan.days} дн · ${f.plan.trades} угод`, value: f.plan.perDay, c: '#34d399' },
+            { id: 'drift', label: 'З відхиленнями', sub: `${f.drift.days} дн · ${f.drift.trades} угод`, value: f.drift.perDay, c: '#fbbf24' },
+          ]}
+          note={thin ? (
+            <>Потрібно хоча б по три дні кожного типу, щоб різниця щось значила</>
+          ) : (
+            <>
+              День за планом дає на{' '}
+              <b style={{ color: gap >= 0 ? '#34d399' : '#f87171' }}>{r2(Math.abs(gap))}R</b>{' '}
+              {gap >= 0 ? 'більше' : 'менше'} за день з відхиленнями
+            </>
+          )}
+        />
+      );
+    },
+  },
+
+  /* Вечірній розбір.
+
+     Єдине місце, де видно ПРИЧИНУ, а не наслідок. Прапорці психології
+     в угоді кажуть, що вхід був зі страхом; розбір дня каже, чому саме
+     страх — «уже був у мінусі за день» чи «не повірив своєму аналізу».
+     Це різні хвороби з однаковою температурою, і лікуються вони теж
+     по-різному.
+
+     Рахунок у днях, а не в угодах: причина стосується сесії цілком. */
+  dayreview: {
+    title: 'Вечірній розбір',
+    hint: 'Причини, які ти сам назвав наприкінці дня',
+    icon: NotebookPen, group: 'Психологія', tone: '#8b7bff', shape: 'bars', defaultW: 2, defaultH: 3,
+    render: ({ s }) => {
+      const r = s.review || { days: 0, states: [], why: [], hard: [] };
+
+      if (!r.days) {
+        return (
+          <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
+            <span className="text-[13px] font-semibold" style={{ fontFamily: F.sans, color: 'var(--edge-text3, #7A7A85)' }}>
+              Розборів ще немає
+            </span>
+            <span className="text-[12px]" style={{ fontFamily: F.sans, color: 'var(--edge-text4, #4A4A52)' }}>
+              Заповни «Як минув торговий день» у плані — і причини зʼявляться тут
+            </span>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex h-full flex-col gap-4 px-1">
+          <span className="text-[12px]" style={{ fontFamily: F.sans, color: 'var(--edge-text3, #7A7A85)' }}>
+            Зібрано з <b style={{ color: 'var(--edge-text, #FAFAFA)' }}>{r.days}</b>{' '}
+            {r.days === 1 ? 'дня' : 'днів'} розбору
+          </span>
+
+          <div className="flex min-w-0 flex-wrap gap-6">
+            <ReviewList
+              title="Що керувало"
+              items={r.states}
+              empty="Стан не відмічався"
+              tone="#8b7bff"
+            />
+            <ReviewList
+              title="Чому так сталося"
+              items={r.why}
+              empty="Причин ще немає"
+              tone="#fbbf24"
+            />
+            <ReviewList
+              title="Що давалось найважче"
+              items={r.hard}
+              empty="Не відмічалось"
+              tone="#34d399"
+            />
+          </div>
+        </div>
+      );
+    },
+  },
+
+
   neuro: {
     title: 'Нейропрофіль',
-    hint: 'Пʼять осей психіки, зібраних із твоїх угод',
+    hint: 'У розробці — зʼявиться разом з AI-коучем',
     icon: Cpu, group: 'Психологія', tone: '#8b7bff', shape: 'gauge',
     /* Сканер + 5 осей + плитки + кнопка звіту вкладаються в h:3;
        h:4 лишав ~300px порожнечі внизу картки. */
     defaultW: 4, defaultH: 3, minH: 3,
     options: {
     },
-    render: ({ s, w }) => <NeuroBody s={s} w={w} />,
+    render: ({ s, w }) => <SoonWrap><NeuroBody s={s} w={w} /></SoonWrap>,
   },
   tilt: {
     title: 'Ланцюг тільта',
@@ -955,7 +1342,7 @@ const ALL_PSYCH_WIDGETS = {
    тим самим реєстром, що й був: сім блоків старого дизайну плюс пʼять
    розрізів, яких там не було (streaks, revenge, cleancurve, dowmood,
    hourrisk) — вони лишаються в бібліотеці, не в дефолтних слотах. */
-const MAIN_IDS = ['neuro', 'tilt', 'emotions', 'states', 'mistakes', 'plan', 'risk', 'streaks', 'revenge', 'cleancurve', 'dowmood', 'hourrisk'];
+const MAIN_IDS = ['handcost', 'flowmoney', 'biasmoney', 'conflict', 'neuro', 'dayreview', 'tilt', 'emotions', 'states', 'mistakes', 'plan', 'risk', 'streaks', 'revenge', 'cleancurve', 'dowmood', 'hourrisk'];
 const SIDE_IDS = ['aicoach', 'verdict', 'checklist'];
 
 const pickWidgets = (ids) => Object.fromEntries(ids.map((id) => [id, ALL_PSYCH_WIDGETS[id]]));
@@ -963,15 +1350,48 @@ const pickWidgets = (ids) => Object.fromEntries(ids.map((id) => [id, ALL_PSYCH_W
 export const PSYCH_MAIN_WIDGETS = pickWidgets(MAIN_IDS);
 export const PSYCH_SIDE_WIDGETS = pickWidgets(SIDE_IDS);
 
+/* Порядок за тим, що ми справді вміємо порахувати.
+
+   Нейропрофіль стояв першим і був обличчям розділу — а показував
+   індекс, зібраний із припущень. Тепер угорі те, що спирається на
+   факти: ціна виходу руками (її каже термінал), дисципліна в грошах і
+   вечірній розбір (їх каже сам трейдер). Нейропрофіль лишився в
+   реєстрі й у дошці, але сірим і з позначкою. */
 export const PSYCH_MAIN_DEFAULT = [
-  { id: 'neuro', h: 3, w: 4, p: 'inherit', o: {} },
+  /* Розділ читається як розповідь, і порядок — це її сюжет.
+
+     1. ЩО РОБЛЯТЬ РУКИ. Ціна виходу руками не потребує від людини
+        жодної відмітки: термінал сказав усе сам. Тому вона перша —
+        це єдина цифра тут, з якою неможливо посперечатись.
+
+     2. ЩО ТИ САМ ПРО СЕБЕ СКАЗАВ і скільки це коштувало: дисципліна
+        в грошах і поведінка в дні, коли читання не справдилось.
+
+     3. ДЕ ОДНЕ НЕ СХОДИТЬСЯ З ІНШИМ. «Слово проти діла» — головне,
+        заради чого варто тримати обидва джерела: жодне з них окремо
+        цього не бачить.
+
+     4. Далі — старі блоки по самих угодах, і в самому кінці сірий
+        нейропрофіль, якого ще немає. */
+  { id: 'handcost', h: 2, w: 2, p: 'inherit', o: {} },
+  { id: 'flowmoney', h: 2, w: 2, p: 'inherit', o: {} },
+
+  { id: 'dayreview', h: 3, w: 4, p: 'inherit', o: {} },
+
+  { id: 'biasmoney', h: 2, w: 2, p: 'inherit', o: {} },
+  { id: 'conflict', h: 3, w: 2, p: 'inherit', o: {} },
+
   { id: 'tilt', h: 2, w: 2, p: 'inherit', o: {} },
   { id: 'emotions', h: 2, w: 2, p: 'inherit', o: {} },
   { id: 'states', h: 4, w: 2, p: 'inherit', o: {} },
   { id: 'mistakes', h: 2, w: 2, p: 'inherit', o: {} },
   { id: 'plan', h: 2, w: 2, p: 'inherit', o: {} },
   { id: 'risk', h: 3, w: 2, p: 'inherit', o: {} },
+
+  { id: 'neuro', h: 3, w: 4, p: 'inherit', o: {} },
 ];
+
+
 
 /* Права колонка: кожен блок на всю її ширину (w:4 — «на всю ширину
    ЦІЄЇ дошки», яка сама вужча за ліву), тож вони стають одне під

@@ -32,6 +32,23 @@ import { T } from '../../lib/theme';
 ================================================================== */
 
 const MONO = "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace";
+
+/* Як позиція закрилась за даними термінала.
+
+   Кольори не за «добре/погано», а за «хто вирішив»: тейк і стоп —
+   рішення, прийняте до входу, тому вони спокійних кольорів системи;
+   вихід руками — жовтий, бо це рішення посеред угоди; стоп-аут —
+   червоний, бо це вже не рішення.
+
+   Ключі збігаються зі значеннями, які пише воркер MT5. */
+const EXIT_REASON = {
+  tp:      { label: 'Тейк',        color: T.ok,    rgb: T.okRgb },
+  sl:      { label: 'Стоп',        color: T.bad,   rgb: T.badRgb },
+  manual:  { label: 'Руками',      color: T.warn,  rgb: T.warnRgb },
+  expert:  { label: 'Радник',      color: T.info,  rgb: T.infoRgb },
+  stopout: { label: 'Стоп-аут',    color: T.bad,   rgb: T.badRgb },
+  other:   { label: 'Інше',        color: T.text3, rgb: T.text3Rgb || '122,122,133' },
+};
 const SPRING_UI = { type: 'spring', duration: 0.35, bounce: 0 };
 const SPRING_TAP = { type: 'spring', duration: 0.22, bounce: 0 };
 
@@ -1237,6 +1254,33 @@ export default function TradeDetailsModal({
                 <Eyebrow>SESSION</Eyebrow>
                 <PillGroup groupId="session" editing={editing} options={SESSIONS} value={d.session} onChange={(v) => set({ session: v })} colorMap={SESSION_COLORS} />
               </div>
+
+              {/* Як саме закрилась позиція. Приходить із термінала й
+                  редагуванню не підлягає: це факт від брокера, а не
+                  твоя оцінка. Показуємо лише коли він є — у ручних
+                  угодах цього поля немає, і порожній рядок «—» тут
+                  читався б як «невідомо чому», хоча питання просто не
+                  ставилось.
+
+                  Різниця між «взяв тейк» і «закрив руками в тому ж
+                  місці» — саме те, заради чого ведуть журнал: за
+                  грошима це одна угода, за дисципліною різні. */}
+              {EXIT_REASON[d.exit_reason] && (
+                <div className="flex items-center justify-between gap-3 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
+                  <Eyebrow>ВИХІД</Eyebrow>
+                  <span
+                    className="rounded-md px-2 py-1 text-[12.5px] font-bold"
+                    style={{
+                      fontFamily: T.sans,
+                      color: EXIT_REASON[d.exit_reason].color,
+                      background: `rgba(${EXIT_REASON[d.exit_reason].rgb},0.12)`,
+                      border: `1px solid rgba(${EXIT_REASON[d.exit_reason].rgb},0.28)`,
+                    }}
+                  >
+                    {EXIT_REASON[d.exit_reason].label}
+                  </span>
+                </div>
+              )}
 
               <div className="flex flex-col gap-2 px-3.5 py-3">
                 <Eyebrow>RESULT</Eyebrow>

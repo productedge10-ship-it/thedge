@@ -80,6 +80,11 @@ const toApp = (row) => {
     planFollowed: !!row.followed_plan && !row.has_mistake,
     rushed: !!row.rushed,
     risk: typeof row.risk === 'number' ? row.risk : null,
+    /* Як закрилась позиція за даними термінала. Для психології це
+       найчесніший сигнал із усіх: рішення вийти руками приймається
+       посеред угоди, коли емоція вже працює, — на відміну від стопа,
+       який поставлений до входу з холодною головою. */
+    exitReason: row.exit_reason || null,
     holdMin: holdOf(row.entry_time, row.exit_time),
     note: row.trade_description || '',
   };
@@ -91,7 +96,7 @@ export async function fetchTrades(userId, { from, to } = {}) {
     .select(`
       id, plan_date, plan_pair, account_name, type, result, rr, risk, session,
       setup, entry_time, exit_time,
-      followed_plan, rushed, has_mistake, mistake_category, trade_description,
+      followed_plan, rushed, has_mistake, mistake_category, trade_description, exit_reason,
       psy_confident, psy_fear, psy_repeat, psy_revenge, created_at
     `)
     .eq('user_id', userId)
@@ -127,4 +132,68 @@ export function periodStart(id) {
   }
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/* ---------- розбір дня ----------
+
+   Вечірні відповіді живуть не в угоді, а в плані: `trading_plans.
+   plan_data`. Це властивість дня, а не окремого входу — «набридло
+   чекати» стосується сесії цілком, і приписувати його кожній угоді
+   означало б порахувати одну причину стільки разів, скільки в той
+   день було входів.
+
+   Тому вони й приходять окремим запитом і зводяться по днях, а не
+   змішуються з угодами.
+*/
+export async function fetchDayReviews(userId, { from, to } = {}) {
+  if (!userId) return [];
+
+  let q = supabase
+    .from('trading_plans')
+    .select('date, narrative, plan_data')
+    .eq('user_id', userId)
+    .order('date', { ascending: true })
+    .limit(500);
+
+  if (from) q = q.gte('date', from);
+  if (to) q = q.lte('date', to);
+
+  const { data, error } = await q;
+  if (error || !data) return [];
+
+  const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+
+  /* Один день — один запис, навіть якщо планів на нього кілька.
+     Розбір ведеться про день, а не про актив: людина заповнює його
+     раз, і два плани на ту саму дату дали б подвійний рахунок. */
+  const byDate = new Map();
+  data.forEach((row) => {
+    const d = row.plan_data || {};
+    const state = list(d.dayState);
+    const why = list(d.dayWhy);
+    const hard = list(d.dayHard);
+    const flow = list(d.dayFlow);
+    if (!state.length && !why.length && !hard.length && !flow.length
+        && !d.actualNarrative) return;
+
+    /* Bias беремо з першого плану дня, який його має. Плани на різні
+       активи можуть дивитись у різні боки, і «збіглось» тут означає
+       не «ринок пішов як ти сказав узагалі», а «твоє читання по цьому
+       активу справдилось». Для психології цього досить: питання не
+       про точність прогнозу, а про те, що ти робиш, коли помилився. */
+    const prev = byDate.get(row.date)
+      || { date: row.date, state: [], why: [], hard: [], flow: [], planned: null, actual: null };
+    const merge = (a, b) => [...new Set([...a, ...b])];
+    byDate.set(row.date, {
+      date: row.date,
+      state: merge(prev.state, state),
+      why: merge(prev.why, why),
+      hard: merge(prev.hard, hard),
+      flow: merge(prev.flow, flow),
+      planned: prev.planned || row.narrative || null,
+      actual: prev.actual || d.actualNarrative || null,
+    });
+  });
+
+  return [...byDate.values()];
 }

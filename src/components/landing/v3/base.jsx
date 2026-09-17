@@ -67,6 +67,9 @@ export const KEYFRAMES = `
 @keyframes lnCaret{0%,100%{opacity:1}50%{opacity:0}}
 @keyframes lnBreathe{0%,100%{opacity:.3}50%{opacity:.62}}
 @keyframes lnRailGlow{0%{transform:translateX(-30%)}100%{transform:translateX(130%)}}
+@keyframes lnPriceIn{from{transform:translateY(105%);opacity:0;filter:blur(4px)}to{transform:translateY(0);opacity:1;filter:blur(0)}}
+@keyframes lnPriceOut{from{transform:translateY(0);opacity:1;filter:blur(0)}to{transform:translateY(-105%);opacity:0;filter:blur(4px)}}
+@keyframes lnSubIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @media (prefers-reduced-motion: reduce){
   .ln-root *{animation:none !important;transition:none !important}
 }
@@ -100,6 +103,109 @@ export function useInView(threshold = 0.15) {
 }
 
 export const lerp = (a, b, t) => a + (b - a) * t;
+
+/* Позначка «ще не вийшло».
+
+   Приглушена навмисно: обіцянка не має конкурувати за увагу з тим,
+   що вже працює. Яскравий бейдж поруч із готовими пунктами читається
+   як «найголовніше», і людина купує саме його — а воно ще не готове.
+
+   `whiteSpace: nowrap` тут обовʼязковий: без нього «SOON» відривається
+   від своєї фрази й переїжджає на наступний рядок сам по собі. */
+export const SoonTag = ({ children = 'SOON' }) => (
+  <span
+    style={{
+      display: 'inline-block',
+      marginLeft: 8,
+      padding: '2px 7px',
+      borderRadius: 999,
+      fontFamily: F.mono,
+      fontSize: 9.5,
+      fontWeight: 700,
+      letterSpacing: '1.1px',
+      lineHeight: 1.6,
+      verticalAlign: '2px',
+      whiteSpace: 'nowrap',
+      color: C.accSoft,
+      background: A(0.12),
+      border: `1px solid ${A(0.3)}`,
+    }}
+  >
+    {children}
+  </span>
+);
+
+/* Ціна, що перекочується.
+
+   Одометр, а не просто підміна тексту: стара цифра їде вгору й
+   розмивається, нова заїжджає знизу. Розмиття тут не прикраса — без
+   нього на 46 пікселях шрифту рух читається як стрибок, бо око
+   встигає побачити обидва стани різкими.
+
+   Символи зсунуті по фазі на 55мс: одночасний рух усіх трьох виглядає
+   як зміна картинки, послідовний — як механізм, що прокручується.
+
+   Поки триває перехід, у DOM обидва значення. Тому клітинка кожного
+   символа — з `overflow: hidden` і фіксованою висотою: інакше на
+   пів секунди картка стає вдвічі вищою й уся сітка цін підстрибує.
+*/
+export function PriceRoll({ value, size = 46, style }) {
+  const reduce = reducedMotion();
+  const [shown, setShown] = useState(value);
+  const [next, setNext] = useState(null);
+
+  useEffect(() => {
+    if (value === shown) return undefined;
+    if (reduce) { setShown(value); return undefined; }
+
+    setNext(value);
+    const t = setTimeout(() => { setShown(value); setNext(null); }, 460);
+    return () => clearTimeout(t);
+  }, [value, shown, reduce]);
+
+  const cur = [...String(next ?? shown)];
+  const prev = [...String(shown)];
+  const h = Math.round(size * 1.16);
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'baseline', ...style }}>
+      {cur.map((ch, i) => (
+        <span
+          key={i}
+          style={{
+            position: 'relative',
+            display: 'inline-block',
+            height: h,
+            lineHeight: `${h}px`,
+            overflow: 'hidden',
+          }}
+        >
+          {next && (
+            <span
+              aria-hidden
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                animation: `lnPriceOut .46s cubic-bezier(.4,0,.2,1) ${i * 38}ms both`,
+              }}
+            >
+              {prev[i] ?? ''}
+            </span>
+          )}
+          <span
+            style={{
+              display: 'inline-block',
+              animation: next ? `lnPriceIn .46s cubic-bezier(.4,0,.2,1) ${i * 38}ms both` : undefined,
+            }}
+          >
+            {ch}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export const Eyebrow = ({ children, color = C.accSoft }) => (
   <div

@@ -1511,122 +1511,244 @@ h1, h2, h3, h4, h5, h6 {
 
 .plan-cta { transition: box-shadow .22s ease, border-color .22s ease; }
 
-.plan-cta-chart {
+/* ---------- символьне тло ----------
+
+   Два рядки моноширинного тексту: пунктир сітки й спарклайн із
+   блокових гліфів. Разом вони читаються як накидка графіка від руки —
+   рівно те, чим план і є.
+
+   `white-space: pre` обовʼязковий: без нього браузер схлопує пробіли
+   в пунктирі, і сітка з рівної перетворюється на рвану. */
+
+.plan-ascii {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Пунктир угору, спарклайн униз, підпис між ними. Спершу обидва
+     рядки стояли по центру й лягали просто під текст — виходила каша
+     з двох шарів. Розігнані до країв, вони читаються як поля
+     графіка, а підпис лишається підписом. */
+  justify-content: space-between;
+  margin: 0;
+  padding: 4px 0 2px;
+  font-family: ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace;
+  line-height: 1;
+  white-space: pre;
+  color: var(--edge-acc, #8b7bff);
   opacity: 0;
   pointer-events: none;
+  clip-path: inset(0 100% 0 0);
   transition: opacity .16s ease;
 }
 
-.plan-cta-label {
-  transition: opacity .18s ease, transform .3s cubic-bezier(.4, 0, .2, 1);
+.plan-ascii-dots  { font-size: 7px;  opacity: .40; letter-spacing: .5px; }
+.plan-ascii-spark {
+  font-size: 12px;
+  opacity: .5;
+  transform-origin: bottom center;
+  text-shadow: 0 0 9px rgba(var(--edge-acc-rgb, 139, 123, 255), 0.9);
 }
 
-/* Сітка відкривається однією хвилею, а не десятьма окремими лініями.
-   Десять анімацій із затримками читаються як метушня; одна хвиля —
-   як рух руки, що проводить по паперу. */
-@keyframes planBlueprintSweep {
-  from { clip-path: inset(0 100% 0 0); }
-  to   { clip-path: inset(0 0 0 0); }
-}
-
-@keyframes planBlueprintDraw {
-  from { stroke-dashoffset: 1; }
-  to   { stroke-dashoffset: 0; }
-}
-
-@keyframes planBlueprintTarget {
-  from { transform: scale(0); opacity: 0; }
-  60%  { transform: scale(1.35); opacity: 1; }
-  to   { transform: scale(1); opacity: 1; }
-}
-
-/* Кільце розходиться й тане — те саме, що робить ціль на графіку,
-   коли до неї дійшли. */
-@keyframes planBlueprintPing {
-  from { transform: scale(.5); opacity: .85; }
-  to   { transform: scale(2.6); opacity: 0; }
-}
-
-.plan-bp-grid {
-  clip-path: inset(0 100% 0 0);
-  stroke: rgba(var(--edge-acc-rgb, 139, 123, 255), 0.30);
-  stroke-width: .7;
-}
-
-.plan-bp-route {
-  stroke: var(--edge-acc, #8b7bff);
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  filter: drop-shadow(0 0 5px rgba(var(--edge-acc-rgb, 139, 123, 255), 0.85));
-}
-
-.plan-bp-target {
-  fill: var(--edge-ok, #34d399);
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scale(0);
+/* Промінь сканера. Тонка смуга з розмитими краями — саме розмиття
+   й робить її променем, а не просто лінією, що їде. */
+.plan-scan {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 2px;
   opacity: 0;
+  pointer-events: none;
+  filter: blur(.6px);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(var(--edge-acc-rgb, 139, 123, 255), 0.95),
+    transparent
+  );
 }
 
-.plan-bp-ping {
-  fill: none;
-  stroke: var(--edge-ok, #34d399);
-  stroke-width: 1.4;
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scale(.5);
+.plan-cta-label { transition: color .22s ease; }
+
+/* Текст і його невидимий двійник лежать в одній клітинці ґрід:
+   двійник задає ширину, живий рядок у ній центрується. Тому кнопка
+   не міняє розміру ні під час перебору символів, ні в кінці. */
+.plan-cta-text {
+  display: inline-grid;
+  place-items: center;
+}
+
+.plan-cta-text > * { grid-area: 1 / 1; }
+
+.plan-cta-sizer,
+.plan-cta-live {
+  white-space: pre;
+  letter-spacing: .06em;
+}
+
+.plan-cta-sizer {
+  visibility: hidden;
+  font-family: ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace;
+}
+
+/* Живий рядок моноширинний завжди. Інакше випадкові гліфи мали б
+   різну ширину й текст смикався б усередині клітинки — кнопка стоїть
+   на місці, а підпис усе одно танцює. */
+.plan-cta-live {
+  font-family: ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace;
+  transition: color .22s ease;
+}
+
+/* Курсор стоїть у потоці завжди, просто невидимий: якби він
+   зʼявлявся разом із ховером, підпис смикався б управо на пів
+   символа щоразу, коли на кнопку наводять. */
+.plan-caret {
+  display: inline-block;
+  width: .55em;
+  margin-left: -.15em;
   opacity: 0;
+  color: var(--edge-acc, #8b7bff);
+}
+
+/* Плюс і промпт займають одну клітинку й міняються місцями.
+
+   Спершу плюс просто повертався на 90° — і не мінявся взагалі,
+   бо плюс симетричний. Анімація була, руху не було. */
+.plan-cta-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.plan-cta-icon > * { grid-area: 1 / 1; transition: opacity .2s ease, transform .3s cubic-bezier(.34, 1.4, .5, 1); }
+
+.plan-cta-prompt {
+  font-family: ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--edge-acc, #8b7bff);
+  opacity: 0;
+  transform: translateX(-4px);
 }
 
 /* ---------- сам ховер ---------- */
 
-.plan-cta:hover .plan-cta-chart,
-.plan-cta:focus-visible .plan-cta-chart { opacity: 1; }
-
-.plan-cta:hover .plan-bp-grid,
-.plan-cta:focus-visible .plan-bp-grid {
-  animation: planBlueprintSweep .34s cubic-bezier(.35, 0, .2, 1) forwards;
+/* `steps()` тут принциповий. Плавний clip-path виглядає як штора, що
+   їде; ступінчастий — як символи, що зʼявляються по одному. Слово
+   одне, а жест зовсім інший. */
+@keyframes planAsciiType {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
 }
 
-/* Маршрут стартує ще до того, як сітка добігла до правого краю:
-   пауза між ними розбиває жест на два окремі, а має бути один. */
-.plan-cta:hover .plan-bp-route,
-.plan-cta:focus-visible .plan-bp-route {
-  animation: planBlueprintDraw .42s cubic-bezier(.35, 0, .2, 1) .18s forwards;
+/* Графік не просто проявляється, а виростає від підлоги — саме це
+   робить друк рухом, а не появою. */
+@keyframes planAsciiRise {
+  from { transform: scaleY(.15); opacity: .15; }
+  to   { transform: scaleY(1);   opacity: .5; }
 }
 
-.plan-cta:hover .plan-bp-target,
-.plan-cta:focus-visible .plan-bp-target {
-  animation: planBlueprintTarget .3s cubic-bezier(.34, 1.5, .5, 1) .56s forwards;
+/* Пунктир угорі приходить першим і трохи пульсує: два рядки, що
+   зʼявляються абсолютно синхронно, читаються як одна картинка,
+   а не як стрічка, що набирається. */
+@keyframes planAsciiDots {
+  from { opacity: 0; }
+  60%  { opacity: .55; }
+  to   { opacity: .4; }
 }
 
-.plan-cta:hover .plan-bp-ping,
-.plan-cta:focus-visible .plan-bp-ping {
-  animation: planBlueprintPing .7s cubic-bezier(.2, .7, .3, 1) .6s forwards;
+/* Спалах у мить, коли рядок дочитався. Коротка розсинхронізація
+   тіні — той самий збій зображення, через який це й читається як
+   термінал, а не як плавна поява. */
+@keyframes planAsciiGlitch {
+  0%   { transform: translateX(0);    text-shadow: none; }
+  30%  { transform: translateX(-1px); text-shadow: 1.5px 0 rgba(var(--edge-bad-rgb, 248, 113, 113), .8), -1.5px 0 rgba(94, 234, 212, .8); }
+  60%  { transform: translateX(1px);  text-shadow: -1.5px 0 rgba(var(--edge-bad-rgb, 248, 113, 113), .8), 1.5px 0 rgba(94, 234, 212, .8); }
+  100% { transform: translateX(0);    text-shadow: 0 0 10px rgba(var(--edge-acc-rgb, 139, 123, 255), .7); }
+}
+
+@keyframes planAsciiScan {
+  0%   { left: -4px; opacity: 0; }
+  14%  { opacity: .9; }
+  86%  { opacity: .9; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@keyframes planAsciiCaret {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.plan-cta:hover .plan-ascii,
+.plan-cta:focus-visible .plan-ascii {
+  opacity: 1;
+  animation: planAsciiType .4s steps(22, end) forwards;
+}
+
+.plan-cta:hover .plan-scan,
+.plan-cta:focus-visible .plan-scan {
+  animation: planAsciiScan .46s cubic-bezier(.3, 0, .2, 1) forwards;
 }
 
 .plan-cta:hover .plan-cta-label,
-.plan-cta:focus-visible .plan-cta-label {
-  opacity: 0;
-  transform: translateY(-8px) scale(.96);
+.plan-cta:focus-visible .plan-cta-label { color: var(--edge-acc, #8b7bff); }
+
+.plan-cta:hover .plan-ascii-spark,
+.plan-cta:focus-visible .plan-ascii-spark {
+  animation: planAsciiRise .44s cubic-bezier(.3, .9, .3, 1) forwards;
 }
 
-/* ---------- вимкнення руху ---------- */
+.plan-cta:hover .plan-ascii-dots,
+.plan-cta:focus-visible .plan-ascii-dots {
+  animation: planAsciiDots .34s ease forwards;
+}
 
-.edge-no-motion .plan-cta:hover .plan-cta-chart,
-.edge-no-motion .plan-cta:focus-visible .plan-cta-chart { opacity: 0; }
-.edge-no-motion .plan-cta:hover .plan-cta-label,
-.edge-no-motion .plan-cta:focus-visible .plan-cta-label { opacity: 1; transform: none; }
+.plan-cta:hover .plan-cta-live,
+.plan-cta:focus-visible .plan-cta-live {
+  animation: planAsciiGlitch .26s steps(2, end) .4s forwards;
+}
+
+.plan-cta:hover .plan-cta-plus,
+.plan-cta:focus-visible .plan-cta-plus { opacity: 0; transform: scale(.6); }
+
+.plan-cta:hover .plan-cta-prompt,
+.plan-cta:focus-visible .plan-cta-prompt { opacity: 1; transform: translateX(0); }
+
+/* Курсор блимає лише після того, як рядок дописався: раніше він
+   змагався з розшифровкою за увагу. */
+.plan-cta:hover .plan-caret,
+.plan-cta:focus-visible .plan-caret {
+  animation: planAsciiCaret .9s steps(1, end) .42s infinite;
+}
+
+/* ---------- вимкнення руху ----------
+
+   Підпис лишається читабельним у будь-якому разі — він і в русі
+   нікуди не зникав, тож тут достатньо прибрати тло й миготіння. */
+
+.edge-no-motion .plan-cta:hover .plan-ascii,
+.edge-no-motion .plan-cta:focus-visible .plan-ascii { opacity: 0; animation: none; }
+.edge-no-motion .plan-cta:hover .plan-scan,
+.edge-no-motion .plan-cta:focus-visible .plan-scan { animation: none; opacity: 0; }
+.edge-no-motion .plan-cta:hover .plan-caret,
+.edge-no-motion .plan-cta:focus-visible .plan-caret { animation: none; opacity: 0; }
+.edge-no-motion .plan-cta:hover .plan-cta-live,
+.edge-no-motion .plan-cta:focus-visible .plan-cta-live { animation: none; text-shadow: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .plan-cta:hover .plan-cta-chart,
-  .plan-cta:focus-visible .plan-cta-chart { opacity: 0; }
-  .plan-cta:hover .plan-cta-label,
-  .plan-cta:focus-visible .plan-cta-label { opacity: 1; transform: none; }
+  .plan-cta:hover .plan-ascii,
+  .plan-cta:focus-visible .plan-ascii { opacity: 0; animation: none; }
+  .plan-cta:hover .plan-scan,
+  .plan-cta:focus-visible .plan-scan { animation: none; opacity: 0; }
+  .plan-cta:hover .plan-caret,
+  .plan-cta:focus-visible .plan-caret { animation: none; opacity: 0; }
+  .plan-cta:hover .plan-cta-live,
+  .plan-cta:focus-visible .plan-cta-live { animation: none; text-shadow: none; }
 }
 
 /* ==================================================================

@@ -124,7 +124,12 @@ export function SpineNode({ done, color }) {
 }
 
 /* ---------- одноразовий проблиск по рядку ---------- */
-export function Sweep({ trigger, color }) {
+/* `rgb`, а не `color`. Тут стояло `${color}22`, а кольори в проєкті —
+   це `var(--edge-ok, #34d399)`: дописати до них два символи прозорості
+   не можна, браузер мовчки викидає все правило. Проблиск не працював
+   жодного разу, і помітити це було нічим — нічого не ламалось, просто
+   нічого й не відбувалось. */
+export function Sweep({ trigger, rgb }) {
   const reduce = useReducedMotion();
   const [runs, setRuns] = useState(0);
 
@@ -139,7 +144,7 @@ export function Sweep({ trigger, color }) {
       key={runs}
       aria-hidden
       className="pointer-events-none absolute inset-y-0 w-1/3 rounded-xl"
-      style={{ background: `linear-gradient(90deg, transparent, ${color}22, transparent)` }}
+      style={{ background: `linear-gradient(90deg, transparent, rgba(${rgb},0.16), transparent)` }}
       initial={{ x: '-120%' }}
       animate={{ x: '420%' }}
       transition={{ duration: 0.75, ease: 'easeOut' }}
@@ -148,12 +153,12 @@ export function Sweep({ trigger, color }) {
 }
 
 /* ---------- лінія прогресу по верхньому краю картки ---------- */
-export function EdgeProgress({ pct, color }) {
+export function EdgeProgress({ pct, rgb }) {
   return (
     <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: T.line }}>
       <motion.span
         className="absolute inset-y-0 left-0 origin-left"
-        style={{ background: `linear-gradient(90deg, ${color}00, ${color})`, width: '100%' }}
+        style={{ background: `linear-gradient(90deg, rgba(${rgb},0), rgba(${rgb},1))`, width: '100%' }}
         initial={false}
         animate={{ scaleX: pct }}
         transition={{ type: 'spring', stiffness: 140, damping: 24 }}
