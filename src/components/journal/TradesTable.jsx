@@ -33,6 +33,22 @@ const RESULT = {
   scratch: { label: 'Scratch', c: T.info, rgb: T.infoRgb },
 };
 
+/* Як позиція закрилась за даними термінала.
+
+   Це не заміна результату, а відповідь на інше питання. Результат
+   каже, чим угода скінчилась; вихід — хто це вирішив. «Stop» на −0.65R
+   і «Market» на −0.65R однакові за грошима й протилежні за
+   дисципліною: у першому випадку спрацював стоп, поставлений до
+   входу, у другому людина закрила руками посеред угоди.
+
+   Тейк і стоп тут не показуємо: для них `result` уже сказав те саме,
+   і другий підпис про те саме читався б як шум. */
+const EXIT_LABEL = {
+  manual:  'Market',
+  expert:  'Bot',
+  stopout: 'Stop-out',
+};
+
 const COLUMNS = [
   { key: 'plan_date',    label: 'Date',      align: 'left',   sortable: true },
   { key: 'plan_pair',    label: 'Asset',     align: 'left',   sortable: true },
@@ -426,6 +442,26 @@ export default function TradesTable({
                       <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: res ? res.c : T.text4 }} />
                       {res ? res.label : 'Not set'}
                     </span>
+
+                    {/* Колір лишається за результатом, підпис — приглушений
+                        і поруч, а не замість. Пофарбувати «Market» у
+                        жовтий означало б поставити спосіб виходу вище за
+                        сам результат, а в таблиці спершу читають, чим
+                        угода скінчилась. */}
+                    {EXIT_LABEL[t.exit_reason] && (
+                      <span
+                        className="ml-1.5 inline-flex items-center rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em]"
+                        style={{
+                          fontFamily: T.sans,
+                          color: T.text3,
+                          background: 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${T.line}`,
+                        }}
+                        title="Позиція закрита вручну по ринку, а не за ордером"
+                      >
+                        {EXIT_LABEL[t.exit_reason]}
+                      </span>
+                    )}
                   </td>
 
                   <td className="px-4 py-0">

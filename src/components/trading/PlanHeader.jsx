@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2, ChevronDown, Layers, LayoutGrid } from 'lucide-react';
 import AssetIcon from '../ui/AssetIcon';
+import AsciiDecode from '../ui/AsciiDecode';
 import { T, SPRING, EASE } from './planTheme';
 import { usePlanBlocks, PHASE_LABEL } from '../../lib/planBlocks';
 
@@ -150,6 +151,12 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        /* Підказка потрібна саме тут: коли план обрано, на кнопці
+           стоїть лише назва активу, і здогадатись, що по ній
+           перемикаються, можна тільки клікнувши. */
+        title={plans.length > 1
+          ? 'Перемкнутись між планами на сьогодні'
+          : 'Плани на сьогодні'}
         className="flex h-[38px] items-center gap-2 rounded-xl pl-2 pr-3 transition-all duration-200"
         style={{
           fontFamily: T.sans,
@@ -168,7 +175,10 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
           <Layers size={15} strokeWidth={2.3} style={{ color: T.text3, marginLeft: 4 }} />
         )}
         <span className="text-[13.5px] font-semibold tabular-nums" style={{ color: current ? T.text : T.text3 }}>
-          {current || 'План'}
+          {/* Множина навмисно. «План» читається як назва розділу —
+              тобто як кнопка, що кудись веде. «Плани» одразу каже,
+              що їх декілька і що тут між ними вибирають. */}
+          {current || 'Плани'}
         </span>
         {plans.length > 1 && (
           <span
@@ -198,7 +208,7 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
             }}
           >
             <div className="px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              Плани на сьогодні
+              {plans.length > 1 ? 'Перемкнутись на план' : 'Плани на сьогодні'}
             </div>
 
             {plans.map((p) => {
@@ -226,7 +236,7 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
 
             {!plans.length && (
               <div className="px-2.5 py-2 text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                Сьогодні ще порожньо
+                Планів на сьогодні ще немає
               </div>
             )}
 
@@ -243,7 +253,7 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
                 <Plus size={12} strokeWidth={2.6} style={{ color: T.text4 }} />
               </span>
               <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>
-                Інший актив…
+                {plans.length ? 'Ще один актив…' : 'Створити план…'}
               </span>
             </button>
           </motion.div>
@@ -436,6 +446,13 @@ export default function PlanHeader({
   onAddTrade,
 }) {
   const weekly = mode === 'weekly';
+
+  /* Ховер головної кнопки тримаємо станом, а не тільки в CSS:
+     розшифровка підпису — це JS, і йому потрібен сигнал. Решта
+     анімації лишається на :hover, щоб рух не залежав від
+     перерендерів. */
+  const [hot, setHot] = useState(false);
+
   return (
     <div className="mb-7 flex flex-col gap-6">
       {/* Верхній рядок: перемикач і дії — на одному рівні. Раніше
@@ -554,59 +571,64 @@ export default function PlanHeader({
             onClick={onNewPlan}
             className="plan-cta group relative ml-1 inline-flex h-[38px] shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-xl px-4 text-[14px] font-bold active:scale-[0.98]"
             style={CTA_STYLE}
-            onMouseEnter={ctaIn}
-            onMouseLeave={ctaOut}
+            onMouseEnter={(e) => { setHot(true); ctaIn(e); }}
+            onMouseLeave={(e) => { setHot(false); ctaOut(e); }}
+            onFocus={() => setHot(true)}
+            onBlur={() => setHot(false)}
           >
-            {/* `preserveAspectRatio="none"` — щоб креслення лягло по всій
-                кнопці, а не лишило поля: підпис «New week» ширший за
-                «New plan», і фіксована пропорція дала б різний вигляд у
-                двох режимах. Лінії від розтягування рятує
-                `vectorEffect`, а `pathLength="1"` робить довжину
-                маршруту одиничною, щоб малювати його одним зсувом. */}
-            <svg
-              className="plan-cta-chart"
-              viewBox="0 0 140 38"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-              focusable="false"
-            >
-              {/* Міліметрівка. Однією групою, бо відкривається вона
-                  однією хвилею — десять окремих анімацій читались би
-                  як метушня, а не як рух руки по паперу. */}
-              <g className="plan-bp-grid" fill="none" vectorEffect="non-scaling-stroke">
-                  <path d="M14 4V34" />
-                  <path d="M28 4V34" />
-                  <path d="M42 4V34" />
-                  <path d="M56 4V34" />
-                  <path d="M70 4V34" />
-                  <path d="M84 4V34" />
-                  <path d="M98 4V34" />
-                  <path d="M112 4V34" />
-                  <path d="M126 4V34" />
-                  <path d="M6 11H134" />
-                  <path d="M6 19H134" />
-                  <path d="M6 27H134" />
-              </g>
+            {/* Тло — маленький термінал.
 
-              {/* Маршрут — те, заради чого сітка й зʼявилась. */}
-              <path
-                className="plan-bp-route"
-                pathLength="1"
-                d="M8 27 L34 22 L58 28 L84 14 L110 19 L126 9"
-                fill="none"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-              />
+                ASCII тут не прикраса й не данина ретро: план — єдине
+                місце застосунку, де малюють те, чого ще не сталося, а
+                символьний графік виглядає саме як накидка, ескіз. І він
+                чесно дешевий: два рядки тексту й один clip-path проти
+                десятка SVG-анімацій, які тут стояли раніше.
 
-              <circle className="plan-bp-ping" cx="126" cy="9" r="4" vectorEffect="non-scaling-stroke" />
-              <circle className="plan-bp-target" cx="126" cy="9" r="3.4" />
-            </svg>
+                `steps()` на друкуванні обовʼязковий. Плавний clip-path
+                виглядає як штора, що їде; ступінчастий — як символи, що
+                зʼявляються по одному. Різниця в одному слові, а жест
+                виходить зовсім інший. */}
+            <pre className="plan-ascii" aria-hidden="true">
+              <span className="plan-ascii-dots">· · · · · · · · · · · ·</span>
+              <span className="plan-ascii-spark">▁▂▁▃▂▄▃▅▆▅▇▆█▇█</span>
+            </pre>
+
+            {/* Промінь сканера доганяє друк і гасне за правим краєм —
+                він і ставить крапку в жесті. */}
+            <span className="plan-scan" aria-hidden="true" />
 
             <span className="plan-cta-label relative flex items-center gap-2">
-              <Plus size={15} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
-              {weekly ? 'New week' : 'New plan'}
+              <span className="plan-cta-icon">
+                <Plus size={15} strokeWidth={3} className="plan-cta-plus" />
+                <span className="plan-cta-prompt" aria-hidden="true">›</span>
+              </span>
+              {/* Підпис не зникає, а перебирається символами й стає
+                  командою. Верхній регістр тут не косметика: рядок із
+                  курсором має читатись як щось, що ввели, а не як
+                  назва кнопки. */}
+              {/* Ширину тримає невидимий двійник, набраний у найширшому
+                  зі станів. Без нього кнопка дихала на кожному ховері:
+                  моноширинний верхній регістр із розрядкою помітно
+                  ширший за звичайний підпис, а кнопка стоїть крайньою
+                  в тісному рядку й тягла б за собою сусідів.
+
+                  Кінцевий текст лишається кодом, а не чистим «NEW
+                  PLAN»: рядок має виглядати як щось введене в
+                  термінал, і саме недочитаність робить його таким.
+                  Але читатись він мусить з першого погляду, тому
+                  підміни рівно три і всі очевидні. */}
+              <span className="plan-cta-text">
+                <span className="plan-cta-sizer" aria-hidden="true">
+                  {weekly ? 'N3W_W33K' : 'N3W_PL4N'}
+                </span>
+                <AsciiDecode
+                  text={weekly ? 'New week' : 'New plan'}
+                  alt={weekly ? 'N3W_W33K' : 'N3W_PL4N'}
+                  active={hot}
+                  className="plan-cta-live"
+                />
+              </span>
+              <span className="plan-caret" aria-hidden="true">▌</span>
             </span>
           </button>
         </div>

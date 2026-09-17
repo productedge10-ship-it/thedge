@@ -33,6 +33,7 @@ import { loadTodayPairs } from '../lib/planAssets';
 import { Section, SectionAnchor, WriteBlock } from '../components/trading/PlanPrimitives';
 import WeeklyPlanView from '../components/trading/WeeklyPlanView';
 import { usePlanBlocks } from '../lib/planBlocks';
+import { asList } from '../lib/dayReview';
 import { T, EASE, useEdgeFonts } from '../components/trading/planTheme';
 import useTerminalSkin from '../hooks/useTerminalSkin';
 import {
@@ -143,7 +144,7 @@ export default function DailyPlan() {
     narrative: '',
     tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(), conclusionBlocks: emptyConclusions(),
     actualNarrative: '', analysisMistakeText: '',
-    dayFlow: null, dayState: null, conclusionsText: '',
+    dayFlow: [], dayState: [], dayHard: [], dayWhy: [], conclusionsText: '',
     psyConfident: null, psyFear: null, psyRepeatTrade: null, psyRevenge: null, psyNotes: '',
   });
 
@@ -374,8 +375,11 @@ export default function DailyPlan() {
     const reviewPart = [
       Math.min(shots / 1, 1),
       planData.actualNarrative ? 1 : 0,
-      planData.dayFlow ? 1 : 0,
-      planData.dayState ? 1 : 0,
+      /* `asList` обовʼязковий: порожній масив у JS правдивий, і стара
+         перевірка `!!dayFlow` рахувала б незаповнений крок за
+         заповнений — прогрес показував би готовність, якої немає. */
+      asList(planData.dayFlow).length ? 1 : 0,
+      asList(planData.dayState).length ? 1 : 0,
       planData.conclusionsText?.trim() ? 1 : 0,
     ];
     const review = reviewPart.reduce((a, b) => a + b, 0) / reviewPart.length;
@@ -549,7 +553,7 @@ export default function DailyPlan() {
             ...p, title: getUkrainianTitle(t), date: t, pair: '', narrative: '',
             tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(), conclusionBlocks: emptyConclusions(),
             actualNarrative: '', analysisMistakeText: '',
-            dayFlow: null, dayState: null, conclusionsText: '',
+            dayFlow: [], dayState: [], dayHard: [], dayWhy: [], conclusionsText: '',
           }));
         } else if (date) {
           ignoreNextChangeRef.current = true;
@@ -557,7 +561,7 @@ export default function DailyPlan() {
             ...p, title: getUkrainianTitle(date), date, pair: pair || '', narrative: '',
             tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(), conclusionBlocks: emptyConclusions(),
             actualNarrative: '', analysisMistakeText: '',
-            dayFlow: null, dayState: null, conclusionsText: '',
+            dayFlow: [], dayState: [], dayHard: [], dayWhy: [], conclusionsText: '',
           }));
         }
       }
@@ -821,7 +825,7 @@ export default function DailyPlan() {
       ...p, title: getUkrainianTitle(today), date: today, pair: '', narrative: '',
       tdaBlocks: emptyTda(), planText: '', updates: [], reviewBlocks: emptyReview(), conclusionBlocks: emptyConclusions(),
       actualNarrative: '', analysisMistakeText: '',
-      dayFlow: null, dayState: null, conclusionsText: '',
+      dayFlow: [], dayState: [], dayHard: [], dayWhy: [], conclusionsText: '',
     }));
   };
 
@@ -1066,8 +1070,8 @@ export default function DailyPlan() {
               title="Діагностика"
               done={
                 !!planData.actualNarrative &&
-                !!planData.dayFlow &&
-                !!planData.dayState
+                asList(planData.dayFlow).length > 0 &&
+                asList(planData.dayState).length > 0
               }
             >
               <PostSessionDiagnostics

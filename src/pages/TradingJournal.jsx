@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import {
   BookOpen, Plus, TrendingUp, TrendingDown, Minus, AlertTriangle, X,
-  Filter, Calendar, ChevronDown, Check, Search, ShieldAlert, AlertOctagon, Zap,
+  Filter, Calendar, ChevronDown, Check, Search, ShieldAlert, AlertOctagon, Zap, Hand,
   CandlestickChart,
 } from "lucide-react";
 
@@ -387,6 +387,12 @@ const QUICK_DISCIPLINE = [
   { id: "offplan", label: "Off plan", icon: ShieldAlert,  c: T.bad,  rgb: T.badRgb,  test: (t) => !t.followed_plan },
   { id: "mistake", label: "Mistake",   icon: AlertOctagon, c: T.warn, rgb: T.warnRgb, test: (t) => !!t.has_mistake },
   { id: "rushed",  label: "Rushed",       icon: Zap,          c: "#fb923c", rgb: "251,146,60", test: (t) => !!t.rushed },
+  /* Вихід по ринку — теж про дисципліну, і тому стоїть тут, а не
+     серед результатів. Результати взаємовиключні й фільтруються через
+     `.in(result, …)`; спосіб виходу з ними не сперечається, його
+     треба додавати через І. «Stop» і «Stop + Market» — різні
+     запитання: у другому стоп не спрацював, людина закрила сама. */
+  { id: "market",  label: "Market",       icon: Hand,         c: T.text2,   rgb: "168,168,184", test: (t) => t.exit_reason === "manual" },
 ];
 const QUICK = [...QUICK_RESULT, ...QUICK_DISCIPLINE];
 const RESULT_QUICK_IDS = QUICK_RESULT.map((f) => f.id);
@@ -797,6 +803,7 @@ export default function TradingJournal() {
       if (quick.includes("offplan")) q = q.eq("followed_plan", false);
       if (quick.includes("mistake")) q = q.eq("has_mistake", true);
       if (quick.includes("rushed")) q = q.eq("rushed", true);
+      if (quick.includes("market")) q = q.eq("exit_reason", "manual");
       return q;
     },
     [quick]
@@ -811,7 +818,7 @@ export default function TradingJournal() {
            доларах рахувався лише по тих угодах, де вручну заповнений
            ризик. */
         .select(
-          "plan_date, result, rr, followed_plan, has_mistake, rushed, account_name, risk, profit_money"
+          "plan_date, result, rr, followed_plan, has_mistake, rushed, exit_reason, account_name, risk, profit_money"
         )
         .order("plan_date", { ascending: true })
     );

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { STATES, REASONS, HARD } from '../../lib/dayReview';
 
 export function mulberry32(seed) {
   return function () {
@@ -122,7 +123,201 @@ export function groupStats(trades, keyFn) {
    генератора всередині себе — і сторінка показувала однакові гарні
    графіки будь-якій людині. Тепер джерело приходить ззовні, а
    генератор лишається тільки для демо. */
-export function useStats(trades) {
+/* Зведення вечірнього розбору.
+
+   Рахуємо в ДНЯХ, а не в угодах. Причина «страх ще одного мінусу»
+   стосується дня, і помножити її на кількість входів того дня
+   означало б зробити найгучнішою ту причину, яка трапилась у
+   найактивніший день, а не ту, що трапляється найчастіше.
+
+   Порожній масив на вході — нормальний стан: розділ має сказати
+   «ще нема даних», а не зникнути. */
+function reviewStats(reviews) {
+  const days = Array.isArray(reviews) ? reviews : [];
+
+  const count = (key, defs) => {
+    const n = {};
+    days.forEach((d) => (d[key] || []).forEach((id) => { n[id] = (n[id] || 0) + 1; }));
+    return defs
+      .map((def) => ({ ...def, days: n[def.id] || 0 }))
+      .filter((x) => x.days > 0)
+      .sort((a, b) => b.days - a.days);
+  };
+
+  return {
+    days: days.length,
+    states: count('state', STATES),
+    why: count('why', REASONS),
+    hard: count('hard', HARD),
+  };
+}
+
+/* Ціна виходу руками.
+
+   Найчесніший психологічний сигнал із усіх, що в нас є. Стоп і тейк
+   поставлені ДО входу, холодною головою; рішення закрити руками
+   приймається посеред угоди, коли емоція вже працює. Різниця в
+   середньому R між цими двома групами — це буквально ціна одного
+   такого рішення, порахована на власних грошах.
+
+   Рахуємо тільки там, де термінал сказав. Ручні угоди без
+   `exitReason` у знаменник не йдуть: приписати їм «руками» означало
+   б зробити висновок із відсутності даних. */
+function handStats(t) {
+  const known = t.filter((x) => x.exitReason);
+  const hand = known.filter((x) => x.exitReason === 'manual');
+  const order = known.filter((x) => x.exitReason === 'tp' || x.exitReason === 'sl');
+
+  const avg = (list) => (list.length ? sum(list.map((x) => x.rr)) / list.length : 0);
+  const wr = (list) => (list.length
+    ? (list.filter((x) => x.result === 'WIN').length / list.length) * 100
+    : 0);
+
+  return {
+    known: known.length,
+    total: t.length,
+    hand: { n: hand.length, avg: avg(hand), wr: wr(hand), net: sum(hand.map((x) => x.rr)) },
+    order: { n: order.length, avg: avg(order), wr: wr(order), net: sum(order.map((x) => x.rr)) },
+    /* Додатна дельта означає, що рука допомагає, відʼємна — що
+       коштує. Друге трапляється значно частіше, але стверджувати це
+       за людину ми не будемо: хай скаже її власна вибірка. */
+    delta: avg(hand) - avg(order),
+  };
+}
+
+/* Дні за планом проти днів з відхиленнями.
+
+   Звʼязка вечірнього розбору з грошима. Сам по собі розбір каже, як
+   день минув; ця пара каже, скільки це коштувало. Рахуємо по днях, а
+   не по угодах: «відійшов від плану» — характеристика сесії, і день
+   із однією угодою важить у ній стільки ж, скільки день із десятьма,
+   бо рішення було одне. */
+function flowMoney(t, reviews) {
+  const days = Array.isArray(reviews) ? reviews : [];
+  if (!days.length) return null;
+
+  const byDate = {};
+  t.forEach((x) => { (byDate[x.date] ||= []).push(x); });
+
+  const bucket = (flowId) => {
+    const hit = days.filter((d) => (d.flow || []).includes(flowId));
+    const nets = hit.map((d) => sum((byDate[d.date] || []).map((x) => x.rr)));
+    const trades = hit.reduce((n, d) => n + (byDate[d.date] || []).length, 0);
+    return {
+      days: hit.length,
+      trades,
+      net: sum(nets),
+      perDay: hit.length ? sum(nets) / hit.length : 0,
+    };
+  };
+
+  return { plan: bucket('plan'), drift: bucket('drift'), missed: bucket('missed'), flat: bucket('flat') };
+}
+
+/* Читання ринку і гроші.
+
+   Питання не про точність прогнозу — прогнозувати ринок ніхто не
+   зобовʼязаний. Питання психологічне: що ти робиш у день, коли твоє
+   читання не справдилось. Здоровий трейдер у такий день торгує менше
+   або не торгує зовсім; той, у кого проблема, — навпаки, доводить
+   ринку свою правоту й платить за це. Різниця між двома стовпчиками
+   і є ціна цього доведення. */
+function biasMoney(t, reviews) {
+  const days = (Array.isArray(reviews) ? reviews : [])
+    .filter((d) => d.planned && d.actual);
+  if (!days.length) return null;
+
+  const byDate = {};
+  t.forEach((x) => { (byDate[x.date] ||= []).push(x); });
+
+  const bucket = (match) => {
+    const hit = days.filter((d) => (d.planned === d.actual) === match);
+    const trades = hit.flatMap((d) => byDate[d.date] || []);
+    return {
+      days: hit.length,
+      trades: trades.length,
+      net: sum(trades.map((x) => x.rr)),
+      perDay: hit.length ? sum(trades.map((x) => x.rr)) / hit.length : 0,
+      tradesPerDay: hit.length ? trades.length / hit.length : 0,
+    };
+  };
+
+  const right = bucket(true);
+  const wrong = bucket(false);
+  return { days: days.length, right, wrong, rate: Math.round((right.days / days.length) * 100) };
+}
+
+/* Слово проти діла.
+
+   Найцінніше, що можна дістати з двох джерел одразу, і неможливо — з
+   кожного окремо. Вечірня відповідь — це те, що людина про себе
+   думає; журнал — те, що робили руки. Розбіжність між ними не
+   доказ брехні: увечері справді здається, що день минув за планом,
+   поки не подивишся, що в журналі три угоди з порушенням.
+
+   Саме ці дні варто перечитувати, і саме їх неможливо знайти
+   вручну — для цього треба щоразу тримати перед очима обидва списки.
+*/
+function conflicts(t, reviews) {
+  const days = Array.isArray(reviews) ? reviews : [];
+  if (!days.length) return [];
+
+  const byDate = {};
+  t.forEach((x) => { (byDate[x.date] ||= []).push(x); });
+
+  const out = [];
+  days.forEach((d) => {
+    const list = byDate[d.date] || [];
+    const flow = d.flow || [];
+    const state = d.state || [];
+
+    if (flow.includes('plan')) {
+      const bad = list.filter((x) => !x.planFollowed);
+      if (bad.length) {
+        out.push({
+          date: d.date,
+          said: 'Все зробив за планом',
+          real: `${bad.length} ${bad.length === 1 ? 'угода' : 'угод'} з порушенням у журналі`,
+          tone: '#fbbf24',
+        });
+      }
+    }
+
+    if (flow.includes('flat') && list.length) {
+      out.push({
+        date: d.date,
+        said: 'Не торгував — не було сетапу',
+        real: `${list.length} ${list.length === 1 ? 'угода' : 'угод'} того дня`,
+        tone: '#f87171',
+      });
+    }
+
+    if (state.includes('calm')) {
+      const hot = list.filter((x) => x.emotion === 'tilt');
+      if (hot.length) {
+        out.push({
+          date: d.date,
+          said: 'Спокій',
+          real: `${hot.length} ${hot.length === 1 ? 'угода' : 'угод'} з відміткою «відіграш»`,
+          tone: '#f87171',
+        });
+      }
+    }
+
+    if (flow.includes('missed') && !list.length && state.includes('confident')) {
+      out.push({
+        date: d.date,
+        said: 'Впевненість',
+        real: 'сетап був, але жодного входу',
+        tone: '#8b7bff',
+      });
+    }
+  });
+
+  return out.sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+export function useStats(trades, reviews) {
   return useMemo(() => {
     const t = Array.isArray(trades) ? trades : TRADES;
 
@@ -285,6 +480,11 @@ export function useStats(trades) {
       avgLoss: losses.length ? -grossLoss / losses.length : 0,
       bestW, worstL, cleanStreak,
       tiltCost, mistakeLedger, emotionStats, chain,
+      review: reviewStats(reviews),
+      hand: handStats(t),
+      flowMoney: flowMoney(t, reviews),
+      biasMoney: biasMoney(t, reviews),
+      conflicts: conflicts(t, reviews),
       avgAfterLoss, avgAfterWin, revenge,
       followed, broken, buckets, byDow, bySession, byHour,
       byAsset, bySetup, byAccount, matrix, byMonth, wrCurve, pfCurve,
@@ -292,5 +492,5 @@ export function useStats(trades) {
       adherence: n ? Math.round((followed.length / n) * 100) : 0,
       recovery: maxDD ? net / Math.abs(maxDD) : 0,
     };
-  }, [trades]);
+  }, [trades, reviews]);
 }

@@ -33,9 +33,9 @@ const MT5_ROWS = [
 ];
 
 const TRUST = [
-  { title: 'Дані твої', sub: 'Кожна таблиця замкнена на твій акаунт на рівні бази, тому запит на чужі угоди не поверне нічого.' },
-  { title: 'Закрито, поки ти не вирішиш', sub: 'Публічного за замовчуванням немає. Розбір чи картка статистики відкриваються за посиланням лише коли ти сам його створиш.' },
-  { title: 'Без прив’язки', sub: 'Перестанеш платити — журнал лишиться. Історія на місці, вимикаються лише можливості Pro.' },
+  { title: 'Дані твої', sub: 'Кожна таблиця замкнена на твій акаунт на рівні бази, тому запит на чужі угоди не поверне нічого' },
+  { title: 'Закрито, поки ти не вирішиш', sub: 'Публічного за замовчуванням немає. Розбір чи картка статистики відкриваються за посиланням лише коли ти сам його створиш' },
+  { title: 'Без прив’язки', sub: 'Перестанеш платити — журнал лишиться. Історія на місці, вимикаються лише можливості Pro' },
 ];
 
 const SEED = [
@@ -110,10 +110,10 @@ export default function AutoImport() {
             <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>АВТОІМПОРТ</span>
           </div>
           <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 10px', color: '#fff' }}>
-            Угоди приїжджають самі.
+            Угоди приїжджають самі
           </h2>
           <p style={{ fontFamily: F.sans, fontSize: 16.5, color: '#8a8a9c', margin: 0, maxWidth: 520 }}>
-            Підключаєш MetaTrader 5 — і історія тече в журнал без жодного CSV.
+            Підключаєш MetaTrader 5 — і історія тече в журнал без жодного CSV
           </p>
         </div>
 
@@ -245,7 +245,7 @@ export default function AutoImport() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'rgba(47,191,143,.09)', border: '1px solid rgba(47,191,143,.28)', borderRadius: 11, padding: '10px 12px', animation: reduced ? 'none' : 'lnFadeUp .35s ease-out' }}>
                 <Check size={13} strokeWidth={2.8} color={C.ok} style={{ flexShrink: 0 }} />
                 <span style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 700, color: C.ok }}>
-                  412 угод у журналі. Далі — автоматично.
+                  412 угод у журналі. Далі — автоматично
                 </span>
               </div>
             )}
@@ -254,7 +254,7 @@ export default function AutoImport() {
       </div>
 
       <div style={{ fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.55, color: C.text5, marginTop: 16, maxWidth: 760 }}>
-        Ти пишеш лише людську половину: з якого плану вийшла угода, у якому стані ти був, яке правило порушив.
+        Ти пишеш лише людську половину: з якого плану вийшла угода, у якому стані ти був, яке правило порушив
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 12, marginTop: 24 }}>

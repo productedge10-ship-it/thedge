@@ -146,7 +146,7 @@ export default function Difference() {
       <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 28px', color: '#fff' }}>
         Ти програєш не ринку.{' '}
         <br />
-        Ти програєш тим самим трьом звичкам.
+        Ти програєш тим самим трьом звичкам
       </h2>
 
       <div
@@ -257,10 +257,10 @@ export default function Difference() {
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap', marginTop: 18 }}>
         <div style={{ fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.55, color: C.text5, maxWidth: 600 }}>
           Приклад рахунку — цифри, які журнал зазвичай показує, коли в ньому вже 40+ угод.
-          Твої будуть іншими, у цьому й суть.
+          Твої будуть іншими, у цьому й суть
         </div>
         <div style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 700, color: C.accSoft }}>
-          Не 63 угоди, а 28. Менше угод — не менше грошей.
+          Не 63 угоди, а 28. Менше угод — не менше грошей
         </div>
       </div>
     </section>

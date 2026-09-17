@@ -9,6 +9,7 @@ import { Toaster } from 'react-hot-toast';
 
 import Layout from './components/core/Layout';
 import Landing from './pages/Landing';
+import Terms from './pages/Terms';
 import DemoShell from './pages/DemoShell';
 import Hub from './pages/Hub';
 import Dashboard from './pages/Dashboard';
@@ -89,6 +90,11 @@ const router = createBrowserRouter([
   { path: '/:lang/blog/category/:cat', element: <BlogList /> },
   { path: '/:lang/blog/tag/:tag', element: <BlogList /> },
   { path: '/:lang/blog/:slug', element: <BlogPost /> },
+
+  /* Умови мають бути доступні до входу: на них посилається форма
+     реєстрації, а погодитись із тим, чого не можеш прочитати, —
+     це не погодження. */
+  { path: '/terms', element: <Terms /> },
 
   { path: '/shared/plan/:id', element: <SharedPlan /> },
   { path: '/shared/review/:id', element: <SharedReview /> },

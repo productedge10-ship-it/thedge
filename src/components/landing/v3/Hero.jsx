@@ -187,12 +187,12 @@ export default function Hero() {
                 letterSpacing: '-0.2px', color: C.text3, textWrap: 'pretty',
               }}
             >
-              Журнал угод з імпортом із MetaTrader 5 і аналітика по сесіях.
+              Журнал угод з імпортом із MetaTrader 5 і аналітика по сесіях
             </span>
           </h1>
 
           <p style={{ fontFamily: F.sans, fontSize: 'clamp(16.5px,1.05vw,21px)', lineHeight: 1.5, color: C.text3, margin: '0 0 34px', maxWidth: 560 }}>
-            Журнал, який рахує за тебе і каже, де саме ти втрачаєш гроші.
+            Журнал, який рахує за тебе і каже, де саме ти втрачаєш гроші
           </p>
 
           <div style={{ display: 'flex', gap: 13, flexWrap: 'wrap', marginBottom: 20 }}>
@@ -360,7 +360,7 @@ export default function Hero() {
                     картинка тут читалась як іконка, а не як співрозмовник. */}
                 <Cat size={38} />
                 <div style={{ fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.5, color: '#cfcfdd' }}>
-                  Угоди повз план коштували тобі {catCost}R. Решта твоєї торгівлі — плюс.
+                  Угоди повз план коштували тобі {catCost}R. Решта твоєї торгівлі — плюс
                 </div>
               </div>
             )}
@@ -368,7 +368,7 @@ export default function Hero() {
 
           <div style={{ fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.5, color: C.text5, marginTop: 14, paddingLeft: 2 }}>
             Це живий приклад, а не скріншот: угоди приїжджають із MetaTrader 5 самі.
-            Вимкни ті, що взяті повз план, і подивись, яким був би рахунок.
+            Вимкни ті, що взяті повз план, і подивись, яким був би рахунок
           </div>
         </div>
       </div>

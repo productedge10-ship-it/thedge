@@ -54,7 +54,15 @@ export default function Psychology({ s, rows = [] }) {
   const [mainEdit, setMainEdit] = useState(false);
 
   const [mainLayout, setMainLayout, { saving: savingMain }] = useCloudState(
-    'analytics_psychology_main_v1',
+    /* v2, бо змінився не порядок, а сам набір: чотири нові блоки
+       звʼязують угоди з відповідями в плані. Збережена v1 не знала
+       про них і тихо ховала б усе нове — людина відкрила б розділ і
+       не побачила нічого з того, що ми зробили.
+
+       Ручні перестановки в v1 при цьому злітають. Це свідома ціна:
+       порожня дошка без головних блоків гірша за втрачений порядок
+       карток, а сама v1 у базі лишається й нікуди не зникає. */
+    'analytics_psychology_main_v2',
     PSYCH_MAIN_DEFAULT,
     { normalize: normalizeMain },
   );

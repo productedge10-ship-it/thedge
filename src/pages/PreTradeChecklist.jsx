@@ -112,7 +112,7 @@ function Item({
       onClick={() => { if (!editMode) onToggle(item.id); }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className={`group relative flex select-none items-center gap-3 overflow-hidden rounded-[10px] py-[9px] pl-3 pr-2 ${editMode ? '' : 'cursor-pointer'}`}
+      className={`group relative flex select-none items-center gap-3 overflow-hidden rounded-xl py-[10px] pl-3 pr-2 ${editMode ? '' : 'cursor-pointer'}`}
       /* Підкладка світліша за картку, а не темніша: темна читалась як
          дірка в поверхні, світла — як предмет, що лежить зверху.
          Відмічений пункт підкладку втрачає й тихо тоне у фоні.
@@ -127,18 +127,24 @@ function Item({
          Відмічений пункт підкладку втратив, тому під курсором її
          отримує назад ледь помітною: інакше він виглядає як текст, а
          не як щось, що ще можна натиснути й зняти. */
+      /* У спокої підкладки немає взагалі.
+
+         Раніше кожен пункт був власною плашкою, і чотирнадцять
+         однакових прямокутників перетворювали сторінку на сітку
+         кнопок — саме те, що читалось як «дуже квадратно». Список,
+         у якому рядки просто лежать один під одним, читається як
+         список; плашка потрібна лише тоді, коли на рядок дивляться,
+         і тоді вона й зʼявляється. */
       style={{
-        background: checked
-          ? (hover && !editMode ? 'var(--edge-hair)' : 'transparent')
-          : focused && !editMode
-            ? `rgba(${T.accRgb},0.13)`
-            : hover && !editMode
-              ? `rgba(${T.accRgb},0.07)`
-              : 'var(--edge-hair)',
+        background: focused && !editMode
+          ? `rgba(${T.accRgb},0.13)`
+          : hover && !editMode
+            ? `rgba(${T.accRgb},0.07)`
+            : 'transparent',
         transition: 'background 200ms',
       }}
     >
-      <Sweep trigger={checked} color={T.ok} />
+      <Sweep trigger={checked} rgb={T.okRgb} />
 
       {/* Жовта риска = критичність, і більше нічого. Вона лишається й
           після відмітки, тільки тихішає: те, що пункт був критичним,
@@ -154,7 +160,10 @@ function Item({
 
       {/* галочка */}
       <motion.span
-        className="relative z-10 grid h-[21px] w-[21px] shrink-0 place-items-center rounded-[7px]"
+        /* Коло, а не квадрат зі скругленням. Найдешевша зміна проти
+           «квадратності» й найпомітніша: чотирнадцять круглих
+           галочок ламають сітку прямих кутів самі по собі. */
+        className="relative z-10 grid h-[21px] w-[21px] shrink-0 place-items-center rounded-full"
         initial={false}
         animate={{
           backgroundColor: checked ? T.ok : 'rgba(0,0,0,0)',
@@ -466,7 +475,15 @@ export default function PreTradeChecklist() {
 
   return (
     <div className="relative min-h-full">
-      <div className="relative z-10 mx-auto w-[94%] max-w-[1720px] pb-20 pt-5 lg:pt-7">
+      {/* Колонка, а не полотно.
+
+          1720px під чотири блоки — це запрошення розкласти їх матрицею,
+          і саме матриця тут була головною бідою: чекліст читається
+          зверху вниз (контекст → сетап → ризик → голова), а сітка 2×2
+          змушує око йти вліво-вправо-вліво й губити порядок. Вузька
+          колонка повертає послідовність і заодно прибирає порожнечу
+          внизу, бо контент більше не розтягнутий на пів екрана. */}
+      <div className="relative z-10 mx-auto w-[92%] max-w-[880px] pb-24 pt-5 lg:pt-7">
 
         {/* ─────────── Хедер ─────────── */}
         <motion.div
@@ -599,7 +616,21 @@ export default function PreTradeChecklist() {
         </motion.div>
 
         {/* ─────────── Блоки 2×2 ─────────── */}
-        <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
+        {/* Один вертикальний хребет на всі етапи.
+
+            Лінія тут не прикраса, а сама структура: вона каже, що це
+            шлях із чотирьох кроків, а не чотири незалежні картки.
+            Поки блоки були коробками, порядок між ними доводилось
+            вгадувати з номерів; на лінії він видно без жодної цифри.
+
+            І це єдина фігура на сторінці, яка не прямокутник, — саме
+            вона й ламає відчуття таблиці. */}
+        <div className="relative flex flex-col gap-8">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute bottom-6 left-[13.5px] top-6 w-px"
+            style={{ background: T.line }}
+          />
           {groups.map((g, gi) => {
             const list = items.filter((i) => i.group === g.id);
             const doneIn = list.filter((i) => checked.includes(i.id)).length;
@@ -608,7 +639,9 @@ export default function PreTradeChecklist() {
             return (
               <motion.div
                 key={g.id}
-                layout
+                /* `layout` тут прибрано: у CSS-колонках framer міряє
+                   позицію до того, як браузер розкладе блок по
+                   стовпцях, і картка на мить стрибає в чуже місце. */
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: gi * 0.04, ease: EASE }}
@@ -616,28 +649,38 @@ export default function PreTradeChecklist() {
                 {/* Закритий блок тьмяніє, але лишається на місці — так
                     видно пройдений шлях, і розкладка не смикається під
                     руками. Наведення повертає повну яскравість. */}
+                {/* Ні фону, ні рамки. Коробка навколо етапу не додавала
+                    жодного сенсу — межу між етапами й так тримають
+                    заголовок, відступ і вузол на лінії, — зате саме
+                    вона робила сторінку сіткою прямокутників. */}
                 <motion.div
-                  className="overflow-hidden rounded-2xl"
+                  className="relative"
                   initial={false}
-                  animate={{ opacity: allDone && !editMode ? 0.45 : 1 }}
+                  animate={{ opacity: allDone && !editMode ? 0.5 : 1 }}
                   whileHover={{ opacity: 1 }}
                   transition={{ duration: 0.35, ease: EASE }}
-                  style={{
-                    background: T.surface,
-                    border: `1px solid ${allDone ? `rgba(${T.okRgb},0.18)` : T.line}`,
-                  }}
                 >
                   {/* шапка блоку */}
-                  <div className="flex items-center gap-3 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
+                  {/* Лінії під шапкою більше немає. Вона ділила картку на
+                      два прямокутники й дублювала те, що вже сказано
+                      відступом і кеглем заголовка. */}
+                  <div className="flex items-center gap-3 pb-1">
                     <motion.span
-                      className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-lg text-[12.5px] font-bold tabular-nums"
+                      className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full text-[12.5px] font-bold tabular-nums"
                       initial={false}
                       animate={{
                         backgroundColor: allDone ? `rgba(${T.okRgb},0.14)` : 'var(--edge-hair)',
                         color: allDone ? T.ok : T.text3,
                       }}
                       transition={{ duration: 0.35, ease: EASE }}
-                      style={{ fontFamily: T.mono }}
+                      /* Кільце кольору фону вирізає лінію під вузлом.
+                         Без нього хребет просвічує крізь напівпрозору
+                         підкладку номера, і вузол читається як намистина
+                         на нитці, а не як точка шляху. */
+                      style={{
+                        fontFamily: T.mono,
+                        boxShadow: '0 0 0 5px var(--edge-bg, #111)',
+                      }}
                     >
                       <AnimatePresence mode="wait" initial={false}>
                         <motion.span
@@ -752,7 +795,7 @@ export default function PreTradeChecklist() {
                   </div>
 
                   {/* пункти */}
-                  <div className="flex flex-col gap-1 p-2.5">
+                  <div className="flex flex-col gap-0.5 pl-[40px] pr-1 pt-1">
                     {list.length === 0 && adding !== g.id && (
                       <p className="px-1 py-2 text-[13.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
                         Порожньо.

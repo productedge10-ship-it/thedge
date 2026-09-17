@@ -556,12 +556,27 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
               ))}
             </div>
 
+            {/* Кнопка лишається на місці, але вимкнена: звіт ще не
+                готовий, а зникла кнопка — це питання «а де воно
+                поділось», на яке ніхто не відповість. */}
             <button
-              onClick={() => setOpen(true)}
-              className="mt-1 w-full py-3.5 rounded-xl border text-[12.5px] font-bold transition-colors flex items-center justify-center gap-2"
-              style={{ borderColor: `${neuro.tier.color}33`, background: `${neuro.tier.color}10`, color: neuro.tier.color }}
+              type="button"
+              disabled
+              title="Зʼявиться разом з AI-коучем"
+              className="mt-1 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border py-3.5 text-[12.5px] font-bold"
+              style={{
+                borderColor: 'var(--edge-line, #26262c)',
+                background: 'rgba(255,255,255,0.02)',
+                color: 'var(--edge-text4, #4A4A52)',
+              }}
             >
-              <Brain size={15} /> Відкрити повний нейро-звіт
+              <Brain size={15} /> Повний нейро-звіт
+              <span
+                className="ml-1 rounded-full px-2 py-0.5 text-[9.5px] font-black uppercase tracking-[0.16em]"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--edge-line, #26262c)' }}
+              >
+                Soon
+              </span>
             </button>
           </div>
         </div>

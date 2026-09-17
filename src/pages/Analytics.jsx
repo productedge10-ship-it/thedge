@@ -4,7 +4,7 @@ import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIc
 import { Link } from 'react-router-dom';
 import { T, EASE } from '../lib/theme';
 import { useAuth } from '../context/AuthContext';
-import { fetchTrades, periodStart } from '../lib/analyticsStore';
+import { fetchTrades, fetchDayReviews, periodStart } from '../lib/analyticsStore';
 import { useStats, r1 } from '../components/analytics/data';
 import { Delta } from '../components/analytics/ui';
 
@@ -147,6 +147,7 @@ export default function Analytics() {
   const [exportOpen, setExportOpen] = useState(false);
 
   const [rows, setRows] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [failed, setFailed] = useState(false);
 
   /* Тягнемо весь журнал один раз, а період ріжемо на клієнті: вибірка
@@ -155,6 +156,11 @@ export default function Analytics() {
   useEffect(() => {
     if (!user?.id) return undefined;
     let alive = true;
+
+    /* Розбір дня їде окремо й тихо: якщо його не буде, розділ
+       психології просто не покаже свій блок, а решта аналітики має
+       працювати як працювала. */
+    fetchDayReviews(user.id).then(setReviews).catch(() => setReviews([]));
 
     fetchTrades(user.id)
       .then((data) => { if (alive) setRows(data); })
@@ -169,7 +175,14 @@ export default function Analytics() {
     return from ? rows.filter((t) => t.date >= from) : rows;
   }, [rows, period]);
 
-  const s = useStats(scoped || []);
+  /* Розбір ріжемо тим самим періодом, що й угоди: інакше «за тиждень»
+     показувало б тижневі угоди поруч із причинами за весь час. */
+  const scopedReviews = useMemo(() => {
+    const from = periodStart(period);
+    return from ? reviews.filter((r) => r.date >= from) : reviews;
+  }, [reviews, period]);
+
+  const s = useStats(scoped || [], scopedReviews);
 
   /* Скільки угод у кожному періоді — щоб вибір у випадашці був
      видимим ще до перемикання. */

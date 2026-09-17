@@ -872,6 +872,12 @@ export default function Auth() {
   const [mode, setMode] = useState(
     isRecoveryUrl || isRecoveryFlow() ? 'newpass' : 'login',
   );
+
+  /* Згода живе поруч із формою, а не в submit: кнопка мусить бути
+     вимкненою ДО натискання. Перевіряти згоду всередині handleAuth
+     означає дати натиснути й відмовити — тобто повідомити про умову
+     вже після того, як людина її порушила. */
+  const [agreed, setAgreed] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   /* Другий пароль тільки для екрана 'newpass': поставити новий пароль
@@ -1396,7 +1402,34 @@ export default function Auth() {
                         value={email} onChange={handleInputChange(setEmail)} autoComplete="email" />
                       <FieldInput icon={Lock} type="password" placeholder="Пароль" required
                         value={password} onChange={handleInputChange(setPassword)} autoComplete="new-password" />
-                      <PrimaryButton type="submit" loading={loading} withArrow>Створити акаунт</PrimaryButton>
+
+                      {/* Згода — окремою дією, а не дрібним рядком під
+                          кнопкою. «Натискаючи, ви погоджуєтесь» технічно
+                          теж згода, але людина її не робила; тут вона
+                          робить її свідомо. */}
+                      <label className="flex cursor-pointer select-none items-start gap-2.5 px-0.5 py-1">
+                        <input
+                          type="checkbox"
+                          checked={agreed}
+                          onChange={(e) => setAgreed(e.target.checked)}
+                          className="mt-[3px] h-[15px] w-[15px] shrink-0 cursor-pointer accent-[#8b7bff]"
+                        />
+                        <span className="text-[12.5px] leading-[1.5] text-[#e8eaed]/55">
+                          Я прочитав(ла) і приймаю{' '}
+                          <a
+                            href="/terms"
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[#8b7bff] underline decoration-[#8b7bff]/40 underline-offset-2 transition-colors hover:text-white"
+                          >
+                            Умови користування
+                          </a>
+                          . Розумію, що сервіс не надає фінансових порад і не відповідає за мої торгові рішення.
+                        </span>
+                      </label>
+
+                      <PrimaryButton type="submit" loading={loading} disabled={!agreed} withArrow>Створити акаунт</PrimaryButton>
                     </form>
 
                     <Divider />
