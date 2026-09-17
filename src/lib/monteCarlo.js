@@ -56,15 +56,22 @@ export const PRESET = {
    Але коли вона є, підставити свої реальні цифри корисніше, ніж
    вигадувати їх з голови. */
 export function fromTrades(trades) {
-  const closed = (trades || []).filter((t) => t.result === 'WIN' || t.result === 'LOSS');
+  /* 'Win'/'Lose' — той самий словник результату, що й у
+     accountsStore.tradeR/tradeStats, звідки й приходять trades сюди.
+     Було 'WIN'/'LOSS' (великими) — з реальними угодами жодна не
+     збігалась, і калькулятор завжди бачив нуль закритих, скільки б
+     їх насправді не було. */
+  const closed = (trades || []).filter((t) => t.result === 'Win' || t.result === 'Lose');
   if (closed.length < 10) return null;
 
-  const wins = closed.filter((t) => t.result === 'WIN');
+  const wins = closed.filter((t) => t.result === 'Win');
   const rr = wins.length
     ? wins.reduce((s, t) => s + Math.abs(Number(t.rr) || 0), 0) / wins.length
     : 0;
 
-  const days = new Set(closed.map((t) => t.date).filter(Boolean));
+  /* plan_date, не date — угоди приходять із fetchAccountTrades, де
+     колонка називається саме так. */
+  const days = new Set(closed.map((t) => t.plan_date).filter(Boolean));
 
   return {
     trades: closed.length,

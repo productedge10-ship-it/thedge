@@ -395,7 +395,7 @@ export default function Todo() {
             <button
               type="button"
               onClick={() => openPomodoro(null)}
-              className="pomodoro-cta inline-flex h-[54px] shrink-0 items-center justify-center gap-2.5 rounded-2xl px-6 text-[14.5px] font-bold"
+              className="pomodoro-cta inline-flex h-[42px] shrink-0 items-center justify-center gap-2.5 rounded-2xl px-6 text-[14.5px] font-bold"
               style={{
                 background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
                 border: '1px solid rgba(139,123,255,0.5)',

@@ -235,7 +235,7 @@ function NewFolderCta({ onClick, children }) {
       onMouseLeave={leave}
       onFocus={enter}
       onBlur={leave}
-      className={`folder-cta inline-flex h-[54px] shrink-0 items-center justify-center gap-2.5 rounded-2xl pl-6 pr-7 text-[14.5px] font-bold${hover ? ' is-hover' : ''}${lit ? ' is-lit' : ''}`}
+      className={`folder-cta inline-flex h-11 shrink-0 items-center justify-center gap-2.5 rounded-2xl pl-6 pr-7 text-[14.5px] font-bold${hover ? ' is-hover' : ''}${lit ? ' is-lit' : ''}`}
       style={{
         background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
         border: '1px solid rgba(139,123,255,0.5)',
@@ -245,8 +245,8 @@ function NewFolderCta({ onClick, children }) {
       }}
     >
       <span className="folder-cta-arc" aria-hidden="true">
-        <svg viewBox="0 0 166 54" preserveAspectRatio="none">
-          <path d="M 34 28 Q 92 8, 148 25" />
+        <svg viewBox="0 0 166 44" preserveAspectRatio="none">
+          <path d="M 34 23 Q 92 7, 148 20" />
         </svg>
       </span>
 

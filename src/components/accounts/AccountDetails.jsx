@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Building2, Loader2, Check, Trash2, Lock, Pencil,
-  TrendingUp, TrendingDown,
+  TrendingUp, TrendingDown, ArrowRight, Flag, History,
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
@@ -12,9 +12,11 @@ import { T, EASE, SPRING } from '../../lib/theme';
 import {
   fetchEvents, ensureStart, addEvent, removeEvent, setBalance, fetchAccountTrades,
   tradeStats, money, money2, todayLocal, KINDS_EN, CLOSE_REASONS, closeAccount,
+  fetchPhases, ensurePhase, advancePhase, failPhase, PHASE_STATUS,
 } from '../../lib/accountsStore';
 import DateField from '../ui/DateField';
 import BalanceChart from './BalanceChart';
+import Survival from './Survival';
 import { listMt5Snapshots, listMt5AccountTrades } from '../../lib/mt5Store';
 import { supabase as sb } from '../../lib/supabase';
 
@@ -55,6 +57,16 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
   const { user } = useAuth();
 
   const [events, setEvents] = useState([]);
+
+  /* Етапи проп-челенджу: Фаза 1 → Фаза 2 → Funded. Рівно один зі
+     status='active' — саме він і є "поточним" для Survival і для
+     фільтрації угод/подій нижче. */
+  const [phases, setPhases] = useState([]);
+  const [phaseBusy, setPhaseBusy] = useState(false);
+  const [phasePanel, setPhasePanel] = useState(false);
+  const [phaseHistoryOpen, setPhaseHistoryOpen] = useState(false);
+  const [nextLabel, setNextLabel] = useState('');
+  const [nextTarget, setNextTarget] = useState('');
 
   /* Знімки балансу з терміналу. У рахунку, підключеного до MT5, подій
      руками ніхто не заводить — виплат ще не було, поповнень теж, тож
@@ -98,15 +110,22 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
 
     (async () => {
       try {
-        const [evs, trs] = await Promise.all([
+        const [evs, trs, phs] = await Promise.all([
           fetchEvents(acc.id),
           fetchAccountTrades(user.id, acc.firm_name),
+          fetchPhases(acc.id),
         ]);
         if (!alive) return;
         const withStart = await ensureStart(user.id, acc, evs);
         if (!alive) return;
+        /* Рахунки, заведені до появи етапів, не мають жодного рядка —
+           заводимо «Фазу 1» заднім числом, інакше Survival нема з
+           чим працювати. */
+        const withPhase = await ensurePhase(user.id, acc, phs);
+        if (!alive) return;
         setEvents(withStart);
         setTrades(trs);
+        setPhases(withPhase);
       } catch (err) {
         if (alive) notify.error('Could not load history', err.message);
       } finally {
@@ -164,6 +183,64 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
     } catch (err) {
       setNameDraft(acc.firm_name || '');
       notify.error('Не вийшло перейменувати', err.message);
+    }
+  };
+
+  /* Поточна фаза — рівно одна зі status='active' (гарантія з боку
+     бази, унікальний індекс). Угоди фільтруємо від її started_at:
+     інакше перехід у фазу 2 миттю показав би ціль уже пройденою
+     прогресом фази 1 — саме те, від чого й просили піти. */
+  const currentPhase = useMemo(() => phases.find((p) => p.status === 'active') || null, [phases]);
+  const pastPhases = useMemo(
+    () => phases.filter((p) => p.status !== 'active').slice().reverse(),
+    [phases],
+  );
+
+  const phaseTrades = useMemo(() => {
+    if (!currentPhase) return trades;
+    const from = String(currentPhase.started_at).slice(0, 10);
+    return trades.filter((t) => String(t.plan_date || '') >= from);
+  }, [trades, currentPhase]);
+
+  /* Прогрес поточної фази — від балансу на момент її старту, не від
+     initial_balance рахунку: це і є «новий старт» для фази 2. */
+  const phaseProgressPct = useMemo(() => {
+    if (!currentPhase || !currentPhase.starting_balance) return 0;
+    return ((balance - currentPhase.starting_balance) / currentPhase.starting_balance) * 100;
+  }, [currentPhase, balance]);
+
+  const nextLabelSuggestion = (label) => {
+    if (/фаза\s*1/i.test(label || '')) return 'Фаза 2';
+    if (/фаза\s*2/i.test(label || '')) return 'Funded';
+    return 'Наступний етап';
+  };
+
+  const openPhasePanel = () => {
+    setNextLabel(nextLabelSuggestion(currentPhase?.label));
+    setNextTarget('');
+    setPhasePanel(true);
+  };
+
+  const goNextPhase = async () => {
+    setPhaseBusy(true);
+    try {
+      const opened = await advancePhase(user.id, acc, currentPhase, {
+        label: nextLabel.trim() || nextLabelSuggestion(currentPhase?.label),
+        target_pct: nextTarget,
+        daily_loss_pct: null,
+        max_drawdown_pct: null,
+      });
+      const endedAt = new Date().toISOString();
+      setPhases((ps) => [
+        ...ps.map((p) => (p.id === currentPhase?.id ? { ...p, status: 'passed', ended_at: endedAt } : p)),
+        opened,
+      ]);
+      setPhasePanel(false);
+      notify.success('Наступний етап', `Тепер «${opened.label}» — відлік почався заново`);
+    } catch (err) {
+      notify.error('Не вийшло перейти далі', err.message);
+    } finally {
+      setPhaseBusy(false);
     }
   };
 
@@ -403,6 +480,17 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
     try {
       const reason = closeNote.trim() ? `${closeReason} — ${closeNote.trim()}` : closeReason;
       const next = await closeAccount(user.id, acc.id, reason);
+      /* Рахунок закрився — активна фаза не лишається "в роботі"
+         навіки. 'passed', якщо причина — саме прохід, інакше
+         'failed': тиша тут не критична, просто без позначки. */
+      if (currentPhase) {
+        try {
+          await failPhase(user.id, currentPhase.id);
+          setPhases((ps) => ps.map((p) => (
+            p.id === currentPhase.id ? { ...p, status: 'failed', ended_at: new Date().toISOString() } : p
+          )));
+        } catch { /* не критично для закриття рахунку */ }
+      }
       onUpdate(next);
       setClosePanel(false);
       notify.success('Account closed', reason);
@@ -617,6 +705,9 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: isClosed ? T.text3 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
               <span className="shrink-0">{isClosed ? 'Closed' : 'Active'}</span>
               <span className="truncate" style={{ color: T.text3 }}>· {money(initial)}<span className="hidden sm:inline"> account</span></span>
+              {!isClosed && currentPhase && (
+                <span className="hidden shrink-0 sm:inline" style={{ color: T.acc }}>· {currentPhase.label}</span>
+              )}
               {isClosed && acc.closed_reason && <span className="hidden shrink-0 sm:inline" style={{ color: T.text3 }}>· {acc.closed_reason}</span>}
             </div>
           </div>
@@ -949,6 +1040,194 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
           </div>
 
           <div className="px-4 py-5 sm:px-6">
+
+            {/* ─────────── Фаза проп-челенджу ───────────
+                Активна фаза — не бейдж, а робочий контроль: тут
+                видно прогрес до цілі саме цієї фази (від starting_
+                balance, не від initial_balance рахунку) і кнопка
+                «наступна фаза», яка закриває поточну й заводить нову
+                з нуля. Для закритих рахунків розділ ховаємо — там
+                уже нема чим управляти, лишається тільки історія. */}
+            {!isClosed && currentPhase && (
+              <div
+                className="relative mb-5 overflow-hidden rounded-2xl"
+                style={{ background: T.surface, border: `1px solid ${T.line}` }}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-5">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+                      style={{ background: `rgba(${T.accRgb},0.12)`, border: `1px solid ${T.lineAcc}`, color: T.acc }}
+                    >
+                      <Flag size={16} strokeWidth={2.3} />
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[15px] font-bold" style={{ fontFamily: T.display, color: T.text }}>
+                        {currentPhase.label}
+                      </span>
+                      <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
+                        {currentPhase.target_pct != null
+                          ? `${phaseProgressPct >= 0 ? '+' : ''}${phaseProgressPct.toFixed(1)}% з ${currentPhase.target_pct}% цілі`
+                          : `від ${money(currentPhase.starting_balance)}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {pastPhases.length > 0 && (
+                      <button
+                        onClick={() => setPhaseHistoryOpen((v) => !v)}
+                        className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold transition-colors"
+                        style={{ fontFamily: T.sans, color: T.text3, background: phaseHistoryOpen ? T.sunken : 'transparent' }}
+                      >
+                        <History size={13} strokeWidth={2.2} />
+                        Історія
+                      </button>
+                    )}
+                    <button
+                      onClick={() => (phasePanel ? setPhasePanel(false) : openPhasePanel())}
+                      className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-[12.5px] font-bold transition-colors"
+                      style={{
+                        fontFamily: T.sans,
+                        color: T.acc,
+                        background: `rgba(${T.accRgb},0.12)`,
+                        border: `1px solid ${T.lineAcc}`,
+                      }}
+                    >
+                      Наступна фаза
+                      <ArrowRight size={13} strokeWidth={2.4} />
+                    </button>
+                  </div>
+                </div>
+
+                {currentPhase.target_pct != null && (
+                  <div className="px-4 pb-4 sm:px-5">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: T.sunken }}>
+                      <div
+                        className="h-full rounded-full transition-[width] duration-500"
+                        style={{
+                          width: `${Math.max(0, Math.min(100, (phaseProgressPct / currentPhase.target_pct) * 100))}%`,
+                          background: phaseProgressPct < 0 ? T.bad : T.acc,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ─── Панель «наступна фаза» — той самий grid-trick, що й Close account ─── */}
+                <div
+                  className="grid transition-[grid-template-rows] duration-300 ease-out"
+                  style={{
+                    gridTemplateRows: phasePanel ? '1fr' : '0fr',
+                    borderTop: phasePanel ? `1px solid ${T.line}` : 'none',
+                    background: `rgba(${T.accRgb},0.04)`,
+                  }}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <div
+                      className="flex flex-col gap-3 px-4 py-4 transition-opacity duration-200 sm:px-5"
+                      style={{ opacity: phasePanel ? 1 : 0, transitionDelay: phasePanel ? '80ms' : '0ms' }}
+                    >
+                      <p className="text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.acc }}>
+                        «{currentPhase.label}» зараховується пройденою, новий етап стартує від {money(balance)}
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        <label className="flex min-w-[140px] flex-1 flex-col gap-1">
+                          <span className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                            Назва етапу
+                          </span>
+                          <input
+                            value={nextLabel}
+                            onChange={(e) => setNextLabel(e.target.value)}
+                            className="h-10 w-full rounded-xl px-3.5 text-[13.5px] outline-none"
+                            style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: T.sans }}
+                          />
+                        </label>
+                        <label className="flex min-w-[110px] flex-col gap-1">
+                          <span className="text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                            Ціль, %
+                          </span>
+                          <input
+                            value={nextTarget}
+                            onChange={(e) => setNextTarget(e.target.value.replace(/[^\d.,]/g, ''))}
+                            placeholder="8"
+                            inputMode="decimal"
+                            className="h-10 w-full rounded-xl px-3.5 text-[13.5px] outline-none"
+                            style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: T.mono }}
+                          />
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={goNextPhase}
+                          disabled={phaseBusy || !nextLabel.trim()}
+                          className="flex h-10 items-center gap-1.5 rounded-xl px-4 text-[12.5px] font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                          style={{ fontFamily: T.sans, background: T.acc, color: '#08080c' }}
+                        >
+                          {phaseBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={2.8} />}
+                          Почати
+                        </button>
+                        <button
+                          onClick={() => setPhasePanel(false)}
+                          className="h-10 rounded-xl px-3.5 text-[12.5px] font-semibold"
+                          style={{ fontFamily: T.sans, color: T.text3 }}
+                        >
+                          Скасувати
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ─── Історія попередніх фаз ─── */}
+                {pastPhases.length > 0 && (
+                  <div
+                    className="grid transition-[grid-template-rows] duration-300 ease-out"
+                    style={{
+                      gridTemplateRows: phaseHistoryOpen ? '1fr' : '0fr',
+                      borderTop: phaseHistoryOpen ? `1px solid ${T.line}` : 'none',
+                    }}
+                  >
+                    <div className="min-h-0 overflow-hidden">
+                      <div
+                        className="flex flex-col gap-2 px-4 py-4 transition-opacity duration-200 sm:px-5"
+                        style={{ opacity: phaseHistoryOpen ? 1 : 0, transitionDelay: phaseHistoryOpen ? '80ms' : '0ms' }}
+                      >
+                        {pastPhases.map((p) => {
+                          const tone = p.status === 'passed' ? T.ok : T.bad;
+                          return (
+                            <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 text-[12.5px]" style={{ fontFamily: T.sans }}>
+                              <div className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone }} />
+                                <span className="font-semibold" style={{ color: T.text }}>{p.label}</span>
+                                <span style={{ color: tone }}>{PHASE_STATUS[p.status]?.label ?? p.status}</span>
+                              </div>
+                              <span style={{ color: T.text3 }}>
+                                {fmtDayShort(p.started_at)} – {p.ended_at ? fmtDayShort(p.ended_at) : '—'}
+                                {p.target_pct != null && ` · ціль ${p.target_pct}%`}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ─────────── Чи виживе рахунок (Monte-Carlo по поточній фазі) ─────────── */}
+            {!isClosed && currentPhase && (
+              <div className="mb-5">
+                <Survival
+                  account={acc}
+                  phase={currentPhase}
+                  trades={phaseTrades}
+                  loading={loading}
+                  onUpdate={(row) => setPhases((ps) => ps.map((p) => (p.id === row.id ? row : p)))}
+                />
+              </div>
+            )}
 
             {/* ─────────── Chart + side stats — 1:1 з макетом ─────────── */}
             <div

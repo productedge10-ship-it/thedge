@@ -539,7 +539,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 13px;
   height: 13px;
   opacity: 0;
-  offset-path: path('M 34 28 Q 92 8, 148 25');
+  offset-path: path('M 34 23 Q 92 7, 148 20');
   offset-distance: 0%;
   offset-rotate: 35deg;
   transform: translate(-50%, -50%) scale(.35);

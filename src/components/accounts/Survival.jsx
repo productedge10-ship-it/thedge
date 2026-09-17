@@ -4,32 +4,40 @@ import { ShieldAlert, Info, Loader2, Check } from 'lucide-react';
 
 import { T } from '../../lib/theme';
 import { useAuth } from '../../context/AuthContext';
-import { saveRules } from '../../lib/accountsStore';
-import { simulate, verdict, tradesPerDay, MIN_TRADES } from '../../lib/monteCarlo';
+import { updatePhase } from '../../lib/accountsStore';
+import { simulate, verdict, fromTrades } from '../../lib/monteCarlo';
 
 /* ==================================================================
    Чи виживе рахунок.
 
    Три відповіді на щоденне питання проп-трейдера: дійду до цілі, зіллю
    на межі, чи просто далі торгуватиму. Рахується з реального
-   розподілу R саме цього рахунку.
+   розподілу R САМЕ ЦІЄЇ ФАЗИ — угоди попереднього етапу сюди не
+   потрапляють (їх у AccountDetails уже відфільтровано по
+   phase.started_at), інакше перехід у фазу 2 миттю показував би
+   ціль уже пройденою чужим прогресом.
 
    Що тут свідомо зроблено «незручно»: правила не підставляються
    типовими 5/10/8. Підставлене число виглядає як перевірене, і
    людина не помітить, що воно чуже — а весь розрахунок стоїть саме
    на ньому. Краще один раз спитати.
-================================================================== */
+
+   Ліміти можуть бути порожніми не тому, що їх не заповнили, а тому,
+   що вони успадковані з рахунку (prop_accounts.max_daily_loss_pct/
+   max_total_loss_pct) — денний ліміт зазвичай той самий на всіх
+   етапах, і дублювати його в кожну фазу означає, що правка на
+   рахунку до вже створених фаз не долетить. */
 
 const FIELDS = [
-  { id: 'daily_loss_pct', label: 'Денний ліміт', hint: '% від старту за добу', ph: '5' },
+  { id: 'daily_loss_pct', label: 'Денний ліміт', hint: '% від старту фази за добу', ph: '5' },
   { id: 'max_drawdown_pct', label: 'Макс. просадка', hint: 'загальна межа, %', ph: '10' },
-  { id: 'profit_target_pct', label: 'Ціль етапу', hint: 'прибуток для проходу, %', ph: '8' },
+  { id: 'target_pct', label: 'Ціль етапу', hint: 'прибуток для проходу, %', ph: '8' },
 ];
 
 function Num({ label, hint, value, ph, onChange }) {
   return (
     <label className="block min-w-0">
-      <span className="mb-1.5 block text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+      <span className="mb-1.5 block text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text3 }}>
         {label}
       </span>
       <div
@@ -44,9 +52,9 @@ function Num({ label, hint, value, ph, onChange }) {
           className="w-full min-w-0 bg-transparent text-[14px] font-bold outline-none placeholder:opacity-40"
           style={{ fontFamily: T.mono, color: T.text }}
         />
-        <span className="shrink-0 text-[12.5px] font-bold" style={{ fontFamily: T.mono, color: T.text4 }}>%</span>
+        <span className="shrink-0 text-[12.5px] font-bold" style={{ fontFamily: T.mono, color: T.text3 }}>%</span>
       </div>
-      <span className="mt-1 block text-[11px]" style={{ fontFamily: T.sans, color: T.text4 }}>{hint}</span>
+      <span className="mt-1 block text-[11px]" style={{ fontFamily: T.sans, color: T.text3 }}>{hint}</span>
     </label>
   );
 }
@@ -54,14 +62,14 @@ function Num({ label, hint, value, ph, onChange }) {
 function Odds({ label, value, tone, hint }) {
   return (
     <div className="min-w-0 rounded-xl p-3.5" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
-      <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+      <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text3 }}>
         {label}
       </div>
       <div className="text-[23px] font-bold tabular-nums leading-none" style={{ fontFamily: T.mono, color: tone }}>
         {value}%
       </div>
       {hint && (
-        <div className="mt-1.5 text-[11px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.45 }}>
+        <div className="mt-1.5 text-[11px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.45 }}>
           {hint}
         </div>
       )}
@@ -69,13 +77,18 @@ function Odds({ label, value, tone, hint }) {
   );
 }
 
-export default function Survival({ account, trades, loading, onUpdate }) {
+/* trades тут — уже угоди тільки цієї фази (AccountDetails фільтрує
+   по phase.started_at до передачі). account — потрібен лише як
+   джерело успадкованих лімітів, коли на фазі вони null. */
+export default function Survival({ account, phase, trades, loading, onUpdate }) {
   const { user } = useAuth();
 
+  const inherited = (v, fallback) => (v ?? fallback ?? '');
+
   const [form, setForm] = useState({
-    daily_loss_pct: account.daily_loss_pct ?? '',
-    max_drawdown_pct: account.max_drawdown_pct ?? '',
-    profit_target_pct: account.profit_target_pct ?? '',
+    daily_loss_pct: inherited(phase?.daily_loss_pct, account.max_daily_loss_pct),
+    max_drawdown_pct: inherited(phase?.max_drawdown_pct, account.max_total_loss_pct),
+    target_pct: phase?.target_pct ?? '',
   });
   const [risk, setRisk] = useState('1');
   const [saving, setSaving] = useState(false);
@@ -83,37 +96,55 @@ export default function Survival({ account, trades, loading, onUpdate }) {
 
   useEffect(() => {
     setForm({
-      daily_loss_pct: account.daily_loss_pct ?? '',
-      max_drawdown_pct: account.max_drawdown_pct ?? '',
-      profit_target_pct: account.profit_target_pct ?? '',
+      daily_loss_pct: inherited(phase?.daily_loss_pct, account.max_daily_loss_pct),
+      max_drawdown_pct: inherited(phase?.max_drawdown_pct, account.max_total_loss_pct),
+      target_pct: phase?.target_pct ?? '',
     });
-  }, [account.id, account.daily_loss_pct, account.max_drawdown_pct, account.profit_target_pct]);
+  }, [phase?.id, phase?.daily_loss_pct, phase?.max_drawdown_pct, phase?.target_pct, account.max_daily_loss_pct, account.max_total_loss_pct]);
 
   const num = (v) => {
     const n = Number(String(v ?? '').replace(',', '.'));
     return Number.isFinite(n) && n > 0 ? n : 0;
   };
 
-  const hasRules = num(form.daily_loss_pct) || num(form.max_drawdown_pct) || num(form.profit_target_pct);
+  /* Boolean(...), а не голе `||`: інакше коли всі три поля порожні,
+     вираз рахується в число 0, і React виводить його в JSX як
+     буквальний текст "0" усюди, де стоїть `{hasRules && ...}`. */
+  const hasRules = Boolean(num(form.daily_loss_pct) || num(form.max_drawdown_pct) || num(form.target_pct));
+
+  /* Вінрейт і середній RR беремо з реальних угод фази, не з форми —
+     калькулятор питає лише про межі, а свою якість трейдер щодня
+     доводить угодами, а не вводить руками. */
+  const fromJournal = useMemo(() => fromTrades(trades), [trades]);
 
   const sim = useMemo(() => {
-    if (loading || !hasRules) return null;
-    return simulate(trades, {
+    if (loading || !hasRules || !fromJournal) return null;
+    return simulate({
+      winRate: fromJournal.winRate,
+      rr: fromJournal.rr,
+      perDay: fromJournal.perDay,
       riskPct: num(risk) || 1,
       dailyPct: num(form.daily_loss_pct),
       ddPct: num(form.max_drawdown_pct),
-      targetPct: num(form.profit_target_pct),
+      targetPct: num(form.target_pct),
     });
-    /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [trades, loading, form, risk, hasRules]);
+  }, [fromJournal, loading, form, risk, hasRules]);
 
-  const v = verdict(sim);
+  const v = useMemo(
+    () => (fromJournal ? verdict(sim, fromJournal) : null),
+    [sim, fromJournal],
+  );
 
   const save = async () => {
+    if (!phase) return;
     setSaving(true);
     try {
-      const row = await saveRules(user.id, account.id, form);
-      onUpdate?.({ ...account, ...row });
+      const row = await updatePhase(user.id, phase.id, {
+        daily_loss_pct: form.daily_loss_pct === '' ? null : num(form.daily_loss_pct),
+        max_drawdown_pct: form.max_drawdown_pct === '' ? null : num(form.max_drawdown_pct),
+        target_pct: form.target_pct === '' ? null : num(form.target_pct),
+      });
+      onUpdate?.(row);
       setSaved(true);
       setTimeout(() => setSaved(false), 1600);
     } catch {
@@ -123,8 +154,6 @@ export default function Survival({ account, trades, loading, onUpdate }) {
     }
   };
 
-  const perDay = useMemo(() => tradesPerDay(trades), [trades]);
-
   return (
     <div
       className="mb-4 overflow-hidden rounded-2xl"
@@ -133,11 +162,11 @@ export default function Survival({ account, trades, loading, onUpdate }) {
       <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
         <ShieldAlert size={13} strokeWidth={2.4} style={{ color: T.warn }} />
         <span className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text3 }}>
-          Чи виживе рахунок
+          Чи виживе рахунок{phase ? ` · ${phase.label}` : ''}
         </span>
-        {sim?.ok && (
-          <span className="ml-auto text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
-            {sim.runs} прогонів · {sim.trades} угод
+        {sim && (
+          <span className="ml-auto text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text3 }}>
+            {sim.runs} прогонів · {fromJournal.trades} угод
           </span>
         )}
       </div>
@@ -160,7 +189,7 @@ export default function Survival({ account, trades, loading, onUpdate }) {
 
         <button
           onClick={save}
-          disabled={saving}
+          disabled={saving || !phase}
           className="mt-3 flex h-9 items-center gap-2 rounded-xl px-3.5 text-[12.5px] font-bold transition-colors"
           style={{
             fontFamily: T.sans,
@@ -175,35 +204,36 @@ export default function Survival({ account, trades, loading, onUpdate }) {
 
         {/* ---------- результат ---------- */}
         {!hasRules && (
-          <p className="mt-4 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.6 }}>
+          <p className="mt-4 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.6 }}>
             Впиши межі свого пропа — і побачиш, які шанси дійти до цілі раніше, ніж до них.
             Без цих чисел рахувати нема від чого.
           </p>
         )}
 
         {hasRules && loading && (
-          <div className="mt-4 flex items-center gap-2 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
+          <div className="mt-4 flex items-center gap-2 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
             <Loader2 size={13} className="animate-spin" /> рахую…
           </div>
         )}
 
         {/* Замало угод — кажемо прямо, а не малюємо відсоток із трьох
-            чисел. Ймовірність, виведена з десяти угод, точна рівно до
-            одного трейду. */}
-        {sim && !sim.ok && (
+            чисел. Ймовірність, виведена з дев'яти угод, точна рівно до
+            одного трейду. Рахунок саме цієї фази, тому лічильник може
+            бути малим навіть на старому акаунті, щойно перейшов далі. */}
+        {hasRules && !loading && !fromJournal && (
           <div
             className="mt-4 flex items-start gap-2.5 rounded-xl px-3.5 py-3"
             style={{ background: `rgba(${T.warnRgb},0.07)`, border: `1px solid rgba(${T.warnRgb},0.24)` }}
           >
             <Info size={14} strokeWidth={2.3} className="mt-0.5 shrink-0" style={{ color: T.warn }} />
             <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.6 }}>
-              На цьому рахунку {sim.have} {sim.have === 1 ? 'угода' : 'угод'}, а треба щонайменше {sim.need}.
-              На меншій вибірці розподіл R — це не розподіл, і будь-яка ймовірність з нього буде вигадкою.
+              У цій фазі поки {trades.filter((t) => t.result === 'Win' || t.result === 'Lose').length} закритих угод,
+              а треба щонайменше 10. На меншій вибірці розподіл R — це не розподіл, і будь-яка ймовірність з нього буде вигадкою.
             </span>
           </div>
         )}
 
-        {sim?.ok && (
+        {sim && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -238,7 +268,7 @@ export default function Survival({ account, trades, loading, onUpdate }) {
               className="mt-2.5 rounded-xl px-3.5 py-3"
               style={{ background: T.sunken, border: `1px solid ${T.line}` }}
             >
-              <div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+              <div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text3 }}>
                 Що для тебе нормально
               </div>
               <p className="text-[13px]" style={{ fontFamily: T.sans, color: T.text2, lineHeight: 1.6 }}>
@@ -264,8 +294,8 @@ export default function Survival({ account, trades, loading, onUpdate }) {
               </div>
             )}
 
-            <p className="mt-3 text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.55 }}>
-              Симуляція перемішує твої ж угоди ({perDay} на день у середньому) і припускає, що далі
+            <p className="mt-3 text-[11.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.55 }}>
+              Симуляція перемішує твої ж угоди цієї фази ({fromJournal.perDay} на день у середньому) і припускає, що далі
               торгуєш так само. Це припущення, а не передбачення: зміниш підхід — зміняться й цифри.
             </p>
           </motion.div>

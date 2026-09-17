@@ -143,8 +143,13 @@ function ChartCard({ block, onZoom, eyebrow }) {
         )}
       </div>
       {block.image && (
-        <button onClick={() => onZoom(block.image)} className="group relative block w-full cursor-zoom-in" style={{ background: T.sunken }}>
-          <img src={tvImage(block.image)} alt="" className="block h-auto max-h-[70vh] w-full object-contain" />
+        <button onClick={() => onZoom(block)} className="group relative block w-full cursor-zoom-in" style={{ background: T.sunken }}>
+          <img
+            src={tvImage(block.image)}
+            alt=""
+            className="block h-auto max-h-[70vh] w-full object-contain"
+            style={{ filter: block.isDimmed ? 'brightness(0.76) contrast(1.08)' : 'none' }}
+          />
           <span
             className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-lg opacity-0 transition-opacity duration-200 group-hover:opacity-100"
             style={{ background: 'rgba(0,0,0,0.6)', color: T.text, backdropFilter: 'blur(6px)' }}
@@ -686,11 +691,11 @@ export default function SharedPlan() {
             style={{ background: 'rgba(6,6,8,0.93)', backdropFilter: 'blur(10px)' }}
           >
             <motion.img
-              src={tvImage(zoom)} alt=""
+              src={tvImage(zoom.image)} alt=""
               initial={{ scale: 0.97, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.97, opacity: 0 }}
               transition={{ duration: 0.22, ease: EASE }}
               className="max-h-full max-w-full rounded-2xl object-contain"
-              style={{ border: `1px solid ${T.lineHi}` }}
+              style={{ border: `1px solid ${T.lineHi}`, filter: zoom.isDimmed ? 'brightness(0.82)' : 'none' }}
             />
             <button onClick={() => setZoom(null)} className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-xl" style={{ background: T.surface, border: `1px solid ${T.lineHi}`, color: T.text2 }}>
               <X size={17} strokeWidth={2.4} />
