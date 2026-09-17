@@ -375,14 +375,37 @@ export default function Reviews() {
                 )}
 
                 {/* Та сама кнопка, що «Add Account» на рахунках: висота
-                    під сусіднє поле пошуку, решта — спільний клас. */}
+                    під сусіднє поле пошуку, решта — спільний клас
+                    `.edge-add-btn` (він же на десятку інших кнопок
+                    застосунку, тому сам вигляд чіпати не можна).
+                    Ховер — своя сцена поверх того самого вигляду:
+                    напис ховається, і крізь кнопку зверху вниз
+                    проходить лінія-сканер, а слідом за нею на мить
+                    проступають цифри й теги з самого розбору — не
+                    вигадані, а реальні поля білдера (нетто в R,
+                    відсоток «за планом», емоції з `EMOTIONS`). Лише
+                    чотири теги по кутах, а не п'ять: на кнопці 42px
+                    заввишки третій, центральний рядок налазив на
+                    сусідні. Уся анімація — `.reviews-scan-cta*` в
+                    index.css. */}
                 <button
                   onClick={startCreate}
-                  className="edge-add-btn inline-flex h-[42px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold"
+                  className="edge-add-btn reviews-scan-cta relative inline-flex h-[42px] shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-xl px-5 text-[14px] font-bold"
                   style={{ color: '#fff', fontFamily: T.sans }}
                 >
-                  <Plus size={15} strokeWidth={3} className="shrink-0" />
-                  Новий розбір
+                  <span className="reviews-scan-cta-front">
+                    <Plus size={15} strokeWidth={3} className="shrink-0" />
+                    Новий розбір
+                  </span>
+
+                  <span className="reviews-scan-cta-line" aria-hidden="true" />
+
+                  <span className="reviews-scan-cta-tags" aria-hidden="true">
+                    <span className="reviews-scan-tag reviews-scan-tag-ok reviews-scan-tag-1">+2.4R</span>
+                    <span className="reviews-scan-tag reviews-scan-tag-bad reviews-scan-tag-2">FOMO</span>
+                    <span className="reviews-scan-tag reviews-scan-tag-ok reviews-scan-tag-3">Фокус</span>
+                    <span className="reviews-scan-tag reviews-scan-tag-acc reviews-scan-tag-4">68% плану</span>
+                  </span>
                 </button>
           </div>
         </motion.div>

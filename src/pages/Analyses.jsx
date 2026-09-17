@@ -418,10 +418,11 @@ export default function Analyses() {
                    зліва направо, як набір на клавіатурі.
                 2. Під словом від руки прокреслюється лінія — той
                    самий жест, яким підкреслюють у зошиті.
-                3. По кнопці проходить промінь світла — те саме, що
-                   блиск на металі.
 
-                Ручка при цьому нахиляється, як у момент письма. */}
+                Ручка при цьому нахиляється, як у момент письма.
+                (Промінь світла по кнопці був тут третім — прибрали:
+                фіолетовий блиск наприкінці проходу читався як зайва
+                пляма між іконкою і текстом, а не як «блиск металу».) */}
             <Magnetic
               onClick={createNewPlan}
               /* strength=0 — магніт вимкнено, лишається тільки стиск
@@ -447,10 +448,6 @@ export default function Analyses() {
                 e.currentTarget.style.borderColor = T.lineAcc;
               }}
             >
-              {/* Промінь світла, що проходить по кнопці разом із
-                  хвилею літер — те саме, що робить блиск на металі. */}
-              <span aria-hidden="true" className="analysis-cta-sheen" />
-
               <span className="analysis-cta-row relative flex items-center gap-2">
                 <PenLine size={16} strokeWidth={2.6} className="analysis-cta-icon shrink-0" style={{ color: T.acc }} />
 

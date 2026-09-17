@@ -233,15 +233,18 @@ function ReasonPanel({ value, onChange, invalid }) {
         </Cap>
 
         <div
-          className="mt-2.5 flex h-10 items-center gap-2.5 rounded-xl pl-3.5 pr-2"
+          className="mt-2.5 flex h-10 items-center gap-3 px-1"
           style={{
-            background: focus ? 'rgba(var(--edge-hair-rgb),0.07)' : 'rgba(var(--edge-hair-rgb),0.03)',
-            /* Те саме, що й у полі опису: світліша рамка замість
-               фіолетового ореолу. */
-            border: `1px solid ${invalid
+            /* Було заповнене поле з рамкою з усіх боків — на 40px
+               висоти з іконкою й кнопкою «додати» всередині це
+               залишало впритул 2-3px падінгу, і все ліпилось одне
+               до одного. Лишаємо тільки нижню лінію: менше власної
+               ваги в компонента, і місце під іконку/текст/кнопку
+               більше не тісне. */
+            borderBottom: `1px solid ${invalid
               ? 'rgba(var(--edge-bad-rgb),0.55)'
-              : focus ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
-            transition: 'all .2s',
+              : focus ? 'var(--edge-acc, #8b7bff)' : 'var(--edge-line)'}`,
+            transition: 'border-color .2s',
           }}
         >
           <Search size={15} strokeWidth={1.8} className="shrink-0" style={{ color: 'var(--edge-text2)' }} />
