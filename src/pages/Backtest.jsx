@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Search, X, Loader2, FlaskConical, Trash2, Layers,
+  Plus, Search, X, Loader2, FlaskConical, Trash2, Layers, SlidersVertical,
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
@@ -128,6 +128,68 @@ function Summary({ sessions }) {
         </motion.div>
       ))}
     </div>
+  );
+}
+
+/* ==================================================================
+   «Новий бектест» — потік даних у 3D-перспективі.
+
+   За основою користувача: два ряди плашок пливуть назустріч одна
+   одній під нахилом, у масці, що гасить їх по краях кнопки, а «+»
+   на ховері перетворюється на повзунки — саме те, чим і є створення
+   бектесту, налаштування параметрів. Панель лишилась тією самою, що
+   в «Add Account» (це вже не тимчасова копія — просто той самий
+   стиль кнопки пасує обом), змінився лише вміст усередині.
+
+   Плашки — не декоративний текст, а ті самі поняття, що й у формі
+   створення нижче (пара, ризик, R, депозит): кнопка натякає на
+   форму, яку зараз відкриє. Емодзі свідомо нема — у проєкті іконки
+   лише SVG. Прозорість плашок і тінь під написом підібрані так, щоб
+   «Новий бектест» лишався читабельним поверх руху, а не змагався з
+   ним за увагу. */
+function NewBacktestButton({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="bt-stream inline-flex h-[54px] shrink-0 items-center justify-center gap-2.5 rounded-2xl px-6 text-[14.5px] font-bold"
+      style={{
+        background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
+        border: '1px solid rgba(139,123,255,0.5)',
+        color: '#fff',
+        fontFamily: T.sans,
+        boxShadow: '0 10px 28px -12px rgba(139,123,255,0.4)',
+      }}
+    >
+      <span className="bt-stream-bg" aria-hidden="true">
+        <span className="bt-stream-row bt-stream-row-a">
+          <span className="bt-pill">EURUSD</span>
+          <span className="bt-pill bt-pill-ok">+2.4R</span>
+          <span className="bt-pill">Ризик 1%</span>
+          <span className="bt-pill bt-pill-ok">Win 62%</span>
+          <span className="bt-pill">EURUSD</span>
+          <span className="bt-pill bt-pill-ok">+2.4R</span>
+          <span className="bt-pill">Ризик 1%</span>
+          <span className="bt-pill bt-pill-ok">Win 62%</span>
+        </span>
+        <span className="bt-stream-row bt-stream-row-b">
+          <span className="bt-pill bt-pill-ok">NET +18.5R</span>
+          <span className="bt-pill">SFP · ORB</span>
+          <span className="bt-pill">$1 000 / R</span>
+          <span className="bt-pill">XAUUSD</span>
+          <span className="bt-pill bt-pill-ok">NET +18.5R</span>
+          <span className="bt-pill">SFP · ORB</span>
+          <span className="bt-pill">$1 000 / R</span>
+          <span className="bt-pill">XAUUSD</span>
+        </span>
+      </span>
+
+      <span className="bt-stream-icon relative inline-flex h-4 w-4 shrink-0 items-center justify-center">
+        <Plus size={16} strokeWidth={2.6} className="bt-stream-plus" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
+        <SlidersVertical size={15} strokeWidth={2.3} className="bt-stream-sliders" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
+      </span>
+      <span className="bt-stream-label whitespace-nowrap">Новий бектест</span>
+    </button>
   );
 }
 
@@ -378,30 +440,10 @@ export default function Backtest() {
             </p>
           </div>
 
-          {/* Ховер простий: градієнт трохи світлішає, і все. Кнопка
-              не рухається, не світиться й нічого не малює — на
-              сторінці вона єдина яскрава, їй не треба привертати
-              увагу ще й рухом. */}
-          <button
-            onClick={() => setCreating(true)}
-            className="flex shrink-0 items-center active:scale-[0.98]"
-            style={{
-              fontFamily: T.sans, gap: 10, height: 46, padding: '0 22px', borderRadius: 13,
-              background: `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`,
-              color: '#fff', fontSize: 14.5, fontWeight: 600,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 30px -12px rgba(${ACT.rgb},0.9)`,
-              transition: 'background .2s ease, transform .12s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = `linear-gradient(180deg, ${ACT.hoverFrom}, ${ACT.hoverTo})`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`;
-            }}
-          >
-            <Plus size={16} strokeWidth={2.6} />
-            Новий бектест
-          </button>
+          {/* NewBacktestButton вище — панель і вибух за формулою
+              «Add Account» з рахунків, перефарбовані під суть
+              бектесту (деталі — у коментарі над компонентом). */}
+          <NewBacktestButton onClick={() => setCreating(true)} />
         </motion.div>
 
         {loading ? (

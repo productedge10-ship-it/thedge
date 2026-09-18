@@ -7,7 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
   BellRing,
@@ -22,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 
-import { T, EASE, useEdgeFonts } from "../lib/theme";
+import { T, EASE, SPRING_SOFT, useEdgeFonts } from "../lib/theme";
 import {
   IMPACTS,
   WEEK_SPAN,
@@ -1318,6 +1318,14 @@ export default function News() {
 
   const dayRefs = useRef({});
   const stripRef = useRef(null);
+  /* Перший показ списку днів має зачекати своєї черги в каскаді
+     (хедер → стрічка → «Далі» → фільтри → дні), а кожне наступне
+     перемикання тижня чи фільтра — ні, інакше плавність в'їзду на
+     сторінку обертається на гальмо при щоденному користуванні.
+     Прапорець клацає в true лише коли список уже показав реальні
+     дні (не порожній первинний рендер до відповіді сервера), тож
+     затримка не губиться на кадрі, де ще нема що показувати. */
+  const listEnteredRef = useRef(false);
   const [folds, setFolds] = useState(readFolds);
 
   useEffect(() => {
@@ -1415,6 +1423,12 @@ export default function News() {
     });
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [shown]);
+
+  /* Клацає в true щойно список хоч раз показав реальні дні — див.
+     коментар над оголошенням `listEnteredRef`. */
+  useEffect(() => {
+    if (days.length > 0) listEnteredRef.current = true;
+  });
 
   const today = dayKey(new Date());
   /* Без явного вибору минуле згорнуте, майбутнє відкрите. */
@@ -1680,10 +1694,16 @@ export default function News() {
           вони просто розтягуються рівномірно. */}
       <div className="relative z-10 mx-auto w-[92%] max-w-[1880px] pb-20 pt-4 sm:w-[94%] sm:pb-24 sm:pt-5 lg:pt-7">
         {/* ─────────── Хедер ─────────── */}
+        {/* Перший захід на сторінку — не один fade, а маленький
+            каскад: хедер підіймається з легким scale, за ним із
+            наростаючою затримкою — стрічка, «Далі» й фільтри. Кожен
+            наступний блок стартує трохи пізніше за попередній, тому
+            погляд встигає прочитати один шар, перш ніж з'явиться
+            наступний, а не ловить усе одним кадром. */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE }}
+          initial={{ opacity: 0, y: 18, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.55, ease: EASE }}
           className="flex flex-wrap items-end justify-between gap-5 sm:gap-8"
         >
           <div className="min-w-0">
@@ -1928,7 +1948,11 @@ export default function News() {
             завантажився: інакше разом із нею зникають стрілки, і
             людина лишається замкненою на порожньому тижні без
             жодного способу повернутись назад. */}
-        <div className="mt-6 flex items-stretch gap-2.5">
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.5, ease: EASE, delay: 0.1 }}
+          className="mt-6 flex items-stretch gap-2.5">
           <NavBtn
             onClick={() => goWeek(week - 1)}
             disabled={week <= -WEEK_SPAN}
@@ -1971,11 +1995,16 @@ export default function News() {
             disabled={week >= WEEK_SPAN}
             side="right"
           />
-        </div>
+        </motion.div>
 
         {/* ─────────── Найближче ─────────── */}
+        <AnimatePresence>
         {upcoming && (
-          <div
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97, transition: { duration: 0.18, ease: EASE } }}
+            transition={{ duration: 0.45, ease: EASE, delay: 0.18 }}
             className="relative mt-3.5 overflow-hidden rounded-2xl px-3.5 py-3 sm:px-[18px] sm:py-3.5"
             style={{
               background: "linear-gradient(120deg, var(--edge-surface-hi), var(--edge-surface) 52%, var(--edge-surface))",
@@ -2125,58 +2154,78 @@ export default function News() {
                 />
               )}
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
 
         {/* ─────────── Стан фільтрів ─────────── */}
-        <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
-          {hasFilter && (
-            <button
-              onClick={() => {
-                setImp(MAJOR);
-                setCcy("all");
-                setSoloDay(null);
-              }}
-              className="flex h-[34px] items-center gap-[7px] rounded-[10px] px-3 text-[11.5px] font-semibold"
-              style={{
-                background: "var(--edge-hair)",
-                border: "1px dashed var(--edge-line-hi)",
-                color: "var(--edge-text2)",
-                fontFamily: T.sans,
-                transition: "all .16s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = A(0.5);
-                e.currentTarget.style.color = "var(--edge-acc)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "var(--edge-line-hi)";
-                e.currentTarget.style.color = "var(--edge-text2)";
-              }}
-            >
-              <X size={11} strokeWidth={2.4} />
-              Скинути фільтри
-            </button>
-          )}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE, delay: 0.26 }}
+          className="mt-3.5 flex flex-wrap items-center gap-2.5"
+        >
+          <AnimatePresence>
+            {hasFilter && (
+              <motion.button
+                key="reset-filters"
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
+                transition={SPRING_SOFT}
+                onClick={() => {
+                  setImp(MAJOR);
+                  setCcy("all");
+                  setSoloDay(null);
+                }}
+                className="flex h-[34px] items-center gap-[7px] rounded-[10px] px-3 text-[11.5px] font-semibold"
+                style={{
+                  background: "var(--edge-hair)",
+                  border: "1px dashed var(--edge-line-hi)",
+                  color: "var(--edge-text2)",
+                  fontFamily: T.sans,
+                  transition: "all .16s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = A(0.5);
+                  e.currentTarget.style.color = "var(--edge-acc)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--edge-line-hi)";
+                  e.currentTarget.style.color = "var(--edge-text2)";
+                }}
+              >
+                <X size={11} strokeWidth={2.4} />
+                Скинути фільтри
+              </motion.button>
+            )}
+          </AnimatePresence>
 
           {/* Повернення до поточного тижня одним рухом: інакше після
               пʼяти кліків уперед доводиться робити пʼять назад. */}
-          {week !== 0 && (
-            <button
-              onClick={() => goWeek(0)}
-              className="flex h-[34px] items-center gap-[7px] rounded-[10px] px-3 text-[11.5px] font-semibold"
-              style={{
-                background: A(0.14),
-                border: `1px solid ${A(0.45)}`,
-                color: "var(--edge-acc)",
-                fontFamily: T.sans,
-                transition: "all .16s",
-              }}
-            >
-              <ChevronLeft size={12} strokeWidth={2.4} />
-              Цей тиждень
-            </button>
-          )}
+          <AnimatePresence>
+            {week !== 0 && (
+              <motion.button
+                key="this-week"
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
+                transition={SPRING_SOFT}
+                onClick={() => goWeek(0)}
+                className="flex h-[34px] items-center gap-[7px] rounded-[10px] px-3 text-[11.5px] font-semibold"
+                style={{
+                  background: A(0.14),
+                  border: `1px solid ${A(0.45)}`,
+                  color: "var(--edge-acc)",
+                  fontFamily: T.sans,
+                  transition: "all .16s",
+                }}
+              >
+                <ChevronLeft size={12} strokeWidth={2.4} />
+                Цей тиждень
+              </motion.button>
+            )}
+          </AnimatePresence>
 
           {days.length > 1 && (
             <button
@@ -2222,7 +2271,7 @@ export default function News() {
           >
             {shown.length} з {rows.length} подій
           </span>
-        </div>
+        </motion.div>
 
         {/* ─────────── Помилка ─────────── */}
         {err && (
@@ -2293,8 +2342,29 @@ export default function News() {
         )}
 
         {/* ─────────── Дні ─────────── */}
-        <div className="mt-6 flex flex-col gap-[30px]">
-          {days.map(([day, list]) => {
+        {/* Перемикач тижня чи фільтра раніше просто підміняв список
+            миттєво — старі дні зникали, нові з'являлись одним кадром.
+            AnimatePresence на композитному ключі робить із цього
+            перехід: старий список згасає, новий проявляється з
+            легким scale і зсувом, а дні всередині ще й проступають
+            одне за одним замість того, щоб вивалюватись усі разом.
+            На першому заході список ще й чекає своєї черги в каскаді
+            (delay нижче) — на кожному наступному перемиканні тієї
+            затримки вже нема, щоб не гальмувати щоденну роботу. */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${week}-${imp}-${ccy}-${soloDay || ""}`}
+            initial={{ opacity: 0, y: 16, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.99 }}
+            transition={{
+              duration: 0.36,
+              ease: EASE,
+              delay: listEnteredRef.current ? 0 : 0.32,
+            }}
+            className="mt-6 flex flex-col gap-[30px]"
+          >
+          {days.map(([day, list], dayIndex) => {
             const now = isToday(day);
             const high = list.filter((e) => e.impact === "High").length;
             const d = new Date(`${day}T12:00:00`);
@@ -2308,8 +2378,11 @@ export default function News() {
             const shut = folded(day);
 
             return (
-              <div
+              <motion.div
                 key={day}
+                initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.4, ease: EASE, delay: Math.min(dayIndex * 0.05, 0.3) }}
                 ref={(el) => {
                   dayRefs.current[day] = el;
                 }}
@@ -2460,37 +2533,54 @@ export default function News() {
                 {/* Згорнутий день просто не рендериться: ховати його
                     через CSS означало б і далі тримати в дереві сотню
                     рядків, а вся суть згортання — щоб сторінка стала
-                    коротшою і легшою. */}
-                {!shut && (
-                <div className="relative mt-3">
-                  <span
-                    className="pointer-events-none absolute bottom-[14px] top-[14px] left-[55px] w-px sm:left-[88px]"
-                    style={{
-                      background:
-                        "linear-gradient(180deg,transparent,var(--edge-line) 6%,var(--edge-line) 94%,transparent)",
-                    }}
-                  />
-
-                  <div className="flex flex-col gap-1.5">
-                    {list.map((ev, i) => (
-                      <div key={ev.id}>
-                        {i === nowAt && <NowLine />}
-                        <EventRow
-                          ev={ev}
-                          watched={watchedIds.has(ev.id)}
-                          lead={leadOf(ev.id)}
-                          onWatch={setWatch}
-                          canWatch={canWatch}
+                    коротшою і легшою. AnimatePresence лишає цю економію
+                    (DOM усе одно розмонтовується) і додає лише сам
+                    перехід — росте/згасає, а не клацає миттєво. */}
+                <AnimatePresence initial={false}>
+                  {!shut && (
+                    <motion.div
+                      key="body"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{
+                        height: { duration: 0.42, ease: EASE },
+                        opacity: { duration: 0.3, ease: EASE },
+                      }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div className="relative mt-3">
+                        <span
+                          className="pointer-events-none absolute bottom-[14px] top-[14px] left-[55px] w-px sm:left-[88px]"
+                          style={{
+                            background:
+                              "linear-gradient(180deg,transparent,var(--edge-line) 6%,var(--edge-line) 94%,transparent)",
+                          }}
                         />
+
+                        <div className="flex flex-col gap-1.5">
+                          {list.map((ev, i) => (
+                            <div key={ev.id}>
+                              {i === nowAt && <NowLine />}
+                              <EventRow
+                                ev={ev}
+                                watched={watchedIds.has(ev.id)}
+                                lead={leadOf(ev.id)}
+                                onWatch={setWatch}
+                                canWatch={canWatch}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-                )}
-              </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             );
           })}
-        </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ListTodo, LayoutGrid, CalendarDays, Timer, ChevronDown, CheckCircle2, Keyboard,
+  ListTodo, LayoutGrid, CalendarDays, Timer, ChevronDown, CheckCircle2, Keyboard, Heart,
 } from 'lucide-react';
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
@@ -387,24 +387,57 @@ export default function Todo() {
               })}
             </div>
 
-            {/* помодоро */}
+            {/* помодоро — та сама база, що в «Новий бектест» і «Нова
+                папка»: темний градієнт, лавандова рамка, світіння
+                знизу. Ховер — «пульс»: годинник згортається в серце,
+                що б'ється, а фон промальовує ЕКГ (уся анімація —
+                `.pomodoro-cta*` в index.css, тут лише розмітка). */}
             <button
+              type="button"
               onClick={() => openPomodoro(null)}
-              className="group inline-flex h-[42px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
+              className="pomodoro-cta inline-flex h-[42px] shrink-0 items-center justify-center gap-2.5 rounded-2xl px-6 text-[14.5px] font-bold"
               style={{
-                background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans,
-                boxShadow: `0 6px 18px -8px rgba(${T.accRgb},0.6)`,
+                background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
+                border: '1px solid rgba(139,123,255,0.5)',
+                color: '#fff',
+                fontFamily: T.sans,
+                boxShadow: '0 10px 28px -12px rgba(139,123,255,0.4)',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.boxShadow = `0 10px 26px -8px rgba(${T.accRgb},0.75)`)}
-              onMouseLeave={(e) => (e.currentTarget.style.boxShadow = `0 6px 18px -8px rgba(${T.accRgb},0.6)`)}
             >
-              <Timer size={16} strokeWidth={2.6} className="shrink-0 transition-transform duration-300 group-hover:rotate-12" />
-              Помодоро
+              <span className="pomodoro-cta-ecg" aria-hidden="true">
+                <svg viewBox="0 0 176 54" preserveAspectRatio="none">
+                  <path className="pomodoro-cta-ecg-line" d="M 0 27 L 19 27 L 24 22 L 28 27 L 33 9 L 38 43 L 43 16 L 48 30 L 52 27 L 72 27 L 77 22 L 81 27 L 86 11 L 91 40 L 96 18 L 101 27 L 132 27 C 148 27, 160 27, 176 27" />
+                  <path className="pomodoro-cta-ecg-beam" d="M 0 27 L 19 27 L 24 22 L 28 27 L 33 9 L 38 43 L 43 16 L 48 30 L 52 27 L 72 27 L 77 22 L 81 27 L 86 11 L 91 40 L 96 18 L 101 27 L 132 27 C 148 27, 160 27, 176 27" />
+                </svg>
+              </span>
+
+              <span className="pomodoro-cta-icon" aria-hidden="true">
+                <Timer size={16} strokeWidth={2.6} className="pomodoro-cta-timer" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
+                <Heart size={16} className="pomodoro-cta-heart" fill="#ef4444" stroke="none" />
+              </span>
+
+              {/* Бейдж 25/5 не додає власного місця в рядку — лежить
+                  абсолютно поверх напису й лише зʼявляється замість
+                  нього, тому кнопка не ширшає на ховері. */}
+              <span className="pomodoro-cta-textstage">
+                <span className="pomodoro-cta-label whitespace-nowrap">Помодоро</span>
+                <span className="pomodoro-cta-badge" aria-hidden="true">
+                  <span className="pomodoro-cta-badge-inner">
+                    <b>25</b><i>/</i>5<small>хв</small>
+                  </span>
+                </span>
+              </span>
+
               {stats.pomo > 0 && (
-                <span className="rounded-md px-1.5 text-[12.5px] tabular-nums" style={{ background: 'rgba(10,10,12,0.14)' }}>
+                <span
+                  className="pomodoro-cta-count rounded-md px-1.5 text-[12.5px] tabular-nums"
+                  style={{ background: 'rgba(139,123,255,0.16)', border: '1px solid rgba(139,123,255,0.3)', color: '#c7d2fe' }}
+                >
                   {stats.pomo}
                 </span>
               )}
+
+              <span className="pomodoro-cta-glimmer" aria-hidden="true" />
             </button>
           </div>
         </motion.div>

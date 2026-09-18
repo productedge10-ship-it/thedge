@@ -37,6 +37,14 @@ import AssetSearchModal from '../components/modals/AssetSearchModal';
 
 const QUICK_SELECT_SYMBOLS = ['BTC/USD', 'EUR/USD', 'GER40', 'ETH/USD', 'GBP/USD', 'XAU/USD'];
 
+/* Ризик завжди від стартового капіталу рахунку, не від поточного.
+   Наторгований профіт не збільшує розмір наступної позиції — інакше
+   1% на рахунку з +$6,000 зверху рахувався б уже не від $100,000, а
+   від $106,000, і ризик непомітно ріс би разом із самим рахунком.
+   initial_balance фіксується один раз при створенні рахунку; старі
+   записи, заведені до цього поля, підстраховані відкатом на balance. */
+const initialBalanceOf = (acc) => String(Number(acc?.initial_balance ?? acc?.balance) || 0);
+
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.04 } },
@@ -215,21 +223,24 @@ export default function Calculator() {
   useEffect(() => {
     async function fetchAccounts() {
       try {
-        const { data: accData } = await supabase.from('prop_accounts').select('*').order('created_at', { ascending: false });
+        const { data: raw } = await supabase.from('prop_accounts').select('*').order('created_at', { ascending: false });
+        /* Архівні (Closed) рахунки сюди не потрапляють — калькулятор
+           рахує наступну угоду, а по закритому рахунку її не буде. */
+        const accData = (raw || []).filter((a) => a.status !== 'Closed');
         const savedAcc = localStorage.getItem('calc_selected_account');
         const savedBal = localStorage.getItem('calc_custom_balance');
 
-        if (accData && accData.length > 0) {
+        if (accData.length > 0) {
           setAccounts(accData);
           if (savedAcc === 'custom') {
             setSelectedAccount('custom');
             setBalance(savedBal || '');
           } else if (savedAcc && accData.some((a) => a.id === savedAcc)) {
             setSelectedAccount(savedAcc);
-            setBalance(accData.find((a) => a.id === savedAcc).balance.toString());
+            setBalance(initialBalanceOf(accData.find((a) => a.id === savedAcc)));
           } else {
             setSelectedAccount(accData[0].id);
-            setBalance(accData[0].balance.toString());
+            setBalance(initialBalanceOf(accData[0]));
           }
         } else {
           setSelectedAccount('custom');
@@ -353,7 +364,7 @@ export default function Calculator() {
     const type = acc === 'custom' ? 'custom' : acc.id;
     setSelectedAccount(type);
     localStorage.setItem('calc_selected_account', type);
-    setBalance(acc === 'custom' ? (localStorage.getItem('calc_custom_balance') || '') : acc.balance.toString());
+    setBalance(acc === 'custom' ? (localStorage.getItem('calc_custom_balance') || '') : initialBalanceOf(acc));
   };
 
   const handleAssetSelect = (asset) => {
@@ -594,9 +605,12 @@ export default function Calculator() {
                 ) : (
                   <>
                     {/* Плитки замість випадайки: рахунків у трейдера
-                        одиниці, а баланс кожного — саме те число, за
-                        яким його й вибирають. Ховати це в список
-                        означало змушувати відкривати його щоразу. */}
+                        одиниці, а число на плитці — саме те, що піде
+                        в розрахунок ризику. Це стартовий баланс
+                        рахунку, а не поточний: тіло риск-менеджменту
+                        не росте разом із наторгованим профітом, тож і
+                        тут не показуємо число, яке однаково не
+                        використається. */}
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {accounts.map((acc) => {
                         const on = selectedAccount === acc.id;
@@ -620,7 +634,7 @@ export default function Calculator() {
                               {acc.firm_name}
                             </span>
                             <span className="truncate text-[16px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: on ? T.text : T.text3 }}>
-                              ${Number(acc.balance).toLocaleString('uk-UA')}
+                              ${Number(acc.initial_balance ?? acc.balance).toLocaleString('uk-UA')}
                             </span>
                           </button>
                         );

@@ -226,6 +226,899 @@ h1, h2, h3, h4, h5, h6 {
   .journal-cta:focus-visible .journal-cta-label { opacity: 1; transform: none; }
 }
 
+/* ==================================================================
+   «Add Account» — гаманці віялом, монети вилітають з-під них.
+
+   Референс від користувача (готова розмітка): стос гаманців на
+   наведенні розходиться віялом, а з-під кожного випурхує своя
+   монета — BTC, золото, ETH. Загальний вигляд кнопки (фон/рамка/тінь
+   у .acc-burst нижче) навмисно не чіпаємо — лише міняємо, що
+   відбувається всередині на ховері.
+
+   Монети — не нові SVG, а той самий AssetIcon, що скрізь у застосунку
+   малює BTC/ETH/золото: символ має лишатись тим самим, яким його й
+   так впізнають на сторінці рахунків і в журналі. */
+@keyframes accGlimmer {
+  from { left: -60%; }
+  to   { left: 160%; }
+}
+
+.acc-burst { position: relative; overflow: hidden; transition: border-color .2s ease, box-shadow .2s ease; }
+/* !important тут виправданий: рамка й тінь заведені інлайном (бо
+   рахуються від акценту теми), а інлайн-style завжди переважає
+   клас — навіть на :hover. Без цього рамка на ховері просто не
+   світлішала б, хай би скільки перехідів тут написати. */
+.acc-burst:hover,
+.acc-burst:focus-visible {
+  border-color: rgba(139,123,255,0.9) !important;
+  box-shadow: 0 16px 38px -14px rgba(139,123,255,0.7), 0 0 0 3px rgba(139,123,255,0.12) !important;
+}
+
+/* Крапка відліку: рівно розміром з іконку, щоб і гаманці, і монети
+   розходились від неї, а не від центру всієї кнопки. */
+.acc-wallet-stage { position: relative; overflow: visible; }
+
+.acc-wallet {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  transition: transform .45s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
+}
+.acc-wallet-1 { z-index: 5; }
+.acc-wallet-2 { z-index: 3; opacity: 0; transform: scale(.85); }
+.acc-wallet-3 { z-index: 1; opacity: 0; transform: scale(.75); }
+
+.acc-burst:hover .acc-wallet-1,
+.acc-burst:focus-visible .acc-wallet-1 { transform: translate(-4px, 2px) rotate(-8deg); }
+.acc-burst:hover .acc-wallet-2,
+.acc-burst:focus-visible .acc-wallet-2 { opacity: 1; transform: translate(2px, -4px) rotate(6deg) scale(.85); }
+.acc-burst:hover .acc-wallet-3,
+.acc-burst:focus-visible .acc-wallet-3 { opacity: .92; transform: translate(8px, -9px) rotate(18deg) scale(.75); }
+
+.acc-fly-coin {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .4s cubic-bezier(.175,.885,.32,1.275), opacity .3s ease;
+}
+.acc-fly-btc  { z-index: 6; transform: translate(-4px, 2px) scale(.3); }
+.acc-fly-gold { z-index: 4; transform: translate(1px, -3px) scale(.3); }
+.acc-fly-eth  { z-index: 2; transform: translate(6px, -7px) scale(.3); }
+
+.acc-burst:hover .acc-fly-btc,
+.acc-burst:focus-visible .acc-fly-btc {
+  opacity: 1;
+  transform: translate(-9px, -9px) scale(.9) rotate(-12deg);
+  transition-delay: .08s;
+}
+.acc-burst:hover .acc-fly-gold,
+.acc-burst:focus-visible .acc-fly-gold {
+  opacity: 1;
+  transform: translate(1px, -14px) scale(.95);
+  transition-delay: .14s;
+}
+.acc-burst:hover .acc-fly-eth,
+.acc-burst:focus-visible .acc-fly-eth {
+  opacity: 1;
+  transform: translate(10px, -12px) scale(.85) rotate(15deg);
+  transition-delay: .2s;
+}
+
+/* М'який діагональний блік — пробігає раз, коли гаманці вже
+   розійшлись, а не одразу: інакше два рухи стартують упереміш і
+   жоден не встигає прочитатись. */
+.acc-burst-glimmer {
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+.acc-burst:hover .acc-burst-glimmer,
+.acc-burst:focus-visible .acc-burst-glimmer { animation: accGlimmer .75s ease-in-out .1s forwards; }
+
+.acc-burst-label { transition: color .3s ease; }
+.acc-burst:hover .acc-burst-label,
+.acc-burst:focus-visible .acc-burst-label {
+  background: linear-gradient(90deg, #fff, #c7d2fe);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.edge-no-motion .acc-wallet,
+.edge-no-motion .acc-fly-coin,
+.edge-no-motion .acc-burst-glimmer { transition: none !important; animation: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .acc-wallet,
+  .acc-fly-coin,
+  .acc-burst-glimmer { transition: none !important; animation: none !important; }
+}
+
+/* ==================================================================
+   «Новий бектест» — два ряди плашок пливуть назустріч одна одній під
+   нахилом (perspective), у масці, що гасить їх по краях кнопки, а
+   «+» на ховері обертається на повзунки. Анімація рядів іде постійно
+   (дешево для GPU — самий лиш transform), але шар прихований до
+   ховера непрозорістю: коли курсор приходить, потік уже «в русі», а
+   не рвучко стартує з нуля.
+
+   Плашки покладені за текстом за z-index, а не приховані: різна
+   глибина (rotateX нахилений ряд) і напівпрозорість — 0.5, не 0.65
+   з референсу, — уже дають достатній контраст, а текстова тінь
+   лишень підстраховує його на найяскравіших плашках. */
+@keyframes btStreamLeft {
+  from { transform: rotateX(14deg) translateX(0); }
+  to   { transform: rotateX(14deg) translateX(-50%); }
+}
+@keyframes btStreamRight {
+  from { transform: rotateX(-14deg) translateX(-50%); }
+  to   { transform: rotateX(-14deg) translateX(0); }
+}
+@keyframes btSliderIn {
+  from { opacity: 0; transform: scale(.6) rotate(-45deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+.bt-stream { position: relative; overflow: hidden; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+/* !important — рамка й тінь тримають лавандовий акцент інлайном
+   (той самий, що в «Add Account»), а інлайн переважає клас навіть на
+   :hover. */
+.bt-stream:hover,
+.bt-stream:focus-visible {
+  border-color: rgba(139,123,255,0.75) !important;
+  box-shadow: 0 16px 34px -14px rgba(139,123,255,0.6), 0 0 0 3px rgba(139,123,255,0.10) !important;
+  transform: translateY(-1px);
+}
+
+.bt-stream-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  opacity: 0;
+  pointer-events: none;
+  perspective: 320px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+  transition: opacity .4s ease;
+}
+.bt-stream:hover .bt-stream-bg,
+.bt-stream:focus-visible .bt-stream-bg { opacity: .5; }
+
+.bt-stream-row {
+  display: flex;
+  white-space: nowrap;
+  gap: 8px;
+  width: max-content;
+  transform-style: preserve-3d;
+}
+.bt-stream-row-a { animation: btStreamLeft 11s linear infinite; }
+.bt-stream-row-b { animation: btStreamRight 11s linear infinite; }
+
+.bt-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: var(--edge-mono, ui-monospace, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: .2px;
+  color: #c7d2fe;
+  background: rgba(139,123,255,0.16);
+  border: 1px solid rgba(139,123,255,0.3);
+}
+.bt-pill-ok {
+  color: #4ade80;
+  background: rgba(52,211,153,0.16);
+  border-color: rgba(74,222,128,0.35);
+}
+
+.bt-stream-icon { z-index: 1; }
+.bt-stream-plus,
+.bt-stream-sliders {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
+}
+.bt-stream-sliders { opacity: 0; transform: scale(.6) rotate(-45deg); }
+.bt-stream:hover .bt-stream-plus,
+.bt-stream:focus-visible .bt-stream-plus { opacity: 0; transform: scale(0) rotate(90deg); }
+.bt-stream:hover .bt-stream-sliders,
+.bt-stream:focus-visible .bt-stream-sliders { animation: btSliderIn .35s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+.bt-stream-label {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 10px rgba(10,10,12,0.9), 0 0 16px rgba(10,10,12,0.75);
+  transition: letter-spacing .3s ease;
+}
+.bt-stream:hover .bt-stream-label,
+.bt-stream:focus-visible .bt-stream-label { letter-spacing: .2px; }
+
+.edge-no-motion .bt-stream-row,
+.edge-no-motion .bt-stream-plus,
+.edge-no-motion .bt-stream-sliders { animation: none !important; }
+.edge-no-motion .bt-stream:hover .bt-stream-bg,
+.edge-no-motion .bt-stream:focus-visible .bt-stream-bg { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bt-stream-row,
+  .bt-stream-plus,
+  .bt-stream-sliders { animation: none !important; }
+  .bt-stream:hover .bt-stream-bg,
+  .bt-stream:focus-visible .bt-stream-bg { opacity: 0; }
+}
+
+/* ==================================================================
+   «Нова папка» на нотатках — маленька сцена в три такти: думка
+   (анімований Noto-емодзі) крутиться, поки курсор на кнопці, з неї
+   стартує іскра-ідея, що летить дугою через кнопку, і лише коли вона
+   майже долетіла — засвічується ліхтарик (теж живий Noto-емодзі), а
+   літачок розчиняється.
+
+   Керує таймлайном JS (`.is-hover`/`.is-lit` — див. NewFolderCta в
+   Dashboard.jsx), не `:hover`/transition-delay: кнопці однаково
+   потрібен JS-стан, щоб керувати двома lottie-програвачами
+   (думка — цикл, поки hover; ліхтарик — один прогін після затримки),
+   тож простіше запалювати ті самі класи тим самим таймером, ніж
+   тримати паралельно JS-таймер під lottie і CSS-затримки під іскру
+   й сподіватись, що вони не розійдуться врізнобіч.
+
+   Політ літака — `offset-path`, а не keyframe-набір `transform:
+   translate()`. Перша версія теж лежала на композиторі (тільки
+   transform/opacity), але з шістьма контрольними точками — а кожна
+   пара сусідніх keyframe формує ВЛАСНИЙ відрізок easing, тому
+   швидкість падала до нуля на кожній зупинці й розганялась знову:
+   рух читався як низка ривків, а не одна дуга. `offset-path` описує
+   всю траєкторію ОДНИМ безперервним шляхом, а `offset-distance`
+   від 0% до 100% — це один-єдиний відрізок анімації з одним easing,
+   тож швидкість ніде не обнуляється всередині польоту.
+   `offset-rotate` лишив фіксованим, не `auto`: `auto` (довертання по
+   дотичній) на вершині дуги розвертало силует майже боком — ставав
+   схожим на трикутник-попередження, а не на літак. Фіксований кут
+   програє в «реалізмі нахилу на віражі», але виграє в тому, що
+   лишається впізнаваним літаком на кожному кадрі. Сам глиф намальований
+   носом up-right під ~43° — 35deg довертає його майже до напрямку
+   польоту (носом до ліхтарика), а не вгору.
+
+   Додав слід: дві менші іскри той самий шлях, з невеликим
+   animation-delay — короткий комет-хвіст замість голого силуету.
+   І фінальний «спалах» — м'яке коло, що розширюється й гасне в
+   момент .is-lit, для відчутного «клац» у секунду запалення. */
+.folder-cta { position: relative; overflow: hidden; transition: border-color .4s ease, box-shadow .4s ease, transform .3s ease; }
+/* !important — рамка й тінь тримають лавандовий акцент інлайном
+   (border/boxShadow у style={{}}), а інлайн переважає клас без нього:
+   без !important колір рамки й тінь тут просто не змінювались. */
+.folder-cta.is-hover {
+  border-color: rgba(251,191,36,0.60) !important;
+  box-shadow: 0 14px 32px -14px rgba(251,191,36,0.35), inset 0 0 18px rgba(251,191,36,0.08) !important;
+  transform: translateY(-2px);
+}
+
+.folder-cta-arc { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.folder-cta-arc svg { width: 100%; height: 100%; overflow: visible; }
+.folder-cta-arc path {
+  fill: none;
+  stroke: #fbbf24;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 3 4;
+  stroke-dashoffset: 44;
+  opacity: 0;
+  transition: stroke-dashoffset .43s cubic-bezier(.16,1,.3,1), opacity .3s ease;
+}
+.folder-cta.is-hover .folder-cta-arc path { opacity: .5; stroke-dashoffset: 0; transition-delay: .1s; }
+
+.folder-cta-icon { position: relative; z-index: 4; display: inline-flex; width: 20px; height: 20px; flex: none; align-items: center; justify-content: center; }
+.folder-cta-plus { transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .2s ease; }
+.folder-cta.is-hover .folder-cta-plus { transform: scale(0) rotate(90deg); opacity: 0; }
+
+.folder-cta-emoji {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: scale(.4) rotate(-20deg);
+  transition: transform .4s cubic-bezier(.34,1.56,.64,1), opacity .25s ease;
+}
+.folder-cta.is-hover .folder-cta-emoji { opacity: 1; transform: scale(1) rotate(0deg); }
+
+/* Один суцільний шлях для літака й обох іскор сліду — координати в
+   пікселях кнопки (166×54, майже стала ширина, бо текст незмінний). */
+.folder-cta-plane,
+.folder-cta-spark {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: 13px;
+  height: 13px;
+  opacity: 0;
+  offset-path: path('M 34 23 Q 92 7, 148 20');
+  offset-distance: 0%;
+  offset-rotate: 35deg;
+  transform: translate(-50%, -50%) scale(.35);
+  will-change: offset-distance, transform, opacity;
+}
+.folder-cta.is-hover .folder-cta-plane {
+  animation: folderPlaneFly .58s linear .05s forwards;
+}
+@keyframes folderPlaneFly {
+  0%   { offset-distance: 0%;   opacity: 0; transform: translate(-50%,-50%) scale(.4); }
+  9%   {                        opacity: 1; }
+  50%  {                                    transform: translate(-50%,-50%) scale(1); }
+  88%  {                        opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; transform: translate(-50%,-50%) scale(.6); }
+}
+
+/* Слід: дві крапки на тому самому шляху, трохи позаду й дрібніші —
+   comet-tail, а не самотній силует літака. */
+.folder-cta-spark {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fde68a, rgba(253,230,138,0));
+  offset-rotate: 0deg;
+}
+.folder-cta.is-hover .folder-cta-spark-1 { animation: folderSparkFly .58s linear .06s forwards; }
+.folder-cta.is-hover .folder-cta-spark-2 { animation: folderSparkFly .58s linear .09s forwards; }
+@keyframes folderSparkFly {
+  0%   { offset-distance: 0%;  opacity: 0; transform: translate(-50%,-50%) scale(.3); }
+  10%  {                       opacity: .55; }
+  80%  {                       opacity: .4; }
+  100% { offset-distance: 92%; opacity: 0; transform: translate(-50%,-50%) scale(.15); }
+}
+
+/* Ліхтарик видно з самого початку ховера — тьмяним, вимкненим
+   (`grayscale` + приглушена яскравість), а не порожнім місцем, що
+   раптово матеріалізується. «Запалюється» лише з `.is-lit` (JS-таймер
+   на ~1.9s, див. Dashboard.jsx) — саме коли літачок щойно розчинився.
+   `grayscale`/`brightness`/`drop-shadow` перелічені в обох станах
+   в одному порядку: лише тоді браузер інтерполює кожен параметр
+   плавно, а не перемикає весь `filter` одним стрибком. */
+.folder-cta-bulb {
+  position: absolute;
+  z-index: 3;
+  right: 7px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  opacity: 0;
+  transform: translateY(-50%) scale(.6);
+  filter: grayscale(1) brightness(.55) drop-shadow(0 0 0 rgba(251,191,36,0));
+  transition: opacity .4s ease, transform .45s cubic-bezier(.34,1.56,.64,1), filter .5s ease;
+}
+.folder-cta.is-hover .folder-cta-bulb { opacity: .8; transform: translateY(-50%) scale(.88); }
+.folder-cta.is-lit .folder-cta-bulb {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  filter: grayscale(0) brightness(1) drop-shadow(0 0 6px rgba(251,191,36,.65));
+}
+
+/* Спалах у мить запалення: коло розходиться від лампочки й гасне —
+   короткий, окремий від самої лампочки (та не смикається власним
+   transition), тому «клац» відчутний навіть при швидкому наведенні. */
+.folder-cta-bulb-burst {
+  position: absolute;
+  z-index: 2;
+  right: 7px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transform: translateY(-50%) scale(.5);
+  background: radial-gradient(circle, rgba(251,191,36,.9), rgba(251,191,36,0) 72%);
+  opacity: 0;
+  pointer-events: none;
+}
+.folder-cta.is-lit .folder-cta-bulb-burst {
+  animation: folderBulbBurst .8s cubic-bezier(.16,1,.3,1) forwards;
+}
+@keyframes folderBulbBurst {
+  0%   { opacity: .9; transform: translateY(-50%) scale(.5); }
+  100% { opacity: 0;  transform: translateY(-50%) scale(2.4); }
+}
+
+.folder-cta-label { position: relative; z-index: 4; }
+
+.edge-no-motion .folder-cta.is-hover .folder-cta-plane,
+.edge-no-motion .folder-cta.is-hover .folder-cta-spark { animation: none !important; opacity: 0; }
+.edge-no-motion .folder-cta.is-lit .folder-cta-bulb-burst { animation: none !important; opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .folder-cta.is-hover .folder-cta-plane,
+  .folder-cta.is-hover .folder-cta-spark { animation: none !important; opacity: 0; }
+  .folder-cta.is-lit .folder-cta-bulb-burst { animation: none !important; opacity: 0; }
+}
+
+/* ==================================================================
+   «Помодоро» на тудушці — та сама база, що в «Новий бектест» і «Нова
+   папка», з власним ховером під суть розділу: секундомір згортається
+   в серце, що б'ється справжнім подвійним ритмом (тук-тук, а не
+   рівномірний пульс), а по фону зліва направо промальовується
+   ЕКГ-крива — гострі піки під фазу фокусу, спокійна хвиля під паузу.
+
+   Чистий CSS `:hover`, без JS-стану: тут, на відміну від «Нової
+   папки», нічого не грає власним програвачем (lottie), тож немає
+   причини городити JS-таймер — `:hover`/`:focus-visible` самі
+   тримають весь таймлайн через transition-delay.
+
+   Бейдж «25/5» — не окрема декорація збоку, а readout, що виїжджає
+   поруч із написом через `max-width` (кнопка сама трохи ширшає під
+   ховером, а не тисне вміст): голий текст «25m / 5m» як у референсі
+   нічого не пояснював на 10px шрифті — тепер це акуратна пігулка в
+   тому самому мовному стилі, що й `.bt-pill` у бектесті, з тим самим
+   червоним акцентом, що ЕКГ і серце, а не довільним кольором. */
+.pomodoro-cta { position: relative; overflow: hidden; transition: border-color .35s ease, box-shadow .35s ease, transform .3s ease; }
+.pomodoro-cta:hover,
+.pomodoro-cta:focus-visible {
+  border-color: rgba(239,68,68,0.55) !important;
+  box-shadow: 0 14px 32px -14px rgba(239,68,68,0.4), inset 0 0 18px rgba(239,68,68,0.08) !important;
+  transform: translateY(-2px);
+}
+
+.pomodoro-cta-ecg { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.pomodoro-cta-ecg svg { width: 100%; height: 100%; overflow: visible; }
+.pomodoro-cta-ecg-line,
+.pomodoro-cta-ecg-beam { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.pomodoro-cta-ecg-line {
+  stroke: #ef4444;
+  stroke-width: 1.6;
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+  opacity: 0;
+  transition: stroke-dashoffset .85s cubic-bezier(.16,1,.3,1), opacity .35s ease;
+}
+.pomodoro-cta:hover .pomodoro-cta-ecg-line,
+.pomodoro-cta:focus-visible .pomodoro-cta-ecg-line { opacity: .55; stroke-dashoffset: 0; }
+
+/* Промінь, що біжить по вже намальованій кривій — постійна швидкість
+   (`linear`), не `ease`: анімація нескінченна, і будь-яке
+   пришвидшення/сповільнення на кожному витку читається як заїкання,
+   а не як плавний потік. */
+.pomodoro-cta-ecg-beam {
+  stroke: #fca5a5;
+  stroke-width: 2.2;
+  stroke-dasharray: 34 266;
+  stroke-dashoffset: 300;
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+.pomodoro-cta:hover .pomodoro-cta-ecg-beam,
+.pomodoro-cta:focus-visible .pomodoro-cta-ecg-beam {
+  opacity: .9;
+  animation: pomodoroEcgFlow 2.1s linear infinite .3s;
+}
+@keyframes pomodoroEcgFlow {
+  0%   { stroke-dashoffset: 300; }
+  100% { stroke-dashoffset: -300; }
+}
+
+.pomodoro-cta-icon { position: relative; z-index: 4; display: inline-flex; width: 18px; height: 18px; flex: none; align-items: center; justify-content: center; }
+.pomodoro-cta-timer { transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .2s ease; }
+.pomodoro-cta:hover .pomodoro-cta-timer,
+.pomodoro-cta:focus-visible .pomodoro-cta-timer { transform: scale(0) rotate(90deg); opacity: 0; }
+
+.pomodoro-cta-heart {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: scale(.3);
+  filter: drop-shadow(0 1px 5px rgba(239,68,68,.5));
+  transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .25s ease;
+}
+.pomodoro-cta:hover .pomodoro-cta-heart,
+.pomodoro-cta:focus-visible .pomodoro-cta-heart {
+  opacity: 1;
+  transform: scale(1);
+  animation: pomodoroHeartbeat 1.3s cubic-bezier(.215,.61,.355,1) .25s infinite;
+}
+/* Подвійне скорочення (тук-тук), а не один рівний пульс — справжній
+   ритм серця несиметричний. */
+@keyframes pomodoroHeartbeat {
+  0%   { transform: scale(1); }
+  14%  { transform: scale(1.24); }
+  28%  { transform: scale(1.05); }
+  42%  { transform: scale(1.2); }
+  70%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+.pomodoro-cta-count { position: relative; z-index: 4; }
+
+/* Бейдж лежить абсолютно ПОВЕРХ напису в спільній «сцені», а не поруч
+   із ним у рядку: стейдж бере ширину від самого широкого напису
+   («Помодоро»), бейдж вужчий і просто спливає на тому самому місці.
+   Кнопка лишається рівно тієї ширини, що й була, — і в спокої, і на
+   ховері, ніде не ширшає. */
+.pomodoro-cta-textstage { position: relative; z-index: 4; display: inline-flex; align-items: center; }
+.pomodoro-cta-label {
+  position: relative;
+  transition: opacity .25s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
+}
+.pomodoro-cta:hover .pomodoro-cta-label,
+.pomodoro-cta:focus-visible .pomodoro-cta-label { opacity: 0; transform: scale(.85); }
+
+.pomodoro-cta-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0;
+  transform: translate(-50%,-50%) scale(.7);
+  transition: opacity .3s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
+}
+.pomodoro-cta:hover .pomodoro-cta-badge,
+.pomodoro-cta:focus-visible .pomodoro-cta-badge {
+  opacity: 1;
+  transform: translate(-50%,-50%) scale(1);
+  transition-delay: .15s;
+}
+.pomodoro-cta-badge-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(239,68,68,0.14);
+  border: 1px solid rgba(239,68,68,0.32);
+  font-family: var(--edge-mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  line-height: 1;
+  color: rgba(255,255,255,0.55);
+  white-space: nowrap;
+}
+.pomodoro-cta-badge-inner b { color: #fff; font-weight: 800; }
+.pomodoro-cta-badge-inner i { color: #ef4444; font-style: normal; font-weight: 800; margin: 0 1px; }
+
+.pomodoro-cta-glimmer {
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 55%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  z-index: 2;
+  transition: left .8s cubic-bezier(.16,1,.3,1);
+}
+.pomodoro-cta:hover .pomodoro-cta-glimmer,
+.pomodoro-cta:focus-visible .pomodoro-cta-glimmer { left: 170%; }
+
+.edge-no-motion .pomodoro-cta:hover .pomodoro-cta-heart,
+.edge-no-motion .pomodoro-cta:focus-visible .pomodoro-cta-heart { animation: none !important; }
+.edge-no-motion .pomodoro-cta:hover .pomodoro-cta-ecg-beam,
+.edge-no-motion .pomodoro-cta:focus-visible .pomodoro-cta-ecg-beam { animation: none !important; opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .pomodoro-cta:hover .pomodoro-cta-heart,
+  .pomodoro-cta:focus-visible .pomodoro-cta-heart { animation: none !important; }
+  .pomodoro-cta:hover .pomodoro-cta-ecg-beam,
+  .pomodoro-cta:focus-visible .pomodoro-cta-ecg-beam { animation: none !important; opacity: 0; }
+}
+
+/* ==================================================================
+   «Новий розбір» на /reviews — та сама `.edge-add-btn`, яку не можна
+   чіпати (вона ж на десятку інших кнопок застосунку), тож увесь
+   ефект — надбудова через окремий клас, а не правка спільного.
+
+   На ховері напис ховається (звільняє кнопку під сканування), а
+   згори вниз проходить лінія — і слідом за нею на мить проступають
+   цифри з самого розбору: нетто в R, кількість угод, «за планом»,
+   емоції з `EMOTIONS` (FOMO/Фокус). Це не вигадані слова з референсу,
+   а реальний словник білдера — `src/lib/reviewsData.js`.
+
+   Лінія рухається через `transform: translateY()`, а не `top` —
+   `top` перераховує layout на кожному кадрі (той самий урок, що й
+   із літачком «Помодоро»); `translateY` лежить на композиторі й не
+   спотикається на нескінченному повторі. */
+.reviews-scan-cta { isolation: isolate; }
+
+.reviews-scan-cta-front {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity .3s cubic-bezier(.16,1,.3,1), transform .3s ease;
+}
+.reviews-scan-cta:hover .reviews-scan-cta-front,
+.reviews-scan-cta:focus-visible .reviews-scan-cta-front {
+  opacity: 0;
+  transform: scale(.92);
+}
+
+.reviews-scan-cta-line {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 2px;
+  background: #fff;
+  box-shadow: 0 0 8px #fff, 0 3px 14px rgba(var(--edge-acc-rgb, 139,123,255), .85);
+  opacity: 0;
+  transform: translateY(0);
+  transition: opacity .25s ease;
+}
+.reviews-scan-cta:hover .reviews-scan-cta-line,
+.reviews-scan-cta:focus-visible .reviews-scan-cta-line {
+  opacity: 1;
+  animation: reviewsScanLine 2s cubic-bezier(.4,0,.2,1) infinite;
+}
+@keyframes reviewsScanLine {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(48px); }
+}
+
+.reviews-scan-cta-tags {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.reviews-scan-tag {
+  position: absolute;
+  font-family: var(--edge-mono, ui-monospace, monospace);
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .2px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-50%) scale(.85);
+}
+.reviews-scan-tag-ok   { color: var(--edge-ok, #34d399);   background: rgba(var(--edge-ok-rgb, 52,211,153), .16);  border: 1px solid rgba(var(--edge-ok-rgb, 52,211,153), .32); }
+.reviews-scan-tag-bad  { color: var(--edge-bad, #f87171);  background: rgba(var(--edge-bad-rgb, 248,113,113), .16); border: 1px solid rgba(var(--edge-bad-rgb, 248,113,113), .32); }
+.reviews-scan-tag-info { color: var(--edge-info, #60a5fa); background: rgba(var(--edge-info-rgb, 96,165,250), .16); border: 1px solid rgba(var(--edge-info-rgb, 96,165,250), .32); }
+.reviews-scan-tag-acc  { color: #c7bfff; background: rgba(var(--edge-acc-rgb, 139,123,255), .18); border: 1px solid rgba(var(--edge-acc-rgb, 139,123,255), .38); }
+
+/* Розкидані по всій ширині (`left` у %, а не два стовпчики по краях
+   — саме на це була скарга), а не рівно по кутах: кут-у-кут читалось
+   як два підписи по боках, а не «сканування». `left` у відсотках +
+   `translateX(-50%)` — центр тега лишається на своєму місці, скільки
+   б символів у ньому не було.
+
+   Обидва ряди — на ОДНАКОВОМУ відступі (top:4 / bottom:4): перша
+   спроба з «розбіжним y для органічності», а тоді з top:7/bottom:7,
+   з'їдала весь зазор між рядами на 42px-заввишки кнопці — виміряв
+   реальну висоту тега в браузері (~14.5px, не 13, як здавалось на
+   око), і два ряди перекривались на 1-3px. Натомість розбіжність —
+   тільки по X, з запасом, порахованим під реальну ширину кожного
+   тега (найширший — «68% плану», ~51px), щоб жодні два теги — ні в
+   одному рядку, ні по діагоналі — не перекривались. */
+.reviews-scan-tag-1 { top: 4px;    left: 18%; }
+.reviews-scan-tag-2 { bottom: 4px; left: 40%; }
+.reviews-scan-tag-3 { bottom: 4px; left: 82%; }
+.reviews-scan-tag-4 { top: 4px;    left: 68%; }
+
+.reviews-scan-cta:hover .reviews-scan-tag-1,
+.reviews-scan-cta:focus-visible .reviews-scan-tag-1 { animation: reviewsScanTag 2s ease-in-out infinite .25s; }
+.reviews-scan-cta:hover .reviews-scan-tag-2,
+.reviews-scan-cta:focus-visible .reviews-scan-tag-2 { animation: reviewsScanTag 2s ease-in-out infinite .55s; }
+.reviews-scan-cta:hover .reviews-scan-tag-3,
+.reviews-scan-cta:focus-visible .reviews-scan-tag-3 { animation: reviewsScanTag 2s ease-in-out infinite .8s; }
+.reviews-scan-cta:hover .reviews-scan-tag-4,
+.reviews-scan-cta:focus-visible .reviews-scan-tag-4 { animation: reviewsScanTag 2s ease-in-out infinite 1.1s; }
+
+@keyframes reviewsScanTag {
+  0%   { opacity: 0; transform: translateX(-50%) scale(.85); }
+  15%  { opacity: .95; transform: translateX(-50%) scale(1); }
+  45%  { opacity: .95; transform: translateX(-50%) scale(1); }
+  65%  { opacity: 0; transform: translateX(-50%) scale(.9); }
+  100% { opacity: 0; transform: translateX(-50%) scale(.85); }
+}
+
+.edge-no-motion .reviews-scan-cta:hover .reviews-scan-cta-line,
+.edge-no-motion .reviews-scan-cta:focus-visible .reviews-scan-cta-line { animation: none !important; opacity: 0; }
+.edge-no-motion .reviews-scan-cta:hover .reviews-scan-tag,
+.edge-no-motion .reviews-scan-cta:focus-visible .reviews-scan-tag { animation: none !important; opacity: 0; }
+.edge-no-motion .reviews-scan-cta:hover .reviews-scan-cta-front,
+.edge-no-motion .reviews-scan-cta:focus-visible .reviews-scan-cta-front { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reviews-scan-cta:hover .reviews-scan-cta-line,
+  .reviews-scan-cta:focus-visible .reviews-scan-cta-line { animation: none !important; opacity: 0; }
+  .reviews-scan-cta:hover .reviews-scan-tag,
+  .reviews-scan-cta:focus-visible .reviews-scan-tag { animation: none !important; opacity: 0; }
+  .reviews-scan-cta:hover .reviews-scan-cta-front,
+  .reviews-scan-cta:focus-visible .reviews-scan-cta-front { opacity: 1; transform: none; }
+}
+
+/* ==================================================================
+   «Thermal Analytics Receipt» — кнопка «Поділитись статистикою» на
+   /analytics.
+
+   Наведення показує метафору чекового принтера: замість спалаху чи
+   підказки повільно й безперервно «друкується» стрічка з тими самими
+   вісьмома цифрами, що йдуть у картку експорту, а наприкінці циклу —
+   штамп реального Net R і перехід до SHARE. Уся хореографія — суто
+   CSS keyframes на одній тривалості (6s): стрічка й штамп завжди
+   синхронні між собою без жодного JS-таймера. */
+.receipt-cta { isolation: isolate; }
+
+.receipt-cta-front {
+  transition: opacity .38s cubic-bezier(.16,1,.3,1), filter .38s cubic-bezier(.16,1,.3,1), transform .38s cubic-bezier(.16,1,.3,1);
+}
+.receipt-cta:hover .receipt-cta-front,
+.receipt-cta:focus-visible .receipt-cta-front {
+  opacity: 0;
+  filter: blur(5px);
+  transform: scale(.92) translateY(-2px);
+}
+
+.receipt-cta-head {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.95), transparent);
+  box-shadow: 0 0 6px 1px rgba(255,255,255,.6);
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.receipt-cta:hover .receipt-cta-head,
+.receipt-cta:focus-visible .receipt-cta-head { opacity: .85; }
+
+/* Вузьке «вічко»: суцільна зона лише 46–54% висоти кнопки — рівно
+   під один рядок. Ширша зона (як спершу) читалась одразу як три рядки
+   вкупі, бо крок рядка (~15px) менший за саму зону затухання — і чек
+   виглядав не як стрічка, що котиться, а як статичний список. */
+.receipt-cta-stream {
+  opacity: 0;
+  transition: opacity .4s ease .05s;
+  mask-image: linear-gradient(180deg, transparent 0%, transparent 28%, #000 46%, #000 54%, transparent 72%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 28%, #000 46%, #000 54%, transparent 72%, transparent 100%);
+}
+.receipt-cta:hover .receipt-cta-stream,
+.receipt-cta:focus-visible .receipt-cta-stream { opacity: 1; }
+
+/* top: 100% — стрічка стартує ПІД кнопкою, а не над нею: рядок, що
+   лежить найближче до вічка в стані спокою, завжди виринає першим,
+   тому Net R (перший у списку) має бути ближче до вічка, а не
+   найдальше — інакше чек «друкувався» б задом наперед, від
+   найкращого дня до чистого R. */
+.receipt-cta-paper {
+  top: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.receipt-cta:hover .receipt-cta-paper,
+.receipt-cta:focus-visible .receipt-cta-paper {
+  animation: receiptCtaFeed 6s linear infinite;
+}
+@keyframes receiptCtaFeed {
+  0%   { transform: translateY(0); }
+  68%  { transform: translateY(-188px); }
+  100% { transform: translateY(-188px); }
+}
+
+.receipt-cta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--edge-mono, ui-monospace, monospace);
+  font-size: 8.5px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.receipt-cta-label { color: rgba(255,255,255,.55); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.receipt-cta-val { color: #fff; font-weight: 800; }
+.receipt-cta-val.is-hi {
+  background: rgba(255,255,255,.26);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.receipt-cta-divider {
+  height: 1px;
+  margin: 2px 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+}
+
+/* Штамп зʼявляється на тій самій тривалості (6s), що й стрічка, тому
+   завжди виринає рівно тоді, коли остання цифра вже проїхала повз
+   вічко — жодного окремого таймера, який міг би розсинхронізуватись. */
+.receipt-cta-seal {
+  opacity: 0;
+  transform: scale(.92);
+}
+.receipt-cta:hover .receipt-cta-seal,
+.receipt-cta:focus-visible .receipt-cta-seal {
+  animation: receiptCtaSeal 6s cubic-bezier(.16,1,.3,1) infinite;
+}
+@keyframes receiptCtaSeal {
+  0%, 68%  { opacity: 0; transform: scale(.9); }
+  78%, 96% { opacity: 1; transform: scale(1); }
+  100%     { opacity: 0; transform: scale(.94); }
+}
+
+.receipt-cta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  font-family: var(--edge-mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--tone);
+  background: rgba(var(--tone-rgb), .16);
+  border: 1px solid rgba(var(--tone-rgb), .45);
+  box-shadow: 0 0 14px rgba(var(--tone-rgb), .3);
+}
+.receipt-cta-badge b {
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  color: rgba(255,255,255,.8);
+  margin-left: 1px;
+}
+
+.receipt-cta-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #fff;
+  color: #0A0A0C;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  box-shadow: 0 0 14px rgba(255,255,255,.45);
+}
+
+.receipt-cta-glimmer {
+  left: -120%;
+  width: 55%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent);
+  transform: skewX(-20deg);
+  transition: left 1s cubic-bezier(.16,1,.3,1);
+}
+.receipt-cta:hover .receipt-cta-glimmer,
+.receipt-cta:focus-visible .receipt-cta-glimmer { left: 170%; }
+
+.edge-no-motion .receipt-cta:hover .receipt-cta-paper,
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-paper { animation: none !important; }
+.edge-no-motion .receipt-cta:hover .receipt-cta-seal,
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-seal { animation: none !important; opacity: 0; }
+.edge-no-motion .receipt-cta:hover .receipt-cta-glimmer,
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-glimmer { left: -120%; }
+.edge-no-motion .receipt-cta:hover .receipt-cta-front,
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-front { opacity: 1; filter: none; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .receipt-cta:hover .receipt-cta-paper,
+  .receipt-cta:focus-visible .receipt-cta-paper { animation: none !important; }
+  .receipt-cta:hover .receipt-cta-seal,
+  .receipt-cta:focus-visible .receipt-cta-seal { animation: none !important; opacity: 0; }
+  .receipt-cta:hover .receipt-cta-glimmer,
+  .receipt-cta:focus-visible .receipt-cta-glimmer { left: -120%; }
+  .receipt-cta:hover .receipt-cta-front,
+  .receipt-cta:focus-visible .receipt-cta-front { opacity: 1; filter: none; transform: none; }
+}
+
 /* Ховер селекторів фільтрів у журналі.
 
    Був зсув на два пікселі вгору — кнопка їхала, і разом із нею
@@ -241,7 +1134,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Полю вводу власного кільця не даємо зовсім: його обгортка вже
    показує фокус кольором рамки, а каретка — самим фактом, що курсор
-   усередині. */
+   усередині. (Раніше тут стояло окреме кільце з border-radius:10px
+   для звичайних полів і `.edge-field-input:focus-visible{box-shadow:
+   none}` для самообведених на кшталт FloatField — але generic-правило
+   вище вже виключає input/select/textarea зі свого селектора, тож
+   другий шар був зайвим і для одних, і для інших.) */
 
 @media (prefers-reduced-motion: reduce) {
   :where(a, button, [role='button']):focus-visible { transition: none; }
@@ -1026,11 +1923,6 @@ h1, h2, h3, h4, h5, h6 {
   75%      { transform: rotate(8deg) translateY(-1px); }
 }
 
-@keyframes analysisCtaSheen {
-  from { transform: translateX(-120%) skewX(-18deg); }
-  to   { transform: translateX(260%) skewX(-18deg); }
-}
-
 .analysis-cta {
   transition: box-shadow .24s ease, border-color .24s ease;
 }
@@ -1049,21 +1941,6 @@ h1, h2, h3, h4, h5, h6 {
 .analysis-cta-stroke {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-}
-
-/* Промінь світла по кнопці — те саме, що блиск на металі. */
-.analysis-cta-sheen {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 42%;
-  pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(var(--edge-acc-rgb, 139, 123, 255), .16),
-    transparent
-  );
 }
 
 .analysis-cta-row { position: relative; z-index: 1; }
@@ -1087,16 +1964,9 @@ h1, h2, h3, h4, h5, h6 {
   animation: analysisCtaNib .55s ease-in-out;
 }
 
-.analysis-cta:hover .analysis-cta-sheen,
-.analysis-cta:focus-visible .analysis-cta-sheen {
-  opacity: 1;
-  animation: analysisCtaSheen .7s cubic-bezier(.4, 0, .2, 1);
-}
-
 /* Без руху лишається саме слово — і жодного шоу навколо нього. */
 .edge-no-motion .roll-stack { transition: none !important; transform: none !important; }
-.edge-no-motion .analysis-cta-ink,
-.edge-no-motion .analysis-cta-sheen { opacity: 0 !important; animation: none !important; }
+.edge-no-motion .analysis-cta-ink { opacity: 0 !important; animation: none !important; }
 .edge-no-motion .analysis-cta-icon { animation: none !important; }
 
 /* Світло за курсором на «Аналізах» — прикраса, а не інформація, тож у

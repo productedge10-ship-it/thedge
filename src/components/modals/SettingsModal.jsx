@@ -2504,70 +2504,88 @@ function TelegramTab() {
               style={{ overflow: 'hidden' }}
             >
               <div
-                className="flex flex-wrap items-center"
                 style={{
-                  gap: 12,
                   marginTop: 10,
-                  padding: '14px 18px',
+                  padding: '15px 18px',
                   borderRadius: 14,
                   background: T.sunken,
                   border: `1px solid ${T.line}`,
                 }}
               >
-                <span className="flex items-center" style={{ gap: 9, fontFamily: T.sans, fontSize: 13.5, color: T.text2 }}>
-                  <Clock size={14} strokeWidth={2.2} style={{ color: T.text3 }} />
-                  О котрій нагадати
-                </span>
+                <div className="flex flex-wrap items-center justify-between" style={{ gap: 14 }}>
+                  <span className="flex items-center" style={{ gap: 10, fontFamily: T.sans, fontSize: 13.5, fontWeight: 600, color: T.text2 }}>
+                    <span
+                      className="grid shrink-0 place-items-center"
+                      style={{ width: 26, height: 26, borderRadius: 8, background: 'rgba(var(--edge-hair-rgb),0.06)', border: `1px solid ${T.line}` }}
+                    >
+                      <Clock size={13} strokeWidth={2.2} style={{ color: T.text3 }} />
+                    </span>
+                    О котрій нагадати
+                  </span>
 
-                <div
-                  className="flex items-center"
-                  style={{ gap: 4, marginLeft: 'auto', padding: 4, borderRadius: 12, background: 'rgba(var(--edge-hair-rgb),0.05)' }}
-                >
-                  {[8, 9, 10].map((h) => {
-                    const on = (state.morningHour ?? 9) === h;
-                    return (
-                      <button
-                        key={h}
-                        type="button"
-                        disabled={!state.linked}
-                        onClick={() => pickHour(h)}
-                        className="relative"
-                        style={{
-                          fontFamily: T.sans,
-                          padding: '7px 14px',
-                          borderRadius: 9,
-                          fontSize: 13.5,
-                          fontWeight: 700,
-                          color: on ? T.acc : T.text3,
-                          cursor: state.linked ? 'pointer' : 'default',
-                          transition: 'color .18s',
-                        }}
-                      >
-                        {on && (
-                          <motion.span
-                            layoutId="tg-hour-pill"
-                            transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                            style={{
-                              position: 'absolute',
-                              inset: 0,
-                              borderRadius: 9,
-                              background: `rgba(${T.accRgb},0.13)`,
-                              border: `1px solid ${T.accLine}`,
-                            }}
-                          />
-                        )}
-                        <span style={{ position: 'relative' }}>{h}:00</span>
-                      </button>
-                    );
-                  })}
+                  <div
+                    className="flex shrink-0 items-center"
+                    style={{
+                      gap: 2,
+                      padding: 4,
+                      borderRadius: 13,
+                      background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.surface})`,
+                      border: `1px solid ${T.line}`,
+                      boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.04), inset 0 -1px 2px rgba(0,0,0,0.35)',
+                    }}
+                  >
+                    {[8, 9, 10].map((h) => {
+                      const on = (state.morningHour ?? 9) === h;
+                      return (
+                        <button
+                          key={h}
+                          type="button"
+                          disabled={!state.linked}
+                          onClick={() => pickHour(h)}
+                          className="relative tabular-nums transition-transform duration-150 active:scale-[0.94]"
+                          style={{
+                            fontFamily: T.mono,
+                            padding: '8px 15px',
+                            borderRadius: 10,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            letterSpacing: '0.01em',
+                            color: on ? '#fff' : T.text3,
+                            cursor: state.linked ? 'pointer' : 'default',
+                            transition: 'color .2s',
+                          }}
+                          onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
+                          onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text3; }}
+                        >
+                          {on && (
+                            <motion.span
+                              layoutId="tg-hour-pill"
+                              transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                borderRadius: 10,
+                                background: `linear-gradient(180deg, rgba(${T.accRgb},1), rgba(${T.accRgb},0.86))`,
+                                boxShadow: `0 5px 16px -4px rgba(${T.accRgb},0.75), 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 1px rgba(0,0,0,0.15)`,
+                              }}
+                            />
+                          )}
+                          <span style={{ position: 'relative' }}>{h}:00</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <span
-                  className="w-full"
-                  style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text3, lineHeight: 1.5 }}
-                >
-                  За київським часом. У вихідні не турбуємо.
-                </span>
+                {/* Тонкий розділювач, а не перенос рядка «в нікуди»:
+                    підказка відповідає на «а що як я забуду ввімкнути
+                    Telegram», тому візуально належить до цього блоку,
+                    але не заважає головному питанню — «о котрій». */}
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
+                  <span style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text3, lineHeight: 1.5 }}>
+                    За київським часом. У вихідні не турбуємо.
+                  </span>
+                </div>
               </div>
             </motion.div>
           )}

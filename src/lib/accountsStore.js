@@ -107,6 +107,118 @@ export async function ensureStart(userId, account, events) {
   return [data, ...events];
 }
 
+/* ---------- етапи проп-челенджу ----------
+   Фаза 1 → Фаза 2 → Funded. Кожен етап — свій рядок у account_phases
+   зі своєю ціллю й, за потреби, власними лімітами; рівно один зі
+   status='active' на рахунок (це тримає унікальний індекс у базі,
+   не сам код). daily_loss_pct/max_drawdown_pct тут можуть бути null —
+   це означає «як на рахунку», а не «нуль». */
+
+export const PHASE_STATUS = {
+  active: { label: 'Активна' },
+  passed: { label: 'Пройдена' },
+  failed: { label: 'Провалена' },
+};
+
+export async function fetchPhases(accountId) {
+  const { data, error } = await supabase
+    .from('account_phases')
+    .select('*')
+    .eq('account_id', accountId)
+    .order('started_at', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/* Рахунки, створені до появи етапів, не мають жодного рядка в
+   account_phases — заводимо «Фазу 1» заднім числом, з тим самим
+   принципом, що й ensureStart: без цього Survival не має від чого
+   рахувати прогрес. */
+export async function ensurePhase(userId, account, phases) {
+  if (phases.some((p) => p.status === 'active')) return phases;
+
+  const row = {
+    user_id: userId,
+    account_id: account.id,
+    label: 'Фаза 1',
+    starting_balance: Number(account.initial_balance ?? account.balance) || 0,
+    status: 'active',
+    started_at: account.created_at || new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase.from('account_phases').insert(row).select().single();
+  if (error) return phases;          // не критично: сторінка просто без редактора етапу
+  return [...phases, data];
+}
+
+/* Редагування цілі/лімітів поточного етапу — саме те, заради чого
+   Survival існує: цифри чужого пропа нікуди не годяться, людина
+   підставляє свої. */
+export async function updatePhase(userId, phaseId, fields) {
+  const { data, error } = await supabase
+    .from('account_phases')
+    .update(fields)
+    .eq('id', phaseId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/* Перехід у наступний етап — новий старт, а не зміна цифр на тому
+   самому рядку: інакше Survival і графік балансу далі рахували б
+   від попередньої фази, і ціль виглядала б уже пройденою. Дві дії
+   за раз (закрити старий етап, відкрити новий), і саме в цьому
+   порядку: унікальний індекс account_phases_one_active_idx дозволяє
+   лише один активний рядок на рахунок, тож вставити новий активний,
+   поки старий ще активний, база просто не дасть. Якщо впаде другий
+   запит, лишається рахунок без жодної активної фази — не страшно,
+   ensurePhase заводить нову при наступному відкритті картки. */
+export async function advancePhase(userId, account, currentPhase, { label, target_pct, daily_loss_pct, max_drawdown_pct }) {
+  if (currentPhase) {
+    const { error: closeError } = await supabase
+      .from('account_phases')
+      .update({ status: 'passed', ended_at: new Date().toISOString() })
+      .eq('id', currentPhase.id)
+      .eq('user_id', userId);
+    if (closeError) throw closeError;
+  }
+
+  const { data: opened, error: openError } = await supabase
+    .from('account_phases')
+    .insert({
+      user_id: userId,
+      account_id: account.id,
+      label: label || 'Фаза 2',
+      target_pct: target_pct === '' || target_pct == null ? null : Number(target_pct),
+      daily_loss_pct: daily_loss_pct === '' || daily_loss_pct == null ? null : Number(daily_loss_pct),
+      max_drawdown_pct: max_drawdown_pct === '' || max_drawdown_pct == null ? null : Number(max_drawdown_pct),
+      starting_balance: Number(account.balance) || 0,
+      status: 'active',
+    })
+    .select()
+    .single();
+
+  if (openError) throw openError;
+
+  return opened;
+}
+
+/* Провал етапу — рахунок закрився (проп-порушення), а не пройшов
+   далі. Окремо від advancePhase: тут не заводимо нового рядка, лише
+   позначаємо, чим скінчився цей. */
+export async function failPhase(userId, phaseId) {
+  const { error } = await supabase
+    .from('account_phases')
+    .update({ status: 'failed', ended_at: new Date().toISOString() })
+    .eq('id', phaseId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
 /* ---------- виплата ----------
    Дві дії за раз: подія в історію і новий баланс на акаунті.
    Порядок важливий — спершу подія. Якщо впаде другий запит, у нас
