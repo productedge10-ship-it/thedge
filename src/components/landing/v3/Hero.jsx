@@ -342,7 +342,34 @@ export default function Hero() {
                   <div style={{ fontFamily: F.sans, fontSize: 10.5, fontWeight: 700, letterSpacing: '1.3px', color: C.text4, marginBottom: 8 }}>
                     {label}
                   </div>
-                  <div style={num(value, color)}>{value}</div>
+                  {/* Цифра лежить у два шари: нижній — сама
+                      величина, верхній — її ж світна копія, яка
+                      гасне прозорістю. Копія абсолютна, тож у
+                      розмітці не займає місця й не зсуває сусідів,
+                      а накреслення успадковує від батька — інакше
+                      вона б не лягла символ у символ. */}
+                  <div style={{ ...num(value, color), position: 'relative', animation: 'none' }}>
+                    {value}
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        color: C.acc,
+                        textShadow: '0 0 26px rgba(139,123,255,.6)',
+                        /* Спокійний стан — невидимий. Кадри йдуть від
+                           одиниці до нуля й нічого по собі не лишають,
+                           тож після спалаху шар сам повертається сюди.
+                           Це ж рятує режим без анімацій: там animation
+                           вимкнено зовсім, і копія просто не видно. */
+                        opacity: 0,
+                        animation: pulseAnim,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {value}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

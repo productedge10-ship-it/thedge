@@ -103,12 +103,47 @@
       }
     </script>
 
+    <!-- ================================================================
+         Шрифти.
+
+         Один запит на всі гарнітури сторінки — і він навмисне не
+         блокує малювання.
+
+         Було так: тег стилів ставав у чергу перед першим кадром, і
+         поки Google Fonts відповідав, сторінка лишалась порожньою.
+         Заголовок першого екрана — це якраз той елемент, за яким
+         міряється LCP, тож він чекав мережу двічі: спершу на таблицю
+         стилів, потім на самі файли шрифтів.
+
+         `rel=preload` з підміною на `stylesheet` у onload знімає
+         тільки першу з цих двох пауз. Друга й так була: у посиланні
+         стоїть `display=swap`, тобто текст від самого початку
+         малювався запасною гарнітурою і підмінявся вже потім. Нового
+         мерехтіння звідси не з'являється — зникає порожній екран
+         перед ним.
+
+         `noscript` лишає звичайний тег для читачів без JS: у них
+         сторінка все одно статична, і чекати їй нема куди.
+
+         Діапазони ваг звужені з 300..900 до 400..800: тоншого за 400
+         в макеті немає взагалі, а 900 трапляється лише там, де текст
+         набраний Space Grotesk, і той приходить окремим запитом.
+         Змінний шрифт важить тим менше, чим вужча вісь.
+    ================================================================= -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300..900&family=Golos+Text:wght@400..900&family=Roboto:wght@300..700&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400..800&family=Golos+Text:wght@400..800&family=Roboto:wght@400..700&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400..800&family=Golos+Text:wght@400..800&family=Roboto:wght@400..700&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

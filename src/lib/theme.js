@@ -80,26 +80,55 @@ export const EASE = [0.22, 1, 0.36, 1];
 export const SPRING = { type: 'spring', stiffness: 420, damping: 34, mass: 0.7 };
 export const SPRING_SOFT = { type: 'spring', stiffness: 260, damping: 30 };
 
-/* Підвантаження Roboto — того самого, що вже використовує застосунок */
+/* ------------------------------------------------------------------
+   Догрузка логотипного шрифта.
+
+   Тут лишився рівно Space Grotesk, і тільки він. Раніше цей же рядок
+   тягнув ще Unbounded і Golos Text — ті самі, що вже стоять в
+   index.html. Виходив другий похід до Google Fonts за гарнітурами,
+   які браузер уже качав, і він ставав у чергу перед малюванням
+   заголовка.
+
+   Preconnect теж прибрано: обидва вже оголошені в index.html, а
+   повторні теги Lighthouse рахує як марні підключення.
+
+   Space Grotesk тут не для тексту, а для логотипа. Публічні
+   сторінки живуть поза Layout, тому без цього рядка «THE EDGE»
+   на них падав у системний sans і переставав бути знаком.
+------------------------------------------------------------------ */
 export function useEdgeFonts() {
   useEffect(() => {
-    if (document.getElementById('edge-roboto')) return;
-    const pre1 = document.createElement('link');
-    pre1.rel = 'preconnect';
-    pre1.href = 'https://fonts.googleapis.com';
-    const pre2 = document.createElement('link');
-    pre2.rel = 'preconnect';
-    pre2.href = 'https://fonts.gstatic.com';
-    pre2.crossOrigin = 'anonymous';
+    if (document.getElementById('edge-logo-font')) return;
     const css = document.createElement('link');
-    css.id = 'edge-roboto';
+    css.id = 'edge-logo-font';
     css.rel = 'stylesheet';
-    /* Space Grotesk тут не для тексту, а для логотипа. Публічні
-       сторінки живуть поза Layout, тому без цього рядка «THE EDGE»
-       на них падав у системний sans і переставав бути знаком. */
     css.href =
-      'https://fonts.googleapis.com/css2?family=Unbounded:wght@300..900&family=Golos+Text:wght@400..900&family=Space+Grotesk:wght@500;700;800&display=swap';
-    document.head.append(pre1, pre2, css);
+      'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap';
+    document.head.append(css);
+  }, []);
+}
+
+/* ------------------------------------------------------------------
+   Моноширинна — для сторінок поза оболонкою застосунку.
+
+   JetBrains Mono раніше приходив глобально, через @import у
+   index.css. Той @import прибрано: він вантажився на кожній сторінці,
+   зокрема на лендінгу, де моноширинним не набрано жодного символу, і
+   робив це найповільнішим із можливих способів.
+
+   Усередині застосунку шрифт підключає Layout, на вході — Auth. А от
+   сторінки, що живуть самі по собі (404), лишались ні з чим і падали
+   в системний mono. Для них цей хук.
+------------------------------------------------------------------ */
+export function useMonoFont() {
+  useEffect(() => {
+    if (document.getElementById('edge-mono-font')) return;
+    const css = document.createElement('link');
+    css.id = 'edge-mono-font';
+    css.rel = 'stylesheet';
+    css.href =
+      'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap';
+    document.head.append(css);
   }, []);
 }
 

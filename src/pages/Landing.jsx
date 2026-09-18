@@ -1,15 +1,13 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Globe } from 'lucide-react';
 import { useEdgeFonts } from '../lib/theme';
 import { C, F, A, Cat, KEYFRAMES } from '../components/landing/v3/base';
 import Hero, { Ticker } from '../components/landing/v3/Hero';
-import Steps from '../components/landing/v3/Steps';
-import Difference from '../components/landing/v3/Difference';
-import AutoImport from '../components/landing/v3/AutoImport';
-import Product from '../components/landing/v3/Product';
-import Coach from '../components/landing/v3/Coach';
-import { Rhythm, NotDoing, Pricing, FinalFaq } from '../components/landing/v3/Closing';
 import FontLab from '../components/landing/FontLab';
+
+/* Дев'ять секцій нижче першого екрана плюс підвал — окремим шматком.
+   Подробиці, чому саме так, — у самому BelowFold.jsx. */
+const BelowFold = lazy(() => import('../components/landing/v3/BelowFold'));
 
 /* ==================================================================
    Landing.
@@ -30,16 +28,6 @@ const NAV = [
   ['#pricing', 'Ціни'],
   ['/uk/blog', 'Блог'],
   ['#faq', 'Питання'],
-];
-
-const FOOTER_COLS = [
-  { title: 'ПРОДУКТ', links: [['#product', 'Що всередині'], ['#autoimport', 'Автоімпорт'], ['#coach', 'AI-коуч']] },
-  { title: 'ТАРИФИ', links: [['#pricing', 'Ціни'], ['#pricing', 'Free'], ['#pricing', 'Pro']] },
-  { title: 'ДОВІДКА', links: [['#faq', 'Питання'], ['/uk/blog', 'Блог'], ['#autoimport', 'Твої дані'], ['#faq', 'Підключення MT5']] },
-  /* Окрема колонка, а не рядок дрібним шрифтом унизу. Умови шукають
-     тоді, коли вже щось сталося, — і знаходити їх мають там, де
-     шукають решту посилань, а не в підвалі підвалу. */
-  { title: 'ПРАВО', links: [['/terms', 'Умови користування']] },
 ];
 
 function Header() {
@@ -140,53 +128,56 @@ function Header() {
   );
 }
 
-function Footer() {
-  return (
-    <footer style={{ borderTop: '1px solid rgba(255,255,255,.06)', background: '#0a0a0e' }}>
-      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '40px 32px', display: 'flex', gap: 44, flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ flex: '0 1 250px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <Cat size={34} />
-            <div>
-              <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 14.5, letterSpacing: '2.2px', color: '#fff' }}>
-                THE <span style={{ color: C.acc }}>EDGE</span>
-              </div>
-              <div style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: '1.5px', color: C.dim, marginTop: 3 }}>
-                PLAN THE TRADE — TRADE THE PLAN
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {FOOTER_COLS.map((col) => (
-          <div key={col.title} style={{ flex: '0 1 150px' }}>
-            <div style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 700, letterSpacing: '1.6px', color: C.dim, marginBottom: 14 }}>{col.title}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {col.links.map(([href, label]) => (
-                <a
-                  key={label}
-                  href={href}
-                  style={{ fontFamily: F.sans, fontSize: 13.5, color: '#8a8a9c', transition: 'color .16s' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = C.accSoft; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = '#8a8a9c'; }}
-                >
-                  {label}
-                </a>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        <div style={{ flex: '0 1 150px', textAlign: 'right', fontFamily: F.mono, fontSize: 12, color: C.dim }}>
-          © 2026 Edge Journal
-        </div>
-      </div>
-    </footer>
-  );
-}
-
 export default function Landing() {
   useEdgeFonts();
+
+  /* Прапорець «перший кадр уже намальовано».
+
+     Ефекти виконуються після того, як браузер розклав сторінку, а
+     requestIdleCallback чекає ще й на вільну мить. Разом це означає:
+     герой встигає з'явитись на екрані раніше, ніж React візьметься
+     за решту сторінки.
+
+     timeout — страховка. Без нього на завантаженому процесорі
+     «вільна мить» може не настати зовсім, і низ сторінки не приїде
+     ніколи. Півтори секунди — стеля, після якої малюємо в будь-якому
+     разі. Де requestIdleCallback немає (Safari донедавна) — звичайний
+     таймер. */
+  const [belowReady, setBelowReady] = useState(false);
+
+  useEffect(() => {
+    const w = window;
+    const show = () => setBelowReady(true);
+
+    if (typeof w.requestIdleCallback === 'function') {
+      const id = w.requestIdleCallback(show, { timeout: 1500 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(show, 200);
+    return () => clearTimeout(t);
+  }, []);
+
+  /* Вхід одразу на якір.
+
+     Посилання виду /#pricing приходять із реклами й із власного
+     підвалу. У момент завантаження цієї секції в DOM ще немає, тож
+     браузер нікуди не переходить і людина лишається на початку
+     сторінки. Тому доводимо її самі — коли блоки вже на місці. */
+  useEffect(() => {
+    if (!belowReady) return;
+    const { hash } = window.location;
+    if (!hash || hash.length < 2) return;
+
+    /* Хеш приходить із адреси, тобто ним керує хто завгодно:
+       querySelector на кшталт `#1` кидає виняток і зносить рендер. */
+    let target = null;
+    try {
+      target = document.querySelector(hash);
+    } catch {
+      target = null;
+    }
+    target?.scrollIntoView();
+  }, [belowReady]);
 
   return (
     <div className="ln-root" style={{ background: C.bg, minHeight: '100vh', overflowX: 'hidden', color: C.text }}>
@@ -198,21 +189,27 @@ export default function Landing() {
       <Header />
       <Hero />
       <Ticker />
-      <Steps />
-      <Difference />
-      <AutoImport />
-      <Product />
-      <Coach />
-      <Rhythm />
-      <NotDoing />
-      <Pricing />
-      <FinalFaq />
-      <Footer />
+
+      {/* fallback порожній навмисне: усе, що сюди приходить, лежить
+          за межею першого екрана, і будь-яка заглушка була б
+          мерехтінням у місці, куди ніхто ще не дивиться. */}
+      {belowReady && (
+        <Suspense fallback={null}>
+          <BelowFold />
+        </Suspense>
+      )}
 
       {/* Примірочна шрифтів. Інструмент вибору, не функція для
-          відвідувача: щойно гарнітура затверджена — значення переїжджає
-          в theme.js, а цей рядок зникає. */}
-      <FontLab />
+          відвідувача — тому тепер тільки в розробці.
+
+          У продакшені вона не просто висіла зайвою кнопкою: панель
+          одразу тягнула з Google Fonts усі гарнітури-кандидати, щоб
+          показати їх власними накресленнями. Відвідувач лендінга
+          качав десяток шрифтів, яких на сторінці немає.
+
+          Обидва модулі чисті — без коду на рівні модуля, — тому при
+          складанні ця гілка й сам компонент випадають із бандла. */}
+      {import.meta.env.DEV && <FontLab />}
     </div>
   );
 }

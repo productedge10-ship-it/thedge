@@ -1,4 +1,18 @@
-@import url("https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=UnifrakturMaguntia&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+/* Тут був @import трьох гарнітур із Google Fonts. Він пішов, і ось
+   чому.
+
+   Імпорт усередині CSS — найповільніший спосіб підключити шрифт: браузер
+   мусить спершу скачати цей файл, лише потім побачити рядок імпорту,
+   піти за другою таблицею стилів і аж тоді за самими шрифтами. Чотири
+   кроки в ланцюжку замість одного, і весь цей час сторінка не
+   малюється.
+
+   А платили ми за нього дарма. Cinzel Decorative і UnifrakturMaguntia
+   не використовуються ніде — лишились від давніх спроб. JetBrains Mono
+   потрібен, але його вже підключають ті самі місця, де він і потрібен:
+   Layout для застосунку й Auth для входу. Лендінг же не набирає ним
+   жодного символу.
+*/
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

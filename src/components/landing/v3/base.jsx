@@ -61,8 +61,22 @@ export const KEYFRAMES = `
 @keyframes lnFadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes lnRowIn{0%{opacity:0;transform:translateY(-18px)}60%{opacity:1}100%{opacity:1;transform:translateY(0)}}
 @keyframes lnFlashIn{0%{background:rgba(139,123,255,.22)}100%{background:transparent}}
-@keyframes lnNumA{0%{color:#8b7bff;text-shadow:0 0 26px rgba(139,123,255,.6)}100%{text-shadow:none}}
-@keyframes lnNumB{0%{color:#8b7bff;text-shadow:0 0 26px rgba(139,123,255,.6)}100%{text-shadow:none}}
+/* Спалах цифри — прозорістю, а не кольором.
+
+   Раніше ці два кадри анімували color і text-shadow. Обидві
+   властивості браузер не вміє віддати відеокарті: кожен кадр він
+   перемальовував текст заново, і саме на них Lighthouse показував
+   некомбіновані анімації.
+
+   Тепер світиться окремий шар поверх цифри, а гасне він прозорістю —
+   її композитор тягне сам, без перемальовування. Малюнок той самий:
+   шар набраний тим же накресленням і лежить рівно на місці цифри.
+
+   Імен два, бо анімація перезапускається на кожному кліку: повторно
+   призначене те саме ім'я браузер вважає тією ж анімацією і не
+   починає її спочатку. Чергування імен його переконує. */
+@keyframes lnNumA{from{opacity:1}to{opacity:0}}
+@keyframes lnNumB{from{opacity:1}to{opacity:0}}
 @keyframes lnPing{0%{transform:scale(1);opacity:.75}100%{transform:scale(2.6);opacity:0}}
 @keyframes lnCaret{0%,100%{opacity:1}50%{opacity:0}}
 @keyframes lnBreathe{0%,100%{opacity:.3}50%{opacity:.62}}

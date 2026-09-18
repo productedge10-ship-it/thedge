@@ -8,6 +8,7 @@ import {
 import { ArrowLeft, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useMonoFont } from "../lib/theme";
 
 /**
  * 404 — інтерактивна сторінка "не знайдено".
@@ -28,6 +29,10 @@ import { useAuth } from "../context/AuthContext";
  *   </Routes>
  */
 export default function NotFound() {
+  /* Сторінка живе поза оболонкою застосунку, тому моноширинну
+     підтягує сама — більше ніхто цього за неї не зробить. */
+  useMonoFont();
+
   const navigate = useNavigate();
   const { user } = useAuth();
   const [reduced, setReduced] = useState(false);
