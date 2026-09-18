@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot, CalendarDays, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot, CalendarDays, ChevronDown, Check, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { T, EASE } from '../lib/theme';
 import { useAuth } from '../context/AuthContext';
 import { fetchTrades, fetchDayReviews, periodStart } from '../lib/analyticsStore';
 import { useStats, r1 } from '../components/analytics/data';
+import { METRICS } from '../lib/statCard';
 import { Delta } from '../components/analytics/ui';
 
 import Overview from '../components/analytics/Overview';
@@ -25,6 +26,12 @@ import ExportStats from '../components/analytics/ExportStats';
 ================================================================== */
 
 const PERIODS = ['Весь час', 'Цей квартал', 'Останні 30 днів', 'Цей тиждень'];
+
+/* Порядок рядків «чека» на кнопці поділитись — той самий набір, що й
+   перші вісім метрик картки експорту, просто своїм порядком: спершу
+   підсумок (Net R, Win rate, Profit factor, Угод), тоді якість
+   (Очікування, За планом), і насамкінець — де саме найкраще вийшло. */
+const RECEIPT_METRIC_IDS = ['net', 'wr', 'pf', 'trades', 'expectancy', 'adherence', 'asset', 'day'];
 
 /* Напівпрозорий кант і заливки шапки крутяться навколо однієї змінної
    теми, тому пишемо їх через хелпер, а не двадцять разів рядком. */
@@ -183,6 +190,28 @@ export default function Analytics() {
   }, [reviews, period]);
 
   const s = useStats(scoped || [], scopedReviews);
+
+  /* ---------- «друк чека» на кнопці поділитись ----------
+     Ті самі вісім метрик, що й в картці експорту, рахуються тим самим
+     get(s) — цифри на кнопці й на самій картці ніколи не розійдуться.
+     Саму анімацію (виїзд стрічки, штамп) тримає CSS через клас
+     `.receipt-cta` — React лише підставляє готові рядки в розмітку,
+     на кшталт `.pomodoro-cta`/`.folder-cta` в цьому ж файлі стилів. */
+  const receiptMetrics = useMemo(
+    () => RECEIPT_METRIC_IDS.map((id) => {
+      const m = METRICS.find((x) => x.id === id);
+      const got = m.get(s);
+      return {
+        id,
+        label: m.label,
+        value: got.sub ? `${got.value} ${got.sub}` : got.value,
+        tone: got.tone,
+        hi: id === 'trades' || id === 'asset',
+      };
+    }),
+    [s],
+  );
+  const netMetric = receiptMetrics[0];
 
   /* Скільки угод у кожному періоді — щоб вибір у випадашці був
      видимим ще до перемикання. */
@@ -386,9 +415,17 @@ export default function Analytics() {
                 <div className="ml-auto flex shrink-0 items-center gap-2.5">
                   <PeriodDropdown value={period} onChange={setPeriod} counts={periodCounts} />
 
+                  {/* ─────────── «Thermal Analytics Receipt» ───────────
+                      Уся хореографія — в `.receipt-cta*` (index.css), тим
+                      самим прийомом, що й `.pomodoro-cta`/`.folder-cta`:
+                      наведення вмикає CSS-анімацію, React лише підставляє
+                      готові цифри. Стрічка з тими самими вісьмома
+                      метриками, що й у картці експорту, безперервно їде
+                      знизу вгору крізь градієнтну маску; наприкінці
+                      циклу — штамп реального Net R і перехід до SHARE. */}
                   <button
                     onClick={() => setExportOpen(true)}
-                    className="group inline-flex h-[42px] shrink-0 items-center gap-2 rounded-[13px] pl-4 pr-[18px]"
+                    className="receipt-cta group relative inline-flex h-[42px] shrink-0 items-center gap-2 overflow-hidden rounded-[13px] pl-4 pr-[18px]"
                     style={{
                       background: `linear-gradient(180deg, ${T.acc}, color-mix(in srgb, ${T.acc} 76%, #000))`,
                       border: `1px solid ${hair(0.14)}`,
@@ -408,8 +445,49 @@ export default function Analytics() {
                       e.currentTarget.style.boxShadow = `inset 0 1px 0 ${hair(0.2)}, 0 12px 28px -14px rgba(${T.accRgb},0.9)`;
                     }}
                   >
-                    <Sparkles size={15} strokeWidth={1.8} className="transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
-                    <span className="text-[12.5px] font-bold" style={{ letterSpacing: '-0.012em' }}>Поділитись статистикою</span>
+                    {/* дефолтний напис — тане й трохи зменшується, звільняючи місце друку */}
+                    <span className="receipt-cta-front relative z-10 flex items-center gap-2">
+                      <Sparkles size={15} strokeWidth={1.8} className="transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                      <span className="whitespace-nowrap text-[12.5px] font-bold" style={{ letterSpacing: '-0.012em' }}>Поділитись статистикою</span>
+                    </span>
+
+                    {/* друкарська головка: лінія світла по верхньому краю */}
+                    <span aria-hidden className="receipt-cta-head pointer-events-none absolute inset-x-2 top-[7px] z-20 h-px" />
+
+                    {/* стрічка чека: безперервний виїзд знизу маски вгору */}
+                    <div aria-hidden className="receipt-cta-stream pointer-events-none absolute inset-0 z-10">
+                      <div className="receipt-cta-paper absolute inset-x-3.5">
+                        {receiptMetrics.map((m, i) => (
+                          <div key={m.id}>
+                            {(i === 3 || i === 6) && <div className="receipt-cta-divider" />}
+                            <div className="receipt-cta-row">
+                              <span className="receipt-cta-label">{m.label}</span>
+                              <span className={`receipt-cta-val${m.hi ? ' is-hi' : ''}`}>{m.value}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* фінал циклу: штамп реального Net R і перехід до SHARE */}
+                    <div
+                      aria-hidden
+                      className="receipt-cta-seal pointer-events-none absolute inset-0 z-20 flex items-center justify-between px-2.5"
+                      style={{ '--tone': netMetric.tone === 'bad' ? T.bad : T.ok, '--tone-rgb': netMetric.tone === 'bad' ? T.badRgb : T.okRgb }}
+                    >
+                      <span className="receipt-cta-badge">
+                        <Check size={11} strokeWidth={3.4} />
+                        {netMetric.value}
+                        <b>PRINTED</b>
+                      </span>
+                      <span className="receipt-cta-share">
+                        SHARE
+                        <ArrowRight size={11} strokeWidth={3.2} />
+                      </span>
+                    </div>
+
+                    {/* скляний блік — той самий прийом, що й на «Нова папка» */}
+                    <span aria-hidden className="receipt-cta-glimmer pointer-events-none absolute inset-y-0 z-30" />
                   </button>
                 </div>
               </div>
