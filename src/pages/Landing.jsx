@@ -3,7 +3,6 @@ import { Globe } from 'lucide-react';
 import { useEdgeFonts } from '../lib/theme';
 import { C, F, A, Cat, KEYFRAMES } from '../components/landing/v3/base';
 import Hero, { Ticker } from '../components/landing/v3/Hero';
-import FontLab from '../components/landing/FontLab';
 
 /* Дев'ять секцій нижче першого екрана плюс підвал — окремим шматком.
    Подробиці, чому саме так, — у самому BelowFold.jsx. */
@@ -198,18 +197,6 @@ export default function Landing() {
           <BelowFold />
         </Suspense>
       )}
-
-      {/* Примірочна шрифтів. Інструмент вибору, не функція для
-          відвідувача — тому тепер тільки в розробці.
-
-          У продакшені вона не просто висіла зайвою кнопкою: панель
-          одразу тягнула з Google Fonts усі гарнітури-кандидати, щоб
-          показати їх власними накресленнями. Відвідувач лендінга
-          качав десяток шрифтів, яких на сторінці немає.
-
-          Обидва модулі чисті — без коду на рівні модуля, — тому при
-          складанні ця гілка й сам компонент випадають із бандла. */}
-      {import.meta.env.DEV && <FontLab />}
     </div>
   );
 }
