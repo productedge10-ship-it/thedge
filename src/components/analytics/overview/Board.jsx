@@ -8,7 +8,7 @@ import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
-  Check, Cog, GripVertical, Plus, RotateCcw, X,
+  Check, Cog, GripVertical, Lock, Plus, RotateCcw, X,
 } from 'lucide-react';
 import { A, CSS_SPRING, F, LAYOUT, P, POP, en, hairline, lightLayer, mix, trackLight } from './theme';
 import { DEFAULT_LAYOUT, WIDGETS, optionsFor } from './widgets';
@@ -692,7 +692,7 @@ function IconBtn({ children, onClick, title, danger, active, tone = P.acc }) {
    ось тут».
 ------------------------------------------------------------------ */
 
-function AddPanel({ hidden, onAdd, onClose }) {
+function AddPanel({ hidden, onAdd, onClose, stats }) {
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
@@ -732,7 +732,7 @@ function AddPanel({ hidden, onAdd, onClose }) {
               padding: '2px 18px 8px',
             }}
           >
-            {hidden.map((id) => <LibCard key={id} id={id} onAdd={onAdd} />)}
+            {hidden.map((id) => <LibCard key={id} id={id} onAdd={onAdd} stats={stats} />)}
           </div>
         )}
       </div>
@@ -740,69 +740,91 @@ function AddPanel({ hidden, onAdd, onClose }) {
   );
 }
 
-function LibCard({ id, onAdd }) {
+function LibCard({ id, onAdd, stats }) {
   const WIDGETS = useRegistry();
   const [hover, setHover] = useState(false);
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `lib:${id}`,
-    data: { lib: id },
-  });
 
   const w = WIDGETS[id];
   const tone = w.tone || P.acc;
 
+  /* Готовність рахується від статистики «за весь час», а не від
+     поточного фільтра дошки: якщо сетапи заповнені за минулий
+     квартал, а зараз обраний «цей тиждень», картку не варто замикати
+     через тимчасово порожній період. */
+  const ready = w.ready ? w.ready(stats || {}) : true;
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `lib:${id}`,
+    data: { lib: id },
+    disabled: !ready,
+  });
+
   return (
     <div
       ref={setNodeRef}
-      {...listeners}
-      {...attributes}
+      {...(ready ? listeners : {})}
+      {...(ready ? attributes : {})}
       role="button"
+      aria-disabled={!ready}
       tabIndex={0}
-      title={w.hint}
-      data-state={isDragging ? 'dragging' : hover ? 'hover' : 'idle'}
-      onClick={() => onAdd(id)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd(id); } }}
-      onMouseMove={trackLight}
+      title={ready ? w.hint : w.lockedHint || w.hint}
+      data-state={!ready ? 'locked' : isDragging ? 'dragging' : hover ? 'hover' : 'idle'}
+      onClick={() => { if (ready) onAdd(id); }}
+      onKeyDown={(e) => { if (ready && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onAdd(id); } }}
+      onMouseMove={ready ? trackLight : undefined}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        position: 'relative', overflow: 'hidden', textAlign: 'left', cursor: 'grab',
+        position: 'relative', overflow: 'hidden', textAlign: 'left', cursor: ready ? 'grab' : 'not-allowed',
         display: 'flex', flexDirection: 'column', gap: 11, padding: 13,
         width: 214, flexShrink: 0, borderRadius: 16, touchAction: 'none',
-        background: hover ? P.cardHi : 'rgba(var(--edge-hair-rgb),0.02)',
-        border: `1px solid ${hover ? mix(tone, 35) : P.lineSoft}`,
+        background: !ready ? 'rgba(var(--edge-hair-rgb),0.015)' : hover ? P.cardHi : 'rgba(var(--edge-hair-rgb),0.02)',
+        border: `1px solid ${!ready ? P.lineSoft : hover ? mix(tone, 35) : P.lineSoft}`,
         /* Без підйому: у горизонтальному ряду картка, що вилазить
            угору, читається як збій прокрутки. */
-        opacity: isDragging ? 0.35 : 1,
+        opacity: isDragging ? 0.35 : !ready ? 0.6 : 1,
         transition: CSS_SPRING,
       }}
     >
-      <span aria-hidden style={lightLayer(tone, hover && !isDragging, 200)} />
+      <span aria-hidden style={lightLayer(tone, ready && hover && !isDragging, 200)} />
 
       <span
         style={{
           position: 'relative', display: 'block', padding: '11px 12px', borderRadius: 11,
-          background: 'var(--edge-panel-glow, rgba(0,0,0,0.28))', border: `1px solid ${hover ? mix(tone, 18) : 'rgba(var(--edge-hair-rgb),0.04)'}`,
+          background: 'var(--edge-panel-glow, rgba(0,0,0,0.28))', border: `1px solid ${ready && hover ? mix(tone, 18) : 'rgba(var(--edge-hair-rgb),0.04)'}`,
           transition: 'border-color .2s',
+          filter: !ready ? 'grayscale(0.6)' : 'none',
         }}
       >
         <Preview shape={w.shape} tone={tone} id={id} />
       </span>
 
       <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <w.icon size={13} color={tone} style={{ flexShrink: 0 }} />
-        <span style={{ flex: 1, minWidth: 0, fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: 'var(--edge-text)', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <w.icon size={13} color={!ready ? P.text5 : tone} style={{ flexShrink: 0 }} />
+        <span style={{ flex: 1, minWidth: 0, fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: !ready ? P.text3 : 'var(--edge-text)', letterSpacing: '-0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {w.title}
         </span>
-        <Plus
-          size={14}
-          color={hover ? tone : P.dim}
-          style={{ flexShrink: 0, transform: hover ? 'rotate(90deg)' : 'none', transition: 'all .28s' }}
-        />
+        {!ready ? (
+          <Lock size={12} color={P.text5} style={{ flexShrink: 0 }} />
+        ) : (
+          <Plus
+            size={14}
+            color={hover ? tone : P.dim}
+            style={{ flexShrink: 0, transform: hover ? 'rotate(90deg)' : 'none', transition: 'all .28s' }}
+          />
+        )}
       </span>
 
-      <span style={{ position: 'relative', fontFamily: F.sans, fontSize: 11.5, lineHeight: 1.45, color: P.text5, minHeight: 33 }}>
-        {w.hint}
+      {/* Для заблокованої картки тут не опис віджета, а причина, чому
+          його не можна додати, — те саме, що інакше зустріло б людину
+          вже на дошці, порожнім блоком. */}
+      <span
+        style={{
+          position: 'relative', fontFamily: F.sans, fontSize: 11.5, lineHeight: 1.45,
+          color: !ready ? mix('var(--edge-warn)', 75) : P.text5, minHeight: 33,
+        }}
+      >
+        {!ready ? w.lockedHint || w.hint : w.hint}
       </span>
     </div>
   );
@@ -1118,6 +1140,11 @@ export default function Board({
 
   const add = (id, at) => {
     if (registry[id]?.pinned) return;
+    /* Друга лінія оборони: LibCard сама не віддає drag/click для
+       заблокованої картки, але перетягування — окремий, асинхронний
+       шлях (onDragEnd), і краще перевірити ще раз тут, ніж довіряти
+       тому, що подія просто не мала статись. */
+    if (registry[id]?.ready && !registry[id].ready(statsFor('all'))) return;
     setLayout((prev) => {
       if (prev.some((x) => x.id === id)) return prev;
       const item = { id, w: registry[id].defaultW || 1, h: registry[id].defaultH || 2 };
@@ -1259,7 +1286,7 @@ export default function Board({
         )}
 
         <AnimatePresence>
-          {edit && adding && <AddPanel hidden={hidden} onAdd={(id) => add(id)} onClose={() => setAdding(false)} />}
+          {edit && adding && <AddPanel hidden={hidden} onAdd={(id) => add(id)} onClose={() => setAdding(false)} stats={statsFor('all')} />}
         </AnimatePresence>
 
         {/* ---------- сітка ---------- */}

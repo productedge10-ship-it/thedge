@@ -69,6 +69,110 @@ function Empty({ children }) {
   );
 }
 
+/* Одна точка не малює лінію — Recharts лишає самотню крапку в
+   порожній області, а вісь під неї підбирає випадковий діапазон.
+   Той самий прийом, що в Огляді: кардіомонітор замість зламаного
+   графіка — тьмяна нитка ЕКГ із піком на єдиній реальній точці, і
+   світлова хвиля, що постійно її прочісує, як прилад у пошуку
+   сигналу. Живіше за просту риску й одразу зрозуміло, чому порожньо. */
+function Building({ color, label, w = 84, h = 30 }) {
+  const wave = 'M2,21 L30,21 L37,7 L44,29 L51,13 L58,21 L82,21';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', height: '100%' }}>
+      <svg width={w} height={h} viewBox="0 0 84 30" style={{ display: 'block', overflow: 'visible' }}>
+        <path d={wave} fill="none" stroke={color} strokeOpacity="0.24" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={wave} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" pathLength="100" strokeDasharray="16 130" opacity="0.95">
+          <animate attributeName="stroke-dashoffset" values="100;-100" dur="2.6s" repeatCount="indefinite" />
+        </path>
+        {/* Точка «зараз» стоїть у кінці нитки, а не десь на піку —
+           так само, як на кожному справжньому графіку live-курсор
+           сидить на останній секунді, а не посеред форми. */}
+        <circle cx="82" cy="21" r="3" fill={color}>
+          <animate attributeName="r" values="3;4.4;3" dur="2.2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="1;0.55;1" dur="2.2s" repeatCount="indefinite" />
+        </circle>
+      </svg>
+      {label && (
+        <span style={{ fontFamily: F.sans, fontSize: 12.5, color: P.text5, textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>
+          {label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* Той самий прилад, тільки мовою стовпчиків: примарні бруски
+   «дихають» хвилею зліва направо, ніби еквалайзер чекає на сигнал. */
+function BuildingBars({ color, label }) {
+  const bars = [8, 14, 10, 18, 12, 16, 9];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', height: '100%' }}>
+      <svg width={108} height={34} viewBox="0 0 108 34" style={{ display: 'block', overflow: 'visible' }}>
+        <line x1="0" y1="30" x2="108" y2="30" stroke={color} strokeOpacity="0.14" strokeWidth="1" />
+        {bars.map((h, i) => (
+          <rect key={i} x={i * 15.4 + 3} y={30 - h} width="9" height={h} rx="2.5" fill={color} opacity="0.2">
+            <animate attributeName="opacity" values="0.16;0.55;0.16" dur="1.8s" begin={`${i * 0.14}s`} repeatCount="indefinite" />
+          </rect>
+        ))}
+      </svg>
+      {label && (
+        <span style={{ fontFamily: F.sans, fontSize: 12.5, color: P.text5, textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>
+          {label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* І мовою розсіювання: примарні кола там, де колись ляжуть точки,
+   і одна жива в центрі — пульсує, як радар у пошуку цілі. */
+function BuildingScatter({ color, label }) {
+  const dots = [[16, 22], [30, 9], [46, 24], [62, 12], [78, 21], [92, 8]];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', height: '100%' }}>
+      <svg width={108} height={34} viewBox="0 0 108 34" style={{ display: 'block', overflow: 'visible' }}>
+        <line x1="0" y1="17" x2="108" y2="17" stroke={color} strokeOpacity="0.12" strokeWidth="1" strokeDasharray="2 4" />
+        {dots.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="2.6" fill="none" stroke={color} strokeOpacity="0.3" strokeWidth="1.2" />
+        ))}
+        {/* Радар-пінг: кільце, що розходиться й тане, — рух у просторі
+           видно одразу, на відміну від попередньої версії, де жива
+           крапка просто ледь дихала радіусом на місці й губилась. */}
+        <circle cx="54" cy="17" r="3" fill="none" stroke={color} strokeWidth="1.4">
+          <animate attributeName="r" values="3;12" dur="1.6s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.8;0" dur="1.6s" repeatCount="indefinite" />
+        </circle>
+        <circle cx="54" cy="17" r="3.4" fill={color}>
+          <animate attributeName="r" values="3.4;4.6;3.4" dur="1.6s" repeatCount="indefinite" />
+        </circle>
+      </svg>
+      {label && (
+        <span style={{ fontFamily: F.sans, fontSize: 12.5, color: P.text5, textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>
+          {label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* Recharts анімує розсіювання, лише збільшуючи радіус крапки — на
+   3–4px це непомітно, і виглядає так, ніби анімації нема взагалі.
+   Тому крапки малюємо самі: кожна виринає власною SMIL-анімацією —
+   з нуля, з легким перельотом за розмір і появою прозорості, із
+   невеликим зсувом одна за одною. isAnimationActive на Scatter
+   вимкнено навмисно — інакше Recharts паралельно смикав би size і
+   бив би по нашій <animate>. */
+function AnimatedScatterDot(p) {
+  const r = p.size != null ? Math.sqrt(Math.max(p.size, 0) / Math.PI) : 3;
+  const begin = `${(p.index || 0) * 0.03}s`;
+  return (
+    <circle cx={p.cx} cy={p.cy} r={0} fill={p.fill} fillOpacity={p.fillOpacity}>
+      <animate attributeName="r" values={`0;${r * 1.4};${r}`} keyTimes="0;0.65;1" dur=".5s" begin={begin} fill="freeze" />
+      <animate attributeName="opacity" values="0;1" dur=".32s" begin={begin} fill="freeze" />
+    </circle>
+  );
+}
+
 /* Число з розкладом. Такий самий каркас, як у KPI огляду: у вузькій
    картці — саме число, у ширшій із простору виростає пояснення. */
 function Kpi({ value, color, facts = [], w = 1 }) {
@@ -134,7 +238,7 @@ function ClassicKpi({ id, value, subtext, subStats = [], color, data, dataKey })
         </div>
       )}
 
-      {data && data.length > 0 && (
+      {data && data.length > 1 && (
         <div style={{ flex: 1, minHeight: 28 }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
@@ -147,6 +251,11 @@ function ClassicKpi({ id, value, subtext, subStats = [], color, data, dataKey })
               <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={`url(#pk-${id})`} isAnimationActive animationDuration={900} />
             </AreaChart>
           </ResponsiveContainer>
+        </div>
+      )}
+      {data && data.length === 1 && (
+        <div style={{ flex: 1, minHeight: 28 }}>
+          <Building color={color} w={56} h={22} />
         </div>
       )}
     </div>
@@ -278,6 +387,12 @@ export const PERF_WIDGETS = {
     title: 'Куди рухається перевага',
     hint: 'Ковзне очікування за останні N угод',
     icon: Timer, group: 'Динаміка', tone: 'var(--edge-acc)', shape: 'curve', defaultW: 4, defaultH: 2,
+    /* Вікно за замовчуванням — 10 угод: саме стільки треба, щоб
+       крива взагалі мала перший рядок (rollingSeries повертає []
+       коли угод менше за вікно). Додати картку, яка одразу скаже
+       «замало угод», — той самий випадок, що й із сетапами. */
+    ready: (s) => (s.trades || []).length >= 10,
+    lockedHint: 'Назбирай хоча б 10 угод — і крива стане доступною',
     options: {
       tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
       win: { label: 'Вікно', choices: [['5', '5'], ['10', '10'], ['20', '20'], ['30', '30']], def: '10' },
@@ -323,6 +438,8 @@ export const PERF_WIDGETS = {
     title: 'Залежність від крайніх угод',
     hint: 'Що лишиться, якщо прибрати найкращі або найгірші',
     icon: Crosshair, group: 'Динаміка', tone: 'var(--edge-warn)', shape: 'bars', defaultW: 2, defaultH: 2,
+    ready: (s) => (s.trades || []).length > 5,
+    lockedHint: 'Назбирай хоча б 6 угод — і розклад стане доступним',
     options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => {
       if (s.trades.length <= 5) return <Empty>Треба хоча б шість угод</Empty>;
@@ -385,29 +502,43 @@ export const PERF_WIDGETS = {
     hint: 'Наскільки глибоко й надовго рахунок ішов під воду',
     icon: ArrowDownRight, group: 'Динаміка', tone: P.bad, shape: 'dip', defaultW: 2, defaultH: 2,
     options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
-    render: ({ s, o, id }) => (
-      <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
-        <ResponsiveContainer>
-          <AreaChart data={s.equity} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
-            <defs>
-              <linearGradient id={`pw-dd-${id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={P.bad} stopOpacity={0} />
-                <stop offset="100%" stopColor={P.bad} stopOpacity={0.42} />
-              </linearGradient>
-            </defs>
-            {grid()}
-            <XAxis dataKey="date" {...AX} minTickGap={34} />
-            <YAxis {...AX} />
-            {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [`${r1(v)}R`, 'Просадка']} />}
-            <Area
-              type="monotone" dataKey="dd" stroke={P.bad} strokeWidth={2} fill={`url(#pw-dd-${id})`}
-              activeDot={{ r: 4, fill: P.bad, stroke: 'var(--edge-sunken)', strokeWidth: 2 }}
-              isAnimationActive animationDuration={520}
+    render: ({ s, o, id }) => {
+      if (s.equity.length < 2) {
+        return (
+          <div style={{ display: 'flex', flex: 1, minHeight: 120 }}>
+            <Building
+              color={P.bad}
+              w={130} h={46}
+              label={s.equity.length ? 'Просадка порахується, щойно набереться кілька угод' : 'Ще нема жодної угоди в цьому періоді'}
             />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    ),
+          </div>
+        );
+      }
+
+      return (
+        <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
+          <ResponsiveContainer>
+            <AreaChart data={s.equity} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
+              <defs>
+                <linearGradient id={`pw-dd-${id}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={P.bad} stopOpacity={0} />
+                  <stop offset="100%" stopColor={P.bad} stopOpacity={0.42} />
+                </linearGradient>
+              </defs>
+              {grid()}
+              <XAxis dataKey="date" {...AX} minTickGap={34} />
+              <YAxis {...AX} />
+              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [`${r1(v)}R`, 'Просадка']} />}
+              <Area
+                type="monotone" dataKey="dd" stroke={P.bad} strokeWidth={2} fill={`url(#pw-dd-${id})`}
+                activeDot={{ r: 4, fill: P.bad, stroke: 'var(--edge-sunken)', strokeWidth: 2 }}
+                isAnimationActive animationDuration={520}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    },
   },
 
   /* ---------- розрізи ---------- */
@@ -490,10 +621,18 @@ export const PERF_WIDGETS = {
     title: 'Години входу',
     hint: 'О котрій годині рахунок росте, а о котрій тане',
     icon: Clock, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'bars', defaultW: 2, defaultH: 2,
+    ready: (s) => (s.byHour || []).some((h) => h.trades),
+    lockedHint: 'Заповни час входу хоч в одній угоді — і графік стане доступним',
     options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => {
       const rows = s.byHour.filter((h) => h.trades);
-      if (!rows.length) return <Empty>Час входу ще не проставлений в угодах</Empty>;
+      if (!rows.length) {
+        return (
+          <div style={{ display: 'flex', flex: 1, minHeight: 120 }}>
+            <BuildingBars color="var(--edge-acc)" label="Години з'являться, щойно проставиш час входу в угодах" />
+          </div>
+        );
+      }
 
       return (
         <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
@@ -545,10 +684,30 @@ export const PERF_WIDGETS = {
     title: 'Час утримання проти результату',
     hint: 'Ліворуч збитки — виходиш рано; праворуч — тримаєш надію',
     icon: Timer, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'number', defaultW: 2, defaultH: 2,
+    ready: (s) => (s.trades || []).some((t) => typeof t.holdMin === 'number'),
+    lockedHint: 'Заповни час входу й виходу хоч в одній угоді — і графік стане доступним',
     options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
     render: ({ s, o }) => {
       const rows = s.trades.filter((t) => typeof t.holdMin === 'number');
-      if (!rows.length) return <Empty>Час утримання ще не рахується — заповни час входу й виходу</Empty>;
+      if (!rows.length) {
+        return (
+          <div style={{ display: 'flex', flex: 1, minHeight: 120 }}>
+            <BuildingScatter color="var(--edge-acc)" label="Розклад з'явиться, щойно проставиш час входу й виходу" />
+          </div>
+        );
+      }
+
+      /* Recharts тягне вісь «утримання» від нуля навіть тоді, коли всі
+         угоди закрились за майже однаковий час — крапки збиваються
+         в одну лінію при самому краю, і розкид, який мав щось
+         показати, натомість виглядає як поламаний графік. Домен
+         рахуємо від фактичного розкиду даних, а не від нуля, з
+         невеликим запасом по краях — так навіть купка близьких
+         значень лягає по всій ширині картки. */
+      const holdVals = rows.map((t) => t.holdMin);
+      const hMin = Math.min(...holdVals);
+      const hMax = Math.max(...holdVals);
+      const hPad = Math.max(5, Math.round((hMax - hMin) * 0.15));
 
       return (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 120 }}>
@@ -556,7 +715,7 @@ export const PERF_WIDGETS = {
             <ResponsiveContainer>
               <ScatterChart margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
                 {grid()}
-                <XAxis type="number" dataKey="holdMin" name="хв" {...AX} />
+                <XAxis type="number" dataKey="holdMin" name="хв" domain={[Math.max(0, hMin - hPad), hMax + hPad]} {...AX} />
                 <YAxis type="number" dataKey="rr" name="R" {...AX} />
                 {o.tip !== 'off' && <RTooltip
                   {...TIP}
@@ -564,7 +723,7 @@ export const PERF_WIDGETS = {
                   formatter={(v, n) => [n === 'R' ? `${signed(v, 2)}R` : `${v} хв`, n === 'R' ? 'Результат' : 'Утримання']}
                 />}
                 <ReferenceLine y={0} stroke={P.lineHover} />
-                <Scatter data={rows} isAnimationActive animationDuration={420}>
+                <Scatter data={rows} isAnimationActive={false} shape={AnimatedScatterDot}>
                   {rows.map((t, i) => <Cell key={i} fill={EMOTION_COLOR[t.emotion]} fillOpacity={0.8} />)}
                 </Scatter>
               </ScatterChart>
@@ -626,6 +785,13 @@ export const PERF_WIDGETS = {
     },
     render: ({ s, o, id }) => {
       if (!s.equity.length) return <Empty>Ще нема жодної угоди в цьому періоді</Empty>;
+      if (s.equity.length < 2) {
+        return (
+          <div style={{ display: 'flex', flex: 1, minHeight: 120 }}>
+            <Building color="var(--edge-acc)" label="Крива з'явиться, щойно набереться кілька угод" w={130} h={46} />
+          </div>
+        );
+      }
 
       return (
         <div style={{ width: '100%', flex: 1, minHeight: 120 }}>

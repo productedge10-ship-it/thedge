@@ -722,6 +722,37 @@ export default function Assets({ s }) {
               </button>
             }
           >
+            {!s.bySetup.length ? (
+              <div className="flex h-full min-h-[140px] flex-col items-center justify-center gap-5 px-4 py-6 text-center">
+                {/* Порожній п'єдестал: три місця рейтингу вже намічені,
+                   лишилось назбирати сетапи, які їх заповнять. */}
+                <div className="flex flex-col gap-2 w-full max-w-[210px]">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-2.5" style={{ opacity: 1 - i * 0.22 }}>
+                      <span
+                        className="flex items-center justify-center w-[18px] h-[18px] rounded-full shrink-0 text-[9px] font-black"
+                        style={{ border: '1.5px solid rgba(var(--edge-acc-rgb),0.35)', color: 'rgba(var(--edge-acc-rgb),0.6)' }}
+                      >
+                        {i + 1}
+                      </span>
+                      <span
+                        className="flex-1 h-[9px] rounded-full"
+                        style={{
+                          background: 'rgba(var(--edge-acc-rgb),0.12)',
+                          border: '1px solid rgba(var(--edge-acc-rgb),0.2)',
+                          animation: 'tfPulse 1.8s ease-in-out infinite',
+                          animationDelay: `${i * 0.18}s`,
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[13px] font-semibold text-[var(--edge-text3)]">Ще немає сетапів</span>
+                  <span className="text-[12px] text-[var(--edge-text4)]">Додай сетап у формі угоди — і тут з'явиться його ефективність</span>
+                </div>
+              </div>
+            ) : (
             <div className="flex flex-col gap-2 mt-2">
               {s.bySetup.map((x, i) => {
                 const isProfit = x.net >= 0;
@@ -729,7 +760,7 @@ export default function Assets({ s }) {
                 const share = (Math.abs(x.net) / maxSetupNet) * 100;
                 return (
                   <SpotlightCard key={x.key} glowColor={`${color}20`} className="rounded-[12px]">
-                    <button 
+                    <button
                       onClick={() => setActiveSetupModal(x)}
                       className="w-full text-left p-[14px_16px] bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[12px] flex flex-col gap-3 transition-all hover:border-white/15 hover:bg-[var(--edge-surface-hi)] group hover:scale-[1.01]"
                     >
@@ -755,6 +786,7 @@ export default function Assets({ s }) {
                 );
               })}
             </div>
+            )}
           </Panel>
         </motion.div>
 

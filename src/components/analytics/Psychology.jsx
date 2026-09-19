@@ -44,7 +44,7 @@ const makeNormalize = (WIDGETS, DEFAULT) => (v) => {
 const normalizeMain = makeNormalize(PSYCH_MAIN_WIDGETS, PSYCH_MAIN_DEFAULT);
 const normalizeSide = makeNormalize(PSYCH_SIDE_WIDGETS, PSYCH_SIDE_DEFAULT);
 
-export default function Psychology({ s, rows = [] }) {
+export default function Psychology({ s, rows = [], reviews = [] }) {
   /* Кнопка редагування винесена з дошки нагору сторінки. У «Огляду» й
      «Перформансу» вона сама стоїть у верхньому правому куті — тут же,
      всередині лівої дошки (2fr від ширини), той самий кут опинявся
@@ -79,10 +79,19 @@ export default function Psychology({ s, rows = [] }) {
   const d30 = useMemo(() => { const b = since(30); return rows.filter((t) => t.date >= b); }, [rows]);
   const d90 = useMemo(() => { const b = since(90); return rows.filter((t) => t.date >= b); }, [rows]);
 
-  const s7 = useStats(d7);
-  const s30 = useStats(d30);
-  const s90 = useStats(d90);
-  const sAll = useStats(rows);
+  /* Той самий зріз, що й для угод, але по відгуках дня — інакше
+     віджети «діагностика дня» (тільт, bias, потік, конфлікти) мовчки
+     порожніють, щойно людина перемикає період усередині розділу на
+     щось відмінне від дефолтного: useStats без другого аргументу
+     рахує статистику зовсім без reviews. */
+  const rv7 = useMemo(() => { const b = since(7); return reviews.filter((r) => r.date >= b); }, [reviews]);
+  const rv30 = useMemo(() => { const b = since(30); return reviews.filter((r) => r.date >= b); }, [reviews]);
+  const rv90 = useMemo(() => { const b = since(90); return reviews.filter((r) => r.date >= b); }, [reviews]);
+
+  const s7 = useStats(d7, rv7);
+  const s30 = useStats(d30, rv30);
+  const s90 = useStats(d90, rv90);
+  const sAll = useStats(rows, reviews);
 
   const statsFor = useCallback((period) => {
     switch (period) {

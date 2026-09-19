@@ -711,11 +711,11 @@ function RailTooltip({ children }) {
 const withDemo = (to) => (typeof window !== 'undefined'
   && window.location.pathname.startsWith('/demo') ? `/demo${to}` : to);
 
-/* У пісочниці лишаються чотири розділи. Показувати всі — означає
+/* У пісочниці лишаються пʼять розділів. Показувати всі — означає
    водити людину по вітрині: половина сторінок без її даних порожні
-   й нічого не пояснюють. Ці чотири покривають увесь цикл: план,
-   запис, аналітика по угодах, рахунок. */
-export const DEMO_ROUTES = ['/plan', '/journal', '/analytics', '/accounts'];
+   й нічого не пояснюють. Ці пʼять покривають увесь цикл: план,
+   запис, аналітика по угодах, розбір дня, рахунок. */
+export const DEMO_ROUTES = ['/plan', '/journal', '/analytics', '/analyses', '/accounts'];
 
 export const inDemo = () => typeof window !== 'undefined'
   && window.location.pathname.startsWith('/demo');
