@@ -24,8 +24,28 @@ import { C, F, A } from '../components/landing/v3/base';
 
 const BAR_H = 46;
 
+/* Раз пройдений або пропущений тур не має повертати людину на
+   /plan щоразу, коли вона просто оновлює сторінку чи заходить
+   напряму в /demo/analytics — без цього прапорця кожен свіжий
+   рендер DemoShell забуває прогрес і смикає назад на перший крок. */
+const HINTS_KEY = 'edge.demo.hints.on';
+
+function readHintsOn() {
+  try {
+    const raw = localStorage.getItem(HINTS_KEY);
+    return raw === null ? true : raw === '1';
+  } catch { return true; }
+}
+
 export default function DemoShell() {
-  const [hints, setHints] = useState(true);
+  const [hints, setHintsState] = useState(readHintsOn);
+  const setHints = useCallback((next) => {
+    setHintsState((prev) => {
+      const value = typeof next === 'function' ? next(prev) : next;
+      try { localStorage.setItem(HINTS_KEY, value ? '1' : '0'); } catch { /* no-op */ }
+      return value;
+    });
+  }, []);
 
   /* Прихід із лендінга: там уже розкрилось коло й крутився кіт, тож
      пісочниця не має клацати новим екраном. Вона проявляється з-під

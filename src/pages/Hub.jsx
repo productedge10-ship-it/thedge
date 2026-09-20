@@ -6,7 +6,7 @@ import {
   BrainCircuit, History, NotebookPen, BarChart2, Users, AlertTriangle,
   Activity, ArrowRight, Loader2, Check, Circle,
   SlidersHorizontal, Eye, EyeOff, GripVertical, RotateCcw, Plus,
-  Minimize2, Maximize2,
+  Minimize2, Maximize2, Newspaper,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -41,6 +41,7 @@ const HUE = {
   lime:   '163,230,53',
   sky:    '56,189,248',
   peach:  '251,146,60',
+  indigo: '129,140,248',
 };
 
 /* Одна пружина на всі рухи розкладки. Підбирали не за красою кривої,
@@ -281,6 +282,16 @@ const SECTIONS = [
         to: '/accounts', icon: Users, title: 'Рахунки', hue: HUE.peach,
         text: 'Депозити й проп-акаунти',
         resize: true,
+      },
+    ],
+  },
+  {
+    group: 'Читати',
+    hint: 'Публічна частина — те, чим можна поділитись поза журналом',
+    items: [
+      {
+        to: '/blog', icon: Newspaper, title: 'Блог', hue: HUE.indigo,
+        text: 'Статті про психологію, бектести й підхід до трейдингу',
       },
     ],
   },

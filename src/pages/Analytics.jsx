@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot, CalendarDays, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot, CalendarDays, ChevronDown, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { T, EASE } from '../lib/theme';
 import { useAuth } from '../context/AuthContext';
 import { fetchTrades, fetchDayReviews, periodStart } from '../lib/analyticsStore';
 import { useStats, r1 } from '../components/analytics/data';
+import { METRICS } from '../lib/statCard';
 import { Delta } from '../components/analytics/ui';
 
 import Overview from '../components/analytics/Overview';
@@ -25,14 +26,6 @@ import ExportStats from '../components/analytics/ExportStats';
 ================================================================== */
 
 const PERIODS = ['Весь час', 'Цей квартал', 'Останні 30 днів', 'Цей тиждень'];
-
-/* Шість напрямків для фонтану іскор навколо іконки «Поділитись» —
-   координати кінцевої точки польоту кожної цятки (px, від центру
-   іконки). Розкидані нерівномірно навмисно: ідеальне коло читалось
-   би як механічний патерн, а не як жива іскра. */
-const SPARK_VECTORS = [
-  [14, -7], [7, -15], [-7, -14], [-14, -3], [-6, 13], [11, 12],
-];
 
 /* Напівпрозорий кант і заливки шапки крутяться навколо однієї змінної
    теми, тому пишемо їх через хелпер, а не двадцять разів рядком. */
@@ -191,6 +184,14 @@ export default function Analytics() {
   }, [reviews, period]);
 
   const s = useStats(scoped || [], scopedReviews);
+
+  /* Net R для фіналу анімації кнопки «Поділитись» — той самий get(s),
+     що й у картці експорту, тож цифра, яку показує кнопка, ніколи не
+     розійдеться зі справжнім експортом. */
+  const netMetric = useMemo(() => {
+    const m = METRICS.find((x) => x.id === 'net');
+    return m.get(s);
+  }, [s]);
 
   /* Скільки угод у кожному періоді — щоб вибір у випадашці був
      видимим ще до перемикання. */
@@ -398,17 +399,14 @@ export default function Analytics() {
                 <div className="ml-auto flex shrink-0 items-center gap-2.5">
                   <PeriodDropdown value={period} onChange={setPeriod} counts={periodCounts} />
 
-                  {/* ─────────── «Magnetic Sparkle» ───────────
-                      Три попередні версії розповідали ІСТОРІЮ (друк,
-                      табло, проявка фото) — і всі втискали сюжет у
-                      42px, де він читався як метушня, а не подія.
-                      Тут інша ідея: кнопка реагує на самого користувача
-                      — нахиляється й підсвічується услід за курсором
-                      (3D tilt + glare, той самий прийом, що на картках
-                      Linear/Stripe), навколо іскри-логотипа розлітається
-                      фонтан справжніх іскор, а по контуру біжить
-                      обертовий кант. Жодного заскриптованого сюжету —
-                      лише жива, тактильна відповідь на рух миші. */}
+                  {/* ─────────── «Export Terminal» (стисла версія) ───────────
+                      Та сама ідея — кнопка показує, що відбувається за
+                      кліком, — але вкладена в час, який людина реально
+                      тримає курсор на кнопці: до секунди. Темне ядро
+                      розкривається, встигає майнути одна фраза «пакую», і
+                      одразу штамп готового Net R зі стрілкою — тим самим
+                      жестом, що відкриє саму модалку. Один прохід на весь
+                      ховер, без циклу. */}
                   <button
                     onClick={() => setExportOpen(true)}
                     className="receipt-cta group relative inline-flex h-[42px] shrink-0 items-center gap-2 overflow-hidden rounded-[13px] pl-4 pr-[18px]"
@@ -419,40 +417,30 @@ export default function Analytics() {
                       fontFamily: T.sans,
                       boxShadow: `inset 0 1px 0 ${hair(0.2)}, 0 12px 28px -14px rgba(${T.accRgb},0.9)`,
                     }}
-                    onMouseMove={(e) => {
-                      const r = e.currentTarget.getBoundingClientRect();
-                      const px = (e.clientX - r.left) / r.width;
-                      const py = (e.clientY - r.top) / r.height;
-                      e.currentTarget.style.setProperty('--mx', `${(px * 100).toFixed(1)}%`);
-                      e.currentTarget.style.setProperty('--my', `${(py * 100).toFixed(1)}%`);
-                      e.currentTarget.style.transform = `perspective(500px) rotateX(${((0.5 - py) * 10).toFixed(2)}deg) rotateY(${((px - 0.5) * 14).toFixed(2)}deg) translateY(-1px) scale(1.015)`;
-                      e.currentTarget.style.boxShadow = `inset 0 1px 0 ${hair(0.24)}, 0 18px 36px -14px rgba(${T.accRgb},1)`;
-                      e.currentTarget.style.filter = 'brightness(1.08)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.boxShadow = `inset 0 1px 0 ${hair(0.2)}, 0 12px 28px -14px rgba(${T.accRgb},0.9)`;
-                      e.currentTarget.style.filter = 'none';
-                    }}
                   >
-                    {/* обертовий градієнтний кант — рамка з power'ю, а не звичайна лінія */}
-                    <span aria-hidden className="receipt-cta-ring" />
-
-                    {/* блиск, що ходить точно за курсором (--mx/--my рахує onMouseMove) */}
-                    <span aria-hidden className="receipt-cta-glare" />
-
-                    <span className="relative z-10 flex items-center gap-2">
-                      <span className="receipt-cta-icon-wrap relative inline-flex">
-                        <Sparkles size={15} strokeWidth={1.8} className="relative z-10 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
-                        {/* фонтан іскор навколо логотипа — шість цяток, кожна летить у свій бік */}
-                        <span aria-hidden className="receipt-cta-sparks">
-                          {SPARK_VECTORS.map(([sx, sy], i) => (
-                            <i key={i} className="receipt-cta-spark" style={{ '--sx': `${sx}px`, '--sy': `${sy}px`, '--sd': i }} />
-                          ))}
-                        </span>
-                      </span>
+                    {/* дефолтний напис — тане, звільняючи місце ядру */}
+                    <span className="receipt-cta-default relative z-10 flex w-full items-center justify-center gap-2">
+                      <Sparkles size={15} strokeWidth={1.8} className="transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
                       <span className="whitespace-nowrap text-[12.5px] font-bold" style={{ letterSpacing: '-0.012em' }}>Поділитись статистикою</span>
                     </span>
+
+                    {/* темне ядро — картка експорту, що розгортається з центру */}
+                    <span aria-hidden className="receipt-cta-core absolute inset-[2px] z-[5] rounded-[11px]">
+                      <span className="receipt-cta-step receipt-cta-step-1">
+                        <b>[EXPORT]</b> Пакую картку…
+                      </span>
+                      <span className="receipt-cta-final">
+                        <b className={`receipt-cta-final-badge tone-${netMetric.tone}`}>{netMetric.value}</b>
+                        <span className="receipt-cta-final-label">Картка готова</span>
+                        <span className="receipt-cta-arrow-wrap">
+                          <span aria-hidden className="receipt-cta-arrow-ring" />
+                          <span className="receipt-cta-arrow"><ArrowRight size={13} strokeWidth={2.6} color="#0c0b10" /></span>
+                        </span>
+                      </span>
+                    </span>
+
+                    {/* світловий блік наприкінці */}
+                    <span aria-hidden className="receipt-cta-glimmer" />
                   </button>
                 </div>
               </div>

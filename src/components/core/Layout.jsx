@@ -6,7 +6,8 @@ import {
   History, BookOpen, FileText, BarChart2, Users,
   Activity, AlertTriangle, CheckSquare, BrainCircuit,
   HelpCircle, Target, Menu, X, ClipboardCheck, Calculator,
-  NotebookPen, ChevronLeft, LayoutGrid, Sparkles, Settings, CalendarClock
+  NotebookPen, ChevronLeft, LayoutGrid, Sparkles, Settings, CalendarClock,
+  Newspaper
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
@@ -889,7 +890,7 @@ function NavGroup({ title, collapsed, children }) {
 const NAV_ICONS = {
   LayoutGrid, Target, BookOpen, Activity, ClipboardCheck, CheckSquare, Calculator,
   FileText, BrainCircuit, History, NotebookPen, BarChart2, Users, AlertTriangle,
-  CalendarClock,
+  CalendarClock, Newspaper,
 };
 
 function SidebarContent({ collapsed, hasUncompleted, signOut }) {

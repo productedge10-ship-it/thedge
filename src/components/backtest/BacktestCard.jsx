@@ -238,7 +238,12 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
             Порядок — видалення, лінк, стрілка: рідкісна й небезпечна
             дія найдалі від стрілки, якою картку відкривають. */}
         <span className="flex shrink-0 items-center">
-          {onDelete && !session.demo && (
+          {/* Демо теж можна прибрати — вона живе лише в памʼяті цієї
+             вкладки (removeSession у Backtest.jsx це вже вміє), тож
+             видалення тут не б'ється об базу. Показуємо, поки видно
+             приклад, а не ховаємо кнопку тільки тому, що рядок
+             несправжній. */}
+          {onDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(session); }}
               title="Видалити бектест"
