@@ -6,7 +6,8 @@ import {
   History, BookOpen, FileText, BarChart2, Users,
   Activity, AlertTriangle, CheckSquare, BrainCircuit,
   HelpCircle, Target, Menu, X, ClipboardCheck, Calculator,
-  NotebookPen, ChevronLeft, LayoutGrid, Sparkles, Settings, CalendarClock
+  NotebookPen, ChevronLeft, LayoutGrid, Sparkles, Settings, CalendarClock,
+  Newspaper
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
@@ -711,11 +712,11 @@ function RailTooltip({ children }) {
 const withDemo = (to) => (typeof window !== 'undefined'
   && window.location.pathname.startsWith('/demo') ? `/demo${to}` : to);
 
-/* У пісочниці лишаються чотири розділи. Показувати всі — означає
+/* У пісочниці лишаються пʼять розділів. Показувати всі — означає
    водити людину по вітрині: половина сторінок без її даних порожні
-   й нічого не пояснюють. Ці чотири покривають увесь цикл: план,
-   запис, аналітика по угодах, рахунок. */
-export const DEMO_ROUTES = ['/plan', '/journal', '/analytics', '/accounts'];
+   й нічого не пояснюють. Ці пʼять покривають увесь цикл: план,
+   запис, аналітика по угодах, розбір дня, рахунок. */
+export const DEMO_ROUTES = ['/plan', '/journal', '/analytics', '/analyses', '/accounts'];
 
 export const inDemo = () => typeof window !== 'undefined'
   && window.location.pathname.startsWith('/demo');
@@ -889,7 +890,7 @@ function NavGroup({ title, collapsed, children }) {
 const NAV_ICONS = {
   LayoutGrid, Target, BookOpen, Activity, ClipboardCheck, CheckSquare, Calculator,
   FileText, BrainCircuit, History, NotebookPen, BarChart2, Users, AlertTriangle,
-  CalendarClock,
+  CalendarClock, Newspaper,
 };
 
 function SidebarContent({ collapsed, hasUncompleted, signOut }) {

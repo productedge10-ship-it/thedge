@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Check, Crosshair, LayoutGrid, LineChart, CalendarDays, History, Table2, Share2,
+  Check, Crosshair, LayoutGrid, LineChart, CalendarDays, History, Table2, Share2, Newspaper,
 } from 'lucide-react';
 import { C, F, A, SHELL } from './base';
 
@@ -20,6 +20,7 @@ const NAV = [
   { key: 'weekly', title: 'Тижневі розбори', icon: CalendarDays, desc: 'Зібрати період, назвати закономірність, вибрати одну зміну. Можна поділитись лінком' },
   { key: 'backtest', title: 'Бектести', icon: History, desc: 'Перевір ідею на історії тим самим движком статистики, поки вона не коштувала грошей' },
   { key: 'method', title: 'Метод 20 угод', icon: LayoutGrid, desc: 'Двадцять угод поспіль, виконаних бездоганно за власною системою. Кожна перевіряється за чотирма гранями — стратегія, ризик, план, виконання, — і одна пропущена обнуляє серію' },
+  { key: 'blog', title: 'Блог', icon: Newspaper, desc: 'Психологія, розбори тижня й база термінів — те, що видно в журналі, коли записуєш кожну угоду, тепер можна прочитати без входу' },
 ];
 
 /* Анімації екранів.
@@ -359,7 +360,92 @@ const MethodScreen = () => (
   </div>
 );
 
-const SCREENS = [PlanScreen, JournalScreen, AnalyticsScreen, WeeklyScreen, BacktestScreen, MethodScreen];
+/* Блог.
+
+   Єдиний екран тут не з застосунку, а з публічної частини сайту —
+   і це видно навмисно: обкладинки-градієнти й картки статей замість
+   плиток та кривих. Той самий журнал, який щойно рахував сесії й
+   сетапи, віддає частину висновків назовні, без входу. */
+const BLOG_POSTS = [
+  {
+    cat: 'Психологія', color: C.acc,
+    title: 'Чому дисципліна тримається на цифрах, а не на силі волі',
+    excerpt: 'Що насправді показує журнал за місяць — і чому це працює краще за обіцянки собі',
+    read: '4 хв',
+  },
+  {
+    cat: 'Weekly review', color: C.ok,
+    title: 'Розбір тижня: одна звичка, яка зʼїдає перевагу',
+    excerpt: 'Приклад рядок за рядком — як зібрати період і побачити патерн, а не окрему угоду',
+    read: '3 хв',
+  },
+  {
+    cat: 'База', color: C.warn,
+    title: 'R-multiple, профіт-фактор і просадка — коротко про терміни',
+    excerpt: 'Словник, який економить час, коли читаєш власну статистику',
+    read: '5 хв',
+  },
+];
+
+const BlogScreen = () => (
+  <div>
+    <div style={{ ...capMono, marginBottom: 14 }}>ОСТАННІ СТАТТІ</div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 14 }}>
+      {BLOG_POSTS.map((p, i) => (
+        <div
+          key={p.title}
+          data-anim="soft"
+          style={{ ...card, borderRadius: 14, overflow: 'hidden', animationDelay: `${i * 90}ms` }}
+        >
+          <div
+            style={{
+              position: 'relative', height: 84,
+              background: `linear-gradient(135deg, ${p.color}2e, transparent)`,
+              borderBottom: '1px solid rgba(255,255,255,.06)',
+            }}
+          >
+            <span
+              data-anim="pop"
+              style={{
+                position: 'absolute', left: 12, bottom: 10,
+                fontFamily: F.sans, fontSize: 10.5, fontWeight: 700, letterSpacing: '.3px',
+                color: p.color, background: `${p.color}1f`, border: `1px solid ${p.color}4d`,
+                borderRadius: 999, padding: '4px 10px', animationDelay: `${160 + i * 90}ms`,
+              }}
+            >
+              {p.cat}
+            </span>
+          </div>
+          <div style={{ padding: '14px 15px 16px' }}>
+            <div style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.32, marginBottom: 7 }}>
+              {p.title}
+            </div>
+            <div style={{ fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.5, color: '#8a8a9c', marginBottom: 11 }}>
+              {p.excerpt}
+            </div>
+            <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>{p.read} читання</div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div
+      data-anim="soft"
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10, marginTop: 16,
+        padding: '12px 14px', borderRadius: 13, background: A(0.07), border: `1px solid ${A(0.2)}`,
+        animationDelay: '420ms',
+      }}
+    >
+      <Newspaper size={15} strokeWidth={1.9} style={{ flexShrink: 0, color: C.accSoft }} />
+      <span style={{ fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.5, color: '#c4c4d4' }}>
+        Публічний розділ — можна читати й ділитись лінком без акаунта
+      </span>
+    </div>
+  </div>
+);
+
+const SCREENS = [PlanScreen, JournalScreen, AnalyticsScreen, WeeklyScreen, BacktestScreen, MethodScreen, BlogScreen];
 
 export default function Product() {
   const [nav, setNav] = useState(0);

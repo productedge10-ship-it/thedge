@@ -194,6 +194,42 @@ const ax = {
   tick: { fontSize: 10.5, fill: P.text5, fontFamily: F.mono },
 };
 
+/* Одна-єдина точка не малює лінію — Recharts просто лишає крапку
+   посеред порожньої області, і вісь під неї підбирає випадковий
+   діапазон (0 і 8, коли значення −5). Це не крива, це артефакт.
+
+   Пунктирна риска була чесна, але нецікава — просто лінія в нікуди.
+   Тут натомість кардіомонітор: тьмяна нитка ЕКГ із піком там, де
+   стоїть та сама єдина реальна точка, а поверх неї постійно
+   пробігає світлова хвиля — той самий прийом сканування, що на
+   кнопці «Помодоро». Читається однозначно: прилад увімкнений і
+   шукає сигнал, а не завис на зламаному графіку. */
+function Building({ color, label, w = 84, h = 30 }) {
+  const wave = 'M2,21 L30,21 L37,7 L44,29 L51,13 L58,21 L82,21';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', height: '100%' }}>
+      <svg width={w} height={h} viewBox="0 0 84 30" style={{ display: 'block', overflow: 'visible' }}>
+        <path d={wave} fill="none" stroke={color} strokeOpacity="0.24" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={wave} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" pathLength="100" strokeDasharray="16 130" opacity="0.95">
+          <animate attributeName="stroke-dashoffset" values="100;-100" dur="2.6s" repeatCount="indefinite" />
+        </path>
+        {/* Точка «зараз» стоїть у кінці нитки, а не десь на піку —
+           так само, як на кожному справжньому графіку live-курсор
+           сидить на останній секунді, а не посеред форми. */}
+        <circle cx="82" cy="21" r="3" fill={color}>
+          <animate attributeName="r" values="3;4.4;3" dur="2.2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="1;0.55;1" dur="2.2s" repeatCount="indefinite" />
+        </circle>
+      </svg>
+      {label && (
+        <span style={{ fontFamily: F.sans, fontSize: 12.5, color: P.text5, textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>
+          {label}
+        </span>
+      )}
+    </div>
+  );
+}
+
 /* Спарклайн під числом. Три вигляди, бо один і той самий ряд читається
    по-різному: площа показує масштаб, лінія — форму, а «без графіка»
    потрібен тим, кому в картці важливе лише число. */
@@ -202,6 +238,14 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
   const gid = `sp-${id}`;
 
   const fmt = (v) => (unit === '%' ? `${v}%` : `${signed(v, 2)}R`);
+
+  if (data.length < 2) {
+    return (
+      <div style={{ position: 'absolute', left: -6, right: -6, bottom: -6, height: 74, opacity: hover ? 1 : 0.55, transition: 'opacity .28s ease' }}>
+        <Building color={color} w={88} h={30} />
+      </div>
+    );
+  }
 
   return (
     /* Крива живе під числом і сама по собі ловить курсор.
@@ -593,6 +637,13 @@ export const WIDGETS = {
     },
     render: ({ s, o }) => {
       if (!s.equity.length) return <Empty>Ще нема жодної угоди в цьому періоді</Empty>;
+      if (s.equity.length < 2) {
+        return (
+          <div style={{ display: 'flex', flex: 1, minHeight: 120 }}>
+            <Building color={P.acc} label="Крива з'явиться, щойно набереться кілька угод" w={130} h={46} />
+          </div>
+        );
+      }
 
       return (
         <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
@@ -1002,6 +1053,13 @@ export const WIDGETS = {
     tone: 'var(--edge-warn)',
     shape: 'rows',
     defaultW: 1, defaultH: 2, minH: 2,
+    /* У бібліотеці цей віджет заблокований, доки в угодах жодного разу
+       не заповнили поле «сетап» — інакше людина додає картку, а на
+       дошці її зустрічає порожній блок із поясненням, яке вона вже
+       й так щойно прочитала в бібліотеці. Заборонити додавання там,
+       де видно причину, чесніше, ніж дозволити й одразу перепросити. */
+    ready: (s) => (s.bySetup || []).some((x) => x.key && x.key !== '—'),
+    lockedHint: 'Заповни сетап хоч в одній угоді — і віджет стане доступним',
     options: {
       count: countOption('5'),
       metric: { label: 'Показник', choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']], def: 'net' },

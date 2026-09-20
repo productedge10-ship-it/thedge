@@ -34,11 +34,21 @@ function holdOf(from, to) {
 
 /* Журнал знає шість станів угоди, аналітика — три. Решта («в
    роботі», «пропущена») у статистику не йде взагалі: угода, яка ще
-   не закрилась, не має ні результату, ні R. */
+   не закрилась, не має ні результату, ні R.
+
+   Ключі — рядковими малими літерами: у базі впереміш лежать «Win» з
+   ручної форми і «win»/«loss» з імпорту MT5 (див. той самий словник
+   синонімів у TradingJournal.jsx). Порівняння точно по регістру тут
+   мовчки відсіювало майже всі угоди — рахувались лише ті кілька, що
+   збігались літера в літеру з ручним написанням. `scratch` рахуємо
+   як `BE`: свого відра для нього в аналітиці нема, а по суті це та
+   сама «вийшов при своїх». */
 const RESULT = {
-  Win: 'WIN',
-  Lose: 'LOSS',
-  BE: 'BE',
+  win: 'WIN',
+  lose: 'LOSS',
+  loss: 'LOSS',
+  be: 'BE',
+  scratch: 'BE',
 };
 
 /* Емоція збирається з чотирьох прапорців психології. Порядок
@@ -72,7 +82,7 @@ const toApp = (row) => {
     account: row.account_name || '—',
     setup: row.setup || null,
     emotion: emotionOf(row),
-    result: RESULT[row.result],
+    result: RESULT[String(row.result || '').trim().toLowerCase()],
     rr: typeof row.rr === 'number' ? row.rr : 0,
     mistakes: row.has_mistake
       ? [row.mistake_category || 'Помилка без категорії']

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot, CalendarDays, ChevronDown, Check, ArrowRight } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot, CalendarDays, ChevronDown, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { T, EASE } from '../lib/theme';
 import { useAuth } from '../context/AuthContext';
@@ -26,12 +26,6 @@ import ExportStats from '../components/analytics/ExportStats';
 ================================================================== */
 
 const PERIODS = ['Весь час', 'Цей квартал', 'Останні 30 днів', 'Цей тиждень'];
-
-/* Порядок рядків «чека» на кнопці поділитись — той самий набір, що й
-   перші вісім метрик картки експорту, просто своїм порядком: спершу
-   підсумок (Net R, Win rate, Profit factor, Угод), тоді якість
-   (Очікування, За планом), і насамкінець — де саме найкраще вийшло. */
-const RECEIPT_METRIC_IDS = ['net', 'wr', 'pf', 'trades', 'expectancy', 'adherence', 'asset', 'day'];
 
 /* Напівпрозорий кант і заливки шапки крутяться навколо однієї змінної
    теми, тому пишемо їх через хелпер, а не двадцять разів рядком. */
@@ -191,27 +185,13 @@ export default function Analytics() {
 
   const s = useStats(scoped || [], scopedReviews);
 
-  /* ---------- «друк чека» на кнопці поділитись ----------
-     Ті самі вісім метрик, що й в картці експорту, рахуються тим самим
-     get(s) — цифри на кнопці й на самій картці ніколи не розійдуться.
-     Саму анімацію (виїзд стрічки, штамп) тримає CSS через клас
-     `.receipt-cta` — React лише підставляє готові рядки в розмітку,
-     на кшталт `.pomodoro-cta`/`.folder-cta` в цьому ж файлі стилів. */
-  const receiptMetrics = useMemo(
-    () => RECEIPT_METRIC_IDS.map((id) => {
-      const m = METRICS.find((x) => x.id === id);
-      const got = m.get(s);
-      return {
-        id,
-        label: m.label,
-        value: got.sub ? `${got.value} ${got.sub}` : got.value,
-        tone: got.tone,
-        hi: id === 'trades' || id === 'asset',
-      };
-    }),
-    [s],
-  );
-  const netMetric = receiptMetrics[0];
+  /* Net R для фіналу анімації кнопки «Поділитись» — той самий get(s),
+     що й у картці експорту, тож цифра, яку показує кнопка, ніколи не
+     розійдеться зі справжнім експортом. */
+  const netMetric = useMemo(() => {
+    const m = METRICS.find((x) => x.id === 'net');
+    return m.get(s);
+  }, [s]);
 
   /* Скільки угод у кожному періоді — щоб вибір у випадашці був
      видимим ще до перемикання. */
@@ -263,24 +243,28 @@ export default function Analytics() {
      Позицію не рахуємо з відступів, а міряємо саму кнопку: підписи
      різної довжини, а на вузькому екрані рядок ще й переноситься —
      будь-яка арифметика по індексах тут розійшлася б із реальністю.
-     Наведення веде пігулку наперед, тьмянішою: видно, куди потрапиш,
-     ще до кліку. */
+
+     Пігулка їде лише під СПРАВЖНЮ активну вкладку. Раніше вона
+     виїжджала наперед ще на ховері («прев'ю» кудою потрапиш) — і це
+     мало протилежний ефект: людина бачила ту саму заповнену підкладку
+     під невибраним розділом і читала це як «а я вже тут». Ховер тепер
+     живе окремо — своєю анімацією іконки, а не запозиченою міткою
+     вибраного стану. */
   const barRef = useRef(null);
   const tabRefs = useRef({});
   const [hoverTab, setHoverTab] = useState(null);
+  const [hoverNonce, setHoverNonce] = useState(0);
   const [pill, setPill] = useState(null);
 
   const measurePill = useCallback(() => {
-    const el = tabRefs.current[hoverTab || tab];
+    const el = tabRefs.current[tab];
     const bar = barRef.current;
     if (!el || !bar) return;
     const b = bar.getBoundingClientRect();
     const r = el.getBoundingClientRect();
-    const next = {
-      left: r.left - b.left, top: r.top - b.top, width: r.width, height: r.height, soft: !!hoverTab,
-    };
-    setPill((prev) => (prev && ['left', 'top', 'width', 'height', 'soft'].every((k) => prev[k] === next[k]) ? prev : next));
-  }, [hoverTab, tab]);
+    const next = { left: r.left - b.left, top: r.top - b.top, width: r.width, height: r.height };
+    setPill((prev) => (prev && ['left', 'top', 'width', 'height'].every((k) => prev[k] === next[k]) ? prev : next));
+  }, [tab]);
 
   useLayoutEffect(() => { measurePill(); });
 
@@ -415,14 +399,14 @@ export default function Analytics() {
                 <div className="ml-auto flex shrink-0 items-center gap-2.5">
                   <PeriodDropdown value={period} onChange={setPeriod} counts={periodCounts} />
 
-                  {/* ─────────── «Thermal Analytics Receipt» ───────────
-                      Уся хореографія — в `.receipt-cta*` (index.css), тим
-                      самим прийомом, що й `.pomodoro-cta`/`.folder-cta`:
-                      наведення вмикає CSS-анімацію, React лише підставляє
-                      готові цифри. Стрічка з тими самими вісьмома
-                      метриками, що й у картці експорту, безперервно їде
-                      знизу вгору крізь градієнтну маску; наприкінці
-                      циклу — штамп реального Net R і перехід до SHARE. */}
+                  {/* ─────────── «Export Terminal» (стисла версія) ───────────
+                      Та сама ідея — кнопка показує, що відбувається за
+                      кліком, — але вкладена в час, який людина реально
+                      тримає курсор на кнопці: до секунди. Темне ядро
+                      розкривається, встигає майнути одна фраза «пакую», і
+                      одразу штамп готового Net R зі стрілкою — тим самим
+                      жестом, що відкриє саму модалку. Один прохід на весь
+                      ховер, без циклу. */}
                   <button
                     onClick={() => setExportOpen(true)}
                     className="receipt-cta group relative inline-flex h-[42px] shrink-0 items-center gap-2 overflow-hidden rounded-[13px] pl-4 pr-[18px]"
@@ -432,62 +416,31 @@ export default function Analytics() {
                       color: 'var(--edge-on-acc, #fff)',
                       fontFamily: T.sans,
                       boxShadow: `inset 0 1px 0 ${hair(0.2)}, 0 12px 28px -14px rgba(${T.accRgb},0.9)`,
-                      transition: 'transform .18s, box-shadow .18s, filter .18s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.filter = 'brightness(1.08)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = `inset 0 1px 0 ${hair(0.24)}, 0 18px 36px -14px rgba(${T.accRgb},1)`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.filter = 'none';
-                      e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.boxShadow = `inset 0 1px 0 ${hair(0.2)}, 0 12px 28px -14px rgba(${T.accRgb},0.9)`;
                     }}
                   >
-                    {/* дефолтний напис — тане й трохи зменшується, звільняючи місце друку */}
-                    <span className="receipt-cta-front relative z-10 flex items-center gap-2">
+                    {/* дефолтний напис — тане, звільняючи місце ядру */}
+                    <span className="receipt-cta-default relative z-10 flex w-full items-center justify-center gap-2">
                       <Sparkles size={15} strokeWidth={1.8} className="transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
                       <span className="whitespace-nowrap text-[12.5px] font-bold" style={{ letterSpacing: '-0.012em' }}>Поділитись статистикою</span>
                     </span>
 
-                    {/* друкарська головка: лінія світла по верхньому краю */}
-                    <span aria-hidden className="receipt-cta-head pointer-events-none absolute inset-x-2 top-[7px] z-20 h-px" />
-
-                    {/* стрічка чека: безперервний виїзд знизу маски вгору */}
-                    <div aria-hidden className="receipt-cta-stream pointer-events-none absolute inset-0 z-10">
-                      <div className="receipt-cta-paper absolute inset-x-3.5">
-                        {receiptMetrics.map((m, i) => (
-                          <div key={m.id}>
-                            {(i === 3 || i === 6) && <div className="receipt-cta-divider" />}
-                            <div className="receipt-cta-row">
-                              <span className="receipt-cta-label">{m.label}</span>
-                              <span className={`receipt-cta-val${m.hi ? ' is-hi' : ''}`}>{m.value}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* фінал циклу: штамп реального Net R і перехід до SHARE */}
-                    <div
-                      aria-hidden
-                      className="receipt-cta-seal pointer-events-none absolute inset-0 z-20 flex items-center justify-between px-2.5"
-                      style={{ '--tone': netMetric.tone === 'bad' ? T.bad : T.ok, '--tone-rgb': netMetric.tone === 'bad' ? T.badRgb : T.okRgb }}
-                    >
-                      <span className="receipt-cta-badge">
-                        <Check size={11} strokeWidth={3.4} />
-                        {netMetric.value}
-                        <b>PRINTED</b>
+                    {/* темне ядро — картка експорту, що розгортається з центру */}
+                    <span aria-hidden className="receipt-cta-core absolute inset-[2px] z-[5] rounded-[11px]">
+                      <span className="receipt-cta-step receipt-cta-step-1">
+                        <b>[EXPORT]</b> Пакую картку…
                       </span>
-                      <span className="receipt-cta-share">
-                        SHARE
-                        <ArrowRight size={11} strokeWidth={3.2} />
+                      <span className="receipt-cta-final">
+                        <b className={`receipt-cta-final-badge tone-${netMetric.tone}`}>{netMetric.value}</b>
+                        <span className="receipt-cta-final-label">Картка готова</span>
+                        <span className="receipt-cta-arrow-wrap">
+                          <span aria-hidden className="receipt-cta-arrow-ring" />
+                          <span className="receipt-cta-arrow"><ArrowRight size={13} strokeWidth={2.6} color="#0c0b10" /></span>
+                        </span>
                       </span>
-                    </div>
+                    </span>
 
-                    {/* скляний блік — той самий прийом, що й на «Нова папка» */}
-                    <span aria-hidden className="receipt-cta-glimmer pointer-events-none absolute inset-y-0 z-30" />
+                    {/* світловий блік наприкінці */}
+                    <span aria-hidden className="receipt-cta-glimmer" />
                   </button>
                 </div>
               </div>
@@ -513,8 +466,8 @@ export default function Analytics() {
                         width: pill.width,
                         height: pill.height,
                         transform: `translate3d(${pill.left}px, ${pill.top}px, 0)`,
-                        background: `linear-gradient(180deg, ${hair(pill.soft ? 0.055 : 0.1)}, ${hair(pill.soft ? 0.022 : 0.045)})`,
-                        boxShadow: `inset 0 1px 0 ${hair(pill.soft ? 0.07 : 0.14)}${pill.soft ? '' : `, 0 0 0 1px ${active.tone}2e`}`,
+                        background: `linear-gradient(180deg, ${hair(0.1)}, ${hair(0.045)})`,
+                        boxShadow: `inset 0 1px 0 ${hair(0.14)}, 0 0 0 1px ${active.tone}2e`,
                         transition: 'transform .38s cubic-bezier(.22,.9,.24,1), width .38s cubic-bezier(.22,.9,.24,1), height .2s ease, background .22s, box-shadow .22s',
                       }}
                     />
@@ -522,35 +475,42 @@ export default function Analytics() {
 
                   {NAV.map(({ id, label, icon: Icon, badge, soon, anim, tone }) => {
                     const on = tab === id;
+                    const hovering = !on && hoverTab === id;
                     return (
                       <button
                         key={id}
                         ref={(el) => { if (el) tabRefs.current[id] = el; }}
+                        data-tour={`analytics-tab-${id}`}
                         onClick={() => setTab(id)}
-                        onMouseEnter={() => setHoverTab(id)}
+                        onMouseEnter={() => { setHoverTab(id); setHoverNonce((n) => n + 1); }}
                         onMouseLeave={() => setHoverTab(null)}
                         className="relative z-[1] inline-flex h-[38px] shrink-0 items-center gap-2 whitespace-nowrap rounded-[11px] px-3.5 text-[12.5px]"
                         style={{
                           fontFamily: T.sans,
                           fontWeight: on ? 700 : 500,
                           letterSpacing: '-0.012em',
-                          color: on ? T.text : T.text2,
-                          transition: 'color .22s',
+                          color: on ? T.text : hovering ? T.text2 : T.text3,
+                          transition: 'color .18s',
                         }}
                       >
-                        {/* key міняється в мить, коли вкладка стає
-                            активною, — саме тому анімація програється
-                            на кожному заході в розділ, а не один раз за
-                            життя сторінки. */}
+                        {/* key міняється щоразу, коли вкладка стає
+                            активною, і щоразу на новий заход курсора —
+                            саме тому в іконки є своя маленька анімація
+                            не лише при виборі розділу, а й на ховері:
+                            це і є жива реакція замість запозиченої
+                            підкладки вибраного стану, яка раніше
+                            виїжджала наперед і виглядала як «уже тут». */}
                         <span
-                          key={on ? `on-${tab}` : 'off'}
+                          key={on ? `on-${tab}` : hovering ? `hv-${id}-${hoverNonce}` : 'off'}
                           className="an-anim inline-flex shrink-0"
                           style={{
                             color: tone,
-                            opacity: on ? 1 : 0.72,
-                            filter: on ? `drop-shadow(0 0 7px ${tone}66)` : 'none',
-                            transition: 'opacity .22s, filter .22s',
-                            animation: on ? `${anim} .62s cubic-bezier(.22,1,.36,1)` : undefined,
+                            opacity: on ? 1 : hovering ? 0.95 : 0.6,
+                            filter: on ? `drop-shadow(0 0 7px ${tone}66)` : hovering ? `drop-shadow(0 0 5px ${tone}44)` : 'none',
+                            transition: 'opacity .18s, filter .18s',
+                            animation: on
+                              ? `${anim} .62s cubic-bezier(.22,1,.36,1)`
+                              : hovering ? `${anim} .52s cubic-bezier(.22,1,.36,1)` : undefined,
                           }}
                         >
                           <Icon size={14} strokeWidth={1.9} />
@@ -717,7 +677,7 @@ export default function Analytics() {
             обрізаної статистики, а з повного журналу. */}
         {tab === 'Overview' && <Overview s={s} rows={rows || []} />}
         {tab === 'Performance' && <Performance s={s} rows={rows || []} />}
-        {tab === 'Psychology' && <Psychology s={s} rows={rows || []} />}
+        {tab === 'Psychology' && <Psychology s={s} rows={rows || []} reviews={reviews} />}
         {tab === 'Assets' && <Assets s={s} />}
         {/* Симулятор працює з угодами, а не з готовою статистикою:
             перший крок перераховує криву під кожен набір правил,

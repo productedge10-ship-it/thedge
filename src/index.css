@@ -948,175 +948,169 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ==================================================================
-   «Thermal Analytics Receipt» — кнопка «Поділитись статистикою» на
-   /analytics.
+   «Export Terminal» — кнопка «Поділитись статистикою» на /analytics.
 
-   Наведення показує метафору чекового принтера: замість спалаху чи
-   підказки повільно й безперервно «друкується» стрічка з тими самими
-   вісьмома цифрами, що йдуть у картку експорту, а наприкінці циклу —
-   штамп реального Net R і перехід до SHARE. Уся хореографія — суто
-   CSS keyframes на одній тривалості (6s): стрічка й штамп завжди
-   синхронні між собою без жодного JS-таймера. */
-.receipt-cta { isolation: isolate; }
+   Перша версія цього кроку розтягувала прохід на 3.6с — виглядало
+   гарно на записі, але жоден реальний ховер стільки не тримають:
+   людина або клікає одразу, або веде курсором далі. Тому історія
+   стиснута до одного удару: ядро розкривається, встигає майнути
+   ОДНА фраза, і одразу — штамп готового Net R. Усе разом влазить у
+   секунду, тож навіть побіжний наїзд курсором встигає показати
+   результат, а не обірватись на середині «завантаження». Ядро й
+   кроки анімуються суто CSS-таймлайном (жодного JS-таймера);
+   значення в фіналі — справжній Net R з тим самим get(s), що й
+   картка експорту. */
+.receipt-cta { isolation: isolate; transition: transform .18s ease, box-shadow .22s ease; }
+.receipt-cta:hover,
+.receipt-cta:focus-visible { transform: translateY(-1px); box-shadow: 0 8px 22px -6px rgba(var(--edge-acc-rgb, 139,123,255),.65); }
 
-.receipt-cta-front {
-  transition: opacity .38s cubic-bezier(.16,1,.3,1), filter .38s cubic-bezier(.16,1,.3,1), transform .38s cubic-bezier(.16,1,.3,1);
-}
-.receipt-cta:hover .receipt-cta-front,
-.receipt-cta:focus-visible .receipt-cta-front {
+/* Дефолтний напис тане й трохи спадає — звільняє місце ядру, а не
+   просто зникає різко. */
+.receipt-cta-default { transition: opacity .22s ease, transform .28s cubic-bezier(.3,.9,.4,1); }
+.receipt-cta:hover .receipt-cta-default,
+.receipt-cta:focus-visible .receipt-cta-default { opacity: 0; transform: scale(.94) translateY(4px); }
+
+/* Темне ядро — той самий колір, що й картка експорту — розгортається
+   з центру одним швидким рухом. transition (не лише animation) на
+   opacity тут важливий: якщо прибрати курсор посеред проходу, ядро
+   гасне плавно, а не зникає різким кадром. */
+.receipt-cta-core {
+  background: #0b0a0f;
+  transform: scaleX(0);
   opacity: 0;
-  filter: blur(5px);
-  transform: scale(.92) translateY(-2px);
+  transform-origin: center;
+  transition: transform .32s cubic-bezier(.3,1,.4,1), opacity .22s ease;
 }
+.receipt-cta:hover .receipt-cta-core,
+.receipt-cta:focus-visible .receipt-cta-core { transform: scaleX(1); opacity: 1; }
 
-.receipt-cta-head {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.95), transparent);
-  box-shadow: 0 0 6px 1px rgba(255,255,255,.6);
-  opacity: 0;
-  transition: opacity .25s ease;
-}
-.receipt-cta:hover .receipt-cta-head,
-.receipt-cta:focus-visible .receipt-cta-head { opacity: .85; }
-
-/* Вузьке «вічко»: суцільна зона лише 46–54% висоти кнопки — рівно
-   під один рядок. Ширша зона (як спершу) читалась одразу як три рядки
-   вкупі, бо крок рядка (~15px) менший за саму зону затухання — і чек
-   виглядав не як стрічка, що котиться, а як статичний список. */
-.receipt-cta-stream {
-  opacity: 0;
-  transition: opacity .4s ease .05s;
-  mask-image: linear-gradient(180deg, transparent 0%, transparent 28%, #000 46%, #000 54%, transparent 72%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 28%, #000 46%, #000 54%, transparent 72%, transparent 100%);
-}
-.receipt-cta:hover .receipt-cta-stream,
-.receipt-cta:focus-visible .receipt-cta-stream { opacity: 1; }
-
-/* top: 100% — стрічка стартує ПІД кнопкою, а не над нею: рядок, що
-   лежить найближче до вічка в стані спокою, завжди виринає першим,
-   тому Net R (перший у списку) має бути ближче до вічка, а не
-   найдальше — інакше чек «друкувався» б задом наперед, від
-   найкращого дня до чистого R. */
-.receipt-cta-paper {
-  top: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.receipt-cta:hover .receipt-cta-paper,
-.receipt-cta:focus-visible .receipt-cta-paper {
-  animation: receiptCtaFeed 6s linear infinite;
-}
-@keyframes receiptCtaFeed {
-  0%   { transform: translateY(0); }
-  68%  { transform: translateY(-188px); }
-  100% { transform: translateY(-188px); }
-}
-
-.receipt-cta-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+.receipt-cta-step {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
   font-family: var(--edge-mono, ui-monospace, monospace);
-  font-size: 8.5px;
-  line-height: 1.3;
-  white-space: nowrap;
+  font-size: 11.5px; font-weight: 600; color: #fff;
+  opacity: 0; pointer-events: none;
+  transition: opacity .22s ease;
 }
-.receipt-cta-label { color: rgba(255,255,255,.55); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
-.receipt-cta-val { color: #fff; font-weight: 800; }
-.receipt-cta-val.is-hi {
-  background: rgba(255,255,255,.26);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
-  padding: 1px 5px;
-  border-radius: 4px;
-}
-.receipt-cta-divider {
-  height: 1px;
-  margin: 2px 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+.receipt-cta-step b { color: var(--edge-acc, #8b7bff); font-weight: 800; }
+
+/* Одна фраза, одна поява-й-згасання — не рядок з тексту, а іскра
+   процесу між розкриттям ядра і штампом. */
+.receipt-cta:hover .receipt-cta-step-1,
+.receipt-cta:focus-visible .receipt-cta-step-1 { animation: receiptStepIO .38s cubic-bezier(.3,.8,.4,1) forwards .12s; }
+@keyframes receiptStepIO {
+  0%   { opacity: 0; transform: translateY(6px); }
+  30%  { opacity: 1; transform: translateY(0); }
+  70%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-6px); }
 }
 
-/* Штамп зʼявляється на тій самій тривалості (6s), що й стрічка, тому
-   завжди виринає рівно тоді, коли остання цифра вже проїхала повз
-   вічко — жодного окремого таймера, який міг би розсинхронізуватись. */
-.receipt-cta-seal {
-  opacity: 0;
-  transform: scale(.92);
+/* Фінал: справжній Net R, штамп і стрілка на той самий клік, що й
+   решта кнопки. Тримається до кінця ховеру — прохід один, без петлі. */
+.receipt-cta-final {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 6px 0 18px;
+  opacity: 0; pointer-events: none;
+  transition: opacity .22s ease;
 }
-.receipt-cta:hover .receipt-cta-seal,
-.receipt-cta:focus-visible .receipt-cta-seal {
-  animation: receiptCtaSeal 6s cubic-bezier(.16,1,.3,1) infinite;
+.receipt-cta:hover .receipt-cta-final,
+.receipt-cta:focus-visible .receipt-cta-final { animation: receiptFinalPop .32s cubic-bezier(.3,1.3,.58,1) forwards .5s; }
+@keyframes receiptFinalPop {
+  0%   { opacity: 0; transform: scale(.92) translateY(3px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
 }
-@keyframes receiptCtaSeal {
-  0%, 68%  { opacity: 0; transform: scale(.9); }
-  78%, 96% { opacity: 1; transform: scale(1); }
-  100%     { opacity: 0; transform: scale(.94); }
-}
-
-.receipt-cta-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 8px;
-  border-radius: 7px;
+.receipt-cta-final-badge {
   font-family: var(--edge-mono, ui-monospace, monospace);
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--tone);
-  background: rgba(var(--tone-rgb), .16);
-  border: 1px solid rgba(var(--tone-rgb), .45);
-  box-shadow: 0 0 14px rgba(var(--tone-rgb), .3);
+  font-size: 15px; font-weight: 800; color: #fff;
+  opacity: 0;
 }
-.receipt-cta-badge b {
-  font-size: 7.5px;
-  font-weight: 800;
-  letter-spacing: .1em;
-  color: rgba(255,255,255,.8);
-  margin-left: 1px;
+.receipt-cta-final-badge.tone-ok   { color: #6ee7b7; }
+.receipt-cta-final-badge.tone-bad  { color: #fca5a5; }
+.receipt-cta-final-badge.tone-warn { color: #fde68a; }
+/* Цифра не просто зʼявляється разом з рештою фіналу — вона на мить
+   спалахує світлом, як монета, що клацнула на місце. Власна анімація
+   (не просто `opacity` від .receipt-cta-final) — щоб спалах був точно
+   на цифрі, а не розмазаний по всьому рядку. */
+.receipt-cta:hover .receipt-cta-final-badge,
+.receipt-cta:focus-visible .receipt-cta-final-badge { animation: receiptBadgeFlash .5s ease-out forwards .5s; }
+@keyframes receiptBadgeFlash {
+  0%   { opacity: 0; filter: drop-shadow(0 0 0 rgba(255,255,255,0)); transform: scale(.85); }
+  55%  { opacity: 1; filter: drop-shadow(0 0 7px currentColor); transform: scale(1.08); }
+  100% { opacity: 1; filter: drop-shadow(0 0 0 rgba(255,255,255,0)); transform: scale(1); }
+}
+.receipt-cta-final-label {
+  font-family: var(--edge-sans, inherit);
+  font-size: 10px; font-weight: 700; letter-spacing: .4px;
+  text-transform: uppercase; color: rgba(255,255,255,.65);
+}
+.receipt-cta-arrow-wrap { position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.receipt-cta-arrow {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 999px; background: #fff;
+  box-shadow: 0 0 12px rgba(255,255,255,.28);
+  transition: transform .2s ease;
+}
+.receipt-cta:hover .receipt-cta-arrow { transform: scale(1.06); }
+
+/* Кільце-луна навколо стрілки: одне коротке розширення саме в мить,
+   коли фінал устигає зʼявитись, — ніби кнопка «клацнула», а не просто
+   намалювалась. */
+.receipt-cta-arrow-ring {
+  position: absolute; inset: -3px; border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,.75);
+  opacity: 0; transform: scale(.7); pointer-events: none;
+}
+.receipt-cta:hover .receipt-cta-arrow-ring,
+.receipt-cta:focus-visible .receipt-cta-arrow-ring { animation: receiptArrowPing .5s ease-out forwards .55s; }
+@keyframes receiptArrowPing {
+  0%   { opacity: .8; transform: scale(.75); }
+  100% { opacity: 0; transform: scale(1.75); }
 }
 
-.receipt-cta-share {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 9px;
-  border-radius: 6px;
-  background: #fff;
-  color: #0A0A0C;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: .02em;
-  box-shadow: 0 0 14px rgba(255,255,255,.45);
-}
-
+/* Світловий блік проходить один раз, рівно коли фінал устигає
+   зʼявитись, — легка крапка над «і» замість окремого атракціону. */
 .receipt-cta-glimmer {
-  left: -120%;
-  width: 55%;
+  position: absolute; inset-block: 0; z-index: 10; pointer-events: none;
+  left: -100%; width: 50%;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent);
   transform: skewX(-20deg);
-  transition: left 1s cubic-bezier(.16,1,.3,1);
 }
 .receipt-cta:hover .receipt-cta-glimmer,
-.receipt-cta:focus-visible .receipt-cta-glimmer { left: 170%; }
+.receipt-cta:focus-visible .receipt-cta-glimmer { animation: receiptGlimmerSweep .5s ease forwards .58s; }
+@keyframes receiptGlimmerSweep { from { left: -100%; } to { left: 200%; } }
 
-.edge-no-motion .receipt-cta:hover .receipt-cta-paper,
-.edge-no-motion .receipt-cta:focus-visible .receipt-cta-paper { animation: none !important; }
-.edge-no-motion .receipt-cta:hover .receipt-cta-seal,
-.edge-no-motion .receipt-cta:focus-visible .receipt-cta-seal { animation: none !important; opacity: 0; }
+.edge-no-motion .receipt-cta:hover .receipt-cta-core,
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-core { transition: none !important; transform: scaleX(0) !important; opacity: 0 !important; }
+.edge-no-motion .receipt-cta:hover .receipt-cta-default,
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-default { opacity: 1 !important; transform: none !important; }
+.edge-no-motion .receipt-cta:hover .receipt-cta-step,
+.edge-no-motion .receipt-cta:hover .receipt-cta-final,
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-step,
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-final { animation: none !important; opacity: 0 !important; }
 .edge-no-motion .receipt-cta:hover .receipt-cta-glimmer,
-.edge-no-motion .receipt-cta:focus-visible .receipt-cta-glimmer { left: -120%; }
-.edge-no-motion .receipt-cta:hover .receipt-cta-front,
-.edge-no-motion .receipt-cta:focus-visible .receipt-cta-front { opacity: 1; filter: none; transform: none; }
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-glimmer { animation: none !important; left: -100% !important; }
+.edge-no-motion .receipt-cta:hover .receipt-cta-final-badge,
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-final-badge { animation: none !important; opacity: 0 !important; }
+.edge-no-motion .receipt-cta:hover .receipt-cta-arrow-ring,
+.edge-no-motion .receipt-cta:focus-visible .receipt-cta-arrow-ring { animation: none !important; opacity: 0 !important; }
 
 @media (prefers-reduced-motion: reduce) {
-  .receipt-cta:hover .receipt-cta-paper,
-  .receipt-cta:focus-visible .receipt-cta-paper { animation: none !important; }
-  .receipt-cta:hover .receipt-cta-seal,
-  .receipt-cta:focus-visible .receipt-cta-seal { animation: none !important; opacity: 0; }
+  .receipt-cta:hover .receipt-cta-core,
+  .receipt-cta:focus-visible .receipt-cta-core { transition: none !important; transform: scaleX(0) !important; opacity: 0 !important; }
+  .receipt-cta:hover .receipt-cta-default,
+  .receipt-cta:focus-visible .receipt-cta-default { opacity: 1 !important; transform: none !important; }
+  .receipt-cta:hover .receipt-cta-step,
+  .receipt-cta:hover .receipt-cta-final,
+  .receipt-cta:focus-visible .receipt-cta-step,
+  .receipt-cta:focus-visible .receipt-cta-final { animation: none !important; opacity: 0 !important; }
   .receipt-cta:hover .receipt-cta-glimmer,
-  .receipt-cta:focus-visible .receipt-cta-glimmer { left: -120%; }
-  .receipt-cta:hover .receipt-cta-front,
-  .receipt-cta:focus-visible .receipt-cta-front { opacity: 1; filter: none; transform: none; }
+  .receipt-cta:focus-visible .receipt-cta-glimmer { animation: none !important; left: -100% !important; }
+  .receipt-cta:hover .receipt-cta-final-badge,
+  .receipt-cta:focus-visible .receipt-cta-final-badge { animation: none !important; opacity: 0 !important; }
+  .receipt-cta:hover .receipt-cta-arrow-ring,
+  .receipt-cta:focus-visible .receipt-cta-arrow-ring { animation: none !important; opacity: 0 !important; }
 }
 
 /* Ховер селекторів фільтрів у журналі.

@@ -630,7 +630,9 @@ export default function Backtest() {
                 Видалити «{confirm.name}»?
               </div>
               <p className="mb-6 text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
-                Разом із бектестом зникнуть усі {confirm.trades?.length || 0} угод у ньому.
+                {confirm.demo
+                  ? 'Це приклад, не твої дані — просто сховається з цього перегляду. Онови сторінку, і він зʼявиться знову, поки не створиш свій перший бектест.'
+                  : `Разом із бектестом зникнуть усі ${confirm.trades?.length || 0} угод у ньому.`}
               </p>
               <div className="flex gap-2.5">
                 <button

@@ -113,7 +113,7 @@ export default function TourOverlay({ step, index, total, onNext, onSkip }) {
   }
 
   const body = (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 4000, pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 4000, pointerEvents: 'none', contain: 'layout paint' }}>
       {/* Затемнення з вирізом навколо цілі */}
       {box.center ? (
         <div
@@ -124,21 +124,31 @@ export default function TourOverlay({ step, index, total, onNext, onSkip }) {
           }}
         />
       ) : (
+        /* Спред тіні був 9999px — на кожному кадрі 420-мілісекундного
+           переїзду браузер перемальовував тінь такого розміру заново,
+           і саме це, а не сам рух, давало відчутні провисання кадрів.
+           3000px з запасом ховає під собою навіть 5K-екран, а рахується
+           в рази дешевше. will-change готує композитний шар заздалегідь,
+           а не вже посеред руху. */
         <div
           onClick={onNext}
           style={{
             position: 'absolute',
             top: box.top, left: box.left, width: box.width, height: box.height,
             borderRadius: 14,
-            boxShadow: `0 0 0 9999px rgba(6,6,10,${shown ? 0.82 : 0.55})`,
+            boxShadow: `0 0 0 3000px rgba(6,6,10,${shown ? 0.82 : 0.55})`,
             border: `1px solid ${A(shown ? 0.55 : 0)}`,
             pointerEvents: 'auto',
+            willChange: 'top, left, width, height',
             transition: 'top .42s cubic-bezier(.22,1,.36,1), left .42s cubic-bezier(.22,1,.36,1), width .42s cubic-bezier(.22,1,.36,1), height .42s cubic-bezier(.22,1,.36,1), box-shadow .3s ease, border-color .3s ease',
           }}
         />
       )}
 
-      {/* Сама підказка */}
+      {/* Сама підказка. top/left тут НЕ анімуються навмисно: картка вже
+         йде в opacity:0 на час переїзду (shown=false вище), тож рух
+         під капотом і так невидимий — анімувати layout-властивість,
+         яку ніхто не бачить, тільки зайвий reflow на кожен крок туру. */}
       <div
         style={{
           position: 'absolute', width: TIP_W, pointerEvents: 'auto',
@@ -148,7 +158,7 @@ export default function TourOverlay({ step, index, total, onNext, onSkip }) {
           boxShadow: '0 30px 70px -20px #000',
           opacity: shown ? 1 : 0,
           transform: `${tipStyle.transform || ''} translateY(${shown ? 0 : 8}px) scale(${shown ? 1 : 0.985})`.trim(),
-          transition: 'opacity .28s ease, transform .34s cubic-bezier(.22,1,.36,1), top .42s cubic-bezier(.22,1,.36,1), left .42s cubic-bezier(.22,1,.36,1)',
+          transition: 'opacity .28s ease, transform .34s cubic-bezier(.22,1,.36,1)',
           ...tipStyle,
           ...(tipStyle.transform ? {} : { transform: `translateY(${shown ? 0 : 8}px) scale(${shown ? 1 : 0.985})` }),
         }}

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, Trash2, Loader2, Inbox,
-  ShieldCheck, ShieldAlert, AlertTriangle, Zap, CircleCheck,
+  ShieldCheck, ShieldAlert, AlertTriangle, Zap, CircleCheck, Hand, Bot, OctagonAlert,
 } from 'lucide-react';
 import AssetIcon from '../ui/AssetIcon';
 import { T, SPRING, EASE } from '../../lib/theme';
@@ -42,11 +42,18 @@ const RESULT = {
    входу, у другому людина закрила руками посеред угоди.
 
    Тейк і стоп тут не показуємо: для них `result` уже сказав те саме,
-   і другий підпис про те саме читався б як шум. */
-const EXIT_LABEL = {
-  manual:  'Market',
-  expert:  'Bot',
-  stopout: 'Stop-out',
+   і другий підпис про те саме читався б як шум.
+
+   Кружечок з іконкою — той самий мотив, що й «Дисципліна» поруч у
+   цій-таки таблиці: коротко, кольорово, без тексту, який або не
+   влазить в колонку, або тулиться сірим написом і псує вигляд рядка.
+   Колір тут не дублює результат, а несе власний сенс: жовтий —
+   людина втрутилась руками, синій — це зробив бот, червоний —
+   позицію зняв брокер, і це вже інша розмова, ніж програний стоп. */
+const EXIT_META = {
+  manual:  { label: 'Closed by hand, mid-position', Icon: Hand,         c: '#fb923c', rgb: '251,146,60' },
+  expert:  { label: 'Closed by the bot',             Icon: Bot,          c: T.info,    rgb: T.infoRgb },
+  stopout: { label: 'Stopped out by the broker',     Icon: OctagonAlert, c: T.bad,     rgb: T.badRgb },
 };
 
 const COLUMNS = [
@@ -431,37 +438,38 @@ export default function TradesTable({
                   </td>
 
                   <td className="px-4 py-0">
-                    <span
-                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.06em]"
-                      style={
-                        res
-                          ? { background: `rgba(${res.rgb},0.12)`, border: `1px solid rgba(${res.rgb},0.26)`, color: res.c, fontFamily: T.sans }
-                          : { background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.line}`, color: T.text4, fontFamily: T.sans }
-                      }
-                    >
-                      <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: res ? res.c : T.text4 }} />
-                      {res ? res.label : 'Not set'}
-                    </span>
-
-                    {/* Колір лишається за результатом, підпис — приглушений
-                        і поруч, а не замість. Пофарбувати «Market» у
-                        жовтий означало б поставити спосіб виходу вище за
-                        сам результат, а в таблиці спершу читають, чим
-                        угода скінчилась. */}
-                    {EXIT_LABEL[t.exit_reason] && (
+                    {/* Без рамки й фону: дві бордеровані піллюлі одна над
+                        одною важать однаково й читаються як наліпки, що
+                        зіштовхнулись. Тут лишається одна вагома піллюля
+                        (результат) і легкий підпис способу виходу поруч
+                        — кольоровий, без чіпа, тому не змагається з нею. */}
+                    <div className="flex items-center gap-2">
                       <span
-                        className="ml-1.5 inline-flex items-center rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em]"
-                        style={{
-                          fontFamily: T.sans,
-                          color: T.text3,
-                          background: 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${T.line}`,
-                        }}
-                        title="Позиція закрита вручну по ринку, а не за ордером"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.06em]"
+                        style={
+                          res
+                            ? { background: `rgba(${res.rgb},0.12)`, border: `1px solid rgba(${res.rgb},0.26)`, color: res.c, fontFamily: T.sans }
+                            : { background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.line}`, color: T.text4, fontFamily: T.sans }
+                        }
                       >
-                        {EXIT_LABEL[t.exit_reason]}
+                        <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: res ? res.c : T.text4 }} />
+                        {res ? res.label : 'Not set'}
                       </span>
-                    )}
+
+                      {EXIT_META[t.exit_reason] && (() => {
+                        const meta = EXIT_META[t.exit_reason];
+                        return (
+                          <span
+                            title={meta.label}
+                            className="inline-flex shrink-0 items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.04em]"
+                            style={{ fontFamily: T.sans, color: meta.c }}
+                          >
+                            <meta.Icon size={11} strokeWidth={2.4} />
+                            {t.exit_reason === 'manual' ? 'Market' : t.exit_reason === 'expert' ? 'Bot' : 'Stop-out'}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </td>
 
                   <td className="px-4 py-0">

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import ImageSlider from '../ui/ImageSlider';
 import { resolveSrc } from '../../lib/blogImages';
 import { BlogCat, EdgeWordmark } from './BlogLogo';
+import { useAuth } from '../../context/AuthContext';
 
 /* ==================================================================
    БЛОГ — оболонка й стилі.
@@ -160,6 +161,11 @@ export function Seg({ items, value, onPick, label }) {
    дивиться на людину з трьох місць одночасно.
 ------------------------------------------------------------------ */
 export function BlogHeader({ lang, children, nav = true }) {
+  /* Хто вже зареєстрований, тому «Почати безкоштовно» не має сенсу —
+     людина не починає вдруге. Кнопка веде туди, де вона справді
+     чекає: назад у застосунок, а не на форму реєстрації. */
+  const { user } = useAuth();
+
   return (
     <header className="bl-head">
       <div className="bl-head-in">
@@ -178,7 +184,9 @@ export function BlogHeader({ lang, children, nav = true }) {
 
         <div className="bl-head-right">
           {children}
-          <a className="bl-btn bl-btn--head" href="/auth">Почати безкоштовно</a>
+          {user
+            ? <a className="bl-btn bl-btn--head" href="/app">Відкрити застосунок</a>
+            : <a className="bl-btn bl-btn--head" href="/auth">Почати безкоштовно</a>}
         </div>
       </div>
     </header>

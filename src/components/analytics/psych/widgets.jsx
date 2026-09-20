@@ -325,6 +325,8 @@ const ALL_PSYCH_WIDGETS = {
     title: 'Коли читання не справдилось',
     hint: 'Що ти робиш у дні, коли ринок пішов проти твого bias',
     icon: Compass, group: 'Психологія', tone: '#60a5fa', shape: 'bars', defaultW: 2, defaultH: 2,
+    ready: (s) => !!s.biasMoney,
+    lockedHint: 'Постав фактичний bias у розборі дня — і віджет стане доступним',
     render: ({ s }) => {
       const b = s.biasMoney;
       if (!b) {
@@ -420,6 +422,8 @@ const ALL_PSYCH_WIDGETS = {
     title: 'Ціна виходу руками',
     hint: 'Скільки коштує рішення закрити позицію самому замість ордера',
     icon: Hand, group: 'Психологія', tone: '#fbbf24', shape: 'bars', defaultW: 2, defaultH: 2,
+    ready: (s) => !!(s.hand && s.hand.known),
+    lockedHint: 'Доступно лише для угод з автоімпорту MT5 — причину виходу приносить термінал',
     render: ({ s }) => {
       const h = s.hand || { known: 0 };
       if (!h.known) {
@@ -458,6 +462,8 @@ const ALL_PSYCH_WIDGETS = {
     title: 'Дисципліна в грошах',
     hint: 'Скільки дають дні за планом проти днів з відхиленнями',
     icon: ShieldCheck, group: 'Психологія', tone: '#34d399', shape: 'bars', defaultW: 2, defaultH: 2,
+    ready: (s) => { const f = s.flowMoney; return !!f && (f.plan.days > 0 || f.drift.days > 0); },
+    lockedHint: 'Відмічай у плані, як минув день — і віджет стане доступним',
     render: ({ s }) => {
       const f = s.flowMoney;
       if (!f || (!f.plan.days && !f.drift.days)) {
@@ -500,6 +506,8 @@ const ALL_PSYCH_WIDGETS = {
     title: 'Вечірній розбір',
     hint: 'Причини, які ти сам назвав наприкінці дня',
     icon: NotebookPen, group: 'Психологія', tone: '#8b7bff', shape: 'bars', defaultW: 2, defaultH: 3,
+    ready: (s) => !!(s.review && s.review.days > 0),
+    lockedHint: 'Заповни «Як минув торговий день» у плані — і віджет стане доступним',
     render: ({ s }) => {
       const r = s.review || { days: 0, states: [], why: [], hard: [] };
 
@@ -566,7 +574,9 @@ const ALL_PSYCH_WIDGETS = {
     icon: Flame, group: 'Психологія', tone: '#f87171', shape: 'curve', defaultW: 2, defaultH: 2,
     options: {
     },
-    render: ({ s }) => (
+    render: ({ s }) => {
+      if (!s.trades.length) return <Empty title="Ще немає угод" hint="Ланцюг тільта складеться, щойно в журналі буде за що зачепитись" />;
+      return (
         <>
         <div className="w-full mt-2 relative group" style={{ flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
@@ -595,7 +605,8 @@ const ALL_PSYCH_WIDGETS = {
           </p>
         </div>
         </>
-    ),
+      );
+    },
   },
   emotions: {
     title: 'Емоційний розподіл',
@@ -605,6 +616,7 @@ const ALL_PSYCH_WIDGETS = {
       view: { label: 'Вигляд', choices: [['radar', 'Ефективність'], ['pie', 'Частка станів']], def: 'radar' },
     },
     render: ({ s, o }) => {
+      if (!s.trades.length) return <Empty title="Ще немає угод" hint="Розподіл станів з'явиться, щойно в журналі буде що рахувати" />;
       const { stateData } = derive(s);
       return (
         <>
@@ -676,6 +688,7 @@ const ALL_PSYCH_WIDGETS = {
     options: {
     },
     render: ({ s }) => {
+      if (!s.trades.length) return <Empty title="Ще немає угод" hint="Рейтинг станів з'явиться, щойно в журналі буде що зважити" />;
       const { totalTrades, rankedStates, maxAbsNet, netTotal, impulsiveTrades, netWithoutImpulse, bestState, worstState, calmStat, tiltStat } = derive(s);
       return (
         <>
@@ -781,6 +794,7 @@ const ALL_PSYCH_WIDGETS = {
        найдорожча) досить, а по типи вже видно на самому нижньому графіку. */
     options: {},
     render: ({ s }) => {
+      if (!s.trades.length) return <Empty title="Ще немає угод" hint="Реєстр помилок з'явиться, щойно в журналі буде що перевірити" />;
       const { worstMistake, ledgerTotal, ledgerCount, ledgerAbs } = derive(s);
       return (
         <div className="flex flex-col flex-1 min-h-0 justify-center p-2.5 bg-[var(--edge-surface-hi)]/70 border border-[#f87171]/10 rounded-[12px]">
@@ -827,6 +841,7 @@ const ALL_PSYCH_WIDGETS = {
     options: {
     },
     render: ({ s }) => {
+      if (!s.trades.length) return <Empty title="Ще немає угод" hint="Порівняння з'явиться, щойно в журналі буде за що зачепитись" />;
       const { planChartData } = derive(s);
       return (
         <>
@@ -889,6 +904,7 @@ const ALL_PSYCH_WIDGETS = {
     options: {
     },
     render: ({ s }) => {
+      if (!s.trades.length) return <Empty title="Ще немає угод" hint="Шкала ризику з'явиться, щойно в журналі буде що зважити" />;
       const { riskRows, extraRiskR, riskVerdict } = derive(s);
       return (
         <>
@@ -1170,6 +1186,12 @@ const ALL_PSYCH_WIDGETS = {
     title: 'Крива чистоти',
     hint: 'Частка угод без порушень у ковзному вікні',
     icon: Sparkles, group: 'Психологія', tone: '#34d399', shape: 'curve', defaultW: 2, defaultH: 2,
+    /* Вікно за замовчуванням — 10 угод: менше — cleanSeries повертає
+       [], і картка на дошці одразу каже «замало угод». Той самий
+       принцип, що й із сетапами: не давати додати те, що зараз
+       нема з чого показати. */
+    ready: (s) => (s.trades || []).length >= 10,
+    lockedHint: 'Назбирай хоча б 10 угод — і крива стане доступною',
     options: {
       win: { label: 'Вікно', choices: [['5', '5'], ['10', '10'], ['20', '20']], def: '10' },
     },
@@ -1274,6 +1296,8 @@ const ALL_PSYCH_WIDGETS = {
     title: 'Години зриву',
     hint: 'О котрій годині ти найчастіше виходиш за правила',
     icon: Clock, group: 'Психологія', tone: '#f87171', shape: 'bars', defaultW: 2, defaultH: 2,
+    ready: (s) => (s.trades || []).some((t) => typeof t.hour === 'number'),
+    lockedHint: 'Заповни час входу хоч в одній угоді — і графік стане доступним',
     options: {
     },
     render: ({ s }) => {

@@ -114,6 +114,7 @@ const router = createBrowserRouter([
       { path: 'plan/:date/:pair', element: page(DailyPlan) },
       { path: 'journal', element: page(TradingJournal) },
       { path: 'analytics', element: page(Analytics) },
+      { path: 'analyses', element: page(Analyses) },
       { path: 'accounts', element: page(Accounts) },
     ],
   },

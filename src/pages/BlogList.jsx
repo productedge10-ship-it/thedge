@@ -10,6 +10,7 @@ import {
 import { plainText } from '../lib/blogMd';
 import { colorScheme, themeVars, useReaderPrefs, READER_THEMES } from '../lib/blogReader';
 import { useDocumentMeta, siteOrigin } from '../lib/blogSeo';
+import { useAuth } from '../context/AuthContext';
 import {
   BlogFooter, BlogHeader, BlogStyles, Cover, Crumbs, MIN_WORD, Seg,
   blogPath, fmtDate, useBlogBackground,
@@ -53,6 +54,9 @@ const TXT = {
     promoTitle: 'Журнал, який рахує за тебе',
     promoText: 'План, угоди, аналітика й розбори в одному місці. Безкоштовний тариф — назавжди.',
     promoCta: 'Почати безкоштовно',
+    promoTitleUser: 'Твій журнал уже чекає',
+    promoTextUser: 'План, угоди, аналітика й розбори — усе вже прив’язане до твого акаунта.',
+    promoCtaUser: 'Відкрити застосунок',
     tagPrefix: 'Тег',
     toUk: 'Українською',
   },
@@ -66,7 +70,11 @@ const TXT = {
     about: 'О чём это',
     promoTitle: 'Журнал, который считает за тебя',
     promoText: 'План, сделки, аналитика и разборы в одном месте. Бесплатный тариф — навсегда.',
-    promoCta: 'Начать бесплатно', tagPrefix: 'Тег', toUk: 'На украинском',
+    promoCta: 'Начать бесплатно',
+    promoTitleUser: 'Твой журнал уже ждёт',
+    promoTextUser: 'План, сделки, аналитика и разборы — всё уже привязано к твоему аккаунту.',
+    promoCtaUser: 'Открыть приложение',
+    tagPrefix: 'Тег', toUk: 'На украинском',
   },
   en: {
     blog: 'Blog', title: 'The Edge blog',
@@ -78,7 +86,11 @@ const TXT = {
     about: 'What this is about',
     promoTitle: 'A journal that does the maths',
     promoText: 'Plan, trades, analytics and reviews in one place. Free tier, forever.',
-    promoCta: 'Start free', tagPrefix: 'Tag', toUk: 'In Ukrainian',
+    promoCta: 'Start free',
+    promoTitleUser: 'Your journal is waiting',
+    promoTextUser: 'Plan, trades, analytics and reviews — already tied to your account.',
+    promoCtaUser: 'Open the app',
+    tagPrefix: 'Tag', toUk: 'In Ukrainian',
   },
 };
 
@@ -109,6 +121,7 @@ export default function BlogList() {
   useEdgeFonts();
   const { lang, cat: catSlug, tag } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { prefs, setPref } = useReaderPrefs();
   const [q, setQ] = useState('');
   const [shown, setShown] = useState(PAGE);
@@ -286,9 +299,9 @@ export default function BlogList() {
           {/* ---- правий стовпчик ---- */}
           <aside className="bl-rail">
             <div className="bl-promo">
-              <h4>{t.promoTitle}</h4>
-              <p>{t.promoText}</p>
-              <a className="bl-btn bl-btn--solid bl-btn--wide" href="/auth">{t.promoCta}</a>
+              <h4>{user ? t.promoTitleUser : t.promoTitle}</h4>
+              <p>{user ? t.promoTextUser : t.promoText}</p>
+              <a className="bl-btn bl-btn--solid bl-btn--wide" href={user ? '/app' : '/auth'}>{user ? t.promoCtaUser : t.promoCta}</a>
             </div>
 
             {all.length > 0 && (

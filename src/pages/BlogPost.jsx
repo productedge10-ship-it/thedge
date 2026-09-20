@@ -10,6 +10,7 @@ import {
   colorScheme, themeVars, textVars, useReaderPrefs, READER_THEMES,
 } from '../lib/blogReader';
 import { useDocumentMeta, siteOrigin } from '../lib/blogSeo';
+import { useAuth } from '../context/AuthContext';
 import {
   BlogFooter, BlogHeader, BlogStyles, Cover, Crumbs, MIN_WORD, Seg,
   blogPath, fmtDate, useBlogBackground,
@@ -36,16 +37,33 @@ import ReadingTools, { SideToc, useActiveHeading } from '../components/blog/Read
 
 const SWATCH = { dark: '#0e0e14', light: '#faf5ff', book: '#ede6d9' };
 
+/* ctaTitleUser/ctaTextUser/ctaUser — той самий блок, але для тих,
+   хто вже зареєстрований: «почати безкоштовно» для власника акаунта
+   звучить як помилка, тому й текст, і кнопка інші — назад у
+   застосунок, а не на форму реєстрації. */
 const TXT = {
-  uk: { blog: 'Блог', related: 'Читати далі', ctaTitle: 'Перевір це на своїх угодах', ctaText: 'Журнал сам порахує R, профіт-фактор і покаже, які рішення тобі платять. Безкоштовний тариф — назавжди.', cta: 'Почати безкоштовно' },
-  ru: { blog: 'Блог', related: 'Читать дальше', ctaTitle: 'Проверь это на своих сделках', ctaText: 'Журнал сам посчитает R, профит-фактор и покажет, какие решения тебе платят. Бесплатный тариф — навсегда.', cta: 'Начать бесплатно' },
-  en: { blog: 'Blog', related: 'Read next', ctaTitle: 'Check it on your own trades', ctaText: 'The journal counts R and profit factor for you and shows which decisions pay. Free tier, forever.', cta: 'Start free' },
+  uk: {
+    blog: 'Блог', related: 'Читати далі',
+    ctaTitle: 'Перевір це на своїх угодах', ctaText: 'Журнал сам порахує R, профіт-фактор і покаже, які рішення тобі платять. Безкоштовний тариф — назавжди.', cta: 'Почати безкоштовно',
+    ctaTitleUser: 'Твій журнал уже чекає', ctaTextUser: 'Розбір прочитав — рахувати йди у свій журнал, там ці цифри вже по твоїх угодах.', ctaUser: 'Відкрити застосунок',
+  },
+  ru: {
+    blog: 'Блог', related: 'Читать дальше',
+    ctaTitle: 'Проверь это на своих сделках', ctaText: 'Журнал сам посчитает R, профит-фактор и покажет, какие решения тебе платят. Бесплатный тариф — навсегда.', cta: 'Начать бесплатно',
+    ctaTitleUser: 'Твой журнал уже ждёт', ctaTextUser: 'Разбор прочитал — считать иди в свой журнал, там эти цифры уже по твоим сделкам.', ctaUser: 'Открыть приложение',
+  },
+  en: {
+    blog: 'Blog', related: 'Read next',
+    ctaTitle: 'Check it on your own trades', ctaText: 'The journal counts R and profit factor for you and shows which decisions pay. Free tier, forever.', cta: 'Start free',
+    ctaTitleUser: 'Your journal is waiting', ctaTextUser: 'Read the breakdown — now go run these same numbers on your own journal.', ctaUser: 'Open the app',
+  },
 };
 
 export default function BlogPost() {
   useEdgeFonts();
   const { lang, slug } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { prefs, setPref, reset } = useReaderPrefs();
 
   const vars = themeVars(prefs.theme);
@@ -183,9 +201,9 @@ export default function BlogPost() {
               </div>
 
               <div className="bl-art-cta">
-                <h3>{t.ctaTitle}</h3>
-                <p>{t.ctaText}</p>
-                <a className="bl-btn bl-btn--solid" href="/auth">{t.cta}</a>
+                <h3>{user ? t.ctaTitleUser : t.ctaTitle}</h3>
+                <p>{user ? t.ctaTextUser : t.ctaText}</p>
+                <a className="bl-btn bl-btn--solid" href={user ? '/app' : '/auth'}>{user ? t.ctaUser : t.cta}</a>
               </div>
             </footer>
           </article>

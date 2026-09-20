@@ -29,6 +29,7 @@ export const DEFAULT_ORDER = [
   '/backtest',
   '/20-trades',
   '/accounts',
+  '/blog',
 ];
 
 export const DEFAULT_LAYOUT = { order: DEFAULT_ORDER, hidden: [], sizes: {} };
