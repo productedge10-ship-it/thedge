@@ -857,7 +857,7 @@ export default function TradeDetailsModal({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       onClick={onClose}
-      className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto p-3 sm:p-6"
+      className="fixed inset-0 z-[1000] flex items-start justify-center overflow-x-hidden overflow-y-auto p-3 sm:p-6"
       style={{ background: 'rgba(6,6,8,0.86)', backdropFilter: 'blur(14px)' }}
     >
       <motion.div
@@ -870,44 +870,63 @@ export default function TradeDetailsModal({
         style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 50px 100px rgba(0,0,0,0.85)' }}
       >
         {/* ---------- ШАПКА ---------- */}
-        <header className="flex items-center gap-4 px-6 py-4" style={{ borderBottom: `1px solid ${T.line}`, background: T.sunken }}>
-          <div
-            className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl"
-            style={{
-              background: isLong ? `rgba(${T.okRgb},0.09)` : `rgba(${T.badRgb},0.09)`,
-              border: `1px solid ${isLong ? `rgba(${T.okRgb},0.22)` : `rgba(${T.badRgb},0.22)`}`,
-            }}
-          >
-            {isLong
-              ? <ArrowUpRight size={17} strokeWidth={2.4} style={{ color: T.ok }} />
-              : <ArrowDownRight size={17} strokeWidth={2.4} style={{ color: T.bad }} />}
-          </div>
+        {/* Хрестик закриття винесений з групи дій в окремий верхній
+            рядок разом з іконкою й назвою: коли «Поділитись»/Edit не
+            влазили й переносились нижче, X переносився разом з ними
+            і опинявся зліва посеред картки, а не там, де його шукає
+            рука — у правому верхньому куті. Тепер він завжди на
+            першому рядку, праворуч, незалежно від того, скільки
+            вторинних кнопок пішло на рядок нижче. */}
+        <header className="flex flex-col gap-2 px-4 py-4 sm:px-6" style={{ borderBottom: `1px solid ${T.line}`, background: T.sunken }}>
+          <div className="flex items-start gap-3">
+            <div
+              className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl"
+              style={{
+                background: isLong ? `rgba(${T.okRgb},0.09)` : `rgba(${T.badRgb},0.09)`,
+                border: `1px solid ${isLong ? `rgba(${T.okRgb},0.22)` : `rgba(${T.badRgb},0.22)`}`,
+              }}
+            >
+              {isLong
+                ? <ArrowUpRight size={17} strokeWidth={2.4} style={{ color: T.ok }} />
+                : <ArrowDownRight size={17} strokeWidth={2.4} style={{ color: T.bad }} />}
+            </div>
 
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="truncate text-[23.5px] font-semibold leading-none" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
-                {d.plan_pair || 'Trade'}
-              </h2>
-              {res && (
-                <span
-                  className="rounded-md px-2.5 py-[3px] text-[11.5px] font-bold uppercase tracking-[0.1em]"
-                  style={{ background: `rgba(${res.rgb},0.09)`, border: `1px solid rgba(${res.rgb},0.24)`, color: res.c, fontFamily: MONO }}
-                >
-                  {res.label}
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h2 className="truncate text-[23.5px] font-semibold leading-none" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
+                  {d.plan_pair || 'Trade'}
+                </h2>
+                {res && (
+                  <span
+                    className="rounded-md px-2.5 py-[3px] text-[11.5px] font-bold uppercase tracking-[0.1em]"
+                    style={{ background: `rgba(${res.rgb},0.09)`, border: `1px solid rgba(${res.rgb},0.24)`, color: res.c, fontFamily: MONO }}
+                  >
+                    {res.label}
+                  </span>
+                )}
+                <span className="rounded-md px-2.5 py-[3px] text-[11.5px] tracking-[0.08em]" style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text3, fontFamily: MONO }}>
+                  {(d.type || '—').toUpperCase()}{d.session ? ` · ${d.session}` : ''}
                 </span>
-              )}
-              <span className="rounded-md px-2.5 py-[3px] text-[11.5px] tracking-[0.08em]" style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text3, fontFamily: MONO }}>
-                {(d.type || '—').toUpperCase()}{d.session ? ` · ${d.session}` : ''}
+              </div>
+              <span className="text-[13.5px]" style={{ fontFamily: MONO, color: T.text4 }}>
+                {d.plan_date}{timeRange ? ` · ${timeRange}` : ''}
               </span>
             </div>
-            <span className="text-[13.5px]" style={{ fontFamily: MONO, color: T.text4 }}>
-              {d.plan_date}{timeRange ? ` · ${timeRange}` : ''}
-            </span>
+
+            <motion.button
+              onClick={onClose}
+              whileTap={{ scale: 0.9 }}
+              transition={SPRING_TAP}
+              className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-lg transition-colors"
+              style={{ background: 'transparent', color: T.text4 }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = T.bg; e.currentTarget.style.color = T.text; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text4; }}
+            >
+              <X size={16} strokeWidth={2.3} />
+            </motion.button>
           </div>
 
-          <div className="flex-1" />
-
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <motion.button
               onClick={share}
               disabled={sharing}
@@ -1024,26 +1043,20 @@ export default function TradeDetailsModal({
                 <Pencil size={13} strokeWidth={2.4} /> Edit
               </motion.button>
             )}
-
-            <motion.button
-              onClick={onClose}
-              whileTap={{ scale: 0.9 }}
-              transition={SPRING_TAP}
-              className="grid h-[34px] w-[34px] place-items-center rounded-lg transition-colors"
-              style={{ background: 'transparent', color: T.text4 }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = T.bg; e.currentTarget.style.color = T.text; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text4; }}
-            >
-              <X size={16} strokeWidth={2.3} />
-            </motion.button>
           </div>
         </header>
 
         {/* ---------- СТРІЧКА ЦИФР ---------- */}
         {/* У режимі редагування R, ризик і акаунт правляться прямо тут —
             профіт поруч перераховується наживо. */}
-        <div className="flex flex-wrap items-stretch px-6" style={{ borderBottom: `1px solid ${T.line}` }}>
-          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: 1 }}>
+        {/* П'ять колонок стояли на flex:1 з min-w-0 — flex-basis:0 разом
+            із min-width:0 дозволяє стискатись хоч до нуля, тому ряд
+            ніколи не переносився сам: на 320px усі пʼять стовпців і
+            чотири розділювачі просто напливали одне на одне замість
+            того, щоб піти в два-три рядки. min-w-[128px] на мобільному
+            задає підлогу, нижче якої стискатись нікуди, крім переносу. */}
+        <div className="flex flex-wrap items-stretch px-4 sm:px-6" style={{ borderBottom: `1px solid ${T.line}` }}>
+          <div className="flex min-w-[128px] flex-col gap-1.5 py-3.5 sm:min-w-0" style={{ flex: 1 }}>
             <Eyebrow>R</Eyebrow>
             {editing ? (
               <StripInput value={d.rr ?? ''} onChange={(v) => set({ rr: v.replace(',', '.') })} placeholder="2.5" suffix="R" color={rrColor} />
@@ -1052,16 +1065,16 @@ export default function TradeDetailsModal({
             )}
           </div>
 
-          <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
-          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: 1 }}>
+          <div className="my-2.5 hidden w-px shrink-0 sm:mx-5 sm:block" style={{ background: T.line }} />
+          <div className="flex min-w-[128px] flex-col gap-1.5 py-3.5 sm:min-w-0" style={{ flex: 1 }}>
             <Eyebrow>PROFIT</Eyebrow>
             <span className={`truncate font-bold tabular-nums ${editing ? 'pt-1.5 text-[19px]' : 'text-[21.5px]'}`} style={{ fontFamily: MONO, color: profitColor }}>
               {profitDisplay}
             </span>
           </div>
 
-          <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
-          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: editing ? 1.7 : 1 }}>
+          <div className="my-2.5 hidden w-px shrink-0 sm:mx-5 sm:block" style={{ background: T.line }} />
+          <div className="flex min-w-[128px] flex-col gap-1.5 py-3.5 sm:min-w-0" style={{ flex: editing ? 1.7 : 1 }}>
             <Eyebrow tone={editing ? T.acc : undefined}>RISK</Eyebrow>
             {editing ? (
               /* Ризик — єдине поле тут, ціна помилки в якому вимірюється
@@ -1144,8 +1157,8 @@ export default function TradeDetailsModal({
             )}
           </div>
 
-          <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
-          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: 1.4 }}>
+          <div className="my-2.5 hidden w-px shrink-0 sm:mx-5 sm:block" style={{ background: T.line }} />
+          <div className="flex min-w-[128px] flex-col gap-1.5 py-3.5 sm:min-w-0" style={{ flex: 1.4 }}>
             <Eyebrow>ACCOUNT</Eyebrow>
             {editing ? (
               <AccountSelect value={d.account_name} options={accountOptions} onChange={(v) => set({ account_name: v })} />
@@ -1154,8 +1167,8 @@ export default function TradeDetailsModal({
             )}
           </div>
 
-          <div className="mx-5 my-2.5 w-px shrink-0" style={{ background: T.line }} />
-          <div className="flex min-w-0 flex-col gap-1.5 py-3.5" style={{ flex: 1 }}>
+          <div className="my-2.5 hidden w-px shrink-0 sm:mx-5 sm:block" style={{ background: T.line }} />
+          <div className="flex min-w-[128px] flex-col gap-1.5 py-3.5 sm:min-w-0" style={{ flex: 1 }}>
             <Eyebrow>DISCIPLINE</Eyebrow>
             <div className="flex items-center gap-2 pt-0.5">
               <span className="text-[21.5px] font-bold tabular-nums" style={{ fontFamily: MONO, color: disciplineColor }}>
@@ -1175,10 +1188,16 @@ export default function TradeDetailsModal({
             інпути різної висоти (Процес/Психологія розкриваються теж).
             Без layout уся картка стрибала б стрибком; з layout Framer
             плавно донормовує розмір, і елемент під курсором нікуди не
-            «тікає». */}
-        <motion.div layout transition={SPRING_UI} className="grid lg:grid-cols-[1.55fr_1fr]">
+            «тікає».
+            flex-col замість grid до lg: у CSS Grid порожня колонка за
+            замовчуванням рахується по max-content вмісту, і будь-який
+            рядок усередині, що не переноситься (напр. шапка графіка
+            TradeLevels), розтягував усю картку ширше за екран і робив
+            сторінку горизонтально скролящейся. Flexbox так не робить —
+            діти просто займають 100% ширини контейнера. */}
+        <motion.div layout transition={SPRING_UI} className="flex flex-col lg:grid lg:grid-cols-[1.55fr_1fr]">
           {/* ЛІВА КОЛОНКА */}
-          <motion.div layout transition={SPRING_UI} className="flex flex-col gap-3 p-5" style={{ borderRight: `1px solid ${T.line}` }}>
+          <motion.div layout transition={SPRING_UI} className="flex min-w-0 flex-col gap-3 p-5" style={{ borderRight: `1px solid ${T.line}` }}>
             {images.length > 0 ? (
               <>
                 <ImageSlider images={images} containerClassName="min-h-[420px] rounded-2xl" />
@@ -1217,7 +1236,7 @@ export default function TradeDetailsModal({
           </motion.div>
 
           {/* ПРАВА КОЛОНКА — довідка й чеклісти */}
-          <motion.div layout transition={SPRING_UI} className="flex flex-col gap-3 p-5">
+          <motion.div layout transition={SPRING_UI} className="flex min-w-0 flex-col gap-3 p-5">
             {/* Параметри. Пілюльні групи (Напрямок/Сесія/Результат) —
                 кожна на свій повний рядок: у половині картки «New
                 York» переносилась окремо й ламала висоту рядка.
@@ -1440,18 +1459,30 @@ export default function TradeDetailsModal({
               <AnimatePresence initial={false}>
                 {psyExpanded && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={SPRING_UI} className="overflow-hidden" style={{ borderTop: `1px solid ${T.line}` }}>
-                    <div className="grid grid-cols-2">
-                      {psyItems.map((p, i) => (
-                        <div
-                          key={p.key}
-                          className="flex items-center gap-2 px-3.5 py-2.5"
-                          style={{ borderBottom: i < psyItems.length - 2 ? `1px solid ${T.line}` : 'none', borderRight: i % 2 === 0 ? `1px solid ${T.line}` : 'none' }}
-                        >
-                          <div className="h-1 w-1 shrink-0 rounded-full" style={{ background: p.ok ? T.text4 : T.bad }} />
-                          <span className="flex-1 truncate text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>{p.label}</span>
-                          <YesNo editing={editing} value={p.value} invert={p.invert} onChange={(v) => set({ [p.key]: v })} />
-                        </div>
-                      ))}
+                    {/* На вузьких екранах grid-cols-2 ріже підписи типу "Confidence" до "Confi…" —
+                        тому 1 колонка на мобільних, 2 з sm; рамки рахуються під обидва варіанти */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2">
+                      {psyItems.map((p, i) => {
+                        const isLastMobile = i === psyItems.length - 1;
+                        const isLastRow2col = i >= psyItems.length - 2;
+                        const isLeftCol = i % 2 === 0;
+                        return (
+                          <div
+                            key={p.key}
+                            className={[
+                              'flex items-center gap-2 px-3.5 py-2.5 border-b',
+                              isLastMobile ? 'border-b-0' : '',
+                              isLastRow2col ? 'sm:border-b-0' : 'sm:border-b',
+                              isLeftCol ? 'sm:border-r' : '',
+                            ].filter(Boolean).join(' ')}
+                            style={{ borderColor: T.line }}
+                          >
+                            <div className="h-1 w-1 shrink-0 rounded-full" style={{ background: p.ok ? T.text4 : T.bad }} />
+                            <span className="flex-1 truncate text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>{p.label}</span>
+                            <YesNo editing={editing} value={p.value} invert={p.invert} onChange={(v) => set({ [p.key]: v })} />
+                          </div>
+                        );
+                      })}
                     </div>
                     {(editing || d.psy_notes?.trim()) && (
                       <div className="px-3.5 py-3" style={{ borderTop: `1px solid ${T.line}` }}>

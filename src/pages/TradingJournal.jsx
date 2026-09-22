@@ -86,7 +86,7 @@ function FieldTrigger({ label, value, icon, active, open, onClick, minWidth = 16
       aria-expanded={open}
       whileTap={{ scale: 0.985 }}
       transition={SPRING}
-      className="field-trigger relative flex h-[54px] items-center gap-2.5 rounded-2xl px-4 text-left"
+      className="field-trigger relative flex h-[54px] w-full items-center gap-2.5 rounded-2xl px-4 text-left sm:w-auto"
       style={{
         minWidth,
         background: active ? `rgba(${T.accRgb},0.10)` : T.surface,
@@ -417,23 +417,23 @@ function QuickTile({ f, on, n, onToggle }) {
       whileHover={dim ? undefined : { y: -2 }}
       whileTap={dim ? undefined : { scale: 0.96 }}
       transition={TILE_PRESS}
-      className="group relative flex min-w-[92px] items-center gap-2 overflow-hidden rounded-lg px-2.5 py-2 text-left transition-colors duration-150"
+      className="group relative flex w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-xl px-2 py-2.5 text-left transition-colors duration-150 sm:w-auto sm:min-w-[92px] sm:gap-2.5 sm:px-3"
       style={{
-        background: on ? `linear-gradient(165deg, rgba(${f.rgb},0.15), rgba(${f.rgb},0.03))` : T.sunken,
-        border: `1px solid ${on ? `rgba(${f.rgb},0.42)` : T.line}`,
-        opacity: dim ? 0.4 : 1,
+        background: on ? `linear-gradient(165deg, rgba(${f.rgb},0.16), rgba(${f.rgb},0.03))` : T.sunken,
+        border: `1px solid ${on ? `rgba(${f.rgb},0.45)` : `rgba(${f.rgb},0.16)`}`,
+        opacity: dim ? 0.45 : 1,
         boxShadow: on
-          ? `inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 20px -10px rgba(${f.rgb},0.55)`
-          : "inset 0 1px 0 rgba(255,255,255,0.02)",
+          ? `inset 0 1px 0 rgba(255,255,255,0.07), 0 10px 24px -12px rgba(${f.rgb},0.6)`
+          : "inset 0 1px 0 rgba(255,255,255,0.025)",
         cursor: dim ? "default" : "pointer",
       }}
       onMouseEnter={(e) => {
         if (dim) return;
-        e.currentTarget.style.borderColor = on ? `rgba(${f.rgb},0.7)` : T.lineHi;
+        e.currentTarget.style.borderColor = `rgba(${f.rgb},${on ? 0.75 : 0.4})`;
         if (!on) e.currentTarget.style.background = T.surfaceHi;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = on ? `rgba(${f.rgb},0.42)` : T.line;
+        e.currentTarget.style.borderColor = `rgba(${f.rgb},${on ? 0.45 : 0.16})`;
         if (!on) e.currentTarget.style.background = T.sunken;
       }}
     >
@@ -443,15 +443,24 @@ function QuickTile({ f, on, n, onToggle }) {
         style={{ background: f.c, transform: on ? "scaleX(1)" : "scaleX(0)" }}
       />
 
-      {/* Сам бейдж — це і є чекбокс: вимкнено — помітна нейтральна
-          рамка з іконкою категорії; увімкнено — суцільна заливка
+      {/* Ледь помітний колірний відсвіт категорії позаду бейджа — навіть
+          у вимкненому стані плитка одразу читається як «своя» категорія,
+          а не як безлика сіра рамка, однакова для всіх чотирьох. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-3 -top-3 h-14 w-14 rounded-full opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: `rgba(${f.rgb},0.35)` }}
+      />
+
+      {/* Сам бейдж — це і є чекбокс: вимкнено — рамка й іконка в
+          кольорі категорії, приглушено; увімкнено — суцільна заливка
           кольором з галочкою. Один чіткий елемент замість двох
           слабких, тому видно одразу, а не треба придивлятись. */}
       <span
-        className="relative grid h-7 w-7 shrink-0 place-items-center rounded-md border-[1.5px] transition-colors duration-150"
+        className="relative grid h-7 w-7 shrink-0 place-items-center rounded-lg border-[1.5px] transition-colors duration-150 sm:h-8 sm:w-8"
         style={{
-          background: on ? f.c : "transparent",
-          borderColor: on ? f.c : T.text3,
+          background: on ? f.c : `rgba(${f.rgb},0.12)`,
+          borderColor: on ? f.c : `rgba(${f.rgb},0.4)`,
         }}
       >
         <AnimatePresence mode="popLayout" initial={false}>
@@ -465,20 +474,20 @@ function QuickTile({ f, on, n, onToggle }) {
             {on ? (
               <Check size={14} strokeWidth={3.2} style={{ color: T.bg }} />
             ) : (
-              <Icon size={13} strokeWidth={2.4} style={{ color: T.text2 }} />
+              <Icon size={13.5} strokeWidth={2.4} style={{ color: f.c }} />
             )}
           </motion.span>
         </AnimatePresence>
       </span>
 
-      <span className="flex min-w-0 flex-col gap-0">
+      <span className="relative flex min-w-0 flex-col gap-0">
         <span
-          className="truncate text-[9.5px] font-bold uppercase tracking-[0.05em]"
+          className="truncate text-[9.5px] font-bold uppercase tracking-[0.02em] sm:tracking-[0.06em]"
           style={{ fontFamily: T.sans, color: on ? f.c : T.text4 }}
         >
           {f.label}
         </span>
-        <span className="text-[14px] font-black leading-none tabular-nums" style={{ fontFamily: CHECK_MONO, color: on ? T.text : T.text2 }}>
+        <span className="text-[14.5px] font-black leading-none tabular-nums" style={{ fontFamily: CHECK_MONO, color: on ? T.text : T.text2 }}>
           {n}
         </span>
       </span>
@@ -563,27 +572,37 @@ function QuickFilters({ active, onToggle, onClear, counts, total, pageSize, onPa
         </div>
       </div>
 
-      {/* Результат зліва, дисципліна справа — просторовий поділ сам
-          читається як «це різні категорії», без додаткових пояснень. */}
-      <div className="flex flex-wrap items-stretch justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[9px] font-bold uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+      {/* Результат і дисципліна — кожна в своїй картці: раніше вони
+          просто лежали на фоні сторінки голими плитками, тепер це два
+          чіткі блоки, які самі пояснюють, що це різні категорії.
+          Картки на весь рядок, поки не влізуть поруч (sm:) — якщо
+          поставити їх поруч раніше, кожній лишається половина
+          ширини, і підписи на кшталт «SCRATCH»/«MISTAKE» обрізає.
+          Плитки всередині — рівна сітка 2×2 (grid, не flex-wrap —
+          інакше ширина «гуляла» від вмісту), з sm: у один рядок. */}
+      <div className="flex flex-wrap items-stretch gap-3">
+        <div
+          className="flex w-full flex-col gap-2 rounded-2xl p-2.5 sm:min-w-[220px] sm:flex-1 sm:gap-2.5 sm:p-3.5"
+          style={{ background: T.sunken, border: `1px solid ${T.line}` }}
+        >
+          <span className="text-[9.5px] font-bold uppercase tracking-[0.12em]" style={{ fontFamily: T.sans, color: T.text4 }}>
             Result
           </span>
-          <div className="flex gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
             {QUICK_RESULT.map((f) => (
               <QuickTile key={f.id} f={f} on={active.includes(f.id)} n={counts?.[f.id] ?? 0} onToggle={() => onToggle(f.id)} />
             ))}
           </div>
         </div>
 
-        <div className="hidden w-px self-stretch sm:block" style={{ background: T.line }} />
-
-        <div className="flex flex-col items-start gap-1.5 sm:items-end">
-          <span className="text-[9px] font-bold uppercase tracking-[0.1em]" style={{ fontFamily: T.sans, color: T.text4 }}>
+        <div
+          className="flex w-full flex-col gap-2 rounded-2xl p-2.5 sm:min-w-[220px] sm:flex-1 sm:gap-2.5 sm:p-3.5"
+          style={{ background: T.sunken, border: `1px solid ${T.line}` }}
+        >
+          <span className="text-[9.5px] font-bold uppercase tracking-[0.12em]" style={{ fontFamily: T.sans, color: T.text4 }}>
             Discipline
           </span>
-          <div className="flex gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
             {QUICK_DISCIPLINE.map((f) => (
               <QuickTile key={f.id} f={f} on={active.includes(f.id)} n={counts?.[f.id] ?? 0} onToggle={() => onToggle(f.id)} />
             ))}
@@ -1063,7 +1082,11 @@ export default function TradingJournal() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          {/* На мобільному три кнопки стояли одна під одною, кожна своєї
+              випадкової ширини (168 / 132 / за вмістом) — виглядало як
+              не домальовано. w-full нижче sm: вирівнює їх в один
+              акуратний стовпець; від sm: — назад у рядок своєю шириною. */}
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
             <AssetSelect
               options={uniquePairs}
               categories={pairCategories}
@@ -1107,7 +1130,7 @@ export default function TradingJournal() {
                  фільтрами й тягла б рядок за собою. Від Magnetic
                  лишається стиск при натисканні. */
               strength={0}
-              className="journal-cta group ml-1 inline-flex h-[54px] shrink-0 items-center justify-center rounded-2xl px-6 text-[14.5px] font-bold"
+              className="journal-cta group inline-flex h-[54px] w-full shrink-0 items-center justify-center rounded-2xl px-6 text-[14.5px] font-bold sm:ml-1 sm:w-auto"
               /* Темна панель, а не суцільна заливка акцентом.
 
                  Причина проста: під курсором кнопка перетворюється на

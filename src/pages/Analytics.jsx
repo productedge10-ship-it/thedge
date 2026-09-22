@@ -396,7 +396,7 @@ export default function Analytics() {
                   </h1>
                 </div>
 
-                <div className="ml-auto flex shrink-0 items-center gap-2.5">
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5">
                   <PeriodDropdown value={period} onChange={setPeriod} counts={periodCounts} />
 
                   {/* ─────────── «Export Terminal» (стисла версія) ───────────

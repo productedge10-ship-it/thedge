@@ -28,7 +28,10 @@ export default function Popover({
     const h = panelRef.current?.offsetHeight || 320;
 
     let left = align === 'right' ? t.right - w : t.left;
-    left = Math.min(Math.max(8, left), window.innerWidth - w - 8);
+    /* Коли панель ширша за viewport (вузький екран), верхня межа
+       клампа стає меншою за нижню (8) — без Math.max тут `left`
+       ставав від'ємним і панель вилазила за лівий край. */
+    left = Math.min(Math.max(8, left), Math.max(8, window.innerWidth - w - 8));
 
     let top = t.bottom + gap;
     if (top + h > window.innerHeight - 8) top = Math.max(8, t.top - h - gap);

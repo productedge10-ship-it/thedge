@@ -20,7 +20,7 @@ import { C, F, A, Cat } from '../landing/v3/base';
 ================================================================== */
 
 const PAD = 8;
-const TIP_W = 330;
+const TIP_W_MAX = 330;
 
 export default function TourOverlay({ step, index, total, onNext, onSkip }) {
   const [box, setBox] = useState(null);
@@ -84,7 +84,13 @@ export default function TourOverlay({ step, index, total, onNext, onSkip }) {
      йдуть боки, і сторона обирається за реальним запасом місця. */
   const vh = window.innerHeight;
   const vw = window.innerWidth;
-  const TIP_H = 220;
+  /* На 320-375px екрані фіксовані 330px картки не влазять узагалі —
+     ширину рахуємо від реального вікна, а не від макета для
+     ноутбука. Вужча картка загортає текст у більше рядків, тому й
+     оцінка висоти для розкладки трохи піднята з запасом. */
+  const TIP_W = Math.min(TIP_W_MAX, vw - 32);
+  const narrow = TIP_W < TIP_W_MAX;
+  const TIP_H = narrow ? 260 : 220;
   const GAP = 14;
   let tipStyle;
 
@@ -103,9 +109,9 @@ export default function TourOverlay({ step, index, total, onNext, onSkip }) {
       tipStyle = { top: box.top + box.height + GAP, left: clampX(box.left + box.width / 2 - TIP_W / 2) };
     } else if (above > TIP_H + GAP) {
       tipStyle = { top: box.top - TIP_H - GAP, left: clampX(box.left + box.width / 2 - TIP_W / 2) };
-    } else if (right > TIP_W + GAP) {
+    } else if (right > TIP_W + GAP && !narrow) {
       tipStyle = { top: clampY(box.top + box.height / 2 - TIP_H / 2), left: box.left + box.width + GAP };
-    } else if (left > TIP_W + GAP) {
+    } else if (left > TIP_W + GAP && !narrow) {
       tipStyle = { top: clampY(box.top + box.height / 2 - TIP_H / 2), left: box.left - TIP_W - GAP };
     } else {
       tipStyle = { top: clampY(vh - TIP_H - 24), left: clampX(vw / 2 - TIP_W / 2) };

@@ -100,49 +100,78 @@ export default function DemoShell() {
     <SettingsProvider>
       <Toaster position="bottom-right" reverseOrder={false} />
 
+      {/* Смуга — рівно BAR_H заввишки на будь-якій ширині: Layout
+          нижче відступає від неї фіксованим paddingTop, і якщо смуга
+          хоч раз перенесе рядок (довгий підпис + чотири елементи не
+          влазять у 320px), вона стає вищою за свій відступ і лягає
+          просто на шапку застосунку. Тому нижче 560px підпис і
+          підписи кнопок ховаються, лишаються тільки іконки — сама
+          висота смуги ніколи не змінюється. */}
+      <style>{`
+        .demo-bar-label{ display: inline; }
+        .demo-bar-desc{ display: inline; }
+        .demo-bar-badge{ display: none; }
+        @media (max-width: 560px){
+          .demo-bar-label{ display: none; }
+          .demo-bar-desc{ display: none; }
+          .demo-bar-badge{ display: inline; }
+          .demo-bar-btn{ padding: 6px !important; }
+          .demo-bar-cta{ padding: 7px 10px !important; }
+        }
+      `}</style>
+
       <div
         style={{
-          position: 'fixed', top: 0, left: 0, right: 0, height: BAR_H, zIndex: 2500,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-          padding: '0 18px', background: 'rgba(10,10,14,.92)', backdropFilter: 'blur(12px)',
-          borderBottom: `1px solid ${A(0.22)}`,
+          /* z-index нижче за будь-яку модалку застосунку (найменша — 500):
+             раніше 2500 сидів НАД модалками, і в демо-режимі ця смуга
+             перекривала верх кожного вікна — заголовок, хрестик закриття. */
+          position: 'fixed', top: 0, left: 0, right: 0, height: BAR_H, zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          padding: '0 10px', background: 'rgba(10,10,14,.92)', backdropFilter: 'blur(12px)',
+          borderBottom: `1px solid ${A(0.22)}`, overflow: 'hidden',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/" style={btn(false)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <a href="/" className="demo-bar-btn" style={btn(false)} title="На сайт">
             <ArrowLeft size={14} strokeWidth={2.2} />
-            На сайт
+            <span className="demo-bar-label">На сайт</span>
           </a>
-          <span style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: '1.6px', color: C.accSoft }}>
+          <span className="demo-bar-desc" style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: '1.6px', color: C.accSoft, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             ДЕМО · ДАНІ ВИГАДАНІ Й ЖИВУТЬ ЛИШЕ В ЦЬОМУ БРАУЗЕРІ
+          </span>
+          <span className="demo-bar-badge" style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 700, letterSpacing: '1px', color: C.accSoft, flexShrink: 0 }}>
+            ДЕМО
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <button
             type="button"
+            className="demo-bar-btn"
             onClick={() => { resetDemoDb(); window.location.reload(); }}
             style={btn(false)}
             title="Повернути демо у початковий стан"
           >
             <RotateCcw size={14} strokeWidth={2.2} />
-            Скинути
+            <span className="demo-bar-label">Скинути</span>
           </button>
 
-          <button type="button" onClick={() => { setHints((v) => !v); setStepIdx(0); }} style={btn(hints)}>
+          <button type="button" className="demo-bar-btn" onClick={() => { setHints((v) => !v); setStepIdx(0); }} style={btn(hints)} title={hints ? 'Підказки увімкнені' : 'Підказки вимкнені'}>
             {hints ? <Lightbulb size={14} strokeWidth={2} /> : <LightbulbOff size={14} strokeWidth={2} />}
-            {hints ? 'Підказки увімкнені' : 'Підказки вимкнені'}
+            <span className="demo-bar-label">{hints ? 'Підказки увімкнені' : 'Підказки вимкнені'}</span>
           </button>
 
           <a
             href="/auth"
+            className="demo-bar-cta"
             style={{
               fontFamily: F.sans, fontSize: 12.5, fontWeight: 700, color: '#fff',
               background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, borderRadius: 9,
               padding: '7px 14px', whiteSpace: 'nowrap', boxShadow: '0 8px 22px rgba(74,59,245,.32)',
             }}
           >
-            Почати безкоштовно
+            <span className="demo-bar-label">Почати безкоштовно</span>
+            <span className="demo-bar-badge">Почати</span>
           </a>
         </div>
       </div>

@@ -101,6 +101,40 @@ export default function AutoImport() {
     <section id="autoimport" ref={ref} style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <style>{`
         @keyframes lnTicketFly{0%{left:-16%;opacity:0}12%{opacity:1}86%{opacity:1}100%{left:100%;opacity:0}}
+        @keyframes lnTicketFlyV{0%{top:-14%;opacity:0}12%{opacity:1}86%{opacity:1}100%{top:100%;opacity:0}}
+        @keyframes lnRailGlowV{0%{transform:translateY(-30%)}100%{transform:translateY(130%)}}
+
+        /* Стрічка тікетів на широкому екрані летить зліва направо —
+           це має сенс, поки термінал стоїть ліворуч, а журнал
+           праворуч. Нижче 1000px усі три панелі й самі складаються в
+           один стовпчик (flex-wrap тут довіряти не можна — на 800-
+           1000px термінал і журнал ще влазили поруч, а рейка вже
+           їхала вертикально, і одне з другим не билось). Разом з
+           панелями розвертається на 90° і сама стрічка: дані падають
+           зверху (з термінала) вниз (у журнал), рівно туди, куди й
+           веде верстка.
+
+           !important тут навмисно НЕ використовується на top:
+           анімація й так переважає звичайний (не-!important) рядок
+           CSS для тієї самої властивості — а !important якраз
+           навпаки, стоїть у каскаді ВИЩЕ за CSS-анімації й блокує їх
+           повністю. Через це картки й «зависали»: top було
+           заблоковано на auto, і lnTicketFlyV просто не міг його
+           чіпати. */
+        .ln-stream-rail{ left: 0; right: 0; top: 50%; height: 2px; width: auto; }
+        .ln-stream-glow{ top: -1px; left: 0; width: 34%; height: 4px; animation: lnRailGlow 3.2s linear infinite; }
+        .ln-ticket{ animation-name: lnTicketFly; }
+        .ln-stream-arrow-h{ display: inline; }
+        .ln-stream-arrow-v{ display: none; }
+        @media (max-width: 1000px){
+          .ln-autoimport-row{ flex-direction: column; }
+          .ln-autoimport-row > *{ flex-basis: auto !important; min-width: 0 !important; width: 100%; }
+          .ln-stream-rail{ left: 50%; right: auto; top: 0; bottom: 0; height: auto; width: 2px; }
+          .ln-stream-glow{ top: 0; left: -1px; width: 4px; height: 30%; animation-name: lnRailGlowV; }
+          .ln-ticket{ animation-name: lnTicketFlyV; left: 50%; transform: translateX(-50%); }
+          .ln-stream-arrow-h{ display: none; }
+          .ln-stream-arrow-v{ display: inline; }
+        }
       `}</style>
 
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 28, flexWrap: 'wrap', marginBottom: 26 }}>
@@ -128,13 +162,13 @@ export default function AutoImport() {
         </div>
       </div>
 
-      <div style={{ position: 'relative', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${C.line}`, borderRadius: 24, padding: 26, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${C.line}`, borderRadius: 24, padding: 'clamp(14px,4vw,26px)', overflow: 'hidden' }}>
         <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${A(0.55)},transparent)` }} />
         <span aria-hidden style={{ position: 'absolute', top: -80, left: '34%', width: 400, height: 340, background: 'radial-gradient(circle,rgba(74,59,245,.15),transparent 70%)', filter: 'blur(70px)', pointerEvents: 'none' }} />
 
-        <div style={{ position: 'relative', display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'stretch' }}>
+        <div className="ln-autoimport-row" style={{ position: 'relative', display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'stretch' }}>
           {/* ---------- термінал ---------- */}
-          <div style={{ ...panel, flex: '1 1 230px', minWidth: 210 }}>
+          <div style={{ ...panel, flex: '1 1 230px', minWidth: 'min(210px,100%)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <MonitorSmartphone size={17} strokeWidth={1.8} color="#5aa9ff" />
               <div>
@@ -162,24 +196,25 @@ export default function AutoImport() {
           </div>
 
           {/* ---------- стрічка ---------- */}
-          <div style={{ flex: '1 1 260px', minWidth: 200, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ flex: '1 1 260px', minWidth: 'min(200px,100%)', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {/* Смуги руху вміщаються у висоту контейнера з запасом:
                 при кроці в 52px нижня картка вилазила за край і
                 накривала підпис під стрічкою. */}
             <div style={{ position: 'relative', height: 176, overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 2, background: `linear-gradient(90deg,${A(0.08)},${A(0.35)},${A(0.08)})`, overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: -1, left: 0, width: '34%', height: 4, background: `linear-gradient(90deg,transparent,${A(0.9)},transparent)`, animation: 'lnRailGlow 3.2s linear infinite' }} />
+              <div className="ln-stream-rail" style={{ position: 'absolute', background: `linear-gradient(90deg,${A(0.08)},${A(0.35)},${A(0.08)})`, overflow: 'hidden' }}>
+                <div className="ln-stream-glow" style={{ position: 'absolute', background: `linear-gradient(90deg,transparent,${A(0.9)},transparent)` }} />
               </div>
 
               {tickets.map((tk) => (
                 <div
                   key={tk.id}
+                  className="ln-ticket"
                   onAnimationEnd={() => land(tk)}
                   style={{
                     position: 'absolute', width: 92, background: '#12121c',
                     border: `1px solid ${A(0.4)}`, borderRadius: 11, padding: '8px 10px',
                     boxShadow: '0 12px 30px rgba(74,59,245,.28)',
-                    animation: `lnTicketFly ${FLIGHT}ms linear forwards`,
+                    animationDuration: `${FLIGHT}ms`, animationTimingFunction: 'linear', animationFillMode: 'forwards',
                     top: `${tk.lane * 44 + 2}px`,
                   }}
                 >
@@ -193,12 +228,12 @@ export default function AutoImport() {
             </div>
 
             <div style={{ textAlign: 'center', fontFamily: F.mono, fontSize: 10.5, letterSpacing: '1.2px', color: C.dim, marginTop: 12 }}>
-              ЗАКРИТІ ПОЗИЦІЇ → ЖУРНАЛ
+              ЗАКРИТІ ПОЗИЦІЇ <span className="ln-stream-arrow-h">→</span><span className="ln-stream-arrow-v">↓</span> ЖУРНАЛ
             </div>
           </div>
 
           {/* ---------- журнал ---------- */}
-          <div style={{ ...panel, flex: '1 1 300px', minWidth: 250, border: `1px solid ${A(0.22)}` }}>
+          <div style={{ ...panel, flex: '1 1 300px', minWidth: 'min(250px,100%)', border: `1px solid ${A(0.22)}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ position: 'relative', width: 74, height: 74, flexShrink: 0 }}>
                 <svg viewBox="0 0 74 74" style={{ width: 74, height: 74, display: 'block', transform: 'rotate(-90deg)' }}>
@@ -257,7 +292,7 @@ export default function AutoImport() {
         Ти пишеш лише людську половину: з якого плану вийшла угода, у якому стані ти був, яке правило порушив
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 12, marginTop: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(280px,100%),1fr))', gap: 12, marginTop: 24 }}>
         {TRUST.map((t) => (
           <div
             key={t.title}

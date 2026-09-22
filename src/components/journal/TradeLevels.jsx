@@ -280,7 +280,10 @@ export default function TradeLevels({ trade, category, className = '' }) {
       className={`flex flex-col overflow-hidden rounded-2xl ${className}`}
       style={{ background: S.bg, border: `1px solid ${S.line}`, transition: PAINT }}
     >
-      <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: `1px solid ${S.line}`, transition: PAINT }}>
+      {/* flex-wrap: актив + бейдж + перемикачі таймфрейму й манери
+          разом не влазять у 320px, а рядок раніше не переносився —
+          хвіст (перемикач манери) обрізало межею картки */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3" style={{ borderBottom: `1px solid ${S.line}`, transition: PAINT }}>
         <span className="grid w-8 shrink-0 place-items-center">
           <AssetIcon symbol={t.plan_pair || ''} category={category} />
         </span>

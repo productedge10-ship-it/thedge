@@ -46,6 +46,39 @@ const SCREEN_CSS = `
 .ln-screen [data-anim="fill"]{animation:lnFill .7s cubic-bezier(.22,1,.36,1) both}
 .ln-screen [data-anim="soft"]{animation:lnSoftIn .4s ease-out both}
 .ln-screen [data-anim="draw"]{stroke-dasharray:640;stroke-dashoffset:640;animation:lnDraw 1.1s cubic-bezier(.3,.9,.4,1) .12s both}
+
+/* Нижче 760px сайдбар-рейка перестає бути рейкою: сім довгих назв
+   одна під одною або в горизонтальному скролі — обидва варіанти
+   вже пробували, і обидва читались погано на телефоні. Замість
+   цього — сітка коротких плиток-іконок, яка сама переносить рядки
+   й завжди видна вся одразу, без гортання. */
+.ln-product-nav{ flex: 0 0 232px; min-width: 180px; border-right: 1px solid rgba(255,255,255,.06); padding: 12px 10px; display: flex; flex-direction: column; gap: 3px; }
+.ln-product-navbtn{ position: relative; display: flex; align-items: center; gap: 11px; text-align: left; border: 0; border-radius: 11px; padding: 11px 12px 11px 14px; cursor: pointer; font-family: ${F.sans}; font-size: 14px; font-weight: 600; transition: background .2s ease, color .2s ease; width: 100%; }
+.ln-product-navbar{ position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: ${C.acc}; box-shadow: 0 0 12px ${A(0.8)}; transition: opacity .2s ease; }
+.ln-product-screen{ flex: 1 1 420px; min-width: 300px; padding: 24px; min-height: 340px; }
+
+@media (max-width: 760px){
+  .ln-product-nav{ flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.06); padding: 10px; gap: 6px; }
+  .ln-product-navbtn{ width: auto; flex: 0 0 auto; gap: 6px; border-radius: 999px; padding: 6px 11px 6px 9px; font-size: 11.5px; border: 1px solid rgba(255,255,255,.08); }
+  .ln-product-navbtn svg{ width: 12px; height: 12px; }
+  .ln-product-navbar{ display: none; }
+  .ln-product-screen{ flex: 1 1 100%; min-width: 0; padding: 16px; }
+}
+
+/* Журнал: п'ять жорстких колонок ("80px 1fr 90px 1fr 60px") не
+   вміщаються у вузький екран навіть після переносу застосунку в
+   один стовпчик. Стан і порушення ховаються з власних колонок і
+   зʼявляються дрібним підрядком під сетапом — той самий рядок, лише
+   в два поверхи замість одного. */
+.ln-journal-sub{ display: none; }
+.ln-journal-h-sym-short{ display: none; }
+@media (max-width: 640px){
+  .ln-journal-head, .ln-journal-row{ grid-template-columns: 62px 1fr 52px !important; }
+  .ln-journal-mood, .ln-journal-viol{ display: none; }
+  .ln-journal-sub{ display: inline; font-size: 11.5px; }
+  .ln-journal-h-sym-full{ display: none; }
+  .ln-journal-h-sym-short{ display: inline; }
+}
 `;
 
 const card = { background: C.sunken, border: '1px solid rgba(255,255,255,.07)', borderRadius: 12 };
@@ -62,7 +95,7 @@ const PlanScreen = () => (
       </div>
     </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 9, marginBottom: 20 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(120px,100%),1fr))', gap: 9, marginBottom: 20 }}>
       {[
         { tf: '1W', dir: 'Тренд вгору', level: '2 386.40', color: C.ok },
         { tf: '1D', dir: 'Відкат до OB', level: '2 412.80', color: C.ok },
@@ -78,7 +111,7 @@ const PlanScreen = () => (
     </div>
 
     <div style={{ ...capMono, marginBottom: 12 }}>СТАН ПЕРЕД СЕСІЄЮ · 5 З 5</div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 9 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(200px,100%),1fr))', gap: 9 }}>
       {['Виспався', 'Немає відкритих збитків', 'План написаний до відкриття', 'Ризик на угоду 1%', 'Немає новин у сесію'].map((t, i) => (
         <div key={t} style={{ ...card, borderRadius: 11, display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px' }}>
           {/* Галочки відмічаються по черзі — так само, як людина
@@ -101,22 +134,39 @@ const JOURNAL = [
 
 const GRID = '80px 1fr 90px 1fr 60px';
 
+/* На вузькому екрані вʼязка «символ · сетап · R» лишається як
+   основний рядок, а стан і порушення переїжджають дрібним підрядком
+   під сетап — так само, як STATUS-бейдж у журналі самого застосунку
+   несе на собі другорядну мітку способу виходу. П'ять жорстких
+   колонок просто не влазять у 280px, а обрізати дані замість того,
+   щоб перекласти їх у два рядки, — гірший компроміс. */
 const JournalScreen = () => (
   <div>
-    <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 12, padding: '0 4px 12px', ...capMono, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-      <span>ІНСТРУМЕНТ</span><span>СЕТАП</span><span>СТАН</span><span>ЩО ПОРУШИВ</span>
+    <div className="ln-journal-head" style={{ display: 'grid', gridTemplateColumns: GRID, gap: 12, padding: '0 4px 12px', ...capMono, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+      <span className="ln-journal-h-sym-full">ІНСТРУМЕНТ</span>
+      <span className="ln-journal-h-sym-short">АКТИВ</span>
+      <span>СЕТАП</span>
+      <span className="ln-journal-mood">СТАН</span><span className="ln-journal-viol">ЩО ПОРУШИВ</span>
       <span style={{ textAlign: 'right' }}>R</span>
     </div>
     {JOURNAL.map((j, i) => (
       <div
         key={i}
         data-anim="slide"
+        className="ln-journal-row"
         style={{ display: 'grid', gridTemplateColumns: GRID, gap: 12, alignItems: 'center', padding: '13px 4px', borderBottom: '1px solid rgba(255,255,255,.035)', animationDelay: `${i * 70}ms` }}
       >
-        <span style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 600, color: C.text }}>{j.sym}</span>
-        <span style={{ fontFamily: F.sans, fontSize: 13, color: '#b8b8c8', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{j.setup}</span>
-        <span style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 600, color: j.mood === 'FOMO' ? C.warn : j.mood === 'Нудьга' ? '#8a8a9c' : C.ok }}>{j.mood}</span>
-        <span style={{ fontFamily: F.sans, fontSize: 12, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: j.viol === '—' ? C.dim : '#ff9b9b' }}>{j.viol}</span>
+        <span className="ln-journal-sym" style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 600, color: C.text }}>{j.sym}</span>
+        <span className="ln-journal-setup" style={{ fontFamily: F.sans, fontSize: 13, color: '#b8b8c8', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {j.setup}
+          <span className="ln-journal-sub">
+            {' · '}
+            <span style={{ color: j.mood === 'FOMO' ? C.warn : j.mood === 'Нудьга' ? '#8a8a9c' : C.ok }}>{j.mood}</span>
+            {j.viol !== '—' && <span style={{ color: '#ff9b9b' }}>{' · '}{j.viol}</span>}
+          </span>
+        </span>
+        <span className="ln-journal-mood" style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 600, color: j.mood === 'FOMO' ? C.warn : j.mood === 'Нудьга' ? '#8a8a9c' : C.ok }}>{j.mood}</span>
+        <span className="ln-journal-viol" style={{ fontFamily: F.sans, fontSize: 12, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: j.viol === '—' ? C.dim : '#ff9b9b' }}>{j.viol}</span>
         <span style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 700, textAlign: 'right', color: j.r.startsWith('−') ? C.bad : C.ok }}>{j.r}</span>
       </div>
     ))}
@@ -138,7 +188,7 @@ const RANKING = [
 
 const AnalyticsScreen = () => (
   <div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12, marginBottom: 18 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(180px,100%),1fr))', gap: 12, marginBottom: 18 }}>
       {CHARTS.map((ch) => (
         <div key={ch.title} style={{ ...card, borderRadius: 14, padding: 15 }}>
           <div style={{ ...capMono, color: C.text4, marginBottom: 14 }}>{ch.title}</div>
@@ -170,7 +220,7 @@ const AnalyticsScreen = () => (
 );
 
 const WeeklyScreen = () => (
-  <div style={{ ...card, borderRadius: 16, padding: 22 }}>
+  <div style={{ ...card, borderRadius: 16, padding: 'clamp(14px,4vw,22px)' }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 18 }}>
       <div>
         <div style={{ ...capMono, color: C.text4, marginBottom: 7 }}>ТИЖНЕВИЙ РОЗБІР</div>
@@ -187,7 +237,7 @@ const WeeklyScreen = () => (
       </button>
     </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 9, marginBottom: 18 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(110px,100%),1fr))', gap: 9, marginBottom: 18 }}>
       {[['68%', 'дисципліна', C.warn], ['22', 'угод за тиждень', C.text], ['−8.4R', 'повз план', C.bad]].map(([v, k, c], i) => (
         <div key={k} data-anim="soft" style={{ background: C.panel, border: '1px solid rgba(255,255,255,.06)', borderRadius: 12, padding: 13, animationDelay: `${i * 80}ms` }}>
           <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, letterSpacing: '-.8px', color: c }}>{v}</div>
@@ -228,7 +278,7 @@ const BacktestScreen = () => (
       <polyline data-anim="draw" points="0,58 30,54 60,46 90,39 116,32 146,24 176,18 210,13 250,8 300,3" fill="none" stroke={C.acc} strokeWidth="2" vectorEffect="non-scaling-stroke" />
     </svg>
 
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 1, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12, overflow: 'hidden' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(120px,100%),1fr))', gap: 1, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12, overflow: 'hidden' }}>
       {BT_STATS.map(([v, k, c], i) => (
         <div key={k} data-anim="soft" style={{ background: C.sunken, padding: '14px 15px', animationDelay: `${400 + i * 60}ms` }}>
           <div style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 700, color: c }}>{v}</div>
@@ -273,8 +323,8 @@ const MethodScreen = () => (
 
     <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 18 }}>
       {/* ---- сітка ---- */}
-      <div style={{ flex: '1 1 300px', minWidth: 260 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(52px,1fr))', gap: 8 }}>
+      <div style={{ flex: '1 1 300px', minWidth: 'min(260px,100%)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(44px,100%),1fr))', gap: 8 }}>
           {Array.from({ length: 20 }, (_, i) => {
             const done = i < 12 ? 4 : i === 12 ? 3 : i < 15 ? 2 : 0;
             const perfect = done === 4;
@@ -320,7 +370,7 @@ const MethodScreen = () => (
       </div>
 
       {/* ---- з чого складається кожна угода ---- */}
-      <div style={{ flex: '1 1 260px', minWidth: 240 }}>
+      <div style={{ flex: '1 1 260px', minWidth: 'min(240px,100%)' }}>
         <div style={{ ...capMono, marginBottom: 12 }}>ЧОТИРИ ГРАНІ КОЖНОЇ УГОДИ</div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -390,7 +440,7 @@ const BLOG_POSTS = [
 const BlogScreen = () => (
   <div>
     <div style={{ ...capMono, marginBottom: 14 }}>ОСТАННІ СТАТТІ</div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 14 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(190px,100%),1fr))', gap: 14 }}>
       {BLOG_POSTS.map((p, i) => (
         <div
           key={p.title}
@@ -477,7 +527,7 @@ export default function Product() {
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch' }}>
-          <div style={{ flex: '0 0 232px', minWidth: 180, borderRight: '1px solid rgba(255,255,255,.06)', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div className="ln-product-nav">
             {NAV.map((n, i) => {
               const on = i === nav;
               const Icon = n.icon;
@@ -485,18 +535,17 @@ export default function Product() {
                 <button
                   key={n.key}
                   type="button"
+                  className="ln-product-navbtn"
                   onClick={() => setNav(i)}
                   style={{
-                    position: 'relative', display: 'flex', alignItems: 'center', gap: 11, textAlign: 'left',
-                    border: 0, borderRadius: 11, padding: '11px 12px 11px 14px', cursor: 'pointer',
-                    fontFamily: F.sans, fontSize: 14, fontWeight: 600,
-                    transition: 'background .2s ease,color .2s ease',
-                    background: on ? A(0.1) : 'transparent', color: on ? '#fff' : '#8a8a9c',
+                    background: on ? A(0.1) : 'transparent',
+                    color: on ? '#fff' : '#8a8a9c',
+                    borderColor: on ? A(0.4) : undefined,
                   }}
                   onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = A(0.07); }}
-                  onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
+                  onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = on ? A(0.1) : 'transparent'; }}
                 >
-                  <span style={{ position: 'absolute', left: 0, top: 10, bottom: 10, width: 3, borderRadius: 2, background: C.acc, boxShadow: `0 0 12px ${A(0.8)}`, transition: 'opacity .2s ease', opacity: on ? 1 : 0 }} />
+                  <span className="ln-product-navbar" style={{ opacity: on ? 1 : 0 }} />
                   <Icon size={15} strokeWidth={1.9} style={{ flexShrink: 0, color: on ? C.accSoft : C.text5 }} />
                   {n.title}
                 </button>
@@ -507,7 +556,7 @@ export default function Product() {
           {/* key перезапускає анімації на кожному перемиканні: без
               нього другий і подальші екрани показувались би вже
               «доанімованими». */}
-          <div key={item.key} className="ln-screen" style={{ flex: '1 1 420px', minWidth: 300, padding: 24, minHeight: 340 }}>
+          <div key={item.key} className="ln-screen ln-product-screen">
             <Screen />
           </div>
         </div>

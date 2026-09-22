@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Globe } from 'lucide-react';
+import { Globe, Menu, X } from 'lucide-react';
 import { useEdgeFonts } from '../lib/theme';
 import { C, F, A, Cat, KEYFRAMES } from '../components/landing/v3/base';
 import Hero, { Ticker } from '../components/landing/v3/Hero';
@@ -29,11 +29,24 @@ const NAV = [
   ['#faq', 'Питання'],
 ];
 
+/* FOOTER_COLS і сам Footer лишились у BelowFold.jsx, куди їх переніс
+   розділ бандла: підвал — найнижча частина сторінки, і вантажити
+   його разом із героєм означало б платити за те, чого людина ще не
+   бачить. Тут вони були б другою копією, яка розійдеться з першою. */
+
+/* Брейкпоінт хедера: нижче нього навігація, мова, «Вхід» і CTA не
+   вміщаються поруч із логотипом (перевірено від 320px), тож ховаємо
+   їх за бургером. CTA в самому хедері на мобільному теж прибираємо —
+   такий самий, тільки більший, і так стоїть у героя першим екраном
+   нижче, дублювати його тут нема сенсу, а місця він забирає багато. */
+const HEADER_BP = 880;
+
 function Header() {
   const [shrunk, setShrunk] = useState(false);
   const [progress, setProgress] = useState(0);
   const [lang, setLang] = useState('UA');
   const [langOpen, setLangOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => {
@@ -56,15 +69,24 @@ function Header() {
 
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 60, background: 'rgba(8,8,12,.78)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
-      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, transition: 'height .25s ease', height: shrunk ? 56 : 64 }}>
-        <a href="#top" style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-          <Cat size={36} />
-          <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 15.5, letterSpacing: '2.4px', color: '#fff', whiteSpace: 'nowrap' }}>
+      <style>{`
+        .ln-h-desktop{display:flex}
+        .ln-h-burger{display:none}
+        @media (max-width:${HEADER_BP}px){
+          .ln-h-desktop{display:none !important}
+          .ln-h-burger{display:flex !important}
+        }
+      `}</style>
+
+      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 clamp(16px,4vw,32px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, transition: 'height .25s ease', height: shrunk ? 56 : 64 }}>
+        <a href="#top" style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, minWidth: 0 }} onClick={() => setMobileOpen(false)}>
+          <Cat size={32} />
+          <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 14.5, letterSpacing: '2px', color: '#fff', whiteSpace: 'nowrap' }}>
             THE <span style={{ color: C.acc }}>EDGE</span>
           </span>
         </a>
 
-        <nav style={{ display: 'flex', alignItems: 'center', gap: 26, fontFamily: F.sans, fontSize: 14.5, fontWeight: 500 }}>
+        <nav className="ln-h-desktop" style={{ alignItems: 'center', gap: 26, fontFamily: F.sans, fontSize: 14.5, fontWeight: 500 }}>
           {NAV.map(([href, label]) => (
             <a
               key={href}
@@ -78,7 +100,7 @@ function Header() {
           ))}
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+        <div className="ln-h-desktop" style={{ alignItems: 'center', gap: 14, flexShrink: 0 }}>
           <div style={{ position: 'relative' }}>
             <button
               type="button"
@@ -120,7 +142,75 @@ function Header() {
             Почати безкоштовно
           </a>
         </div>
+
+        <button
+          type="button"
+          className="ln-h-burger"
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-label={mobileOpen ? 'Закрити меню' : 'Відкрити меню'}
+          style={{ alignItems: 'center', justifyContent: 'center', width: 38, height: 38, flexShrink: 0, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.09)', borderRadius: 10, color: '#e9e9f2', cursor: 'pointer' }}
+        >
+          {mobileOpen ? <X size={18} strokeWidth={2.2} /> : <Menu size={18} strokeWidth={2.2} />}
+        </button>
       </div>
+
+      {mobileOpen && (
+        <div
+          className="ln-h-burger"
+          style={{
+            flexDirection: 'column', gap: 3, position: 'absolute', top: '100%', left: 0, right: 0,
+            maxHeight: 'calc(100vh - 56px)', overflowY: 'auto', padding: '10px 16px 22px',
+            background: '#0a0a0e', borderBottom: '1px solid rgba(255,255,255,.08)',
+            boxShadow: '0 26px 60px rgba(0,0,0,.55)', animation: 'lnFadeUp .2s ease-out',
+          }}
+        >
+          {NAV.map(([href, label]) => (
+            <a
+              key={href}
+              href={href}
+              onClick={() => setMobileOpen(false)}
+              style={{ padding: '13px 6px', fontFamily: F.sans, fontSize: 15.5, fontWeight: 600, color: '#e4e4ee', borderBottom: '1px solid rgba(255,255,255,.05)' }}
+            >
+              {label}
+            </a>
+          ))}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
+            {['UA', 'EN', 'RU'].map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => setLang(code)}
+                style={{
+                  flex: 1, textAlign: 'center', fontFamily: F.sans, fontSize: 13, fontWeight: 700,
+                  padding: '9px 0', borderRadius: 9, cursor: 'pointer',
+                  background: lang === code ? A(0.16) : 'rgba(255,255,255,.04)',
+                  border: `1px solid ${lang === code ? A(0.4) : 'rgba(255,255,255,.08)'}`,
+                  color: lang === code ? '#fff' : '#8a8a9c',
+                }}
+              >
+                {code}
+              </button>
+            ))}
+          </div>
+
+          <a
+            href="/auth"
+            onClick={() => setMobileOpen(false)}
+            style={{ textAlign: 'center', marginTop: 14, fontFamily: F.sans, fontSize: 14.5, fontWeight: 600, color: '#c9c9d8', padding: '12px 0' }}
+          >
+            Вхід
+          </a>
+
+          <a
+            href="/auth"
+            onClick={() => setMobileOpen(false)}
+            style={{ textAlign: 'center', marginTop: 6, background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, color: '#fff', fontFamily: F.sans, fontSize: 15, fontWeight: 700, padding: '15px 0', borderRadius: 13, boxShadow: '0 10px 28px rgba(74,59,245,.34)' }}
+          >
+            Почати безкоштовно
+          </a>
+        </div>
+      )}
 
       <div style={{ height: 2, background: `linear-gradient(90deg,${C.accDeep},${C.acc})`, transition: 'width .1s linear', width: `${(progress * 100).toFixed(2)}%` }} />
     </header>

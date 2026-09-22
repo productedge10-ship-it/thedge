@@ -555,6 +555,14 @@ function TradeDate({ value, onChange, compact }) {
             .edge-daypicker { --rdp-cell-size: 38px; --rdp-accent-color: ${ACCENT};
               --rdp-background-color: rgba(${ACCENT_RGB},0.14); margin: 0;
               font-family: ${T.sans}; color: ${txt(0.8)}; }
+            /* На вузьких екранах 44px-клітинки (дефолт react-day-picker
+               v9 — --rdp-cell-size тут не діє, бібліотека вже давно
+               перейшла на --rdp-day-width) не влазять у 320px і
+               панель вилазила за лівий край екрана */
+            @media (max-width: 380px) {
+              .edge-daypicker { --rdp-day-width: 38px; --rdp-day-height: 38px;
+                --rdp-day_button-width: 36px; --rdp-day_button-height: 36px; }
+            }
             .edge-daypicker .rdp-months { margin: 0; }
             .edge-daypicker .rdp-caption_label { font-size: 14px; font-weight: 700;
               color: var(--edge-text); text-transform: capitalize; letter-spacing: -0.01em; }
@@ -769,8 +777,12 @@ function ReviewList({ values, setters }) {
     <div className="overflow-hidden rounded-[16px]" style={{ background: CARD_BG, border: `1px solid ${line(0.07)}` }}>
       {/* Підсумок угорі: його читають першим і повертаються до нього
           після кожної відповіді. */}
+      {/* Раніше рядок не переносився: бейдж вердикту (shrink-0, а
+          текст у ньому буває довгим — «Лишилось 7», «Чисте виконання»)
+          на 320px просто вилазив за екран. Тепер flex-wrap, і бейдж
+          падає на свій рядок, якщо не влазить поруч зі шкалою. */}
       <div
-        className="flex items-center gap-3 px-4 py-3"
+        className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3"
         style={{ borderBottom: `1px solid ${line(0.06)}`, background: `rgba(${ACCENT_RGB},0.05)` }}
       >
         <span className="text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: '#9b8cfa' }}>
@@ -817,18 +829,28 @@ function ReviewList({ values, setters }) {
         return (
           <div
             key={q.key}
-            className="flex items-center gap-3 px-4 transition-colors duration-200"
+            className="flex items-center gap-2 px-3 transition-colors duration-200 sm:gap-3 sm:px-4"
             style={{
               height: 54,
               borderTop: i === 0 ? 'none' : `1px solid ${line(0.05)}`,
               background: bad ? `rgba(${tn.rgb},0.045)` : 'transparent',
             }}
           >
-            <span className="shrink-0 text-[10.5px]" style={{ fontFamily: MONO, letterSpacing: '0.12em', color: txt(0.3) }}>
+            <span className="hidden shrink-0 text-[10.5px] sm:inline" style={{ fontFamily: MONO, letterSpacing: '0.12em', color: txt(0.3) }}>
               {String(i + 1).padStart(2, '0')}
             </span>
 
-            <span className="min-w-0 flex-1 truncate text-[14.5px]" style={{ fontFamily: T.sans, color: v === null ? txt(0.62) : 'var(--edge-text)' }}>
+            {/* На 320-375px повне питання («Чи дотримувався торгового
+                плану?») з двома 62px-кнопками поруч не влазить в один
+                рядок узагалі — truncate ковтав усе, крім «Чи ...», а
+                перенос на два рядки в рядку заввишки 54px ламав
+                верстку. Коротка мітка (той самий `short`, що вже жив
+                у даних для старої сітки) з тим самим змістом читається
+                й на вузькому екрані без жодних компромісів. */}
+            <span className="min-w-0 flex-1 truncate text-[13.5px] sm:hidden" style={{ fontFamily: T.sans, color: v === null ? txt(0.62) : 'var(--edge-text)' }}>
+              {q.short}
+            </span>
+            <span className="hidden min-w-0 flex-1 truncate text-[14.5px] sm:block" style={{ fontFamily: T.sans, color: v === null ? txt(0.62) : 'var(--edge-text)' }}>
               {q.q}
             </span>
 
@@ -842,7 +864,7 @@ function ReviewList({ values, setters }) {
                     /* Повторний клік знімає відповідь — інакше
                        помилково натиснуту не прибрати. */
                     onClick={() => setters[q.key](v === opt ? null : opt)}
-                    className="flex h-[34px] w-[62px] items-center justify-center rounded-[9px] text-[13px] transition-all duration-150"
+                    className="flex h-[34px] w-[52px] items-center justify-center rounded-[9px] text-[13px] transition-all duration-150 sm:w-[62px]"
                     style={{
                       fontFamily: T.sans,
                       fontWeight: active ? 600 : 500,
@@ -1311,26 +1333,46 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
             style={{ background: CARD_BG, border: `1px solid ${line(0.08)}`, boxShadow: '0 40px 110px -10px rgba(0,0,0,0.65), 0 0 0 1px var(--edge-hair) inset' }}
           >
             {/* ─────────── Шапка ─────────── */}
-            <div className="flex shrink-0 items-center justify-between gap-5 px-6 pb-3 pt-[14px]" style={{ borderBottom: `1px solid ${line(0.06)}` }}>
+            {/* Раніше все це стояло одним нерозривним flex-рядком:
+                заголовок+актив+дата ліворуч, кроки й хрестик праворуч.
+                На вузькому екрані їм там разом не було місця — рядок
+                не переносився, і items-center просто вкладав хрестик і
+                «01 ЦИФРИ» десь посередині висоти лівого блоку, що
+                вже сам переносився на два рядки. Тепер це два окремі
+                рядки: заголовок+хрестик (завжди нагорі, хрестик завжди
+                на місці) і окремо актив/дата+кроки (переносяться між
+                собою, а не крізь заголовок). */}
+            <div className="flex shrink-0 flex-col gap-2.5 px-5 pb-3 pt-[14px] sm:px-6" style={{ borderBottom: `1px solid ${line(0.06)}` }}>
+              <div className="flex items-start justify-between gap-4">
+                <h2 className="min-w-0 text-[19px] font-bold leading-[1.15] sm:text-[21px]" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.03em' }}>
+                  {step === 0
+                    ? (existingTrade ? 'Редагувати угоду' : 'Записати угоду')
+                    : 'Розбір виконання'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] transition-all duration-200"
+                  style={{ background: 'transparent', border: `1px solid ${line(0.08)}`, color: txt(0.55) }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = line(0.06); e.currentTarget.style.color = 'var(--edge-text)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = txt(0.55); }}
+                >
+                  <X size={14} strokeWidth={2.2} />
+                </button>
+              </div>
+
               {/* Актив і дата живуть у шапці, а не окремими полями в
                   формі. Обидва підставляються самі — з плану або з
                   сьогоднішньої дати, — і міняють їх рідко. Поле, яке
                   вже заповнене й рідко правиться, не має займати рядок
                   нарівні з тим, що заповнюють щоразу. */}
-              <div className="flex min-w-0 flex-col gap-2">
-                <h2 className="text-[21px] font-bold leading-[1.1]" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.03em' }}>
-                  {step === 0
-                    ? (existingTrade ? 'Редагувати угоду' : 'Записати угоду')
-                    : 'Розбір виконання'}
-                </h2>
-                {step === 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                {step === 0 ? (
                   <div className="flex flex-wrap items-center gap-2">
                     <AssetPicker compact value={selectedPair} onChange={setSelectedPair} />
                     <TradeDate compact value={tradeDate} onChange={setTradeDate} />
                   </div>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center gap-3.5">
+                ) : <span />}
                 <div className="flex items-center gap-2" style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.14em' }}>
                   <button
                     type="button"
@@ -1348,16 +1390,6 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                     02 РОЗБІР
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] transition-all duration-200"
-                  style={{ background: 'transparent', border: `1px solid ${line(0.08)}`, color: txt(0.55) }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = line(0.06); e.currentTarget.style.color = 'var(--edge-text)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = txt(0.55); }}
-                >
-                  <X size={14} strokeWidth={2.2} />
-                </button>
               </div>
             </div>
 
@@ -1677,7 +1709,13 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                     <span className="hidden sm:inline">Чернетка зберігається автоматично</span>
                   </div>
 
-                  <div className="flex shrink-0 flex-nowrap items-center gap-3">
+                  {/* shrink-0 + flex-nowrap на цьому рядку означали, що
+                      «Назад» і «Записати угоду» разом на 320px просто не
+                      влазили — а рядок все одно не переносив, тож другу
+                      кнопку зрізало краєм модалки (overflow-hidden на
+                      картці). Нижче 400px падінги/шрифт вужчі, а сам
+                      рядок може перенестись, якщо й цього не вистачить. */}
+                  <div className="flex flex-wrap shrink-0 items-center justify-end gap-2 sm:gap-3">
                     <span className="hidden whitespace-nowrap text-[13.5px] font-medium sm:block" style={{ fontFamily: T.sans, color: step === 0 ? (step1LeftCount === 0 ? GREEN : txt(0.5)) : (submitReady ? GREEN : txt(0.5)) }}>
                       {step === 0
                         ? (step1LeftCount === 0 ? 'Можна продовжувати' : `Залишилось полів: ${step1LeftCount}`)
@@ -1688,7 +1726,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       <button
                         type="button"
                         onClick={goBack}
-                        className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-[12px] px-5 text-[14.5px] font-medium transition-colors duration-200"
+                        className="flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[12px] px-3 text-[13.5px] font-medium transition-colors duration-200 sm:gap-2 sm:px-5 sm:text-[14.5px]"
                         style={{ fontFamily: T.sans, background: 'transparent', border: `1px solid ${line(0.1)}`, color: txt(0.65) }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-text)'; e.currentTarget.style.borderColor = line(0.22); }}
                         onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.65); e.currentTarget.style.borderColor = line(0.1); }}
@@ -1702,7 +1740,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       <button
                         type="button"
                         onClick={goNext}
-                        className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-[12px] px-5 text-[14.5px] font-semibold transition-all duration-200 active:scale-[0.98]"
+                        className="flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[12px] px-3 text-[13.5px] font-semibold transition-all duration-200 active:scale-[0.98] sm:gap-2 sm:px-5 sm:text-[14.5px]"
                         style={{ fontFamily: T.sans, background: ACCENT, color: 'var(--edge-on-acc)' }}
                         onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.boxShadow = `0 10px 30px -6px rgba(${ACCENT_RGB},0.55)`; }}
                         onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
@@ -1714,7 +1752,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       <button
                         type="submit"
                         disabled={loading || !submitReady || attach.busy}
-                        className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-[13px] px-[22px] text-[14.5px] font-semibold transition-all duration-200"
+                        className="flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[13px] px-4 text-[13.5px] font-semibold transition-all duration-200 sm:gap-2 sm:px-[22px] sm:text-[14.5px]"
                         style={{
                           fontFamily: T.sans,
                           cursor: submitReady ? 'pointer' : 'not-allowed',

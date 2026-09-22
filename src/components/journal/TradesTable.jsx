@@ -112,6 +112,125 @@ function Discipline({ trade }) {
   );
 }
 
+/* ==================================================================
+   Мобільна картка рядка.
+
+   Таблиця з шістьма стовпцями (дата, актив, R/$, статус, дисципліна,
+   видалення) на 320px не влазить нікуди — overflow-x-auto ховав
+   половину даних за скролом, який на дотику легко сплутати зі
+   свайпом картки. Замість горизонтального скролу — вертикальна
+   картка: та сама інформація, три рядки замість однієї широкої смуги.
+================================================================== */
+function MobileRow({ t, res, rr, rrColor, pColor, rowShowProfit, onToggleProfit, onOpen, onDelete }) {
+  return (
+    <div
+      onClick={() => { const { _profit, ...orig } = t; onOpen(orig); }}
+      className="flex cursor-pointer flex-col gap-2.5 px-4 py-3.5 transition-colors duration-150 active:bg-white/[0.03]"
+      style={{ borderBottom: `1px solid ${T.line}` }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="grid w-7 shrink-0 place-items-center">
+            <AssetIcon symbol={t.plan_pair || ''} category={t.category} />
+          </span>
+          <span className="truncate text-[15px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
+            {t.plan_pair}
+          </span>
+          {t.source === 'mt5' && (
+            <span
+              className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold tracking-[0.06em]"
+              style={{ fontFamily: T.sans, color: T.acc, background: `rgba(${T.accRgb},0.12)`, border: `1px solid rgba(${T.accRgb},0.22)` }}
+            >
+              MT5
+            </span>
+          )}
+        </span>
+        <span className="shrink-0 text-[12px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
+          {t.plan_date}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2">
+          <span
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.06em]"
+            style={
+              res
+                ? { background: `rgba(${res.rgb},0.12)`, border: `1px solid rgba(${res.rgb},0.26)`, color: res.c, fontFamily: T.sans }
+                : { background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.line}`, color: T.text4, fontFamily: T.sans }
+            }
+          >
+            <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: res ? res.c : T.text4 }} />
+            {res ? res.label : 'Not set'}
+          </span>
+
+          {EXIT_META[t.exit_reason] && (() => {
+            const meta = EXIT_META[t.exit_reason];
+            return (
+              <span
+                title={meta.label}
+                className="inline-flex shrink-0 items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.04em]"
+                style={{ fontFamily: T.sans, color: meta.c }}
+              >
+                <meta.Icon size={11} strokeWidth={2.4} />
+                {t.exit_reason === 'manual' ? 'Market' : t.exit_reason === 'expert' ? 'Bot' : 'Stop-out'}
+              </span>
+            );
+          })()}
+        </span>
+
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleProfit(t.id); }}
+          title={rowShowProfit ? 'Show R' : 'Show profit in $'}
+          className="shrink-0 rounded-md px-1.5 py-1 text-right"
+        >
+          <span className="relative block h-[18px] w-[88px] overflow-hidden text-right">
+            <AnimatePresence initial={false}>
+              {rowShowProfit ? (
+                <motion.span
+                  key="profit"
+                  initial={{ rotateX: -90, opacity: 0 }}
+                  animate={{ rotateX: 0, opacity: 1 }}
+                  exit={{ rotateX: 90, opacity: 0 }}
+                  transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }}
+                  className="absolute inset-0 whitespace-nowrap text-[14px] font-bold tabular-nums"
+                  style={{ fontFamily: T.mono, color: pColor, lineHeight: '18px', transformOrigin: 'center bottom' }}
+                >
+                  {t._profit === null ? '—' : `${t._profit > 0 ? '+' : t._profit < 0 ? '−' : ''}$${Math.abs(t._profit).toFixed(2)}`}
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="rr"
+                  initial={{ rotateX: -90, opacity: 0 }}
+                  animate={{ rotateX: 0, opacity: 1 }}
+                  exit={{ rotateX: 90, opacity: 0 }}
+                  transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }}
+                  className="absolute inset-0 whitespace-nowrap text-[14px] font-bold tabular-nums"
+                  style={{ fontFamily: T.mono, color: rrColor, lineHeight: '18px', transformOrigin: 'center bottom' }}
+                >
+                  {rr === null ? '—' : `${rr > 0 ? '+' : ''}${rr}R`}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </span>
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between gap-2">
+        <Discipline trade={t} />
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(t.id); }}
+          title="Delete trade"
+          className="grid h-8 w-8 place-items-center rounded-lg transition-colors"
+          style={{ color: T.text4 }}
+        >
+          <Trash2 size={15} strokeWidth={2.2} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SortIcon({ state }) {
   if (state === 'asc')  return <ChevronUp size={13} strokeWidth={3} style={{ color: T.acc }} />;
   if (state === 'desc') return <ChevronDown size={13} strokeWidth={3} style={{ color: T.acc }} />;
@@ -281,9 +400,36 @@ export default function TradesTable({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18, ease: EASE }}
-          className="overflow-x-auto"
           style={{ minHeight: pageSize * 56 + 45 }}
         >
+        {/* Мобільні картки — рядок з 6 стовпців на 320px ніяк не влазить,
+            а overflow-x-auto ховав половину даних за скролом, який на
+            дотику легко сплутати зі свайпом. Тут та сама інформація,
+            просто в три рядки замість однієї широкої смуги. */}
+        <div className="flex flex-col sm:hidden">
+          {rows.map((t) => {
+            const res = RESULT[t.result?.trim().toLowerCase()];
+            const rr = t.rr === null || t.rr === '' ? null : parseFloat(t.rr);
+            const rrColor = rr === null ? T.text4 : rr > 0 ? T.ok : rr < 0 ? T.bad : T.text3;
+            const pColor = t._profit === null ? T.text4 : t._profit > 0 ? T.ok : t._profit < 0 ? T.bad : T.text3;
+            return (
+              <MobileRow
+                key={t.id}
+                t={t}
+                res={res}
+                rr={rr}
+                rrColor={rrColor}
+                pColor={pColor}
+                rowShowProfit={profitIds.has(t.id)}
+                onToggleProfit={toggleProfit}
+                onOpen={onOpen}
+                onDelete={onDelete}
+              />
+            );
+          })}
+        </div>
+
+        <div className="hidden overflow-x-auto sm:block">
         <table className="w-full" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${T.line}`, background: T.sunken }}>
@@ -504,6 +650,7 @@ export default function TradesTable({
             })}
           </tbody>
         </table>
+        </div>
         </motion.div>
       </AnimatePresence>
 
