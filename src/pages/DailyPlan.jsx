@@ -37,8 +37,9 @@ import { asList } from '../lib/dayReview';
 import { T, EASE, useEdgeFonts } from '../components/trading/planTheme';
 import useTerminalSkin from '../hooks/useTerminalSkin';
 import {
-  WEEK_PAIR, mondayOf, weekRangeLabel, emptyWeekPlan, checkIsWeekPlanEmpty,
+  WEEK_PAIR, weekRangeLabel, emptyWeekPlan, checkIsWeekPlanEmpty,
   wasPlanTypeAskedToday, markPlanTypeAskedToday,
+  shiftWeek, planningWeekMonday, weekOffsetFromNow,
 } from '../lib/weekPlan';
 import PlanTypeModal from '../components/modals/PlanTypeModal';
 
@@ -187,7 +188,7 @@ export default function DailyPlan() {
      тим самим /plan, тому масштаб і тиждень мають десь пережити
      перший рендер, а не тільки клік по перемикачу. */
   const [mode, setMode] = useState(() => (location.state?.mode === 'weekly' ? 'weekly' : 'daily'));
-  const [weekMonday, setWeekMonday] = useState(() => location.state?.weekMonday || mondayOf(todayLocal()));
+  const [weekMonday, setWeekMonday] = useState(() => location.state?.weekMonday || planningWeekMonday(todayLocal()));
   const [weekData, setWeekData] = useState(() => emptyWeekPlan(weekMonday));
   const [isWeekLoading, setIsWeekLoading] = useState(false);
   const [isWeekSaving, setIsWeekSaving] = useState(false);
@@ -236,7 +237,7 @@ export default function DailyPlan() {
     setIsPlanTypeModalOpen(false);
     if (type === 'weekly') {
       setMode('weekly');
-      setWeekMonday(mondayOf(todayLocal()));
+      setWeekMonday(planningWeekMonday(todayLocal()));
       return;
     }
     if (planTypeModalContext === 'new') await handleNewPlan();
@@ -320,10 +321,33 @@ export default function DailyPlan() {
     return () => clearTimeout(timer);
   }, [weekData, mode, isWeekLoading, user?.id, performSaveWeek]);
 
-  /* Тижневий план завжди про поточний тиждень — жодного гортання назад
-     чи вперед. Єдиний вихід на "той самий" тиждень — кнопка "New week"
-     у хедері, яка повертає сюди після перегляду минулого через Аналізи. */
-  const goThisWeek = useCallback(() => setWeekMonday(mondayOf(todayLocal())), []);
+  /* Гортання тижнів.
+
+     Раніше тижневий план був прибитий до поточного тижня — «план про
+     зараз, гортати нема чого». На практиці це означало, що в суботу,
+     коли тижневий план і пишуть, екран показував тиждень, який уже
+     минув, і перейти на той, що планують, було нічим.
+
+     Перед переходом дописуємо те, що ще висить у дебаунсі: інакше
+     півтори секунди між останньою літерою і кліком на стрілку
+     коштували б цього абзацу — ефект збереження просто зняв би
+     таймер разом зі зміною тижня. Так само, як у backToDaily. */
+  const goWeek = useCallback(async (nextMonday) => {
+    if (!nextMonday || nextMonday === weekMonday) return;
+    if (weekHasUnsaved && !isWeekSaving && !checkIsWeekPlanEmpty(latestWeekDataRef.current)) {
+      await performSaveWeek();
+    }
+    setWeekMonday(nextMonday);
+  }, [weekMonday, weekHasUnsaved, isWeekSaving, performSaveWeek]);
+
+  /* «Той самий» тиждень — не календарно поточний, а той, який зараз
+     планують: у вихідні це вже наступний. Інакше кнопка повернення в
+     суботу відкидала б людину на тиждень назад. */
+  const planningMonday = planningWeekMonday(todayLocal());
+  const goThisWeek = useCallback(
+    () => goWeek(planningWeekMonday(todayLocal())),
+    [goWeek],
+  );
 
   /* Єдиний вихід назад із тижневого режиму — раніше єдиним способом
      було перезавантажити сторінку. Просте перемикання, як і в auto-
@@ -352,7 +376,7 @@ export default function DailyPlan() {
      була модалка «новий план» — тобто щоб просто подивитись тиждень,
      треба було вдати, що створюєш щось нове. */
   const goWeekly = useCallback(() => {
-    setWeekMonday(mondayOf(todayLocal()));
+    setWeekMonday(planningWeekMonday(todayLocal()));
     setMode('weekly');
   }, []);
 
@@ -894,6 +918,11 @@ export default function DailyPlan() {
           title={mode === 'weekly' ? weekRangeLabel(weekMonday) : planData.title}
           pair={mode === 'weekly' ? '' : planData.pair}
           mode={mode}
+          weekOffset={weekOffsetFromNow(weekMonday, todayLocal())}
+          canReturnToWeek={weekMonday !== planningMonday}
+          onPrevWeek={() => goWeek(shiftWeek(weekMonday, -1))}
+          onNextWeek={() => goWeek(shiftWeek(weekMonday, 1))}
+          onThisWeek={goThisWeek}
           onBackToDaily={backToDaily}
           onGoWeekly={goWeekly}
           plans={dayPlans.map((sym) => ({ symbol: sym, category: flatAssets.find((a) => a.symbol === sym)?.category }))}

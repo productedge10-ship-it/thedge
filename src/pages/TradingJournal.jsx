@@ -823,7 +823,16 @@ export default function TradingJournal() {
         .order("plan_date", { ascending: true })
     );
     const { data, error } = await q;
-    if (!error && data) setGlobalStatsData(data);
+    /* Відкриті позиції у статистику не йдуть. У них немає результату,
+       а `profit_money` — плаваюче число, яке міняється щохвилини: у
+       вінрейті вони сидітимуть у знаменнику як програні, а в сумі
+       доларів показуватимуть прибуток, якого ще ніхто не взяв.
+
+       У самій таблиці вони лишаються — там вони й потрібні. Тут
+       рахується те, що вже сталося. */
+    if (!error && data) {
+      setGlobalStatsData(data.filter((t) => normResult(t.result) !== "open"));
+    }
   }, [applyFilters]);
 
   /* Кеш сторінок у межах поточної сесії: раз завантажену сторінку

@@ -31,6 +31,14 @@ const RESULT = {
   loss:    { label: 'Stop',    c: T.bad,  rgb: T.badRgb },
   be:      { label: 'BE',      c: T.warn, rgb: T.warnRgb },
   scratch: { label: 'Scratch', c: T.info, rgb: T.infoRgb },
+  /* Позиція ще в ринку. Це не результат, а його відсутність — але
+     рядок у журналі мусить бути: угоду вже зроблено, і не бачити її
+     до закриття означає не бачити половини свого дня.
+
+     Колір акцентний, а не з трійки «добре / погано / нічия»: число
+     поруч плаває й нічого остаточного не каже. Пульсуюча крапка
+     робить те саме словами — рядок живий, повернись пізніше. */
+  open:    { label: 'In process', c: T.acc, rgb: T.accRgb, live: true },
 };
 
 /* Як позиція закрилась за даними термінала.
@@ -452,7 +460,10 @@ export default function TradesTable({
                             : { background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.line}`, color: T.text4, fontFamily: T.sans }
                         }
                       >
-                        <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: res ? res.c : T.text4 }} />
+                        <span
+                          className={`h-[6px] w-[6px] shrink-0 rounded-full${res?.live ? ' trade-live-dot' : ''}`}
+                          style={{ background: res ? res.c : T.text4 }}
+                        />
                         {res ? res.label : 'Not set'}
                       </span>
 

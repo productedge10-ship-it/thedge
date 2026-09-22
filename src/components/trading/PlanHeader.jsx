@@ -1,10 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
-import { CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2, ChevronDown, Layers, LayoutGrid } from 'lucide-react';
+import { CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Layers, LayoutGrid } from 'lucide-react';
 import AssetIcon from '../ui/AssetIcon';
 import AsciiDecode from '../ui/AsciiDecode';
 import { T, SPRING, EASE } from './planTheme';
 import { usePlanBlocks, PHASE_LABEL } from '../../lib/planBlocks';
+import { weekRelLabel } from '../../lib/weekPlan';
 
 /* ==================================================================
    Хедер плану. Раніше 6 різнокольорових кнопок кричали однаково
@@ -428,10 +429,80 @@ function BlocksMenu({ mode }) {
   );
 }
 
+/* ------------------------------------------------------------------
+   Гортання тижнів.
+
+   Стрілки стоять впритул до самої дати, а не серед дій угорі: вони
+   міняють те, що написано поруч, і читатись мають як частина
+   заголовка. У ряду з «Add trade» і «Quiz» вони б означали дію над
+   планом, а не над тим, який план відкрито.
+------------------------------------------------------------------ */
+function WeekArrow({ dir, onClick }) {
+  const Icon = dir === 'prev' ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={dir === 'prev' ? 'Попередній тиждень' : 'Наступний тиждень'}
+      aria-label={dir === 'prev' ? 'Попередній тиждень' : 'Наступний тиждень'}
+      className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl transition-all duration-200 active:scale-95"
+      style={{ background: T.surface, border: `1px solid ${T.line}` }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.background = T.surfaceHi; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line;   e.currentTarget.style.background = T.surface; }}
+    >
+      <Icon size={17} strokeWidth={2.4} style={{ color: T.text2 }} />
+    </button>
+  );
+}
+
+/* Підпис відстані: «6 – 12 October» саме по собі не каже, попереду це
+   чи позаду. Коли тиждень не той, який зараз планують, підпис стає
+   кнопкою повернення — інакше з гортання нема швидкого виходу. */
+function WeekChip({ offset, canReturn, onReturn }) {
+  const label = weekRelLabel(offset);
+  const tone = offset === 0 ? T.acc : offset > 0 ? T.info : T.text3;
+  const rgb  = offset === 0 ? T.accRgb : offset > 0 ? T.infoRgb : null;
+
+  const style = {
+    fontFamily: T.sans,
+    color: tone,
+    background: rgb ? `rgba(${rgb},0.10)` : T.surface,
+    border: `1px solid ${rgb ? `rgba(${rgb},0.24)` : T.line}`,
+  };
+
+  if (!canReturn) {
+    return (
+      <span className="flex h-[30px] items-center rounded-lg px-2.5 text-[12.5px] font-semibold" style={style}>
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onReturn}
+      title="Повернутись до тижня, який плануєш"
+      className="flex h-[30px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-semibold transition-all duration-200 active:scale-[0.97]"
+      style={style}
+      onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.35)')}
+      onMouseLeave={(e) => (e.currentTarget.style.filter = 'none')}
+    >
+      <RotateCcw size={12} strokeWidth={2.6} />
+      {label}
+    </button>
+  );
+}
+
 export default function PlanHeader({
   title,
   pair,
   mode = 'daily',
+  weekOffset = 0,
+  canReturnToWeek = false,
+  onPrevWeek,
+  onNextWeek,
+  onThisWeek,
   onBackToDaily,
   onGoWeekly,
   plans,
@@ -636,13 +707,20 @@ export default function PlanHeader({
 
       {/* Нижній рядок: сама назва — тепер на всю ширину і без сусідів
           зверху, звучить як заголовок, а не тіснитись поруч з перемикачем. */}
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {weekly && <WeekArrow dir="prev" onClick={onPrevWeek} />}
+
         <h1
           className="text-[28px] font-bold capitalize leading-none sm:text-[38px] lg:text-[46px]"
           style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
         >
           {title}
         </h1>
+
+        {weekly && <WeekArrow dir="next" onClick={onNextWeek} />}
+        {weekly && (
+          <WeekChip offset={weekOffset} canReturn={canReturnToWeek} onReturn={onThisWeek} />
+        )}
         {/* Бейджа активу тут немає навмисно: він стоїть окремим полем
             у метаданих нижче, і дублювати його поруч із назвою дня —
             означало б двічі сказати те саме на одному екрані. */}

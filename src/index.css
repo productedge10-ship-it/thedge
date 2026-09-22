@@ -2659,3 +2659,23 @@ h1, h2, h3, h4, h5, h6 {
 @media (prefers-reduced-motion: reduce) {
   .edge-soon-anim { animation: none !important; }
 }
+
+/* ==================================================================
+   Крапка «угода ще в ринку».
+
+   Пульс повільний і неглибокий навмисно. Рядок із відкритою позицією
+   висить у таблиці поруч із двома десятками закритих, і все, що
+   блимає помітніше, перетягує на себе увагу з самих чисел — а вони
+   тут головні. Завдання крапки рівно одне: сказати, що рядок ще
+   змінюватиметься, і замовкнути.
+================================================================== */
+@keyframes edgeTradeLive {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%      { opacity: .35; transform: scale(.82); }
+}
+
+.trade-live-dot { animation: edgeTradeLive 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .trade-live-dot { animation: none !important; }
+}

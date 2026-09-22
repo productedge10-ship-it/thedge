@@ -1,5 +1,4 @@
 import { startOfWeek, endOfWeek, format } from 'date-fns';
-import { uk } from 'date-fns/locale';
 
 /* ==================================================================
    Тижневий план.
@@ -23,22 +22,72 @@ const parse = (dateStr) => new Date(`${dateStr || toStr(new Date())}T12:00:00`);
 /* Понеділок тижня, у якому лежить довільна дата. */
 export const mondayOf = (dateStr) => toStr(startOfWeek(parse(dateStr), { weekStartsOn: 1 }));
 
-/* «8 – 14 вересня» або «29 вересня – 5 жовтня», якщо тиждень зачіпає
-   два місяці. Єдине позначення тижня в інтерфейсі — жодних номерів
-   ISO-тижня: людина мислить датами, а не «Тиждень 37».
+/* «8 – 14 September» або «29 September – 5 October», якщо тиждень
+   зачіпає два місяці. Єдине позначення тижня в інтерфейсі — жодних
+   номерів ISO-тижня: людина мислить датами, а не «Тиждень 37».
 
-   Місяць — повною назвою у родовому відмінку ('MMMM', а не стандалон
-   'LLL'): скорочення на кшталт «верес» без крапки виглядало як
-   недописане слово, а не як «вересня». */
+   Місяць англійською — як і решта великих підписів у хедері плану
+   (Daily/Weekly, New plan, Add trade). Українська назва в родовому
+   відмінку сусідила там із латиницею й читалась як недопереклад. */
 export const weekRangeLabel = (mondayStr) => {
   const mon = parse(mondayStr);
   const sun = endOfWeek(mon, { weekStartsOn: 1 });
   const sameMonth = mon.getMonth() === sun.getMonth();
   const day = (d) => format(d, 'd');
-  const month = (d) => format(d, 'MMMM', { locale: uk });
+  const month = (d) => format(d, 'MMMM');
   return sameMonth
     ? `${day(mon)} – ${day(sun)} ${month(sun)}`
     : `${day(mon)} ${month(mon)} – ${day(sun)} ${month(sun)}`;
+};
+
+/* ---------- гортання тижнів ----------
+
+   Тижневий план довго вмів показувати тільки поточний тиждень. Задум
+   був «план — це про зараз», але він ламався об звичку: тижневий план
+   пишуть у суботу-неділю, і саме тоді «поточний» тиждень — це той,
+   що вже закінчився. Людина сідала планувати наступний і впиралась у
+   екран, який показував минуле й не давав його змінити.
+------------------------------------------------------------------ */
+
+export const shiftWeek = (mondayStr, delta) => {
+  const d = parse(mondayOf(mondayStr));
+  d.setDate(d.getDate() + delta * 7);
+  return toStr(d);
+};
+
+/* Який тиждень відкривати за замовчуванням.
+
+   Пн–пт — поточний: тиждень триває, план про нього. Сб–нд — уже
+   наступний: торговий тиждень закінчився в пʼятницю, і планувати на
+   вихідних можна хіба що вперед. */
+export const planningWeekMonday = (dateStr) => {
+  const d = parse(dateStr);
+  const weekend = d.getDay() === 0 || d.getDay() === 6;
+  return shiftWeek(toStr(d), weekend ? 1 : 0);
+};
+
+/* На скільки тижнів обраний тиждень відстоїть від того, у якому ми
+   живемо. Ділення з округленням, а не точне: перехід на літній час
+   зсуває добу на годину, і без round тиждень стрибав би на одиницю. */
+export const weekOffsetFromNow = (mondayStr, todayStr) =>
+  Math.round((parse(mondayStr) - parse(mondayOf(todayStr))) / 6048e5);
+
+const weekWord = (n) => {
+  const t = n % 10;
+  const h = n % 100;
+  if (t === 1 && h !== 11) return 'тиждень';
+  if (t >= 2 && t <= 4 && (h < 12 || h > 14)) return 'тижні';
+  return 'тижнів';
+};
+
+/* Підпис поруч із датами: сама по собі «6 – 12 October» не каже, це
+   попереду чи позаду. Дату людина читає як число, а не як відстань. */
+export const weekRelLabel = (offset) => {
+  if (offset === 0) return 'Цей тиждень';
+  if (offset === 1) return 'Наступний тиждень';
+  if (offset === -1) return 'Минулий тиждень';
+  const n = Math.abs(offset);
+  return offset > 0 ? `Через ${n} ${weekWord(n)}` : `${n} ${weekWord(n)} тому`;
 };
 
 /* ---------- порожні заготовки ---------- */
