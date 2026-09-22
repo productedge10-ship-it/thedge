@@ -200,7 +200,7 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.17, ease: EASE }}
-            className="absolute left-0 top-[calc(100%+8px)] z-[80] w-[232px] overflow-hidden rounded-2xl p-1.5"
+            className="plan-dropdown-panel absolute right-0 top-[calc(100%+8px)] z-[80] w-[232px] overflow-hidden rounded-2xl p-1.5"
             style={{
               background: T.surfaceHi,
               border: `1px solid ${T.lineHi}`,
@@ -343,7 +343,7 @@ function BlocksMenu({ mode }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.17, ease: EASE }}
-            className="absolute right-0 top-[calc(100%+8px)] z-[80] w-[264px] overflow-hidden rounded-2xl p-1.5"
+            className="plan-dropdown-panel absolute right-0 top-[calc(100%+8px)] z-[80] w-[264px] overflow-hidden rounded-2xl p-1.5"
             style={{
               background: T.surfaceHi,
               border: `1px solid ${T.lineHi}`,

@@ -650,7 +650,7 @@ return (
                           )}
                         </div>
                         <div className="mt-1 flex flex-wrap items-baseline gap-2.5">
-                          <h2 className="text-[32px] font-bold tabular-nums" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}>
+                          <h2 className="text-[24px] font-bold tabular-nums sm:text-[32px]" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}>
                             {money2(bal)}
                           </h2>
                           {open !== 0 && (

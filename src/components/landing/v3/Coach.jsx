@@ -177,11 +177,11 @@ export default function Coach() {
 
       <div style={{ display: 'flex', gap: 36, flexWrap: 'wrap', alignItems: 'stretch' }}>
         {/* ---------- кіт ---------- */}
-        <div style={{ flex: '0 1 260px', minWidth: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 22, position: 'relative' }}>
+        <div style={{ flex: '0 1 260px', minWidth: 'min(200px,100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 22, position: 'relative' }}>
           <span
             aria-hidden
             style={{
-              position: 'absolute', top: '10%', width: 270, height: 270, borderRadius: '50%',
+              position: 'absolute', top: '10%', width: 270, height: 270, maxWidth: '90%', borderRadius: '50%',
               background: `radial-gradient(circle,${A(0.24)},transparent 68%)`, filter: 'blur(50px)',
               animation: reduced ? 'none' : 'lnBreathe 6s ease-in-out infinite',
             }}
@@ -235,7 +235,7 @@ export default function Coach() {
         </div>
 
         {/* ---------- розбір ---------- */}
-        <div style={{ flex: '1 1 520px', minWidth: 320, background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${C.line}`, borderRadius: 22, padding: 24, position: 'relative', overflow: 'hidden', minHeight: 430, display: 'flex', flexDirection: 'column', gap: 13 }}>
+        <div style={{ flex: '1 1 520px', minWidth: 'min(320px,100%)', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${C.line}`, borderRadius: 'clamp(16px,4vw,22px)', padding: 'clamp(15px,4vw,24px)', position: 'relative', overflow: 'hidden', minHeight: 430, display: 'flex', flexDirection: 'column', gap: 13 }}>
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${A(0.5)},transparent)` }} />
           <span aria-hidden style={{ position: 'absolute', top: -70, left: -50, width: 280, height: 280, background: 'radial-gradient(circle,rgba(74,59,245,.13),transparent 70%)', filter: 'blur(60px)' }} />
 
@@ -255,12 +255,21 @@ export default function Coach() {
                 style={{ position: 'absolute', right: -30, top: -40, width: 140, height: 110, background: accent, filter: 'blur(42px)', opacity: 0.14, pointerEvents: 'none' }}
               />
 
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ width: 3, height: 26, borderRadius: 2, display: 'block', background: accent, boxShadow: `0 0 10px ${accent}` }} />
-                <span style={{ fontFamily: F.mono, fontSize: 13.5, fontWeight: 700, color: C.text, letterSpacing: '.4px' }}>{sc.sym}</span>
-                <span style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 700, color: accent }}>{sc.r}</span>
-                <span style={{ fontFamily: F.mono, fontSize: 12, color: C.text5 }}>{sc.time}</span>
-                <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, borderRadius: 999, padding: '5px 11px', marginLeft: 'auto', whiteSpace: 'nowrap', color: accent, background: 'rgba(0,0,0,.25)', border: `1px solid ${cardBc}` }}>
+              {/* Раніше бирка тримала marginLeft:auto просто в тому ж
+                  ряду: коли ряду не вистачало ширини, вона одна
+                  зривалась на свій рядок і сідала зліва впритул —
+                  верх і низ читались як два випадкові рівні. Тепер
+                  символ+R+час — одна група, а бирка — друга, і коли
+                  вони не влазять поруч, бирка переїжджає під групу
+                  акуратним другим рядком, а не крапається окремо. */}
+              <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: 8, columnGap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ width: 3, height: 26, borderRadius: 2, display: 'block', flexShrink: 0, background: accent, boxShadow: `0 0 10px ${accent}` }} />
+                  <span style={{ fontFamily: F.mono, fontSize: 13.5, fontWeight: 700, color: C.text, letterSpacing: '.4px' }}>{sc.sym}</span>
+                  <span style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 700, color: accent }}>{sc.r}</span>
+                  <span style={{ fontFamily: F.mono, fontSize: 12, color: C.text5 }}>{sc.time}</span>
+                </div>
+                <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, borderRadius: 999, padding: '5px 11px', whiteSpace: 'nowrap', color: accent, background: 'rgba(0,0,0,.25)', border: `1px solid ${cardBc}` }}>
                   {sc.tag}
                 </span>
               </div>

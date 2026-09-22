@@ -347,7 +347,7 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
           ? "Подій немає"
           : "Клік — перейти до дня, подвійний — показати тільки його"
       }
-      className="relative w-[60px] shrink-0 snap-start overflow-hidden rounded-[15px] px-3 pb-2.5 pt-3 text-left sm:w-auto sm:px-3.5 sm:pb-3 sm:pt-3.5"
+      className="relative w-[74px] shrink-0 snap-start overflow-hidden rounded-[15px] px-2.5 pb-2.5 pt-3.5 text-left sm:w-auto sm:px-3.5 sm:pb-3 sm:pt-4"
       style={{
         background: active
           ? "linear-gradient(165deg, rgba(var(--edge-acc-rgb),0.14), var(--edge-surface))"
@@ -394,7 +394,12 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
             fontFamily: T.display,
             fontWeight: 700,
             letterSpacing: "-1px",
-            lineHeight: 1,
+            /* line-height:1 у Unbounded — його верхівка цифр вища за
+               1× кегля, і кнопка з overflow-hidden зрізала верх «2»/«7».
+               1.15 дає гліфу місце, а на baseline-вирівнювання з «ПН»
+               поруч це не впливає — flex align-items:baseline рахує
+               по базовій лінії гліфа, а не по висоті рядка. */
+            lineHeight: 1.15,
             color: active ? "var(--edge-text)" : empty ? "var(--edge-text4)" : "var(--edge-text2)",
           }}
         >
@@ -404,8 +409,11 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
 
       <span className="relative mt-2.5 flex h-3 items-center gap-1 sm:mt-3">{dots}</span>
 
+      {/* Без truncate на мобільному: «11 подій» у 60px-картці різало до
+          «11 п…» — тепер картка трохи ширша, а підпис має право
+          перенестись у два рядки, замість того щоб губити слово. */}
       <span
-        className="relative mt-2 block truncate text-[10px] font-semibold sm:mt-2.5 sm:text-[11px]"
+        className="relative mt-2 block text-[10px] font-semibold leading-[1.25] sm:mt-2.5 sm:truncate sm:text-[11px]"
         style={{
           fontFamily: T.sans,
           color: active ? "var(--edge-acc)" : empty ? "var(--edge-text4)" : "var(--edge-text3)",

@@ -95,7 +95,7 @@ function Ring({ value, active }) {
   const C = 2 * Math.PI * R;
   const done = value >= 1;
   return (
-    <svg width="40" height="40" viewBox="0 0 40 40" className="-rotate-90">
+    <svg width="100%" height="100%" viewBox="0 0 40 40" className="-rotate-90" style={{ display: 'block' }}>
       <circle cx="20" cy="20" r={R} fill="none" stroke={T.lineHi} strokeWidth="2" />
       <motion.circle
         cx="20" cy="20" r={R} fill="none"
@@ -168,7 +168,7 @@ function MobileDock({ active, onNavigate, progress, overall, sections = SECTIONS
   return (
     <div className="sticky top-3 z-40 mb-8 flex w-full justify-center px-2 no-print xl:hidden">
       <div
-        className="pointer-events-auto flex items-center gap-1 rounded-2xl p-1.5"
+        className="pointer-events-auto flex max-w-full items-center gap-0.5 rounded-2xl p-1.5 sm:gap-1"
         style={{
           background: 'var(--edge-panel, rgba(13,13,16,0.90))',
           backdropFilter: 'blur(20px)',
@@ -184,7 +184,7 @@ function MobileDock({ active, onNavigate, progress, overall, sections = SECTIONS
             <button
               key={s.id}
               onClick={() => onNavigate(s.id)}
-              className="relative flex items-center gap-2.5 rounded-xl px-3.5 py-2 outline-none sm:px-4"
+              className="relative flex shrink-0 items-center gap-1.5 rounded-xl px-2 py-2 outline-none sm:gap-2.5 sm:px-3.5 md:px-4"
             >
               {isActive && (
                 <motion.div
@@ -194,12 +194,13 @@ function MobileDock({ active, onNavigate, progress, overall, sections = SECTIONS
                   transition={SPRING}
                 />
               )}
-              <span className="relative z-10 flex items-center gap-2">
-                <span className="relative grid h-7 w-7 place-items-center">
+              <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+                <span className="relative grid h-6 w-6 shrink-0 place-items-center sm:h-7 sm:w-7">
                   <Ring value={value} active={isActive} />
-                  <Icon size={12} strokeWidth={2.4} className="absolute" style={{ color: isActive ? T.acc : T.text2 }} />
+                  <Icon size={11} strokeWidth={2.4} className="absolute sm:hidden" style={{ color: isActive ? T.acc : T.text2 }} />
+                  <Icon size={12} strokeWidth={2.4} className="absolute hidden sm:block" style={{ color: isActive ? T.acc : T.text2 }} />
                 </span>
-                <span className="text-[14px] font-semibold" style={{ fontFamily: T.display, color: isActive ? T.text : T.text2 }}>
+                <span className="whitespace-nowrap text-[12.5px] font-semibold sm:text-[14px]" style={{ fontFamily: T.display, color: isActive ? T.text : T.text2 }}>
                   {s.label}
                 </span>
               </span>

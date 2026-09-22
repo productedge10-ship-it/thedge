@@ -163,7 +163,7 @@ export default function Difference() {
         onKeyDown={onKey}
         style={{
           position: 'relative', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)',
-          border: `1px solid ${C.line}`, borderRadius: 24, padding: 30, overflow: 'hidden',
+          border: `1px solid ${C.line}`, borderRadius: 24, padding: 'clamp(16px,4vw,30px)', overflow: 'hidden',
           cursor: 'ew-resize', outline: 'none', touchAction: 'pan-y',
         }}
       >
@@ -187,9 +187,9 @@ export default function Difference() {
 
         <div style={{ position: 'relative', display: 'flex', gap: 36, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* ---------- індикатор ---------- */}
-          <div style={{ flex: '0 1 232px', minWidth: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
-            <div style={{ position: 'relative', width: 208, height: 208 }}>
-              <svg viewBox="0 0 208 208" style={{ width: 208, height: 208, display: 'block', transform: 'rotate(-90deg)' }}>
+          <div style={{ flex: '0 1 232px', minWidth: 'min(200px,100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+            <div style={{ position: 'relative', width: 'min(208px,52vw)', height: 'min(208px,52vw)', maxWidth: 208, maxHeight: 208 }}>
+              <svg viewBox="0 0 208 208" style={{ width: '100%', height: '100%', display: 'block', transform: 'rotate(-90deg)' }}>
                 <circle cx="104" cy="104" r="88" fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="10" />
                 <circle
                   cx="104" cy="104" r="88" fill="none" strokeWidth="10" strokeLinecap="round"
@@ -198,7 +198,7 @@ export default function Difference() {
                 />
               </svg>
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 52, letterSpacing: '-2.6px', lineHeight: 1, color: '#fff' }}>
+                <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(34px,9vw,52px)', letterSpacing: '-2.6px', lineHeight: 1, color: '#fff' }}>
                   {Math.round(disc)}%
                 </div>
                 <div style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 700, letterSpacing: '1.8px', color: C.text4 }}>ДИСЦИПЛІНА</div>
@@ -207,8 +207,8 @@ export default function Difference() {
 
             <div
               style={{
-                display: 'inline-flex', borderRadius: 999, padding: '8px 16px',
-                fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.2px', whiteSpace: 'nowrap',
+                display: 'inline-flex', borderRadius: 999, padding: '8px 16px', textAlign: 'center',
+                fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.2px',
                 transition: 'all .35s ease', background: tag.bg, border: `1px solid ${tag.bc}`, color: tag.fg,
               }}
             >
@@ -217,7 +217,7 @@ export default function Difference() {
           </div>
 
           {/* ---------- місяць ---------- */}
-          <div style={{ flex: '1 1 480px', minWidth: 300 }}>
+          <div style={{ flex: '1 1 480px', minWidth: 'min(280px,100%)' }}>
             <div style={{ display: 'flex', alignItems: 'stretch', gap: 5, height: 132, position: 'relative', marginBottom: 6 }}>
               <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 1, background: C.line }} />
               {bars.map((b, i) => (

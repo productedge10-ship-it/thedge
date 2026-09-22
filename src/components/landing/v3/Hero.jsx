@@ -128,7 +128,7 @@ export default function Hero() {
   const pulseAnim = reduced ? 'none' : `${pulse % 2 === 0 ? 'lnNumA' : 'lnNumB'} .4s ease-out`;
 
   const num = (v, color) => ({
-    fontFamily: F.display, fontWeight: 700, fontSize: 28,
+    fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(19px,5vw,28px)',
     letterSpacing: '-1px', color, animation: pulseAnim,
   });
 
@@ -138,20 +138,25 @@ export default function Hero() {
       ref={ref}
       style={{ ...SHELL, paddingTop: '64px', paddingBottom: '72px', position: 'relative' }}
     >
+      <style>{`
+        @media (max-width: 460px) {
+          .ln-hero-mood, .ln-hero-fresh { display: none !important; }
+        }
+      `}</style>
       <Glow x={-120} y={-30} size={500} />
 
       <div style={{ display: 'flex', gap: 56, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
         {/* ---------- текст ---------- */}
-        <div style={{ flex: '1 1 440px', minWidth: 320, maxWidth: 720 }}>
+        <div style={{ flex: '1 1 440px', minWidth: 'min(320px,100%)', maxWidth: 720 }}>
           <div
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 9,
               background: A(0.1), border: `1px solid ${A(0.24)}`, borderRadius: 999,
               padding: '8px 16px', fontFamily: F.sans, fontSize: 12.5, fontWeight: 600,
-              color: C.accSoft, marginBottom: 28, whiteSpace: 'nowrap',
+              color: C.accSoft, marginBottom: 28,
             }}
           >
-            <span style={{ width: 5, height: 5, borderRadius: 999, background: C.acc, display: 'block' }} />
+            <span style={{ width: 5, height: 5, borderRadius: 999, background: C.acc, display: 'block', flexShrink: 0 }} />
             Робочий простір · Аналітика · AI-коуч
           </div>
 
@@ -241,7 +246,7 @@ export default function Hero() {
         </div>
 
         {/* ---------- журнал ---------- */}
-        <div style={{ flex: '1 1 560px', minWidth: 340, position: 'relative' }}>
+        <div style={{ flex: '1 1 560px', minWidth: 'min(340px,100%)', position: 'relative' }}>
           <Glow x="calc(100% - 270px)" y={-20} size={320} color={A(0.15)} blur={80} />
 
           <div
@@ -283,7 +288,7 @@ export default function Hero() {
                     key={r.id}
                     onClick={() => toggle(r.id)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 13, padding: '12px 18px',
+                      display: 'flex', alignItems: 'center', gap: 'clamp(7px,2vw,13px)', padding: '12px clamp(12px,4vw,18px)',
                       borderBottom: '1px solid rgba(255,255,255,.035)', cursor: 'pointer',
                       transition: 'opacity .2s ease', opacity: r.on ? 1 : 0.4,
                       animation: r.fresh && !reduced ? 'lnRowIn .5s ease-out, lnFlashIn 1.6s ease-out' : 'none',
@@ -300,7 +305,7 @@ export default function Hero() {
                       {r.on && <Check size={10} strokeWidth={3.4} color="#fff" />}
                     </span>
 
-                    <span style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 600, color: C.text, width: 70, flexShrink: 0, textDecoration: strike }}>
+                    <span style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 600, color: C.text, width: 58, flexShrink: 0, textDecoration: strike }}>
                       {r.sym}
                     </span>
 
@@ -309,12 +314,13 @@ export default function Hero() {
                     </span>
 
                     {r.fresh && (
-                      <span style={{ fontFamily: F.sans, fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: C.accSoft, background: A(0.14), border: `1px solid ${A(0.32)}`, borderRadius: 6, padding: '3px 7px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      <span className="ln-hero-fresh" style={{ fontFamily: F.sans, fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: C.accSoft, background: A(0.14), border: `1px solid ${A(0.32)}`, borderRadius: 6, padding: '3px 7px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                         ЩОЙНО З MT5
                       </span>
                     )}
 
                     <span
+                      className="ln-hero-mood"
                       style={{
                         fontFamily: F.sans, fontSize: 11, fontWeight: 700, letterSpacing: '.4px',
                         width: 50, textAlign: 'right', flexShrink: 0,
@@ -324,7 +330,7 @@ export default function Hero() {
                       {r.mood}
                     </span>
 
-                    <span style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 700, width: 52, textAlign: 'right', flexShrink: 0, color: r.r >= 0 ? C.ok : C.bad, textDecoration: strike }}>
+                    <span style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 700, width: 46, textAlign: 'right', flexShrink: 0, color: r.r >= 0 ? C.ok : C.bad, textDecoration: strike }}>
                       {(r.r >= 0 ? '+' : '−') + Math.abs(r.r).toFixed(1)}R
                     </span>
                   </div>

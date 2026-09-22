@@ -701,7 +701,7 @@ export default function ReviewBuilder({
       )}
 
       {/* ─────────── дисципліна періоду ─────────── */}
-      <div style={{ ...panel, marginTop: 12, padding: '20px 24px' }}>
+      <div style={{ ...panel, marginTop: 12 }} className="px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex flex-wrap items-center justify-between" style={{ gap: 20 }}>
           <div className="min-w-0">
             <div style={{ fontFamily: T.sans, fontSize: 16, fontWeight: 600, color: T.text }}>
@@ -712,7 +712,10 @@ export default function ReviewBuilder({
             </div>
           </div>
 
-          <div className="flex items-center" style={{ gap: 14 }}>
+          {/* На 320px п'ять кнопок по 52px (292px) самі по собі ширші за
+              доступний простір панелі — flex-wrap і менші кнопки на
+              мобільному рятують рядок від обрізання. */}
+          <div className="flex flex-wrap items-center gap-3 sm:gap-3.5">
             <span
               style={{
                 fontFamily: T.sans, fontSize: 14, fontWeight: 600,
@@ -721,7 +724,7 @@ export default function ReviewBuilder({
             >
               {score ? SCORE_LABELS[score] : 'не оцінено'}
             </span>
-            <div className="flex" style={{ gap: 8 }}>
+            <div className="flex gap-1.5 sm:gap-2">
               {[1, 2, 3, 4, 5].map((n) => {
                 const on = score === n;
                 /* Колір ставимо за самою оцінкою, а не акцентом вікна:
@@ -733,8 +736,8 @@ export default function ReviewBuilder({
                     key={n}
                     onClick={() => onScore(on ? 0 : n)}
                     title={SCORE_LABELS[n]}
+                    className="grid h-11 w-11 place-items-center rounded-xl transition-all duration-150 sm:h-12 sm:w-[52px]"
                     style={{
-                      width: 52, height: 48, borderRadius: 12, transition: 'all .18s',
                       ...mono(17, { fontWeight: 600 }),
                       background: on ? `${c}22` : T.sunken,
                       border: `1px solid ${on ? c : T.line}`,
@@ -808,9 +811,11 @@ export default function ReviewBuilder({
             руху. Ключ перемонтовує вміст і тим перезапускає анімацію. */}
           <div
             key={current.title}
+            className="px-5 sm:px-8"
             style={{
               minHeight: 250,
-              padding: '30px 32px 26px',
+              paddingTop: 30,
+              paddingBottom: 26,
               animation: `edge-step-in-${dir < 0 ? 'left' : 'right'} .3s cubic-bezier(.2,.8,.2,1)`,
             }}
           >
@@ -940,9 +945,12 @@ export default function ReviewBuilder({
             )}
           </div>
 
+        {/* На 320px «Назад» + «Пропустити» + «Далі» в один нерозривний
+            рядок не влазять — flex-wrap опускає праву групу на власний
+            рядок, а не обрізає її за краєм картки. */}
         <div
-          className="flex items-center justify-between"
-          style={{ gap: 12, padding: '16px 20px', background: T.sunken, borderTop: `1px solid ${T.line}` }}
+          className="flex flex-wrap items-center justify-between px-4 py-3 sm:px-5 sm:py-4"
+          style={{ gap: 12, background: T.sunken, borderTop: `1px solid ${T.line}` }}
         >
           <button
             onClick={() => go(idx - 1)}
@@ -961,11 +969,11 @@ export default function ReviewBuilder({
             Назад
           </button>
 
-          <div className="flex items-center" style={{ gap: 10 }}>
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {idx < stepsTotal - 1 && !filled[idx] && (
               <button
                 onClick={() => go(idx + 1)}
-                style={{ fontFamily: T.sans, height: 46, padding: '0 14px', borderRadius: 12, fontSize: 14.5, color: T.text3, transition: 'color .18s' }}
+                style={{ fontFamily: T.sans, height: 46, padding: '0 12px', borderRadius: 12, fontSize: 14.5, color: T.text3, transition: 'color .18s' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
               >
@@ -1009,9 +1017,11 @@ export default function ReviewBuilder({
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.background = T.surface; }}
             >
               <Check size={15} strokeWidth={2.4} className="shrink-0" style={{ color: T.ok }} />
+              {/* width:170 фіксовано з'їдав майже весь рядок на 320px,
+                  лишаючи прев'ю відповіді без місця — вужче на мобільному */}
               <span
-                className="shrink-0 truncate uppercase"
-                style={{ ...mono(11, { fontWeight: 600, letterSpacing: '1.4px', color: T.text3 }), width: 170 }}
+                className="w-[92px] shrink-0 truncate uppercase sm:w-[170px]"
+                style={mono(11, { fontWeight: 600, letterSpacing: '1.4px', color: T.text3 })}
               >
                 {a.title}
               </span>

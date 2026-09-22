@@ -737,9 +737,14 @@ function PrimaryButton({ children, loading, withArrow = false, disabled, ...prop
         onMouseLeave={onLeave}
         whileTap={inert ? undefined : { scale: 0.975 }}
         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        className="relative w-full h-[54px] rounded-[13px] text-white font-bold text-[13px] uppercase tracking-[2px] flex items-center justify-center disabled:opacity-60"
+        className="relative w-full h-[54px] rounded-[13px] px-1 text-white font-bold text-[12.5px] uppercase flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-60"
         style={{
           fontFamily: "'Manrope', sans-serif",
+          /* Фіксовані 2px розрядки — добре на коротких словах («Увійти»),
+             але на довшій фразі («Надіслати посилання») розтягують текст
+             мало не впритул до країв кнопки. Клемп зменшує розрядку саме
+             тоді, коли кнопка вузька, а не завжди. */
+          letterSpacing: 'clamp(0.2px, 0.4vw, 2px)',
           rotateX,
           rotateY,
           y: lift,
@@ -1110,13 +1115,27 @@ export default function Auth() {
         /* scrollable but with no visible scrollbar */
         .edge-right { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -ms-overflow-style: none; }
         .edge-right::-webkit-scrollbar { width: 0; height: 0; display: none; }
+        /* safe center — не лише в мобільній медіа-querу нижче, а й тут,
+           на десктопі: той самий баг центрування ловиться і на широкому,
+           але невисокому вікні (ноутбук з малою висотою екрана, ландшафтний
+           планшет) — «РИНОК ВІДКРИТО» рядок над карткою першим іде під
+           обріз, бо він найвищий у центрованому блоці. */
+        .edge-right { justify-content: safe center !important; }
 
         .edge-brand-panel { display: block; }
         .edge-mobile-bar { display: none; }
         @media (max-width: 1000px) {
           .edge-brand-panel { display: none !important; }
           .edge-mobile-bar { display: flex !important; }
-          .edge-right { padding: 76px 20px 32px !important; align-items: flex-start !important; }
+          /* align-items тут за замовчуванням лишається center: раніше
+             стояв flex-start, і на планшетних 700-1000px, де картка
+             (max-w-428px) вужча за саму колонку, її притискало до
+             лівого краю, а праворуч зяяла порожнеча на весь екран. На
+             телефоні картка й так на всю ширину — там прибити її
+             ліворуч чи центрувати не видно різниці, а на планшеті
+             різниця саме в цьому. justify-content: safe center вже
+             стоїть у базовому .edge-right вище й діє тут так само. */
+          .edge-right { padding: 76px 20px 32px !important; }
         }
         @media (prefers-reduced-motion: reduce) {
           * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }

@@ -45,7 +45,7 @@ export function Rhythm() {
       <div style={{ position: 'relative' }}>
         <span style={{ position: 'absolute', top: 7, left: '10%', right: '10%', height: 1, background: 'rgba(255,255,255,.07)' }} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: 24, position: 'relative' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(250px,100%),1fr))', gap: 24, position: 'relative' }}>
           {RHYTHM.map((r) => (
             <div key={r.time} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <span style={{ width: 14, height: 14, borderRadius: 999, background: C.panel2, border: `2px solid ${C.acc}`, boxShadow: `0 0 16px ${A(0.6)}`, display: 'block', marginBottom: 18 }} />
@@ -84,12 +84,12 @@ const NOT_DOING = ['Не даємо сигналів', 'Не керуємо тв
 export function NotDoing() {
   return (
     <section style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
-      <div style={{ position: 'relative', background: 'linear-gradient(150deg,rgba(245,163,59,.11),rgba(245,163,59,.03) 55%,transparent)', border: '1px solid rgba(245,163,59,.3)', borderRadius: 24, padding: 30, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', background: 'linear-gradient(150deg,rgba(245,163,59,.11),rgba(245,163,59,.03) 55%,transparent)', border: '1px solid rgba(245,163,59,.3)', borderRadius: 24, padding: 'clamp(18px,4.5vw,30px)', overflow: 'hidden' }}>
         <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,#f5a33b,rgba(245,163,59,.2),transparent)' }} />
         <span aria-hidden style={{ position: 'absolute', top: -90, right: -40, width: 320, height: 320, background: 'radial-gradient(circle,rgba(245,163,59,.16),transparent 70%)', filter: 'blur(60px)', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ flex: '1 1 300px', minWidth: 260 }}>
+          <div style={{ flex: '1 1 300px', minWidth: 'min(260px,100%)' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: 'rgba(245,163,59,.14)', border: '1px solid rgba(245,163,59,.4)', borderRadius: 999, padding: '7px 14px', marginBottom: 18 }}>
               <TriangleAlert size={14} strokeWidth={2.2} color={C.warn} />
               <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.4px', color: C.warn }}>ЧИТАЙ ПЕРЕД РЕЄСТРАЦІЄЮ</span>
@@ -103,7 +103,7 @@ export function NotDoing() {
             </p>
           </div>
 
-          <div style={{ flex: '1 1 420px', minWidth: 300, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 11 }}>
+          <div style={{ flex: '1 1 420px', minWidth: 'min(280px,100%)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(190px,100%),1fr))', gap: 11 }}>
             {NOT_DOING.map((t) => (
               <div
                 key={t}
@@ -216,8 +216,8 @@ export function Pricing() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 22 }}>
-        <div style={{ background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${C.line}`, borderRadius: 22, padding: '30px 28px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(320px,100%),1fr))', gap: 22 }}>
+        <div style={{ background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${C.line}`, borderRadius: 22, padding: 'clamp(20px,5vw,30px) clamp(18px,4.5vw,28px)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2px', color: C.text4, marginBottom: 16 }}>FREE</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 10 }}>
             <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}>$0</span>
@@ -235,7 +235,7 @@ export function Pricing() {
           </a>
         </div>
 
-        <div style={{ position: 'relative', background: 'linear-gradient(160deg,#12121c,#0c0c14)', border: `1px solid ${A(0.42)}`, borderRadius: 22, padding: '30px 28px', display: 'flex', flexDirection: 'column', boxShadow: '0 28px 74px rgba(74,59,245,.2)', transform: 'translateY(-6px)' }}>
+        <div style={{ position: 'relative', background: 'linear-gradient(160deg,#12121c,#0c0c14)', border: `1px solid ${A(0.42)}`, borderRadius: 22, padding: 'clamp(20px,5vw,30px) clamp(18px,4.5vw,28px)', display: 'flex', flexDirection: 'column', boxShadow: '0 28px 74px rgba(74,59,245,.2)', transform: 'translateY(-6px)' }}>
           <span style={{ position: 'absolute', top: 0, left: 28, right: 28, height: 1, background: `linear-gradient(90deg,transparent,${C.acc},transparent)` }} />
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginBottom: 16 }}>
@@ -345,7 +345,7 @@ export function FinalFaq() {
   return (
     <section id="faq" style={{ ...SHELL, paddingTop: '0', paddingBottom: '76px' }}>
       <div style={{ display: 'flex', gap: 52, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <div style={{ flex: '1 1 380px', minWidth: 300, position: 'relative' }}>
+        <div style={{ flex: '1 1 380px', minWidth: 'min(280px,100%)', position: 'relative' }}>
           <span
             aria-hidden
             style={{
@@ -379,7 +379,7 @@ export function FinalFaq() {
           </div>
         </div>
 
-        <div style={{ flex: '1 1 470px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <div style={{ flex: '1 1 470px', minWidth: 'min(300px,100%)', display: 'flex', flexDirection: 'column', gap: 9 }}>
           {FAQ.map((f, i) => {
             const on = open === i;
             return (

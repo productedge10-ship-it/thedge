@@ -4,9 +4,15 @@ import { C, F, A, SHELL } from './base';
 /* ==================================================================
    Три кроки.
 
-   Не три картки поруч, а рейка, у якій лінія заповнюється, поки
-   людина прокручує блок. Прокрутка сама стає демонстрацією руху
-   «імпорт → запис → перевага», і блок займає 200px замість екрана.
+   На широкому екрані — рейка, у якій лінія заповнюється зліва
+   направо, поки людина прокручує блок. На вузькому кроки стоять
+   один під одним, і та сама лінія стає вертикальним таймлайном
+   зверху вниз: горизонтальна рейка над одним-єдиним кружечком
+   виглядала як помилка верстки, а не як «крок 1 із 3».
+
+   Значення заповнення (`p`) одне на обидва вигляди — рахує його той
+   самий скрол-ефект, різниться лише CSS-змінна, яку рейка читає як
+   ширину або як висоту залежно від брейкпоінту.
 ================================================================== */
 
 const STEPS = [
@@ -34,31 +40,58 @@ export default function Steps() {
 
   return (
     <section ref={ref} style={{ ...SHELL, paddingTop: '52px', paddingBottom: '56px' }}>
+      <style>{`
+        .ln-steps-outer{ position: relative; }
+        .ln-steps-rail{
+          position: absolute; top: 23px; left: 8%; right: 8%; height: 2px;
+          background: rgba(255,255,255,.07); border-radius: 2px; overflow: hidden;
+        }
+        .ln-steps-rail-fill{
+          display: block; height: 100%; width: var(--p, 0%);
+          background: linear-gradient(90deg,${C.accDeep},${C.acc});
+          box-shadow: 0 0 16px ${A(0.6)}; transition: width .3s ease;
+        }
+        .ln-steps-grid{
+          display: grid; grid-template-columns: repeat(auto-fit,minmax(min(240px,100%),1fr));
+          gap: 28px; position: relative;
+        }
+        .ln-steps-item{ display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .ln-steps-num{
+          width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 16px; transition: all .3s ease; background: ${C.panel2};
+        }
+        .ln-steps-sub{ max-width: 290px; }
+
+        @media (max-width: 680px){
+          .ln-steps-rail{ top: 0; bottom: 0; left: 22px; right: auto; width: 2px; height: auto; }
+          .ln-steps-rail-fill{ width: 100%; height: var(--p, 0%); }
+          .ln-steps-grid{ display: flex; flex-direction: column; gap: 0; }
+          .ln-steps-item{ flex-direction: row; align-items: flex-start; text-align: left; gap: 18px; padding: 16px 0; }
+          .ln-steps-num{ margin-bottom: 0; }
+          .ln-steps-sub{ max-width: none; }
+        }
+      `}
+      </style>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 30 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
         <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>ТРИ КРОКИ</span>
       </div>
 
-      <div style={{ position: 'relative' }}>
-        <div style={{ position: 'absolute', top: 23, left: '8%', right: '8%', height: 2, background: 'rgba(255,255,255,.07)', borderRadius: 2, overflow: 'hidden' }}>
-          <div
-            style={{
-              height: 2, width: `${(p * 100).toFixed(1)}%`,
-              background: `linear-gradient(90deg,${C.accDeep},${C.acc})`,
-              boxShadow: `0 0 16px ${A(0.6)}`, transition: 'width .3s ease',
-            }}
-          />
+      <div className="ln-steps-outer">
+        <div className="ln-steps-rail">
+          <div className="ln-steps-rail-fill" style={{ '--p': `${(p * 100).toFixed(1)}%` }} />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 28, position: 'relative' }}>
+        <div className="ln-steps-grid">
           {STEPS.map((s) => {
             const reached = p >= s.at;
             return (
-              <div key={s.n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <div key={s.n} className="ln-steps-item">
                 <div
+                  className="ln-steps-num"
                   style={{
-                    width: 46, height: 46, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    marginBottom: 16, transition: 'all .3s ease', background: C.panel2,
                     border: `1px solid ${reached ? A(0.55) : 'rgba(255,255,255,.1)'}`,
                     boxShadow: reached ? `0 0 28px ${A(0.3)}` : 'none',
                   }}
@@ -66,10 +99,12 @@ export default function Steps() {
                   <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16.5, color: reached ? '#fff' : C.text5 }}>{s.n}</span>
                 </div>
 
-                <div style={{ fontFamily: F.sans, fontSize: 15.5, fontWeight: 700, marginBottom: 8, color: reached ? '#fff' : '#8a8a9c', transition: 'color .3s' }}>
-                  {s.title}
+                <div>
+                  <div style={{ fontFamily: F.sans, fontSize: 15.5, fontWeight: 700, marginBottom: 8, color: reached ? '#fff' : '#8a8a9c', transition: 'color .3s' }}>
+                    {s.title}
+                  </div>
+                  <div className="ln-steps-sub" style={{ fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.55, color: '#7d7d90' }}>{s.sub}</div>
                 </div>
-                <div style={{ fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.55, color: '#7d7d90', maxWidth: 290 }}>{s.sub}</div>
               </div>
             );
           })}
