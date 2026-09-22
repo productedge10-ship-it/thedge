@@ -160,7 +160,10 @@ function MobileRow({ t, res, rr, rrColor, pColor, rowShowProfit, onToggleProfit,
                 : { background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.line}`, color: T.text4, fontFamily: T.sans }
             }
           >
-            <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={{ background: res ? res.c : T.text4 }} />
+            <span
+              className={`h-[6px] w-[6px] shrink-0 rounded-full${res?.live ? ' trade-live-dot' : ''}`}
+              style={{ background: res ? res.c : T.text4 }}
+            />
             {res ? res.label : 'Not set'}
           </span>
 

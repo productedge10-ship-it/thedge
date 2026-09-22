@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
@@ -68,24 +68,42 @@ const MONO = T.sans;
 const txt = (a) => `rgba(var(--edge-text-rgb, 242,244,243), ${a})`;
 const line = (a) => `rgba(var(--edge-hair-rgb, 255,255,255), ${a})`;
 
-const DEFAULT_SESSIONS = ['Asia', 'London', 'New York'];
+/* Frankfurt — окрема сесія, а не початок Лондона. Європа відкривається
+   на годину раніше, і найрізкіший рух дня часто лежить саме в цій
+   годині: за Лондоном він виглядає як «london open», хоча стався до
+   нього. Без окремого рядка ця година просто не розрізняється в
+   статистиці.
+
+   All day — для позицій, що живуть довше за одну сесію. Свінг не
+   належить жодній, і приписувати його до тієї, у яку випав вхід,
+   означає псувати статистику сесій чужими числами. */
+const DEFAULT_SESSIONS = ['Asia', 'Frankfurt', 'London', 'New York', 'All day'];
+
 /* Той самий колірний код сесій, що й у деталях угоди: Азія —
-   рожево-червона (нічна, нервова), Лондон — синій, Нью-Йорк —
-   зелений. Свої сесії (з БД) підсвічуються акцентом. */
+   рожево-червона (нічна, нервова), Франкфурт — бурштиновий (світає),
+   Лондон — синій, Нью-Йорк — зелений. Свої сесії (з БД)
+   підсвічуються акцентом. */
 const SESSION_COLORS = {
   Asia: { c: '#fb7185', rgb: '251,113,133' },
+  Frankfurt: { c: AMBER, rgb: '245,181,74' },
   London: { c: '#60a5fa', rgb: '96,165,250' },
   'New York': { c: '#34d399', rgb: '52,211,153' },
+  'All day': { c: 'var(--edge-text3)', rgb: '154,154,163' },
 };
 const DIRECTIONS = ['Long', 'Short'];
-/* Значення в БД лишаються англійськими — перекладаємо лише підпис. */
-const DIRECTION_LABEL = { Long: 'Лонг', Short: 'Шорт' };
-const SESSION_LABEL = { Asia: 'Азія', London: 'Лондон', 'New York': 'Нью-Йорк' };
-/* Внутрішні значення лишаються Win/Lose/… (модель даних і решта
-   застосунку на них зав'язані), надпис — Take/Stop, як усюди в
-   журналі. */
+
+/* Підписи англійською — як і всюди в журналі.
+
+   Тут не про мову інтерфейсу: Take, Stop, Long, London — це терміни,
+   якими трейдер думає й говорить, навіть коли решта розмови
+   українською. «Тейк» і «Беззбиток» у випадашці читались як переклад
+   для когось іншого, а в таблиці журналу поруч усе одно стояло
+   Take/Stop. Тепер збігається.
+
+   Значення в БД не чіпаємо взагалі — Win/Lose/BE лишаються, на них
+   зав'язані фільтри, статистика й імпорт. Міняється рівно надпис. */
 const RESULT_CHIPS = ['Win', 'Lose', 'BE', 'In Progress', 'Missed'];
-const RESULT_LABEL = { Win: 'Тейк', Lose: 'Стоп', BE: 'Беззбиток', 'In Progress': 'В процесі', Missed: 'Пропущено' };
+const RESULT_LABEL = { Win: 'Take', Lose: 'Stop', BE: 'BE', 'In Progress': 'In progress', Missed: 'Missed' };
 const RESULT_COLORS = {
   Win: { c: GREEN, rgb: GREEN_RGB },
   Lose: { c: BAD, rgb: BAD_RGB },
@@ -170,7 +188,7 @@ function DirectionToggle({ value, onChange }) {
                 <path d={d === 'Long' ? 'M4 16l6-6 4 4 6-7' : 'M4 8l6 6 4-4 6 7'} />
               </svg>
             </span>
-            {DIRECTION_LABEL[d] || d}
+            {d}
           </button>
         );
       })}
@@ -187,34 +205,65 @@ function DirectionToggle({ value, onChange }) {
    чотири пігулки ризику стояли поруч із полем цілі й читались як одна
    каша з цифр. Випадашка займає рівно одне поле, і всі поля форми
    стають однаковими — око перестає перечіплятись. */
-function StatusPicker({ value, onChange }) {
+/* ------------------------------------------------------------------
+   Рядок форми: підпис ліворуч, значення праворуч.
+
+   Замість коробки на кожне поле. Коробки давали вісім однакових
+   прямокутників, у яких підпис і значення важили однаково, — око
+   мусило читати кожен, щоб зрозуміти, що вже заповнено. Тут підпис
+   тихий і стоїть стовпчиком ліворуч, а значення — яскраві й теж
+   стовпчиком праворуч: заповненість форми видно одним поглядом
+   згори вниз, не читаючи жодного слова.
+------------------------------------------------------------------ */
+function Row({ label, children, hint }) {
+  return (
+    <div
+      className="flex min-h-[46px] items-center justify-between gap-3 py-1"
+      style={{ borderBottom: `1px solid ${line(0.05)}` }}
+    >
+      <span className="shrink-0 text-[13.5px]" style={{ fontFamily: T.sans, color: txt(0.45) }}>
+        {label}
+      </span>
+      <span className="flex min-w-0 items-center justify-end gap-2.5">
+        {hint && (
+          <span className="shrink-0 text-[11.5px]" style={{ fontFamily: MONO, color: txt(0.32) }}>{hint}</span>
+        )}
+        {children}
+      </span>
+    </div>
+  );
+}
+
+function StatusPicker({ value, onChange, bare }) {
   return (
     <MenuPicker
-      title="Результат"
+      title="Result"
       value={value}
       options={RESULT_CHIPS}
       onChange={onChange}
       labelOf={(v) => RESULT_LABEL[v] || v}
       colorOf={(o) => RESULT_COLORS[o]}
-      placeholder="Результат"
+      placeholder="Result"
       isEmpty={(v) => !v || v === 'Not Selected'}
       toggleOff="Not Selected"
+      bare={bare}
     />
   );
 }
 
 const RISK_OPTIONS = ['0.25%', '0.5%', '1%', '1.5%', '2%', '3%'];
 
-function RiskPicker({ value, onChange }) {
+function RiskPicker({ value, onChange, bare }) {
   return (
     <MenuPicker
-      title="Ризик"
+      title="Risk"
       value={value}
       options={RISK_OPTIONS}
       onChange={onChange}
-      placeholder="Ризик"
+      placeholder="Risk"
       isEmpty={(v) => !v}
       allowCustom
+      bare={bare}
     />
   );
 }
@@ -359,7 +408,7 @@ function AssetPicker({ value, onChange, compact }) {
    як і було задумано раніше — тут лише візуальна форма змінюється. */
 function MenuPicker({
   title, value, options, onChange, labelOf = (v) => v, colorOf, placeholder,
-  isEmpty = (v) => !v, toggleOff, allowCustom, height = 48, radius = 12,
+  isEmpty = (v) => !v, toggleOff, allowCustom, height = 48, radius = 12, bare,
 }) {
   const [draft, setDraft] = useState('');
   const empty = isEmpty(value);
@@ -381,8 +430,10 @@ function MenuPicker({
           <button
             type="button"
             onClick={toggle}
-            className="flex w-full items-center justify-between gap-2 px-4 transition-colors duration-200"
-            style={{ height, borderRadius: radius, fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${!empty ? line(0.11) : (open ? line(0.16) : line(0.07))}` }}
+            className={`flex w-full items-center gap-2 transition-colors duration-200 ${bare ? 'justify-end' : 'justify-between px-4'}`}
+            style={bare
+              ? { fontFamily: T.sans, background: 'transparent', border: 0, height: 'auto' }
+              : { height, borderRadius: radius, fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${!empty ? line(0.11) : (open ? line(0.16) : line(0.07))}` }}
           >
             <span className="flex min-w-0 items-center gap-2.5">
               {dot && (
@@ -453,18 +504,18 @@ function MenuPicker({
 
 /* Сесія — фіксовані три варіанти з гео-палітрою, без своїх варіантів:
    Азія / Лондон / Нью-Йорк покривають усе. */
-function SessionPicker({ value, onChange }) {
+function SessionPicker({ value, onChange, bare }) {
   const colorOf = (name) => SESSION_COLORS[name] || { c: ACCENT, rgb: ACCENT_RGB };
   return (
     <MenuPicker
-      title="Сесія"
+      title="Session"
       value={value}
       options={DEFAULT_SESSIONS}
       onChange={onChange}
-      labelOf={(v) => SESSION_LABEL[v] || v}
-      colorOf={colorOf}
-      placeholder="Сесія"
+            colorOf={colorOf}
+      placeholder="Session"
       isEmpty={(v) => !v}
+      bare={bare}
     />
   );
 }
@@ -592,7 +643,7 @@ function TradeDate({ value, onChange, compact }) {
    раніше він був першою колонкою зрощеної картки з ризиком і
    результатом, і через це не мав ні власної рамки, ні висоти —
    виглядав шматком таблиці, а не полем вибору. */
-function AccountPicker({ value, options, onChange }) {
+function AccountPicker({ value, options, onChange, bare }) {
   return (
     <Popover
       z={600}
@@ -601,8 +652,10 @@ function AccountPicker({ value, options, onChange }) {
         <button
           type="button"
           onClick={toggle}
-          className="flex h-12 w-full items-center justify-between gap-2 px-4 text-left transition-colors duration-200"
-          style={{ borderRadius: 12, background: FIELD_BG, border: `1px solid ${value ? line(0.11) : (open ? line(0.16) : line(0.07))}` }}
+          className={`flex w-full items-center gap-2 text-left transition-colors duration-200 ${bare ? 'justify-end' : 'h-12 justify-between px-4'}`}
+          style={bare
+            ? { background: 'transparent', border: 0 }
+            : { borderRadius: 12, background: FIELD_BG, border: `1px solid ${value ? line(0.11) : (open ? line(0.16) : line(0.07))}` }}
         >
           <span className="flex min-w-0 items-center gap-2.5">
             <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: value ? ACCENT : line(0.14), boxShadow: value ? `0 0 7px rgba(${ACCENT_RGB},0.75)` : 'none' }} />
@@ -974,6 +1027,60 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
 
   const scrollRef = useRef(null);
 
+  /* ---------- чернетка ----------
+
+     Футер давно обіцяв «чернетка зберігається автоматично», але не
+     зберігав нічого: напис був частиною верстки. Тепер зберігає — бо
+     напис, якому повірили один раз і втратили пів години розбору,
+     гірший за відсутність напису.
+
+     Тільки для НОВОЇ угоди. У редагування чернетка лізти не має: там
+     джерело правди — база, і підсунути поверх неї щось із минулого
+     сеансу означало б тихо переписати збережену угоду.
+
+     Картинки зберігаємо лише ті, що вже доїхали у сховище. `blob:`
+     живе рівно до перезавантаження вкладки, і відновлена з нього
+     чернетка показала б порожні рамки замість скрінів. */
+  const DRAFT_KEY = 'edge_trade_draft_v1';
+  const [draftSaved, setDraftSaved] = useState(false);
+
+  const draftFields = {
+    tradeDate, selectedPair, account, risk, rr, tradeType, result, session,
+    tradeDescription, entryTime, exitTime,
+    tradeImages: tradeImages.filter((u) => typeof u === 'string' && !u.startsWith('blob:')),
+    followedPlan, rushed, hasMistake, mistakeText,
+    psyConfident, psyFear, psyRepeat, psyRevenge, psyNotes,
+  };
+
+  const draftJson = JSON.stringify(draftFields);
+
+  useEffect(() => {
+    if (!isOpen || existingTrade) return undefined;
+
+    /* Порожню форму не зберігаємо: інакше саме відкриття модалки вже
+       створювало б чернетку, і «Чернетку збережено» світилось би над
+       формою, у якій людина ще нічого не зробила. */
+    const touchedAny = selectedPair || rr || tradeDescription.trim()
+      || tradeImages.length || result !== 'Not Selected';
+    if (!touchedAny) return undefined;
+
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, draftJson);
+        setDraftSaved(true);
+      } catch { /* приватний режим або переповнене сховище */ }
+    }, 600);
+
+    return () => clearTimeout(t);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [draftJson, isOpen, existingTrade]);
+
+  const clearDraft = useCallback(() => {
+    try { localStorage.removeItem(DRAFT_KEY); } catch { /* нічого */ }
+    setDraftSaved(false);
+  }, []);
+
+
   /* Тека для скрінів ще не збереженої угоди: id у неї зʼявиться лише
      після вставки, а складати все в спільний «new» — це втратити
      можливість прибрати файли однієї угоди одним префіксом. */
@@ -989,6 +1096,39 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
     setTouched(false);
     setStep(0);
     let accToSet = '';
+
+    /* Чернетка попереднього сеансу — перед тим, як розкладати
+       значення за замовчуванням: інакше вони перезатруть відновлене. */
+    if (!existingTrade) {
+      try {
+        const raw = localStorage.getItem('edge_trade_draft_v1');
+        if (raw) {
+          const d = JSON.parse(raw);
+          if (d.selectedPair) setSelectedPair(d.selectedPair);
+          if (d.tradeDate) setTradeDate(d.tradeDate);
+          if (d.account) setAccount(d.account);
+          if (d.risk) setRisk(d.risk);
+          if (d.rr) setRr(d.rr);
+          if (d.tradeType) setTradeType(d.tradeType);
+          if (d.result) setResult(d.result);
+          if (d.session) setSession(d.session);
+          if (d.tradeDescription) setTradeDescription(d.tradeDescription);
+          if (d.entryTime) setEntryTime(d.entryTime);
+          if (d.exitTime) setExitTime(d.exitTime);
+          if (Array.isArray(d.tradeImages) && d.tradeImages.length) setTradeImages(d.tradeImages);
+          if (d.followedPlan !== undefined) setFollowedPlan(d.followedPlan);
+          if (d.rushed !== undefined) setRushed(d.rushed);
+          if (d.hasMistake !== undefined) setHasMistake(d.hasMistake);
+          if (d.mistakeText) setMistakeText(d.mistakeText);
+          if (d.psyConfident !== undefined) setPsyConfident(d.psyConfident);
+          if (d.psyFear !== undefined) setPsyFear(d.psyFear);
+          if (d.psyRepeat !== undefined) setPsyRepeat(d.psyRepeat);
+          if (d.psyRevenge !== undefined) setPsyRevenge(d.psyRevenge);
+          if (d.psyNotes) setPsyNotes(d.psyNotes);
+          setDraftSaved(true);
+        }
+      } catch { /* зіпсована чернетка — просто ігноруємо */ }
+    }
 
     if (existingTrade) {
       setTradeDate(existingTrade.plan_date || todayLocal());
@@ -1269,7 +1409,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
               const { account: updatedAcc } = await logTradeMovement(user?.id, accRow, {
                 profit,
                 happened_at: tradeDate,
-                note: `${selectedPair} · ${DIRECTION_LABEL[tradeType] || tradeType} · ${result}`,
+                note: `${selectedPair} · ${tradeType} · ${result}`,
               });
               if (listCache.accounts) {
                 listCache.accounts = listCache.accounts.map((a) => (a.id === updatedAcc.id ? updatedAcc : a));
@@ -1292,6 +1432,9 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
         }
       }
 
+      /* Угода доїхала в базу — чернетка більше не потрібна. Лишити її
+         означало б підсунути щойно записану угоду в наступну. */
+      clearDraft();
       onClose();
     } catch (err) {
       setErrorMsg(err.message);
@@ -1329,67 +1472,40 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.985 }}
             transition={SPRING}
-            className="my-auto flex max-h-[calc(100vh-36px)] w-full max-w-[900px] flex-col overflow-hidden rounded-[20px]"
+            className="my-auto flex max-h-[calc(100vh-36px)] w-full max-w-[560px] flex-col overflow-hidden rounded-[20px]"
             style={{ background: CARD_BG, border: `1px solid ${line(0.08)}`, boxShadow: '0 40px 110px -10px rgba(0,0,0,0.65), 0 0 0 1px var(--edge-hair) inset' }}
           >
             {/* ─────────── Шапка ─────────── */}
-            {/* Раніше все це стояло одним нерозривним flex-рядком:
-                заголовок+актив+дата ліворуч, кроки й хрестик праворуч.
-                На вузькому екрані їм там разом не було місця — рядок
-                не переносився, і items-center просто вкладав хрестик і
-                «01 ЦИФРИ» десь посередині висоти лівого блоку, що
-                вже сам переносився на два рядки. Тепер це два окремі
-                рядки: заголовок+хрестик (завжди нагорі, хрестик завжди
-                на місці) і окремо актив/дата+кроки (переносяться між
-                собою, а не крізь заголовок). */}
-            <div className="flex shrink-0 flex-col gap-2.5 px-5 pb-3 pt-[14px] sm:px-6" style={{ borderBottom: `1px solid ${line(0.06)}` }}>
-              <div className="flex items-start justify-between gap-4">
-                <h2 className="min-w-0 text-[19px] font-bold leading-[1.15] sm:text-[21px]" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.03em' }}>
-                  {step === 0
-                    ? (existingTrade ? 'Редагувати угоду' : 'Записати угоду')
-                    : 'Розбір виконання'}
-                </h2>
+            {/* Актив — заголовок, а не поле.
+
+                Він і так підставлений із плану або з попередньої
+                угоди, і міняють його рідко. Поставити його в один
+                рядок із результатом і ризиком означало б зрівняти
+                те, що вже відоме, з тим, що заповнюють щоразу. Як
+                заголовок він ще й відповідає на питання «а що я
+                взагалі зараз записую», якого в списку полів не видно. */}
+            <div className="flex shrink-0 items-start justify-between gap-4 px-6 pb-4 pt-5">
+              <div className="min-w-0">
+                <span className="block text-[10px] font-semibold uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: txt(0.4) }}>
+                  {existingTrade ? 'Угода' : 'Нова угода'}
+                </span>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <AssetPicker compact value={selectedPair} onChange={setSelectedPair} />
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <TradeDate compact value={tradeDate} onChange={setTradeDate} />
                 <button
                   type="button"
                   onClick={onClose}
                   className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] transition-all duration-200"
-                  style={{ background: 'transparent', border: `1px solid ${line(0.08)}`, color: txt(0.55) }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = line(0.06); e.currentTarget.style.color = 'var(--edge-text)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = txt(0.55); }}
+                  style={{ background: 'transparent', border: 0, color: txt(0.45) }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-text)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.45); }}
                 >
-                  <X size={14} strokeWidth={2.2} />
+                  <X size={16} strokeWidth={2.2} />
                 </button>
-              </div>
-
-              {/* Актив і дата живуть у шапці, а не окремими полями в
-                  формі. Обидва підставляються самі — з плану або з
-                  сьогоднішньої дати, — і міняють їх рідко. Поле, яке
-                  вже заповнене й рідко правиться, не має займати рядок
-                  нарівні з тим, що заповнюють щоразу. */}
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                {step === 0 ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <AssetPicker compact value={selectedPair} onChange={setSelectedPair} />
-                    <TradeDate compact value={tradeDate} onChange={setTradeDate} />
-                  </div>
-                ) : <span />}
-                <div className="flex items-center gap-2" style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.14em' }}>
-                  <button
-                    type="button"
-                    onClick={goBack}
-                    style={{ color: step === 0 ? 'var(--edge-text)' : ACCENT, fontWeight: step === 0 ? 600 : 500, transition: 'color .2s' }}
-                  >
-                    {step > 0 ? '✓ ' : '01 '}ЦИФРИ
-                  </button>
-                  <span className="h-px w-3" style={{ background: line(0.16) }} />
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    style={{ color: step === 1 ? 'var(--edge-text)' : txt(0.45), fontWeight: step === 1 ? 600 : 500, transition: 'color .2s' }}
-                  >
-                    02 РОЗБІР
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -1473,89 +1589,74 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       {/* Напрямок лишається сегментами: їх рівно два,
                           вибір робиться в кожній угоді, і ховати його
                           під клік означало б додати крок там, де його
-                          не було. Решта — однакові поля-випадашки. */}
-                      <DirectionToggle value={tradeType} onChange={setTradeType} />
-
-                      <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                        <StatusPicker value={result} onChange={setResult} />
-                        <SessionPicker value={session} onChange={setSession} />
+                          не було. */}
+                      <div className="mb-1 mt-3">
+                        <DirectionToggle value={tradeType} onChange={setTradeType} />
                       </div>
 
-                      <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                        <AccountPicker value={account} options={accountOptions} onChange={setAccount} />
-                        <RiskPicker value={risk} onChange={setRisk} />
-                      </div>
+                      <Row label="Результат">
+                        <StatusPicker bare value={result} onChange={setResult} />
+                      </Row>
 
-                      {/* Ціль і похідні числа — тонкою смугою. 1R і
-                          результат рахуються з ризику й цілі, тож
-                          стоять поруч із ними, а не окремими великими
-                          цифрами вгорі форми. */}
-                      <div
-                        className="flex items-center gap-2.5 rounded-[12px] px-3 py-2"
-                        style={{ background: line(0.02), border: `1px solid ${line(0.07)}` }}
-                      >
-                        <span className="shrink-0 text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: txt(0.4) }}>
-                          Ціль
-                        </span>
-                        <div className="flex h-9 shrink-0 items-center gap-1 rounded-[9px] px-3" style={{ background: 'rgba(0,0,0,0.28)', border: `1px solid ${line(0.07)}` }}>
+                      <Row label="Сесія">
+                        <SessionPicker bare value={session} onChange={setSession} />
+                      </Row>
+
+                      <Row label="Рахунок">
+                        <AccountPicker bare value={account} options={accountOptions} onChange={setAccount} />
+                      </Row>
+
+                      <Row label="Ризик">
+                        <RiskPicker bare value={risk} onChange={setRisk} />
+                      </Row>
+
+                      {/* Ціль і ціна одного R — в одному рядку.
+
+                          «2.5 R» саме по собі нічого не важить, поки не
+                          знаєш, скільки коштує один R на цьому рахунку.
+                          Тому $ стоїть підказкою поруч, а не окремою
+                          смугою цифр: це те саме число, сказане двічі
+                          різними мовами. */}
+                      <Row label="Ціль" hint={oneR != null ? `≈ $${oneR.toLocaleString('en-US')} / 1R` : null}>
+                        <span className="flex items-center gap-1">
                           <input
                             value={rr}
                             onChange={(e) => setRr(e.target.value.replace(',', '.'))}
                             inputMode="decimal"
-                            placeholder="2.5"
-                            className="w-[38px] bg-transparent text-[13.5px] outline-none"
-                            style={{ fontFamily: MONO, color: rColor }}
+                            className="w-[42px] bg-transparent text-right text-[14.5px] font-semibold outline-none"
+                            style={{ fontFamily: MONO, color: hasR ? rColor : txt(0.4) }}
                           />
-                          <span className="shrink-0 text-[11px]" style={{ fontFamily: MONO, color: txt(0.4) }}>R</span>
-                        </div>
-
-                        <span className="ml-auto flex shrink-0 items-center gap-3">
-                          <span className="text-[12.5px]" style={{ fontFamily: MONO, color: txt(0.42) }}>
-                            1R {oneR != null ? `$${oneR.toLocaleString('en-US')}` : '—'}
-                          </span>
-                          <span className="text-[13.5px] font-semibold" style={{ fontFamily: MONO, color: hasR ? rColor : txt(0.35) }}>
-                            {hasR ? `${rNum > 0 ? '+' : ''}${rNum.toFixed(2)}R` : '—'}
-                          </span>
+                          <span className="text-[12px]" style={{ fontFamily: MONO, color: txt(0.4) }}>R</span>
                         </span>
-                      </div>
+                      </Row>
 
-                      {/* Час угоди — за замовчуванням порожній: більшість
-                          записує угоду вже після факту, і хвилина входу
-                          в неї не завжди в голові. Тому це не поле форми
-                          з зірочкою, а можливість — заповнив дві точки,
-                          отримав тривалість, ні — просто немає смуги
-                          цифр праворуч. */}
-                      <div
-                        className="flex items-center gap-2.5 rounded-[12px] px-3 py-2"
-                        style={{ background: line(0.02), border: `1px solid ${line(0.07)}` }}
-                      >
-                        <span className="shrink-0 text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: txt(0.4) }}>
-                          Час
+                      <Row label="Час" hint={tradeDuration || null}>
+                        <span className="flex items-center gap-1.5">
+                          <TimePop value={entryTime || null} onChange={(v) => setEntryTime(v || '')} align="right" z={600} />
+                          <span className="text-[12px]" style={{ fontFamily: MONO, color: txt(0.3) }}>→</span>
+                          <TimePop value={exitTime || null} onChange={(v) => setExitTime(v || '')} align="right" z={600} />
                         </span>
+                      </Row>
 
-                        <TimePop value={entryTime || null} onChange={(v) => setEntryTime(v || '')} align="left" z={600} />
-                        <span className="shrink-0 text-[12px]" style={{ fontFamily: MONO, color: txt(0.3) }}>→</span>
-                        <TimePop value={exitTime || null} onChange={(v) => setExitTime(v || '')} align="left" z={600} />
+                      {/* Нотатка — поле на кілька рядків, а не один.
 
-                        <span className="ml-auto shrink-0 text-[12.5px]" style={{ fontFamily: MONO, color: tradeDuration ? txt(0.55) : txt(0.3) }}>
-                          {tradeDuration || '—'}
+                          Однорядкове поле саме по собі каже «сюди
+                          вміщається коротко», і люди писали туди три
+                          слова. Тут пишуть, чому зайшли, — а це рідко
+                          вкладається в рядок. */}
+                      <div className="pt-4">
+                        <span className="mb-2 block text-[13.5px]" style={{ fontFamily: T.sans, color: txt(0.45) }}>
+                          Нотатка
                         </span>
-                      </div>
-
-                      {/* Нотатка — один рядок: іконка ліворуч,
-                          лічильник символів справа. */}
-                      <div className="edge-note-field flex h-12 items-center gap-2.5 rounded-xl px-[15px] transition-colors duration-200" style={{ background: line(0.02), border: `1px solid ${line(0.07)}` }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={txt(0.5)} strokeWidth="1.8" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h9" /></svg>
-                        <input
+                        <textarea
                           value={tradeDescription}
                           onChange={(e) => setTradeDescription(e.target.value)}
+                          rows={4}
                           placeholder="Логіка входу, підтвердження, емоції…"
-                          className="min-w-0 flex-1 bg-transparent text-[14.5px] font-medium outline-none placeholder:opacity-60"
+                          className="w-full resize-none bg-transparent text-[14.5px] leading-[22px] outline-none placeholder:opacity-45"
                           style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
                         />
-                        <span className="shrink-0 text-[11px]" style={{ fontFamily: MONO, color: txt(0.42) }}>{tradeDescription.length}</span>
                       </div>
-                      <style>{`.edge-note-field:focus-within { border-color: rgba(${ACCENT_RGB},0.4) !important; }`}</style>
                     </motion.div>
                   ) : (
                     <motion.div
@@ -1705,8 +1806,16 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
 
                 <div className="flex items-center justify-between gap-5">
                   <div className="flex items-center gap-2.5 text-[13.5px] font-medium" style={{ fontFamily: T.sans, color: txt(0.55) }}>
-                    <span className="h-[5px] w-[5px] shrink-0 animate-pulse rounded-full" style={{ background: GREEN, boxShadow: `0 0 8px 1px rgba(${GREEN_RGB},0.5)` }} />
-                    <span className="hidden sm:inline">Чернетка зберігається автоматично</span>
+                    <span
+                      className="h-[5px] w-[5px] shrink-0 rounded-full"
+                      style={{
+                        background: draftSaved ? GREEN : line(0.18),
+                        boxShadow: draftSaved ? `0 0 8px 1px rgba(${GREEN_RGB},0.5)` : 'none',
+                      }}
+                    />
+                    <span className="hidden sm:inline">
+                      {existingTrade ? 'Редагування' : draftSaved ? 'Чернетку збережено' : 'Чернетка порожня'}
+                    </span>
                   </div>
 
                   {/* shrink-0 + flex-nowrap на цьому рядку означали, що

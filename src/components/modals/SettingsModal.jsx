@@ -22,6 +22,9 @@ import {
   countMt5Accounts, MT5_LIMIT,
 } from '../../lib/mt5Store';
 import { THEMES } from '../../lib/themes';
+import ProGate from './ProGate';
+import useSubscription from '../../hooks/useSubscription';
+import { startCheckout } from '../../lib/billing';
 import { BROKERS, brokerById } from '../../lib/brokers';
 import {
   BOT_NAME, readTelegram, createLinkCode, unlinkTelegram,
@@ -161,6 +164,7 @@ const ARRIVED_FOR_PASSWORD = typeof window !== 'undefined'
 export default function SettingsModal() {
   const s = useSettings();
   const { user, emailVerified } = useAuth();
+  const sub = useSubscription();
   const navigate = useNavigate();
   /* Відкрито одразу, якщо прийшли з листа: інакше людина повернулась би
      в застосунок і не зрозуміла, куди подівся новий пароль. */
@@ -779,10 +783,22 @@ export default function SettingsModal() {
                 )}
 
                 {/* ================= Підключення ================= */}
-                {safeTab === 'connect' && <ConnectTab />}
+                {/* Два платні розділи. Замок малюється тут, а не
+                    всередині самих вкладок: інакше кожна з них мусила б
+                    знати про тарифи, і ця логіка розповзлася б по
+                    компонентах, які взагалі не про гроші.
+
+                    Поки відповідь про підписку не прийшла (`ready`),
+                    не показуємо нічого: блимнути замком на оплаченому
+                    акаунті — образливо. */}
+                {safeTab === 'connect' && (!sub.ready ? null : sub.isPro
+                  ? <ConnectTab />
+                  : <ProGate feature="mt5" onStart={() => startCheckout('pro_monthly', { trial: true })} />)}
 
                 {/* ================= Telegram ================= */}
-                {safeTab === 'telegram' && <TelegramTab />}
+                {safeTab === 'telegram' && (!sub.ready ? null : sub.isPro
+                  ? <TelegramTab />
+                  : <ProGate feature="telegram" onStart={() => startCheckout('pro_monthly', { trial: true })} />)}
 
                 {/* ================= Тема ================= */}
                 {safeTab === 'look' && (

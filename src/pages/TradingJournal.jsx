@@ -18,9 +18,9 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
+import { deleteTrade } from "../lib/tradesStore";
 import { notify } from "../utils/notify";
 import { prefetchTradeCandles } from "../lib/mt5Store";
-import useEmailGate from "../hooks/useEmailGate";
 import { useAuth } from "../context/AuthContext";
 import { getTradeProfit } from "../utils/journalUtils";
 import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
@@ -709,12 +709,18 @@ export default function TradingJournal() {
   const { user } = useAuth();
   const mine = (q) => (user?.id ? q.eq('user_id', user.id) : q);
 
-  /* Створювати угоди можна лише з підтвердженою поштою. Кнопка при
-     цьому лишається клікабельною — guard покаже пояснення замість
-     мовчазної відмови. */
-  const { guard } = useEmailGate();
+  /* Перепустки на «Add Trade» більше немає.
+
+     Раніше кнопка вела на підтвердження пошти. Але завести угоду —
+     це перше, заради чого сюди приходять, і саме на ньому людина
+     впиралась у вимогу піти в поштову скриньку. Підтвердження
+     лишається там, де воно справді щось означає: на діях, які
+     виходять назовні — поділитись планом, зробити публічне
+     посилання. Записати власну угоду у власний журнал назовні не
+     виходить узагалі. */
 
   const [trades, setTrades] = useState([]);
+  const [openTrades, setOpenTrades] = useState([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -864,6 +870,23 @@ export default function TradingJournal() {
   const cacheKey = (pageNum) =>
     `${filterPair}|${dateFrom}|${dateTo}|${[...quick].sort().join(",")}|${pageSize}|${pageNum}`;
 
+  /* Відкриті позиції — свій запит, без пагінації й без кешу.
+
+     Без пагінації, бо їх одиниці: більше пʼяти відкритих одночасно —
+     це вже не журнал, а зовсім інша розмова.
+
+     Без кешу, бо це єдиний рядок у журналі, який живе: плаваючий
+     результат міняється щохвилини, і показати його з памʼяті
+     пʼятихвилинної давнини гірше, ніж не показати зовсім. Решта
+     сторінок кешується саме тому, що закрита угода вже не зміниться. */
+  const fetchOpenTrades = useCallback(async () => {
+    const { data, error } = await applyFilters(
+      supabase.from("trades").select("*").eq("result", "open"),
+    ).order("plan_date", { ascending: false });
+
+    if (!error) setOpenTrades(data || []);
+  }, [applyFilters]);
+
   const fetchTradesList = useCallback(
     async (pageNum = 1, { force = false } = {}) => {
       const key = cacheKey(pageNum);
@@ -882,6 +905,10 @@ export default function TradingJournal() {
             supabase
               .from("trades")
               .select("*", { count: "exact" })
+              /* Відкриті звідси прибрані: вони приїдуть окремо й
+                 стануть згори. Інакше та сама угода була б і вгорі,
+                 і на своєму місці за датою. */
+              .neq("result", "open")
               .order("plan_date", { ascending: false })
           )
         ).range(from, from + pageSize - 1);
@@ -934,6 +961,10 @@ export default function TradingJournal() {
   useEffect(() => {
     fetchTradesList(page);
   }, [fetchTradesList, page]);
+
+  useEffect(() => {
+    fetchOpenTrades();
+  }, [fetchOpenTrades]);
 
   /* ---------- Похідні дані ---------- */
   const stats = useMemo(() => {
@@ -1011,7 +1042,22 @@ export default function TradingJournal() {
   /* Фільтрація тепер уся на сервері, тож показуємо рівно те, що
      прийшло. Лишається як окрема назва, бо так читається різниця між
      «сирі дані сторінки» і «те, що на екрані». */
-  const visibleTrades = trades;
+  /* Відкриті позиції завжди зверху першої сторінки.
+
+     Сортування в журналі йде за `plan_date`, а це дата ВХОДУ. Свінгова
+     позиція, відкрита півтора тижня тому, лягає між закритими угодами
+     того дня — тобто десь на третій сторінці. Формально вона в
+     журналі є, практично її там немає: людина відкриває журнал саме
+     для того, щоб глянути, що зараз у ринку, і бачить перелік давно
+     закритих угод.
+
+     Тому вони тягнуться окремим запитом без пагінації (їх одиниці) і
+     приклеюються згори. З основного запиту при цьому виключені, щоб
+     не показатись двічі — на своїй сторінці за датою. */
+  const visibleTrades = useMemo(
+    () => (page === 1 ? [...openTrades, ...trades] : trades),
+    [page, openTrades, trades],
+  );
 
   /* Лічильники рахуємо з повного набору, а не зі сторінки: цифра на
      плитці має відповідати на питання «скільки в мене стопів узагалі»,
@@ -1030,13 +1076,11 @@ export default function TradingJournal() {
     const id = tradeToDelete;
     setTradeToDelete(null);
     try {
-      /* user_id у видаленні — не зайва обережність: адмінська політика
-         дає нам право читати чужі рядки, і один невдалий id міг би
-         стерти чужу угоду. */
-      const { error } = await mine(supabase.from("trades").delete().eq("id", id));
-      if (error) throw error;
+      const victim = [...openTrades, ...trades].find((t) => t.id === id);
+      await deleteTrade(victim || { id }, user?.id);
       tradesCache.current = {};
       fetchGlobalData();
+      fetchOpenTrades();
       /* Останній рядок на не першій сторінці — повертаємось на
          попередню, інакше лишимось на порожній сторінці. */
       if (trades.length === 1 && page > 1) setPage((p) => p - 1);
@@ -1117,7 +1161,7 @@ export default function TradingJournal() {
                 воно доречне вдвічі, бо кнопка стоїть у рядку з іншими
                 й тягла рядок за собою. */}
             <Magnetic
-              onClick={guard(() => setIsTradeModalOpen(true))}
+              onClick={() => setIsTradeModalOpen(true)}
               /* strength=0 — магніт вимкнено.
 
                  Саме він і смикав кнопку: Magnetic тягне елемент до
@@ -1597,12 +1641,14 @@ export default function TradingJournal() {
               setSelectedTrade(null);
               tradesCache.current = {};
               fetchGlobalData();
+              fetchOpenTrades();
               if (trades.length === 1 && page > 1) setPage((p) => p - 1);
               else fetchTradesList(page, { force: true });
             }}
             onUpdated={() => {
               tradesCache.current = {};
               fetchGlobalData();
+              fetchOpenTrades();
               fetchTradesList(page, { force: true });
             }}
           />

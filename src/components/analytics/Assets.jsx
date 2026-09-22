@@ -161,8 +161,28 @@ function SingleSetupModal({ setup, s, onClose }) {
   const bestAsset = sortedAssets[0];
   const worstAsset = sortedAssets[sortedAssets.length - 1];
 
-  const sessMap = { 'Asia': 0, 'London': 0, 'New York': 0 };
-  trades.forEach(t => { if(sessMap[t.session] !== undefined) sessMap[t.session] += t.rr; });
+  /* Сесії беремо з самих угод, а не зі списку в коді.
+
+     Було три зашитих ключі, і `if (sessMap[t.session] !== undefined)`
+     мовчки викидав усе інше. Щойно у формі угоди зʼявились Frankfurt
+     і All day, ці угоди просто переставали існувати для цього блоку —
+     без помилки, без нуля, без жодного сліду. Найгірший вид втрати
+     даних: той, якого не видно.
+
+     Порядок фіксований для звичних сесій, решта — за ними, щоб
+     колонки не стрибали від тижня до тижня. */
+  const SESS_ORDER = ['Asia', 'Frankfurt', 'London', 'New York', 'All day'];
+  const sessMap = {};
+  trades.forEach((t) => {
+    const k = t.session || '—';
+    sessMap[k] = (sessMap[k] || 0) + t.rr;
+  });
+  Object.keys(sessMap)
+    .sort((a, b) => {
+      const ia = SESS_ORDER.indexOf(a); const ib = SESS_ORDER.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    })
+    .forEach((k) => { const v = sessMap[k]; delete sessMap[k]; sessMap[k] = v; });
 
   const verdict = setup.net >= 5 
     ? "Флагманський сетап. Дає стабільний прибуток, можна плавно збільшувати об'єм або частоту торгівлі."

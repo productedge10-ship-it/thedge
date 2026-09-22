@@ -1,0 +1,14 @@
+# Збірка й функції.
+#
+# Раніше файла не було взагалі: сайт віддавався як статика, а тека
+# /api лишалась від Vercel і на Netlify не виконувалась ніколи.
+
+[build]
+  command  = "npm run build"
+  publish  = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  # Бандлимо esbuild-ом: функції імпортують @supabase/supabase-js, і
+  # без бандлінга модуль просто не доїде в рантайм.
+  node_bundler = "esbuild"

@@ -11,6 +11,7 @@ import {
 
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { deleteTrade } from '../../lib/tradesStore';
 import { notify } from '../../utils/notify';
 import { syncErrorFromTrade, fetchErrorForTrade, catsFromTrade } from '../../lib/errorsStore';
 import { CATS } from '../errors/utils';
@@ -776,8 +777,14 @@ export default function TradeDetailsModal({
 
   async function remove() {
     try {
-      const { error } = await supabase.from('trades').delete().eq('id', d.id);
-      if (error) throw error;
+      /* Через спільний tradesStore, а не запитом тут.
+
+         Раніше це був прямий delete по id — і він не ставив
+         надгробок, тож імпортована угода, видалена з картки,
+         поверталась наступною синхронізацією. З таблиці та сама
+         угода видалялась назавжди. Один і той самий кошик поводився
+         по-різному залежно від того, звідки його натиснули. */
+      await deleteTrade(d, user?.id);
       notify.success('Deleted', 'Trade removed from journal.');
       onDeleted?.(d.id);
       onDeleteClick?.(d.id);
