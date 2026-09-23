@@ -3051,6 +3051,11 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
                   >
                     {brokerById(broker).name} runs on the standard MetaTrader 5.
                     Copy the server name exactly as it appears in your credentials email.
+                    {brokerById(broker).company && (
+                      <>
+                        {' '}In the terminal it's listed under "{brokerById(broker).company}", not "{brokerById(broker).name}".
+                      </>
+                    )}
                   </div>
                 </motion.div>
               )}
