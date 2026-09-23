@@ -1494,10 +1494,10 @@ function ShareTab() {
         <div style={{ marginTop: 24 }}><Loader2 size={18} className="animate-spin" style={{ color: T.text3 }} /></div>
       ) : !token ? (
         <div style={{ marginTop: 22 }}>
-          <button type="button" onClick={enable} disabled={busy} className="edge-add-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            {busy ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} strokeWidth={2.2} />}
+          <ShareBtn onClick={enable} disabled={busy}>
+            {busy ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} strokeWidth={2.4} />}
             Create link &amp; copy
-          </button>
+          </ShareBtn>
           <Note>Your MT5 logins, settings, notes and tasks are never shown — only trades, accounts, plans and analytics.</Note>
         </div>
       ) : (
@@ -1513,10 +1513,21 @@ function ShareTab() {
                 fontSize: 13, color: T.text, background: T.sunken, border: `1px solid ${T.line}`, outline: 'none',
               }}
             />
-            <button type="button" onClick={() => copy()} className="edge-add-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              {copied ? <Check size={16} strokeWidth={2.4} /> : <Copy size={16} strokeWidth={2.2} />}
-              {copied ? 'Copied' : 'Copy'}
-            </button>
+            <ShareBtn onClick={() => copy()} done={copied} style={{ flexShrink: 0, minWidth: 116 }}>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={copied ? 'done' : 'copy'}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18, ease: EASE }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                >
+                  {copied ? <Check size={16} strokeWidth={2.6} /> : <Copy size={16} strokeWidth={2.4} />}
+                  {copied ? 'Copied' : 'Copy'}
+                </motion.span>
+              </AnimatePresence>
+            </ShareBtn>
           </div>
 
           <div className="flex flex-wrap" style={{ marginTop: 14, gap: 10 }}>
@@ -1540,6 +1551,52 @@ function ShareTab() {
         </div>
       )}
     </div>
+  );
+}
+
+/* Головна кнопка вкладки «Share». Та сама мова, що в кнопки експорту
+   на аналітиці: заливка акцентом зверху вниз, тонкий світлий кант
+   згори й ореол. Під курсором — світло, а не рух: ореол ширшає, заливка
+   яскравішає, кнопка лишається на місці. Після копіювання на мить
+   зеленіє — щоб «скопійовано» було видно краєм ока, без читання. */
+function ShareBtn({ children, onClick, disabled, done, style }) {
+  const [hot, setHot] = useState(false);
+  const rgb = done ? T.okRgb : T.accRgb;
+  const base = done ? T.ok : T.acc;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setHot(true)}
+      onMouseLeave={() => setHot(false)}
+      style={{
+        fontFamily: T.sans,
+        height: 44,
+        padding: '0 20px',
+        borderRadius: 12,
+        fontSize: 14,
+        fontWeight: 700,
+        letterSpacing: '.1px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        color: 'var(--edge-on-acc, #fff)',
+        background: `linear-gradient(180deg, ${base}, color-mix(in srgb, ${base} 72%, #000))`,
+        border: '1px solid rgba(255,255,255,0.14)',
+        boxShadow: hot && !disabled
+          ? `0 16px 40px -12px rgba(${rgb},0.85), 0 0 0 3px rgba(${rgb},0.16), inset 0 1px 0 rgba(255,255,255,0.28)`
+          : `0 10px 28px -12px rgba(${rgb},0.6), inset 0 1px 0 rgba(255,255,255,0.22)`,
+        filter: hot && !disabled ? 'brightness(1.08)' : 'none',
+        opacity: disabled ? 0.7 : 1,
+        cursor: disabled ? 'default' : 'pointer',
+        transition: 'box-shadow .22s ease, filter .22s ease, background .3s ease',
+        ...style,
+      }}
+    >
+      {children}
+    </button>
   );
 }
 

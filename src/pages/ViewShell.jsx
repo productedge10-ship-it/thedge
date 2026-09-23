@@ -26,7 +26,10 @@ import { C, F, A } from '../components/landing/v3/base';
 const BAR_H = 46;
 
 const RO_CSS = `
-  .edge-view-ro .edge-add-btn { display: none !important; }
+  .edge-view-ro .edge-add-btn,
+  .edge-view-ro .journal-cta,
+  .edge-view-ro .analysis-cta,
+  .edge-view-ro .receipt-cta { display: none !important; }
   .demo-bar-label{ display: inline; }
   .demo-bar-desc{ display: inline; }
   .view-bar-short{ display: none; }
