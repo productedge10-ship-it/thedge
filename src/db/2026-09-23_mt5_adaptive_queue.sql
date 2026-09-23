@@ -25,6 +25,31 @@
 -- воркера: наступний же прохід візьме нові значення.
 
 -- ------------------------------------------------------------------
+-- Прибрати зайві версії mt5_claim / mt5_done
+-- ------------------------------------------------------------------
+-- У живій базі виявилась ще одна mt5_claim з іншим набором параметрів
+-- (у репозиторії її немає). Обидві мали значення за замовчуванням, тож
+-- виклик воркера з трьома аргументами підходив до обох, і PostgREST
+-- відповідав 400 «is not unique» — воркер упав. Лишаємо рівно ті
+-- сигнатури, які кличе воркер.
+do $$
+declare r record;
+begin
+  for r in
+    select p.oid::regprocedure as sig
+      from pg_proc p
+     where p.pronamespace = 'public'::regnamespace
+       and (
+         (p.proname = 'mt5_claim' and p.proargtypes::regtype[]::text <> '{text,integer,interval}')
+         or (p.proname = 'mt5_done' and p.proargtypes::regtype[]::text <> '{uuid,boolean,text,interval}')
+       )
+  loop
+    raise notice 'drop %', r.sig;
+    execute 'drop function ' || r.sig;
+  end loop;
+end $$;
+
+-- ------------------------------------------------------------------
 -- Налаштування
 -- ------------------------------------------------------------------
 create table if not exists public.mt5_sync_config (
