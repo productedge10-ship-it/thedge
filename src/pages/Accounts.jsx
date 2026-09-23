@@ -15,6 +15,9 @@ import { supabase as sb } from '../lib/supabase';
 import AccountDetails from '../components/accounts/AccountDetails';
 import AssetIcon from '../components/ui/AssetIcon';
 import { Mt5Card } from '../components/modals/SettingsModal';
+import useSubscription from '../hooks/useSubscription';
+import { FREE_LIMITS } from '../lib/billing';
+import { openSettings } from '../lib/settings';
 
 const PREDEFINED_FIRMS = [
   'FTMO', 'Funding Pips', 'Topstep', 'The Funded Trader', 
@@ -151,6 +154,7 @@ function AddAccountCta({ onClick }) {
 
 export default function Accounts() {
   const { user } = useAuth();
+  const sub = useSubscription();
 
   const [accounts, setAccounts] = useState([]);
   const [payouts, setPayouts] = useState([]);
