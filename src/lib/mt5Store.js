@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { inSandbox } from './sandbox';
 
 /* ==================================================================
    Підключення торгового рахунку MT5.
@@ -305,6 +306,22 @@ export async function removeMt5Account(id) {
   if (error) throw error;
 }
 
+/* Людина відкрила журнал — просимо чергу оновити її рахунки першими.
+
+   Не чекаємо й нічого не повертаємо: це підказка черзі, а не запит
+   даних. Частоту стримує сама база (mt5_sync_now не підштовхує рахунок,
+   синхронізований менш ніж хвилину тому), а тут — лише щоб не смикати
+   мережу на кожне перемикання вкладки. */
+let lastNudge = 0;
+export function nudgeMt5Sync() {
+  /* У демо й у чужому журналі за посиланням черги немає. */
+  if (inSandbox()) return;
+  const now = Date.now();
+  if (now - lastNudge < 60_000) return;
+  lastNudge = now;
+  supabase.rpc('mt5_sync_now').then(() => {}, () => {});
+}
+
 /* Забрати угоди з терміналу «прямо зараз».
 
    Кнопка на фронті нічого не тягне з MT5 сама — до термінала має
@@ -336,7 +353,7 @@ export async function pullMt5Trades({ timeoutMs = 25000 } = {}) {
      попередніх невдач, через які воркер уже махнув на рахунок рукою. */
   const { error: bumpErr } = await supabase
     .from('mt5_accounts')
-    .update({ next_sync_at: new Date().toISOString(), locked_until: null, fail_count: 0 })
+    .update({ next_sync_at: new Date().toISOString(), wanted_at: new Date().toISOString(), locked_until: null, fail_count: 0 })
     .eq('user_id', user.id);
 
   if (bumpErr) throw bumpErr;

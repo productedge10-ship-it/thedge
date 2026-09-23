@@ -20,7 +20,7 @@ import {
 import { supabase } from "../lib/supabase";
 import { deleteTrade } from "../lib/tradesStore";
 import { notify } from "../utils/notify";
-import { prefetchTradeCandles } from "../lib/mt5Store";
+import { prefetchTradeCandles, nudgeMt5Sync } from "../lib/mt5Store";
 import { useAuth } from "../context/AuthContext";
 import { getTradeProfit } from "../utils/journalUtils";
 import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
@@ -750,6 +750,17 @@ export default function TradingJournal() {
     () => periodToRange(period),
     [period]
   );
+
+  /* Відкритий журнал = людина хоче бачити свіжі угоди. Просимо чергу
+     MT5 взяти її рахунки першими — зараз і щоразу, коли вона
+     повертається на вкладку. */
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    nudgeMt5Sync();
+    const onFocus = () => { if (document.visibilityState === "visible") nudgeMt5Sync(); };
+    document.addEventListener("visibilitychange", onFocus);
+    return () => document.removeEventListener("visibilitychange", onFocus);
+  }, [user?.id]);
 
   /* ---------- Завантаження ---------- */
   useEffect(() => {
