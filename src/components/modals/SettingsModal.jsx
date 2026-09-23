@@ -3022,6 +3022,40 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
               />
             </FormField>
 
+            {/* Підказка лише для фірм на звичайному MT5. У фірм із
+                власною збіркою сервери вже зашиті в термінал, а тут
+                термінал загальний, і назву він шукає дослівно: одна
+                зайва літера — і людина отримає «сервер не знайдено» з
+                правильним логіном і паролем. */}
+            <AnimatePresence initial={false}>
+              {brokerById(broker).standard && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.26, ease: EASE }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div
+                    style={{
+                      fontFamily: T.sans,
+                      marginTop: -4,
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      background: `rgba(${T.accRgb},0.07)`,
+                      border: `1px solid ${T.accLine}`,
+                      fontSize: 12.5,
+                      lineHeight: '19px',
+                      color: T.text2,
+                    }}
+                  >
+                    {brokerById(broker).name} runs on the standard MetaTrader 5.
+                    Copy the server name exactly as it appears in your credentials email.
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Знак питання — окремим рядком під полями, а не всередині
                 інпута: там він читався як частина поля вводу, а не як
                 питання про форму в цілому. Одна кнопка на всі три

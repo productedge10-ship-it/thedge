@@ -69,6 +69,26 @@ export const BROKERS = [
     icon: null,
     plate: 'dark',
   },
+  /* FundingPips власної збірки не має — їхні сервери бачить звичайний
+     MetaTrader 5 від MetaQuotes. На VPS під нього стоїть окрема
+     portable-копія звичайного терміналу (MT5_PATH_FUNDINGPIPS), а не
+     спільна з іншими: у кожної копії свій servers.dat, і змішувати в
+     ньому сервери різних фірм — шлях до «не той сервер» у чужому
+     рахунку.
+
+     `standard` читає форма: для такої фірми під полем сервера
+     зʼявляється підказка, що назву треба взяти з листа фірми
+     дослівно — звичайний термінал сервер за «схожою» назвою не
+     знайде. */
+  {
+    id: 'fundingpips',
+    name: 'FundingPips',
+    domain: 'fundingpips.com',
+    tint: '#3d6be0',
+    icon: 'https://www.google.com/s2/favicons?domain=fundingpips.com&sz=128',
+    plate: 'light',
+    standard: true,
+  },
 ];
 
 /* Запасний варіант для НЕВІДОМОГО id.
