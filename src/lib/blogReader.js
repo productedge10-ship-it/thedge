@@ -19,9 +19,9 @@ import { useCallback, useEffect, useState } from 'react';
 ================================================================== */
 
 export const READER_THEMES = [
-  { id: 'dark', label: { uk: 'Темна', ru: 'Тёмная', en: 'Dark' } },
-  { id: 'light', label: { uk: 'Світла', ru: 'Светлая', en: 'Light' } },
-  { id: 'book', label: { uk: 'Книжкова', ru: 'Книжная', en: 'Paper' } },
+  { id: 'dark', label: { uk: 'Темна', en: 'Dark' } },
+  { id: 'light', label: { uk: 'Світла', en: 'Light' } },
+  { id: 'book', label: { uk: 'Книжкова', en: 'Paper' } },
 ];
 
 /* ------------------------------------------------------------------
@@ -140,20 +140,20 @@ export const FONT_SIZES = [
 ];
 
 export const FAMILIES = [
-  { id: 'sans', label: { uk: 'Без засічок', ru: 'Без засечек', en: 'Sans' } },
-  { id: 'serif', label: { uk: 'З засічками', ru: 'С засечками', en: 'Serif' } },
+  { id: 'sans', label: { uk: 'Без засічок', en: 'Sans' } },
+  { id: 'serif', label: { uk: 'З засічками', en: 'Serif' } },
 ];
 
 export const WIDTHS = [
-  { id: 'narrow', px: 660, label: { uk: 'Вузько', ru: 'Узко', en: 'Narrow' } },
-  { id: 'normal', px: 780, label: { uk: 'Норма', ru: 'Норма', en: 'Normal' } },
-  { id: 'wide', px: 940, label: { uk: 'Широко', ru: 'Широко', en: 'Wide' } },
+  { id: 'narrow', px: 660, label: { uk: 'Вузько', en: 'Narrow' } },
+  { id: 'normal', px: 780, label: { uk: 'Норма', en: 'Normal' } },
+  { id: 'wide', px: 940, label: { uk: 'Широко', en: 'Wide' } },
 ];
 
 export const LEADINGS = [
-  { id: 'tight', value: 1.6, label: { uk: 'Щільно', ru: 'Плотно', en: 'Tight' } },
-  { id: 'normal', value: 1.75, label: { uk: 'Норма', ru: 'Норма', en: 'Normal' } },
-  { id: 'airy', value: 1.95, label: { uk: 'Просторо', ru: 'Просторно', en: 'Airy' } },
+  { id: 'tight', value: 1.6, label: { uk: 'Щільно', en: 'Tight' } },
+  { id: 'normal', value: 1.75, label: { uk: 'Норма', en: 'Normal' } },
+  { id: 'airy', value: 1.95, label: { uk: 'Просторо', en: 'Airy' } },
 ];
 
 export const DEFAULT_PREFS = {

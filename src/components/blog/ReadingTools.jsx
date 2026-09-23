@@ -98,7 +98,6 @@ function TocLinks({ headings, active, onPick }) {
 
 const L = {
   uk: { toc: 'Зміст', reading: 'Читання', theme: 'Тема', size: 'Розмір', family: 'Шрифт', width: 'Ширина', leading: 'Інтервал', reset: 'Скинути до типових' },
-  ru: { toc: 'Содержание', reading: 'Чтение', theme: 'Тема', size: 'Размер', family: 'Шрифт', width: 'Ширина', leading: 'Интервал', reset: 'Сбросить' },
   en: { toc: 'Contents', reading: 'Reading', theme: 'Theme', size: 'Size', family: 'Font', width: 'Width', leading: 'Spacing', reset: 'Reset' },
 };
 

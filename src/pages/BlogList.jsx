@@ -36,7 +36,15 @@ const SWATCH = { dark: '#0e0e14', light: '#faf5ff', book: '#ede6d9' };
 const TXT = {
   uk: {
     blog: 'Блог',
-    title: 'Блог The Edge',
+    /* Заголовок вкладки й H1 різні свідомо: у H1 влазить довший,
+       описовий варіант (лишається один на сторінці, довжина не
+       карається), а <title> — те, що людина бачить у видачі Google,
+       де все за 60 символів обрізається, тому там коротший набір тих
+       самих ключових слів. Обидва мусять нести реальні терміни
+       розділу, а не лише назву бренду — інакше сторінка не
+       асоціюється в пошуку з жодним запитом. */
+    title: 'Блог The Edge: психологія угод, розбори тижня, план і база трейдера',
+    metaTitle: 'Блог The Edge — психологія угод, розбори і план трейдера',
     lede: 'Психологія, розбори тижня, плани й база — те, що видно в журналі, коли записуєш кожну угоду.',
     search: 'Пошук по статтях',
     sections: 'Розділи',
@@ -60,24 +68,9 @@ const TXT = {
     tagPrefix: 'Тег',
     toUk: 'Українською',
   },
-  ru: {
-    blog: 'Блог', title: 'Блог The Edge',
-    lede: 'Психология, разборы недели, планы и база — то, что видно в журнале, когда записываешь каждую сделку.',
-    search: 'Поиск по статьям', sections: 'Разделы', all: 'Все статьи',
-    nothing: 'Ничего не нашлось', nothingSub: 'Попробуй другое слово или посмотри все статьи раздела.',
-    soon: 'Здесь пока пусто', soonSub: 'Статьи на этом языке ещё пишутся.',
-    more: 'Показать ещё', popular: 'Свежее', tags: 'Теги', tagsHint: 'Показать', tagsHide: 'Скрыть',
-    about: 'О чём это',
-    promoTitle: 'Журнал, который считает за тебя',
-    promoText: 'План, сделки, аналитика и разборы в одном месте. Бесплатный тариф — навсегда.',
-    promoCta: 'Начать бесплатно',
-    promoTitleUser: 'Твой журнал уже ждёт',
-    promoTextUser: 'План, сделки, аналитика и разборы — всё уже привязано к твоему аккаунту.',
-    promoCtaUser: 'Открыть приложение',
-    tagPrefix: 'Тег', toUk: 'На украинском',
-  },
   en: {
-    blog: 'Blog', title: 'The Edge blog',
+    blog: 'Blog', title: 'The Edge Blog: trading psychology, weekly reviews, plans & basics',
+    metaTitle: 'The Edge Blog — trading psychology, deals, plans & basics',
     lede: 'Psychology, weekly reviews, plans and fundamentals — what a journal shows when every trade is written down.',
     search: 'Search articles', sections: 'Sections', all: 'All articles',
     nothing: 'Nothing found', nothingSub: 'Try another word or browse the whole section.',
@@ -182,8 +175,14 @@ export default function BlogList() {
     [],
   );
 
+  /* На корені блогу заголовок вкладки — не просто «Блог The Edge»:
+     без жодного ключового слова він програвав би в пошуковій видачі
+     будь-якій статті категорії. У розділі й тегу назва вже сама є
+     ключовим словом, тому там лишається короткий варіант. */
+  const metaTitle = category || activeTag ? `${heading} — The Edge` : t.metaTitle;
+
   useDocumentMeta({
-    title: `${heading} — The Edge`,
+    title: metaTitle,
     description: lede,
     canonical,
     lang: okLang ? lang : 'uk',

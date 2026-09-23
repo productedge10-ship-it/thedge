@@ -50,7 +50,7 @@ import NotFound from './pages/Error404';
    Але руками набирають саме /blog, і в такому разі краще здогадатись
    за мовою браузера, ніж показати 404.
 ------------------------------------------------------------------ */
-const BLOG_LANGS = ['uk', 'ru', 'en'];
+const BLOG_LANGS = ['uk', 'en'];
 
 function BlogRedirect() {
   const nav = (navigator.language || 'uk').slice(0, 2).toLowerCase();
