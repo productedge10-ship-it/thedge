@@ -29,8 +29,8 @@ const PAY_URL = 'https://secure.wayforpay.com/pay';
    модуль разом із supabase-клієнтом браузера ні до чого. Ціна
    змінилась — міняємо в обох місцях. */
 const PLANS = {
-  pro_monthly: { title: 'Edge Journal Pro — місяць', amount: 599, period: 'monthly' },
-  pro_yearly: { title: 'Edge Journal Pro — рік', amount: 5990, period: 'yearly' },
+  pro_monthly: { title: 'Edge Journal Pro — місяць', amount: 15, period: 'monthly' },
+  pro_yearly: { title: 'Edge Journal Pro — рік', amount: 144, period: 'yearly' },
 };
 
 const sign = (parts) => crypto
@@ -102,7 +102,7 @@ export default async function handler(req, res) {
        звіряє суму, побачить гривню проти шестисот і відхилить
        власний же тріал. */
     amount: chargeNow,
-    currency: 'UAH',
+    currency: 'USD',
     status: trial ? 'trial' : 'pending',
   });
 
@@ -117,7 +117,7 @@ export default async function handler(req, res) {
      productPrice. Переставиш два місцями — WayForPay поверне
      «невірний підпис» і не скаже, де саме. */
   const signature = sign([
-    MERCHANT, DOMAIN, reference, orderDate, chargeNow, 'UAH',
+    MERCHANT, DOMAIN, reference, orderDate, chargeNow, 'USD',
     productName, 1, chargeNow,
   ]);
 
@@ -135,7 +135,7 @@ export default async function handler(req, res) {
       orderReference: reference,
       orderDate,
       amount: chargeNow,
-      currency: 'UAH',
+      currency: 'USD',
 
       'productName[]': productName,
       'productPrice[]': chargeNow,

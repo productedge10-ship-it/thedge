@@ -22,12 +22,12 @@ import { readSubscription } from '../lib/billing';
 export default function useSubscription() {
   const { user } = useAuth();
   const [state, setState] = useState({
-    plan: 'free', status: 'inactive', validUntil: null, isPro: false, ready: false,
+    plan: 'free', status: 'inactive', validUntil: null, trialUsed: false, isPro: false, ready: false,
   });
 
   const refresh = useCallback(async () => {
     if (!user?.id) {
-      setState({ plan: 'free', status: 'inactive', validUntil: null, isPro: false, ready: true });
+      setState({ plan: 'free', status: 'inactive', validUntil: null, trialUsed: false, isPro: false, ready: true });
       return;
     }
     try {

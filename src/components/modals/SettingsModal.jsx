@@ -23,6 +23,7 @@ import {
 } from '../../lib/mt5Store';
 import { THEMES } from '../../lib/themes';
 import ProGate from './ProGate';
+import SubscriptionTab from './SubscriptionTab';
 import useSubscription from '../../hooks/useSubscription';
 import { startCheckout } from '../../lib/billing';
 import { BROKERS, brokerById } from '../../lib/brokers';
@@ -55,6 +56,9 @@ const TABS = [
   { id: 'journal', label: 'Journal', icon: BookOpen, eyebrow: 'PRACTICE', hint: 'How many questions to ask after every trade' },
   { id: 'connect', label: 'Connections', icon: Plug, eyebrow: 'SYNC', hint: 'Connect your trading account — the trades will sync automatically' },
   { id: 'telegram', label: 'Telegram', icon: Send, eyebrow: 'NOTIFY', hint: 'Alerts, new trades and the daily wrap — straight to your chat' },
+  /* Підписка стоїть одразу після платних розділів, а не в кінці
+     списку: людина потрапляє сюди саме з них, побачивши замок. */
+  { id: 'billing', label: 'Subscription', icon: Sparkles, eyebrow: 'PLAN', hint: 'What Pro unlocks and when the card is charged' },
   /* «Security» звідси прибрано до того часу, поки не буде готова сама
      двофакторка. Вкладка була, вміст до неї — ні, тож вона показувала
      порожню панель. Пункт меню, який нічого не відкриває, гірший за
@@ -194,6 +198,30 @@ export default function SettingsModal() {
       setOpen(true);
     };
     window.addEventListener(OPEN_EVENT, onOpen);
+
+    /* Та сама дія, але з адреси: `?settings=billing`.
+
+       Потрібно для входу з лендінга. Людина натискає «Почати
+       безкоштовно» біля ціни, її веде на реєстрацію, і після неї
+       вона має опинитись одразу на підписці — а не в застосунку з
+       надією, що сама знайде налаштування.
+
+       Подією це зробити не можна: між кліком і появою тут лежить
+       повне перезавантаження сторінки, і жоден слухач його не
+       переживе. Адреса переживає.
+
+       Параметр одразу прибираємо з історії: інакше він лишиться
+       висіти, і будь-яке оновлення сторінки знову відкриватиме
+       налаштування — людина закриває, тисне F5, вони знову тут. */
+    const url = new URL(window.location.href);
+    const fromUrl = url.searchParams.get('settings');
+    if (fromUrl) {
+      setTab(fromUrl);
+      setOpen(true);
+      url.searchParams.delete('settings');
+      window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+    }
+
     return () => window.removeEventListener(OPEN_EVENT, onOpen);
   }, []);
 
@@ -261,7 +289,15 @@ export default function SettingsModal() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.995 }}
             transition={{ duration: 0.3, ease: EASE }}
-            className="flex w-full max-w-[1180px] overflow-hidden sm:h-[740px] sm:max-h-full"
+            /* Висота йде за екраном, а не стоїть на 740px.
+
+                 Фіксована висота задумувалась як «однаковий розмір на
+                 всіх вкладках», але вкладка підписки довша за решту, і
+                 на ноутбуці 768px її нижній край просто не влазив:
+                 кнопка оплати опинялась під згином, а на 1080p унизу
+                 лишалась порожнеча. Тепер вікно бере 88% висоти вікна
+                 з тією ж стелею — скрізь заповнене й ніде не зрізане. */
+            className="flex w-full max-w-[1180px] overflow-hidden sm:h-[88vh] sm:max-h-[860px] sm:min-h-[560px]"
             style={{
               background: T.surface,
               border: `1px solid ${T.line}`,
@@ -796,6 +832,8 @@ export default function SettingsModal() {
                   : <ProGate feature="mt5" onStart={() => startCheckout('pro_monthly', { trial: true })} />)}
 
                 {/* ================= Telegram ================= */}
+                {safeTab === 'billing' && (sub.ready ? <SubscriptionTab sub={sub} onChanged={sub.refresh} /> : null)}
+
                 {safeTab === 'telegram' && (!sub.ready ? null : sub.isPro
                   ? <TelegramTab />
                   : <ProGate feature="telegram" onStart={() => startCheckout('pro_monthly', { trial: true })} />)}

@@ -2714,3 +2714,403 @@ h1, h2, h3, h4, h5, h6 {
 @media (prefers-reduced-motion: reduce) {
   .trade-live-dot { animation: none !important; }
 }
+
+/* ==================================================================
+   Кнопка підписки.
+
+   Та сама родина, що «Add Trade» у журналі: темна плита, акцентна
+   рамка, ореол під кнопкою.
+
+   Але напис тут НЕ ховається, на відміну від журналу. У журналі під
+   курсором з'являються свічки — картинка, яка сама себе пояснює, і
+   підпис їй не потрібен. Тут же з'являються чотирнадцять днів, і без
+   слів вони читаються як смужки казна-чого. Тому текст лишається на
+   місці, а дні заповнюються ПІД ним, як шкала.
+
+   Заразом це знімає головну проблему попередньої версії: напис
+   «14 днів безкоштовно» — єдина причина натиснути цю кнопку, і
+   ховати його в ту саму мить, коли людина навела мишу, означало
+   забирати аргумент рівно тоді, коли він потрібен.
+
+   Останній день порожній, у пунктирі: на ньому підписка стає
+   платною. Це видно без підпису.
+================================================================== */
+@keyframes subDayFill {
+  from { transform: scaleY(.2); opacity: 0; }
+  to   { transform: scaleY(1);  opacity: 1; }
+}
+
+.sub-cta {
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .22s ease, border-color .22s ease;
+}
+
+/* Шкала днів лежить під написом і до ховера її немає взагалі. */
+.sub-cta-days {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+
+.sub-cta-day {
+  width: 12px;
+  height: 30px;
+  border-radius: 4px;
+  transform-origin: center;
+  transform: scaleY(.2);
+  opacity: 0;
+
+  /* Приглушено навмисно: шкала — тло для напису, а не замість
+     нього. На повній яскравості вона б'ється з текстом, і читати
+     доводиться крізь неї. */
+  background: rgba(var(--edge-acc-rgb, 139,123,255), .30);
+}
+
+.sub-cta-day.is-charge {
+  background: transparent;
+  border: 1px dashed rgba(var(--edge-acc-rgb, 139,123,255), .6);
+}
+
+/* Напис лишається на місці й лише трохи світлішає: рух тексту на
+   кнопці, яку людина цілиться натиснути, збиває приціл. */
+.sub-cta-label {
+  position: relative;
+  z-index: 2;
+  transition: text-shadow .25s ease, letter-spacing .3s cubic-bezier(.4,0,.2,1);
+}
+
+.sub-cta:hover .sub-cta-label,
+.sub-cta:focus-visible .sub-cta-label {
+  letter-spacing: .012em;
+  text-shadow: 0 0 18px rgba(var(--edge-acc-rgb, 139,123,255), .55);
+}
+
+.sub-cta:hover .sub-cta-days,
+.sub-cta:focus-visible .sub-cta-days { opacity: 1; }
+
+/* Крок 30 мс — уся черга за 0.42 с. Дрібний навмисно: більший
+   перетворює анімацію на демонстрацію самої себе. */
+.sub-cta:hover .sub-cta-day,
+.sub-cta:focus-visible .sub-cta-day {
+  animation: subDayFill .24s cubic-bezier(.34, 1.3, .5, 1) forwards;
+}
+.sub-cta:hover .sub-cta-day:nth-child(1),
+.sub-cta:focus-visible .sub-cta-day:nth-child(1) { animation-delay: 0.00s; }
+.sub-cta:hover .sub-cta-day:nth-child(2),
+.sub-cta:focus-visible .sub-cta-day:nth-child(2) { animation-delay: 0.03s; }
+.sub-cta:hover .sub-cta-day:nth-child(3),
+.sub-cta:focus-visible .sub-cta-day:nth-child(3) { animation-delay: 0.06s; }
+.sub-cta:hover .sub-cta-day:nth-child(4),
+.sub-cta:focus-visible .sub-cta-day:nth-child(4) { animation-delay: 0.09s; }
+.sub-cta:hover .sub-cta-day:nth-child(5),
+.sub-cta:focus-visible .sub-cta-day:nth-child(5) { animation-delay: 0.12s; }
+.sub-cta:hover .sub-cta-day:nth-child(6),
+.sub-cta:focus-visible .sub-cta-day:nth-child(6) { animation-delay: 0.15s; }
+.sub-cta:hover .sub-cta-day:nth-child(7),
+.sub-cta:focus-visible .sub-cta-day:nth-child(7) { animation-delay: 0.18s; }
+.sub-cta:hover .sub-cta-day:nth-child(8),
+.sub-cta:focus-visible .sub-cta-day:nth-child(8) { animation-delay: 0.21s; }
+.sub-cta:hover .sub-cta-day:nth-child(9),
+.sub-cta:focus-visible .sub-cta-day:nth-child(9) { animation-delay: 0.24s; }
+.sub-cta:hover .sub-cta-day:nth-child(10),
+.sub-cta:focus-visible .sub-cta-day:nth-child(10) { animation-delay: 0.27s; }
+.sub-cta:hover .sub-cta-day:nth-child(11),
+.sub-cta:focus-visible .sub-cta-day:nth-child(11) { animation-delay: 0.30s; }
+.sub-cta:hover .sub-cta-day:nth-child(12),
+.sub-cta:focus-visible .sub-cta-day:nth-child(12) { animation-delay: 0.33s; }
+.sub-cta:hover .sub-cta-day:nth-child(13),
+.sub-cta:focus-visible .sub-cta-day:nth-child(13) { animation-delay: 0.36s; }
+.sub-cta:hover .sub-cta-day:nth-child(14),
+.sub-cta:focus-visible .sub-cta-day:nth-child(14) { animation-delay: 0.39s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sub-cta-day,
+  .sub-cta-label,
+  .sub-cta-days { animation: none !important; transition: none !important; }
+}
+
+/* ==================================================================
+   Сцени на замкнених розділах (GateScene).
+
+   Замок каже «тобі не дали», але не каже, чого саме. Ці сцени
+   показують роботу розділу — і показують рухом, а не списком.
+
+   Головне тут — переліт. Перша версія просто проявляла рядки в
+   правому блоці, і переїзд угоди доводилось домислювати. Тепер
+   картка відривається від термінала, перетинає проміжок і сідає в
+   журнал: саме цей рух і є вся обіцянка розділу.
+
+   Кадрів циклу тут більше немає. Угоди генерує JSX на ходу, а CSS
+   лишає собі рівно дві речі: транзишен `top`/`bottom` (рядок
+   переїжджає, коли міняється його індекс) і короткий вхід нового
+   елемента. Кінця в стрічки немає, тож немає й моменту, коли все
+   доводиться згасити — а саме він раніше читався як «записи кудись
+   поділись».
+================================================================== */
+.gate-scene {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.gate-box {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 186px;
+  border-radius: 16px;
+  padding: 13px 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+  border: 1px solid rgba(var(--edge-acc-rgb, 139,123,255), .2);
+  overflow: hidden;
+}
+
+.gate-box-title {
+  display: block;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(var(--edge-text-rgb, 242,244,243), .4);
+  margin-bottom: 11px;
+}
+
+/* ---------- проміжок, який перетинає угода ---------- */
+.gate-gap {
+  flex: 0 0 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gate-wire {
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg,
+    rgba(var(--edge-acc-rgb, 139,123,255), .35) 0 4px,
+    transparent 4px 9px);
+}
+
+/* ---------- рядки: черга в терміналі та записи в журналі ---------- */
+
+/* Висота під рівно 3 повні рядки + обрізаний четвертий. Обрізаний і
+   робить головну роботу: він каже, що список довший за вікно, і без
+   нього довелось би вішати смугу прокрутки. */
+.gate-rows {
+  /* display обовʼязковий: у розмітці це <span>, а інлайновому
+     елементу не можна задати висоту. */
+  display: block;
+  position: relative;
+  height: 136px;
+
+  /* Замість смуги прокрутки — розмитий край.
+
+     Маска дає саме зникання, а не обрубаний рядок: у блоку є рамка й
+     фон, і різаний навпіл рядок біля самого краю читається як
+     помилка верстки. -webkit- дубль потрібен Safari, який досі не
+     розуміє беспрефіксний mask-image. */
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 64%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0, #000 64%, transparent 100%);
+}
+
+.gate-row {
+  /* Абсолютно, бо в потоці зміна порядку не анімується — браузер
+     просто перемальовує елементи на нових місцях. Зсув приходить
+     інлайном як translateY(індекс × крок), переїзд робить транзишен.
+
+     Крива — easeOutCubic, без «пружини». cubic-bezier(.22,1,.36,1)
+     тут стояв раніше й стартував ривком: майже весь шлях
+     пролітається за першу третину часу, і на трьох рядках одразу це
+     читається як смик, а не як переїзд. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  transform: translateY(0);
+  transition: transform .72s cubic-bezier(.33, 1, .68, 1),
+              opacity   .34s ease-out;
+  will-change: transform;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.05);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11.5px;
+}
+
+.gate-row-pair { color: rgba(var(--edge-text-rgb, 242,244,243), .88); }
+.gate-row-side { color: rgba(var(--edge-text-rgb, 242,244,243), .34); }
+.gate-row-r    { margin-left: auto; font-weight: 700; }
+
+/* Вхідних анімацій тут навмисно немає.
+
+   У черзі новий рядок з'являється останнім — тобто за краєм маски,
+   де його однаково не видно. У журналі рядок вставляється прозорим
+   ще на зльоті картки й просто проявляється транзишеном, коли вона
+   сідає. Обидва входи transform не чіпають, тож транзишен переїзду
+   нікуди не збивається. */
+
+/* ---------- картка в польоті ---------- */
+.gate-fly {
+  position: absolute;
+
+  /* Летимо через `left`, і фініш — calc, а не круглий відсоток.
+
+     Зашиті 255px працювали рівно на одній ширині: сцена гумова
+     (max-width, а не width). Проміжок між блоками фіксований (58px),
+     самі блоки — 1fr, тому правий блок починається на 50% + 29px, а
+     його рядок — ще на 14px правіше (padding блоку).
+     calc(50% + 43px) ставить картку рівно на слот за будь-якої
+     ширини.
+
+     Вертикаль не анімуємо взагалі: летить завжди голова черги в
+     слот 0 журналу, а обидва блоки мають однакову розкладку — тож
+     старт і фініш на одній висоті. */
+  left: 14px;
+  top: 38px;   /* padding 13 + заголовок 13 + відступ 11, мінус 1 на різницю висот */
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(20,18,30,.96);
+  border: 1px solid rgba(var(--edge-acc-rgb, 139,123,255), .6);
+  box-shadow: 0 8px 24px -8px rgba(var(--edge-acc-rgb, 139,123,255), .9);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11.5px;
+  white-space: nowrap;
+
+  /* 900ms = 760 політ + 140 на згасання поверх рядка, що вже сів.
+     Ці ж числа лежать у GateScene.jsx як FLIGHT і FLY_OUT — картка
+     тримається в DOM рівно стільки, скільки триває анімація. 84.4% —
+     це і є момент посадки (760 з 900). */
+  animation: gateFly .9s cubic-bezier(.45, 0, .25, 1) both;
+}
+
+@keyframes gateFly {
+  0%    { opacity: 0; left: 14px; transform: scale(.92); }
+  9%    { opacity: 1; left: 14px; transform: scale(1); }
+  84.4% { opacity: 1; left: calc(50% + 43px); transform: scale(1); }
+  100%  { opacity: 0; left: calc(50% + 43px); transform: scale(.97); }
+}
+
+/* ---------- Telegram ---------- */
+.gate-scene-chat { max-width: 460px; }
+
+.gate-phone {
+  width: 100%;
+  border-radius: 20px;
+  padding: 15px 16px 17px;
+  background: linear-gradient(180deg, rgba(255,255,255,.032), rgba(255,255,255,.008));
+  border: 1px solid rgba(var(--edge-acc-rgb, 139,123,255), .2);
+}
+
+.gate-phone-bar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 11px;
+  margin-bottom: 11px;
+  border-bottom: 1px solid rgba(255,255,255,.055);
+}
+.gate-phone-bar .gate-box-title { margin: 0; }
+
+.gate-phone-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(var(--edge-acc-rgb, 139,123,255), .28);
+  border: 1px solid rgba(var(--edge-acc-rgb, 139,123,255), .5);
+}
+
+/* Стрічка чату. Той самий прийом, що й у черзі MT5, але дзеркальний:
+   новіше — внизу, тож рахуємо від `bottom`, а маска розмиває верх,
+   куди повідомлення йдуть. */
+.gate-msgs {
+  display: block;   /* теж <span> — див. .gate-rows */
+  position: relative;
+  height: 168px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 34%, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 34%, #000 100%);
+}
+
+.gate-msg {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+
+  /* Одне повідомлення — один рядок, і це вимога, а не стиль.
+     Позиція рахується як індекс × фіксований крок, тож повідомлення
+     в два рядки наїхало б на сусіднє. Тексти в JSX підібрані так,
+     щоб вони й не переносились. */
+  max-width: 100%;
+  white-space: nowrap;
+  padding: 10px 13px;
+  border-radius: 14px 14px 14px 4px;
+  background: rgba(var(--edge-acc-rgb, 139,123,255), .13);
+  border: 1px solid rgba(var(--edge-acc-rgb, 139,123,255), .2);
+  /* Основний шрифт застосунку, а не дисплейний. Space Grotesk у
+     нас — шрифт знака й великих чисел; у тілі тексту він читається
+     як цитата з іншого продукту. */
+  font-family: var(--edge-sans, 'Golos Text', system-ui, sans-serif);
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: rgba(var(--edge-text-rgb, 242,244,243), .88);
+  /* Та сама крива, що й у рядків: стрічка чату й черга угод рухаються
+     в одному екрані продукту, і різні характери руху читались би як
+     два різні інтерфейси. */
+  transition: transform .72s cubic-bezier(.33, 1, .68, 1);
+  will-change: transform;
+
+  /* Вхід — лише прозорість. Зсув тут займає transform (ним рахується
+     позиція в стрічці), і анімувати його ще й на вході означало б
+     перебивати транзишен переїзду. */
+  animation: gateFadeIn .42s ease-out both;
+}
+
+@keyframes gateFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Попередження про ризик — бурштинове. Це єдине повідомлення, яке
+   здатне зупинити збиток до того, як він стався, і воно не має
+   виглядати як решта стрічки. */
+.gate-msg.is-warn {
+  background: rgba(245,181,74,.12);
+  border-color: rgba(245,181,74,.34);
+  color: #f5b54a;
+}
+
+/* Індикатор набору прибрано разом із CSS-циклом: він мав сенс, поки
+   повідомлення були зашиті й треба було чимось заповнити паузу. */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Таймери в GateScene.jsx при цій вимозі взагалі не запускаються,
+     тож списки стоять на місці. Тут лишається зняти вхідні анімації
+     й переїзди — інакше при першому малюванні все одно смикнеться. */
+  .gate-row, .gate-msg { animation: none !important; transition: none !important; }
+  .gate-fly { display: none; }
+}

@@ -221,7 +221,31 @@ export default function Accounts() {
   }
 
   const closeModal = () => { setIsModalOpen(false); setEditingId(null); setNewFirm(''); setNewBalance(''); setNewDailyLoss(''); setNewTotalLoss(''); setAddMode('manual'); };
-  const openAddModal = () => { setEditingId(null); setNewFirm(''); setNewBalance(''); setNewDailyLoss(''); setNewTotalLoss(''); setAddMode('manual'); setIsModalOpen(true); };
+  /* Ліміт рахунків у Free.
+
+     Рахуємо ВСІ рахунки, разом із закритими: інакше ліміт обходиться
+     закриттям старого перед створенням нового, і це не зловживання, а
+     те, що людина зробить природно, — а потім прийде з питанням, чому
+     архів раптом порожній. Закритий рахунок далі займає місце, і так
+     і має бути: він лишається в історії й у статистиці.
+
+     Поки відповідь про підписку не прийшла (`ready === false`), не
+     блокуємо. Показати замок людині, яка щойно заплатила, — гірше за
+     зайвий рахунок у того, хто не платив: другий випадок все одно
+     впирається в RLS на боці бази. */
+  const atFreeLimit = sub.ready && !sub.isPro && accounts.length >= FREE_LIMITS.accounts;
+
+  const openAddModal = () => {
+    if (atFreeLimit) {
+      notify.success(
+        'Кілька рахунків — у Pro',
+        'У безкоштовній версії один рахунок. Наявні лишаються на місці — Pro лише додає нові.',
+      );
+      openSettings('billing');
+      return;
+    }
+    setEditingId(null); setNewFirm(''); setNewBalance(''); setNewDailyLoss(''); setNewTotalLoss(''); setAddMode('manual'); setIsModalOpen(true);
+  };
   const openEditModal = (e, acc) => {
     e.stopPropagation();
     setEditingId(acc.id);

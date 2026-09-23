@@ -13,6 +13,11 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import ProtectedRoute from './components/core/ProtectedRoute';
+/* ProSection вирішує, що показати на платній сторінці — вміст чи
+   замок, — тож має бути на місці ще до того, як сторінка почне
+   малюватись. Ліниво тягнути його означало б зайвий кадр із
+   порожнечею перед кожним платним розділом. */
+import ProSection from './components/core/ProSection';
 import Landing from './pages/Landing';
 
 /* ==================================================================
@@ -78,6 +83,18 @@ const Blank = <div style={{ minHeight: '100vh', background: 'var(--edge-bg, #0A0
    тобто блимав би весь екран замість його середини. */
 const page = (Comp) => (
   <Suspense fallback={Blank}>{createElement(Comp)}</Suspense>
+);
+
+/* Платна сторінка. Замок малюється замість вмісту, але маршрут
+   лишається на місці й лишається в меню.
+
+   Ховати пункт узагалі — найгірший варіант з можливих: прихованого
+   розділу для людини не існує, вона ніколи не дізнається, що продукт
+   таке вміє, і ніколи за це не заплатить. */
+const proPage = (Comp, feature) => (
+  <Suspense fallback={Blank}>
+    <ProSection feature={feature}>{createElement(Comp)}</ProSection>
+  </Suspense>
 );
 
 /* ------------------------------------------------------------------
@@ -174,8 +191,8 @@ const router = createBrowserRouter([
       { path: 'reviews', element: page(Reviews) },
       { path: 'faq', element: page(FAQ) },
       { path: 'system', element: page(TradingSystem) },
-      { path: 'backtest', element: page(Backtest) },
-      { path: 'backtest/:sessionId', element: page(BacktestSession) },
+      { path: 'backtest', element: proPage(Backtest, 'backtest') },
+      { path: 'backtest/:sessionId', element: proPage(BacktestSession, 'backtest') },
       { path: '20-trades', element: page(TwentyTrades) },
       { path: 'checklist', element: page(PreTradeChecklist) },
       { path: 'calculator', element: page(Calculator) },

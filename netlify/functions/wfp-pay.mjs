@@ -26,10 +26,16 @@ const PAY_URL = 'https://secure.wayforpay.com/pay';
 const TRIAL_DAYS = 14;
 
 /* Дзеркало src/lib/billing.js. Саме дзеркало, а не імпорт: функція
-   збирається окремо від застосунку. Ціна змінилась — міняємо в обох. */
+   збирається окремо від застосунку. Ціна змінилась — міняємо в обох.
+
+   Валюта тут одна змінна навмисно: вона входить у підпис, у поля
+   форми і в запис замовлення, і розбіжність у будь-якому з трьох
+   місць дає «невірний підпис» без пояснення, де саме. */
+const CURRENCY = 'USD';
+
 const PLANS = {
-  pro_monthly: { title: 'Edge Journal Pro — місяць', amount: 599, period: 'monthly' },
-  pro_yearly: { title: 'Edge Journal Pro — рік', amount: 5990, period: 'yearly' },
+  pro_monthly: { title: 'Edge Journal Pro — місяць', amount: 15, period: 'monthly' },
+  pro_yearly: { title: 'Edge Journal Pro — рік', amount: 144, period: 'yearly' },
 };
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
@@ -60,15 +66,67 @@ export default async (req) => {
   const plan = PLANS[body?.plan];
   if (!plan) return json({ error: 'Невідомий тариф' }, 400);
 
-  /* Тріал: гривня зараз, повна сума на чотирнадцятий день через
+  /* Клієнт лише ПРОСИТЬ пробний період — дає його сервер, нижче,
+     звірившись із базою. */
+  const wantsTrial = body?.trial === true;
+
+  /* Хто платить — беремо з токена, а не з тіла запиту. Інакше можна
+     оформити підписку на чужий акаунт. */
+  const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!token) return json({ error: 'Треба увійти' }, 401);
+
+  /* Перевіряємо конфіг ОКРЕМО від токена.
+
+     Спершу обидва випадки віддавали «Сесія застаріла». Це виглядало
+     розумно — 401 і 401, — але вело слідство не туди: людина
+     перезаходить в акаунт, чистить кеш, лається на застосунок, а
+     насправді на сервері просто не задана змінна. Помилка має
+     називати свою причину, навіть коли причина соромна. */
+  const SUPA_URL = process.env.SUPABASE_URL;
+  const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+  if (!SUPA_URL || !SUPA_KEY) {
+    console.error('wfp: немає SUPABASE_URL або SUPABASE_SERVICE_KEY у змінних функції');
+    return json({ error: 'Сервер не налаштований: немає ключів Supabase' }, 500);
+  }
+
+  const admin = createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } });
+
+  const { data: { user } = {}, error: authErr } = await admin.auth.getUser(token);
+
+  if (authErr || !user) {
+    /* У лог — справжню причину від Supabase. У відповідь браузеру її
+       не віддаємо: деталі перевірки токена стороннім знати ні до чого. */
+    console.error('wfp: getUser не пройшов —', authErr?.message || 'користувача не знайдено');
+    return json({ error: 'Сесія застаріла' }, 401);
+  }
+
+  /* Тріал: долар зараз, повна сума на чотирнадцятий день через
      dateNext — далі WayForPay списує сам, свого планувальника не
      треба.
 
-     Гривня, а не нуль, навмисно. Нуль виглядає добріше, але нічого
+     Долар, а не нуль, навмисно. Нуль виглядає добріше, але нічого
      не перевіряє: картка без грошей або з забороною інтернет-
      платежів пройде верифікацію і відвалиться рівно тоді, коли
      людина вже звикла до продукту. */
-  const trial = body?.trial === true;
+
+  /* Тріал — один на акаунт, і рішення про це ухвалює сервер.
+
+     Клієнт лише ПРОСИТЬ пробний період; дає його база, звіряючись із
+     власною відміткою. Інакше достатньо скасувати підписку й
+     натиснути кнопку знову — і так щомісяця за гривню. Причому це
+     робитиме не зловмисник, а звичайна людина, якій продукт
+     подобається: вона бачить доступну кнопку й тисне її.
+
+     Відмовляти повністю не треба: людина хотіла заплатити. Просто
+     виставляємо повний рахунок замість пробного. */
+  const { data: sub } = await admin
+    .from('subscriptions')
+    .select('trial_used_at')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const trial = wantsTrial && !sub?.trial_used_at;
   const chargeNow = trial ? 1 : plan.amount;
 
   const dateNext = (() => {
@@ -83,17 +141,6 @@ export default async (req) => {
     ? `${plan.title} — ${TRIAL_DAYS} днів безкоштовно`
     : plan.title;
 
-  /* Хто платить — беремо з токена, а не з тіла запиту. Інакше можна
-     оформити підписку на чужий акаунт. */
-  const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (!token) return json({ error: 'Треба увійти' }, 401);
-
-  const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
-    auth: { persistSession: false },
-  });
-
-  const { data: { user } = {}, error: authErr } = await admin.auth.getUser(token);
-  if (authErr || !user) return json({ error: 'Сесія застаріла' }, 401);
 
   /* Номер замовлення — власний, не uuid користувача. У WayForPay він
      видно платнику й лишається в їхній системі назавжди. */
@@ -107,7 +154,7 @@ export default async (req) => {
     /* Записуємо те, що справді списується зараз: інакше колбек, який
        звіряє суму, відхилить власний же тріал. */
     amount: chargeNow,
-    currency: 'UAH',
+    currency: CURRENCY,
     status: trial ? 'trial' : 'pending',
   });
 
@@ -122,7 +169,7 @@ export default async (req) => {
      productPrice. Переставиш два місцями — WayForPay поверне
      «невірний підпис» і не скаже, де саме. */
   const signature = sign([
-    MERCHANT, DOMAIN, reference, orderDate, chargeNow, 'UAH',
+    MERCHANT, DOMAIN, reference, orderDate, chargeNow, CURRENCY,
     productName, 1, chargeNow,
   ]);
 
@@ -140,7 +187,7 @@ export default async (req) => {
       orderReference: reference,
       orderDate,
       amount: chargeNow,
-      currency: 'UAH',
+      currency: CURRENCY,
 
       'productName[]': productName,
       'productPrice[]': chargeNow,
@@ -152,7 +199,7 @@ export default async (req) => {
          різні ролі. returnUrl бачить браузер, і довіряти йому не
          можна: людина може просто не доїхати до нього, закривши
          вкладку. Доступ відкриває виключно serviceUrl. */
-      returnUrl: `${SITE}/app?paid=1`,
+      returnUrl: `${SITE}/api/wfp-return`,
       serviceUrl: `${SITE}/api/wfp-callback`,
 
       /* Підписка налаштовується прямо тут — окремого API не треба.

@@ -276,8 +276,15 @@ export function Pricing() {
 
           {feat(PRO, C.acc, '#dcdce8')}
 
+          {/* Намір несемо в адресі, а не в localStorage.
+
+              Людина може зареєструватись у другій вкладці, з іншого
+              пристрою або перейти за посиланням, надісланим собі в
+              чат. Прапорець у сховищі цього не переживе, а ?next=
+              переживе — і після входу ми знаємо, що вона прийшла не
+              «подивитись», а по підписку. */}
           <a
-            href="/auth"
+            href="/auth?next=pro"
             style={{ marginTop: 'auto', width: '100%', background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff', fontFamily: F.sans, fontSize: 14.5, fontWeight: 700, padding: 14, borderRadius: 13, cursor: 'pointer', textAlign: 'center', boxShadow: '0 14px 36px rgba(74,59,245,.4)', transition: 'box-shadow .2s' }}
             onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 18px 46px rgba(74,59,245,.55)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 14px 36px rgba(74,59,245,.4)'; }}

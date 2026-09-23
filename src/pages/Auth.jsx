@@ -896,7 +896,23 @@ export default function Auth() {
   const location = useLocation();
   const { user } = useAuth();
   /* Куди повертати після входу: або звідки прийшов, або на головну */
-  const from = location.state?.from?.pathname || '/app';
+  /* Куди вести після входу.
+
+     `?next=pro` приходить із тарифу на лендінгу: людина натиснула
+     «Почати безкоштовно» біля ціни, тобто прийшла не роздивлятись, а
+     підключати. Вести її в застосунок і чекати, доки вона сама
+     знайде налаштування → Subscription, означає загубити рівно той
+     намір, за який ми щойно заплатили рекламою.
+
+     Намір живе в адресі, а не в localStorage: реєстрація буває в
+     другій вкладці, з іншого пристрою або за посиланням, надісланим
+     собі в чат, — сховище цього не переживе.
+
+     Порядок важливий: місце, звідки людину розвернув ProtectedRoute,
+     головніше за намір — вона йшла на конкретну сторінку. */
+  const wantsPro = new URLSearchParams(location.search).get('next') === 'pro';
+  const from = location.state?.from?.pathname
+    || (wantsPro ? '/app?settings=billing' : '/app');
   const canvasRef = useRef(null);
   useCandlestickChart(canvasRef);
 
