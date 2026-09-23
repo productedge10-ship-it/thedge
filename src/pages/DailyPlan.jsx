@@ -42,6 +42,7 @@ import {
   shiftWeek, planningWeekMonday, weekOffsetFromNow,
 } from '../lib/weekPlan';
 import PlanTypeModal from '../components/modals/PlanTypeModal';
+import { inSandbox, isSharedView, withSandbox } from '../lib/sandbox';
 
 const SECTION_IDS = SECTIONS.map((s) => s.id);
 
@@ -795,8 +796,8 @@ export default function DailyPlan() {
      рядка в базі нема чого відкривати), вмикаємо is_public і кладемо
      посилання в буфер. Повертає true, щоб кнопка показала «Скопійовано». */
   const handleShare = async () => {
-    if (location.pathname.startsWith('/demo')) {
-      notify.error('Недоступно в демо', 'Поділитись планом можна у своєму журналі після реєстрації.');
+    if (inSandbox()) {
+      notify.error(isSharedView() ? 'Лише перегляд' : 'Недоступно в демо', isSharedView() ? 'Це чужий журнал — поділитись планом може лише власник.' : 'Поділитись планом можна у своєму журналі після реєстрації.');
       return false;
     }
     const weekly = mode === 'weekly';
@@ -833,7 +834,7 @@ export default function DailyPlan() {
     }
     setHasUnsavedChanges(false);
     ignoreNextChangeRef.current = true;
-    navigate(`/plan/${newDate}/${encodeURIComponent(newPair)}`);
+    navigate(withSandbox(`/plan/${newDate}/${encodeURIComponent(newPair)}`));
   };
 
   /* Порожній план на сьогодні. Виніс окремо, бо скидати треба в
@@ -872,7 +873,7 @@ export default function DailyPlan() {
        і заводило під нього ще один план. Саме звідси бралися «нові
        плани» на актив, вибраний у перемикачі вгорі. */
     resetToBlankPlan();
-    if (paramDate || paramPair) navigate('/plan', { replace: true });
+    if (paramDate || paramPair) navigate(withSandbox('/plan'), { replace: true });
     notify.success('Новий план', 'Можна починати.');
   };
 

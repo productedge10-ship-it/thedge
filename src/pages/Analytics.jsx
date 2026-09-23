@@ -18,6 +18,7 @@ import Simulator from '../components/analytics/Simulator';
 import AiLab from '../components/analytics/AiLab';
 import { EMOTION_LABEL } from '../components/analytics/data';
 import ExportStats from '../components/analytics/ExportStats';
+import { withSandbox } from '../lib/sandbox';
 
 /* ==================================================================
    Аналітика.
@@ -622,7 +623,7 @@ export default function Analytics() {
             </p>
             {!failed && (
               <Link
-                to="/journal"
+                to={withSandbox('/journal')}
                 className="flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-bold"
                 style={{ fontFamily: T.sans, background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)' }}
               >

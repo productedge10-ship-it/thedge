@@ -23,6 +23,11 @@ export const hadAuthTokenInUrl = () => entryHadAuthToken
 
 const realClient = createClient(supabaseUrl, supabaseKey)
 
+/* Клієнту перегляду за посиланням (lib/sharedDb.js) справжня база
+   потрібна напряму: він сам ходить у неї по документ журналу. Через
+   проксі нижче він отримав би самого себе. */
+export const realSupabase = realClient
+
 /* ==================================================================
    Демо-режим.
 
@@ -39,8 +44,17 @@ const onDemoPath = () => typeof window !== 'undefined'
   && window.location.pathname.startsWith('/demo')
 
 let demoClientRef = null
+let sharedClientRef = null
+
+/* Перегляд чужого журналу за посиланням: /view/<токен>/*. Та сама
+   логіка, що й у демо, — підміна за адресою, а не за прапорцем. */
+const onViewPath = () => typeof window !== 'undefined'
+  && /^\/view\/[A-Za-z0-9_-]{16,64}(\/|$)/.test(window.location.pathname)
+
+export const setSharedClient = (client) => { sharedClientRef = client }
 
 const pickClient = () => {
+  if (onViewPath()) return sharedClientRef || realClient
   if (!onDemoPath()) return realClient
   if (!demoClientRef) {
     /* Вантажимо синхронно з уже зібраного модуля: демо-клієнт

@@ -24,6 +24,7 @@ import { NAV, openSettings } from '../../lib/settings';
 import { openCatChat } from '../../lib/catChat';
 import { useSettings } from '../../context/SettingsContext';
 import appVersion from '../../version.json';
+import { inSandbox, isSharedView, withSandbox, VIEW_ROUTES } from '../../lib/sandbox';
 
 /* ------------------------------------------------------------------ */
 /*  THE EDGE — theme tokens                                            */
@@ -709,8 +710,8 @@ function RailTooltip({ children }) {
    новий пункт меню стає доступною ціллю без жодної правки тут. */
 /* У демо той самий сайдбар веде на /demo/*: інакше перший же клік
    викидав би людину із пісочниці в захищену частину застосунку. */
-const withDemo = (to) => (typeof window !== 'undefined'
-  && window.location.pathname.startsWith('/demo') ? `/demo${to}` : to);
+/* Те саме й для перегляду журналу за посиланням: /view/<токен>/*. */
+const withDemo = withSandbox;
 
 /* У пісочниці лишаються пʼять розділів. Показувати всі — означає
    водити людину по вітрині: половина сторінок без її даних порожні
@@ -934,7 +935,8 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
           {NAV.map((g) => {
             const items = g.items
               .filter((it) => !hiddenNav.includes(it.to))
-              .filter((it) => !inDemo() || DEMO_ROUTES.includes(it.to));
+              .filter((it) => !inDemo() || DEMO_ROUTES.includes(it.to))
+              .filter((it) => !isSharedView() || VIEW_ROUTES.includes(it.to));
             if (!items.length) return null;
 
             return (
@@ -965,14 +967,14 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
               де «налаштування про мене», а не серед розділів журналу */}
           {/* У пісочниці немає ані анкети, ані налаштувань, ані виходу:
               це дії над акаунтом, якого в демо просто не існує. */}
-          {!inDemo() && (
+          {!inSandbox() && (
             <>
               <NavItem collapsed={collapsed} onClick={openOnboarding} icon={Sparkles} label="Про тебе" tour="about" soon />
               <NavItem collapsed={collapsed} onClick={openSettings} icon={Settings} label="Settings" tour="settings" fx="nx-gear" />
             </>
           )}
-          <NavItem collapsed={collapsed} to="/faq" icon={HelpCircle} label="FAQ / Help" />
-          {!inDemo() && (
+          {!isSharedView() && <NavItem collapsed={collapsed} to="/faq" icon={HelpCircle} label="FAQ / Help" />}
+          {!inSandbox() && (
             <NavItem collapsed={collapsed} onClick={signOut} icon={SignOutIcon} label="Sign out" isDanger />
           )}
         </div>
@@ -1226,15 +1228,22 @@ export default function Layout() {
       {/* Знайомство з новим користувачем. Живе тут, а не на стартовій
           сторінці: людина може зайти одразу за посиланням у журнал, і
           питання мають зустріти її будь-де. */}
-      <OnboardingModal />
-      {/* Нагадування підтвердити пошту. Теж живе тут, а не на сторінці
-          входу: з вимкненим «Confirm email» реєстрація одразу видає
-          сесію, і людина потрапляє в застосунок, не побачивши жодного
-          екрана авторизації після кнопки «Зареєструватись». */}
-      <VerifyEmailModal />
-      <SettingsModal />
-      <Tour />
-      <CatChat />
+      {/* У чужому журналі за посиланням — нічого від імені власника:
+          ні анкети, ні нагадування про пошту, ні налаштувань, ні туру,
+          ні чату. Гість лише дивиться. */}
+      {!isSharedView() && (
+      <>
+      <OnboardingModal />
+      {/* Нагадування підтвердити пошту. Теж живе тут, а не на сторінці
+          входу: з вимкненим «Confirm email» реєстрація одразу видає
+          сесію, і людина потрапляє в застосунок, не побачивши жодного
+          екрана авторизації після кнопки «Зареєструватись». */}
+      <VerifyEmailModal />
+      <SettingsModal />
+      <Tour />
+      <CatChat />
+      </>
+      )}
       <ThemeSweep />
     </div>
   );

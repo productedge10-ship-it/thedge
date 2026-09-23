@@ -8,6 +8,7 @@ import {
   User, Target, BookOpen, Palette, Sparkles, LayoutGrid,
   MailCheck, MailWarning, KeyRound, Loader2, Check, Send,
   Plug, HelpCircle, ArrowRight, ChevronDown, Unlink, Clock,
+  Share2, Copy, RefreshCw, Link2Off, ExternalLink,
 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
@@ -31,6 +32,7 @@ import {
   BOT_NAME, readTelegram, createLinkCode, unlinkTelegram,
   setTelegramPref, watchTelegramLink,
 } from '../../lib/telegramStore';
+import { shareUrl } from '../../lib/sandbox';
 
 /* ==================================================================
    Налаштування.
@@ -63,6 +65,9 @@ const TABS = [
   { id: 'telegram', label: 'Telegram', icon: Send, eyebrow: 'NOTIFY', hint: 'Alerts, new trades and the daily wrap — straight to your chat' },
   /* Підписка стоїть одразу після платних розділів, а не в кінці
      списку: людина потрапляє сюди саме з них, побачивши замок. */
+  /* Поширення журналу — поруч із Telegram: обидва про те, що журнал
+     бачить хтось, крім тебе. */
+  { id: 'share', label: 'Share journal', icon: Share2, eyebrow: 'PUBLIC', hint: 'A read-only link to your journal, analytics and analyses' },
   { id: 'billing', label: 'Subscription', icon: Sparkles, eyebrow: 'PLAN', hint: 'What Pro unlocks and when the card is charged' },
   /* «Security» звідси прибрано до того часу, поки не буде готова сама
      двофакторка. Вкладка була, вміст до неї — ні, тож вона показувала
@@ -839,6 +844,8 @@ export default function SettingsModal() {
                 {/* ================= Telegram ================= */}
                 {safeTab === 'billing' && (sub.ready ? <SubscriptionTab sub={sub} onChanged={sub.refresh} /> : null)}
 
+                {safeTab === 'share' && <ShareTab />}
+
                 {safeTab === 'telegram' && (!sub.ready ? null : sub.isPro
                   ? <TelegramTab />
                   : <ProGate feature="telegram" onStart={() => startCheckout('pro_monthly', { trial: true })} />)}
@@ -1388,6 +1395,151 @@ function NewPasswordForm({ onDone }) {
         </button>
       </div>
     </form>
+  );
+}
+
+/* ==================================================================
+   Поширення журналу.
+
+   Одне посилання на людину. Хто його має — бачить журнал угод,
+   аналітику й аналізи, але нічого не може змінити: сторінка /view/*
+   працює через клієнт лише для читання, а база за токеном віддає тільки
+   читання (див. db/2026-09-23_journal_share.sql).
+
+   Дві дії, крім копіювання, і обидві миттєво вбивають старе посилання:
+   «нове посилання» — коли його переслали не тій людині; «закрити
+   доступ» — коли показувати більше не хочеться взагалі.
+================================================================== */
+function ShareTab() {
+  const { user } = useAuth();
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    let alive = true;
+    (async () => {
+      const { data } = await supabase
+        .from('journal_shares').select('token').eq('user_id', user.id).maybeSingle();
+      if (alive) { setToken(data?.token || null); setLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, [user?.id]);
+
+  const url = token ? shareUrl(token) : '';
+
+  const copy = async (value = url) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      notify.error('Could not copy', 'Select the link and copy it manually.');
+    }
+  };
+
+  /* Увімкнути = створити рядок і одразу скопіювати: людина натискає
+     кнопку саме для того, щоб отримати посилання в буфер. */
+  const enable = async () => {
+    if (busy) return;
+    setBusy(true);
+    const { data, error } = await supabase
+      .from('journal_shares').insert({ user_id: user.id }).select('token').single();
+    setBusy(false);
+    if (error) { notify.error('Could not create the link', error.message); return; }
+    setToken(data.token);
+    copy(shareUrl(data.token));
+  };
+
+  /* Нове посилання — через видалення й вставку, а не update токена:
+     так токен генерує база, а не браузер. */
+  const regenerate = async () => {
+    if (busy) return;
+    setBusy(true);
+    await supabase.from('journal_shares').delete().eq('user_id', user.id);
+    const { data, error } = await supabase
+      .from('journal_shares').insert({ user_id: user.id }).select('token').single();
+    setBusy(false);
+    if (error) { setToken(null); notify.error('Could not create the link', error.message); return; }
+    setToken(data.token);
+    notify.success('New link created', 'The old one no longer works.');
+  };
+
+  const disable = async () => {
+    if (busy) return;
+    setBusy(true);
+    const { error } = await supabase.from('journal_shares').delete().eq('user_id', user.id);
+    setBusy(false);
+    if (error) { notify.error('Could not close access', error.message); return; }
+    setToken(null);
+    notify.success('Access closed', 'Nobody can open your journal by the old link.');
+  };
+
+  const ghost = {
+    fontFamily: T.sans, height: 42, padding: '0 16px', borderRadius: 12, fontSize: 14, fontWeight: 700,
+    display: 'inline-flex', alignItems: 'center', gap: 8,
+    background: T.surfaceHi, border: `1px solid ${T.line}`, color: T.text2, transition: 'all .18s',
+  };
+
+  return (
+    <div style={{ maxWidth: 900 }}>
+      <Head
+        title="Share your journal"
+        hint="Anyone with the link sees your Trading Journal, Analytics and Analyses — exactly as you do, but without the right to change anything."
+      />
+
+      {loading ? (
+        <div style={{ marginTop: 24 }}><Loader2 size={18} className="animate-spin" style={{ color: T.text3 }} /></div>
+      ) : !token ? (
+        <div style={{ marginTop: 22 }}>
+          <button type="button" onClick={enable} disabled={busy} className="edge-add-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            {busy ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} strokeWidth={2.2} />}
+            Create link &amp; copy
+          </button>
+          <Note>Your MT5 logins, settings, notes and tasks are never shown — only trades, accounts, plans and analytics.</Note>
+        </div>
+      ) : (
+        <div style={{ marginTop: 22 }}>
+          <Label>Your link</Label>
+          <div className="flex items-center" style={{ marginTop: 10, gap: 10 }}>
+            <input
+              readOnly
+              value={url}
+              onFocus={(e) => e.currentTarget.select()}
+              style={{
+                fontFamily: T.mono, flex: 1, minWidth: 0, height: 44, padding: '0 14px', borderRadius: 12,
+                fontSize: 13, color: T.text, background: T.sunken, border: `1px solid ${T.line}`, outline: 'none',
+              }}
+            />
+            <button type="button" onClick={() => copy()} className="edge-add-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              {copied ? <Check size={16} strokeWidth={2.4} /> : <Copy size={16} strokeWidth={2.2} />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap" style={{ marginTop: 14, gap: 10 }}>
+            <a href={url} target="_blank" rel="noreferrer" style={ghost}>
+              <ExternalLink size={15} strokeWidth={2.2} /> Open as a guest
+            </a>
+            <button type="button" onClick={regenerate} disabled={busy} style={ghost}>
+              <RefreshCw size={15} strokeWidth={2.2} /> New link
+            </button>
+            <button
+              type="button"
+              onClick={disable}
+              disabled={busy}
+              style={{ ...ghost, color: T.bad, border: `1px solid rgba(${T.badRgb},0.3)`, background: `rgba(${T.badRgb},0.08)` }}
+            >
+              <Link2Off size={15} strokeWidth={2.2} /> Close access
+            </button>
+          </div>
+
+          <Note>“New link” and “Close access” stop the old link immediately. Trades you add later show up for guests automatically.</Note>
+        </div>
+      )}
+    </div>
   );
 }
 

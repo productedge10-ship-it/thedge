@@ -16,6 +16,7 @@ import AnalysisRow from '../components/analyses/AnalysisRow';
 import RollingText from '../components/ui/RollingText';
 import WeeklyAnalysisCard from '../components/analyses/WeeklyAnalysisCard';
 import PremiumAnalysisHover from '../components/analyses/PremiumAnalysisHover';
+import { withSandbox } from '../lib/sandbox';
 
 /* Трійка для приглушених станів: у T.text3 своєї немає, а прозорість
    можна будувати тільки з трійки — токен теми це рядок `var(...)`, і
@@ -256,10 +257,7 @@ export default function Analyses() {
 
   /* У пісочниці ті самі переходи мусять лишатися всередині /demo/*,
      інакше клік по плану викидає людину в захищену частину. */
-  const toPlan = (path) =>
-    (typeof window !== 'undefined' && window.location.pathname.startsWith('/demo'))
-      ? `/demo${path}`
-      : path;
+  const toPlan = (path) => withSandbox(path);
 
   /* План відкриваємо строго по id з бази — вміст більше не ганяємо
      через localStorage, щоб він не лежав відкритим на диску. */

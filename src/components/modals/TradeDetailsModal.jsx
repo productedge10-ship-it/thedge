@@ -19,6 +19,7 @@ import ErrorComposerModal from '../errors/ErrorComposerModal';
 import ImageSlider from '../ui/ImageSlider';
 import TradeLevels from '../journal/TradeLevels';
 import { T } from '../../lib/theme';
+import { inSandbox, isSharedView, withSandbox } from '../../lib/sandbox';
 
 /* ==================================================================
    Деталі угоди — термінальна фінтех-панель: JetBrains Mono для цифр,
@@ -589,7 +590,7 @@ export default function TradeDetailsModal({
       .then(({ data, error }) => { if (alive) setPlan(error ? null : (data?.[0] || null)); });
     return () => { alive = false; };
   }, [user?.id, trade?.plan_date, trade?.plan_pair]);
-  const openPlan = () => { onClose(); navigate(`/plan/${d.plan_date}/${encodeURIComponent(d.plan_pair)}`); };
+  const openPlan = () => { onClose(); navigate(withSandbox(`/plan/${d.plan_date}/${encodeURIComponent(d.plan_pair)}`)); };
 
   /* Поділитись — один клік: відкриваємо доступ (is_public) і одразу
      кладемо посилання в буфер. Сторінка /shared/trade/:id показує
@@ -598,8 +599,8 @@ export default function TradeDetailsModal({
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
   async function share() {
-    if (window.location.pathname.startsWith('/demo')) {
-      notify.error('Недоступно в демо', 'Поділитись угодою можна у своєму журналі після реєстрації.');
+    if (inSandbox()) {
+      notify.error(isSharedView() ? 'Лише перегляд' : 'Недоступно в демо', isSharedView() ? 'Це чужий журнал — поділитись угодою може лише власник.' : 'Поділитись угодою можна у своєму журналі після реєстрації.');
       return;
     }
     if (!d?.id || sharing) return;
@@ -669,8 +670,8 @@ export default function TradeDetailsModal({
   const [tdaHint, setTdaHint] = useState(false);
   async function toggleTda() {
     if (!d?.id || tdaBusy) return;
-    if (window.location.pathname.startsWith('/demo')) {
-      notify.error('Недоступно в демо', 'Спробуй у своєму журналі після реєстрації.');
+    if (inSandbox()) {
+      notify.error(isSharedView() ? 'Лише перегляд' : 'Недоступно в демо', isSharedView() ? 'Це чужий журнал — змінювати його може лише власник.' : 'Спробуй у своєму журналі після реєстрації.');
       return;
     }
     const next = !d.share_tda;

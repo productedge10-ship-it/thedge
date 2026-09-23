@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { isSharedView } from '../lib/sandbox';
 
 /* ==================================================================
    Стан сторінки, який живе в базі.
@@ -33,12 +34,17 @@ export default function useCloudState(key, initial, options = {}) {
   const { legacyKey, normalize, delay = 700 } = options;
   const { user } = useAuth();
 
-  const mirrorKey = `edge_cloud_${key}`;
+  /* У чужому журналі за посиланням стан власника не має лягти в
+     локальне дзеркало гостя — інакше гість, повернувшись у свій
+     журнал, побачив би чужі розкладки. Окремий ключ і жодного запису
+     в базу: гість нічого не зберігає. */
+  const viewOnly = isSharedView();
+  const mirrorKey = viewOnly ? `edge_view_${key}` : `edge_cloud_${key}`;
   const norm = useCallback((v) => (normalize ? normalize(v) : v), [normalize]);
 
   /* Стартуємо з локального дзеркала — сторінка не блимає порожнечею */
   const [value, setValue] = useState(() => {
-    const local = readLocal(mirrorKey) ?? (legacyKey ? readLocal(legacyKey) : undefined);
+    const local = readLocal(mirrorKey) ?? (legacyKey && !viewOnly ? readLocal(legacyKey) : undefined);
     return local === undefined ? initial : norm(local);
   });
 
@@ -72,12 +78,13 @@ export default function useCloudState(key, initial, options = {}) {
       }
 
       /* У базі порожньо — переносимо те, що лишилось на цьому пристрої */
-      const legacy = legacyKey ? readLocal(legacyKey) : undefined;
+      const legacy = legacyKey && !viewOnly ? readLocal(legacyKey) : undefined;
       const local = readLocal(mirrorKey) ?? legacy;
       const seed = local === undefined ? initial : norm(local);
 
       setValue(seed);
       setReady(true);
+      if (viewOnly) return;
 
       await supabase.from('user_state').upsert(
         { user_id: user.id, key, data: seed },
@@ -91,7 +98,7 @@ export default function useCloudState(key, initial, options = {}) {
 
   /* ---------- запис ---------- */
   const push = useCallback(async (next) => {
-    if (!user?.id) return;
+    if (!user?.id || viewOnly) return;
     setSaving(true);
     try {
       await supabase.from('user_state').upsert(

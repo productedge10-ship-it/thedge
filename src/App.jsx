@@ -1,11 +1,14 @@
 import { createElement, lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { demoClient } from './lib/demoDb';
-import { setDemoClient } from './lib/supabase';
+import { sharedClient } from './lib/sharedDb';
+import { setDemoClient, setSharedClient } from './lib/supabase';
 
 /* Демо-клієнт реєструється до першого рендера: AuthContext питає
-   сесію одразу, і на шляху /demo відповісти має вже він. */
+   сесію одразу, і на шляху /demo відповісти має вже він. Клієнт
+   перегляду за посиланням (/view/*) — з тієї самої причини. */
 setDemoClient(demoClient);
+setSharedClient(sharedClient);
 import { Toaster } from 'react-hot-toast';
 
 /* Сесія потрібна до першого рендера будь-якого маршруту, тому
@@ -37,6 +40,7 @@ import Landing from './pages/Landing';
 const Auth = lazy(() => import('./pages/Auth'));
 const Terms = lazy(() => import('./pages/Terms'));
 const DemoShell = lazy(() => import('./pages/DemoShell'));
+const ViewShell = lazy(() => import('./pages/ViewShell'));
 const Hub = lazy(() => import('./pages/Hub'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const DailyPlan = lazy(() => import('./pages/DailyPlan'));
@@ -133,6 +137,21 @@ const router = createBrowserRouter([
       { path: 'analytics', element: page(Analytics) },
       { path: 'analyses', element: page(Analyses) },
       { path: 'accounts', element: page(Accounts) },
+    ],
+  },
+  /* ---- Журнал за посиланням ----
+     Ті самі сторінки, що в застосунку, на даних власника посилання й
+     без права змін. Підмінений лише клієнт бази (lib/sharedDb.js). */
+  {
+    path: '/view/:token',
+    element: page(ViewShell),
+    children: [
+      { index: true, element: <Navigate to="journal" replace /> },
+      { path: 'journal', element: page(TradingJournal) },
+      { path: 'analytics', element: page(Analytics) },
+      { path: 'analyses', element: page(Analyses) },
+      { path: 'plan', element: page(DailyPlan) },
+      { path: 'plan/:date/:pair', element: page(DailyPlan) },
     ],
   },
   /* ---- Блог ----
