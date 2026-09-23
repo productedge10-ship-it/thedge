@@ -100,6 +100,29 @@ export const BROKERS = [
     standard: true,
     company: 'FundingPips Corp',
   },
+  /* CryptoFundTrader теж на звичайному MT5, у списку компаній терміналу
+     значиться як "RL Crates, S.L.", а не своєю назвою — той самий
+     випадок, що й FundingPips.
+
+     На відміну від фірм із власною збіркою (FTMO, The5ers,
+     AlphaCapital) — тим окрема копія потрібна, бо їхній термінал
+     фізично знає лише одного брокера, — звичайний MT5 сам по собі
+     мультиброкерний: одна копія тримає сервери скількох завгодно
+     звичайних пропів одразу (це видно з того ж вікна «List of
+     companies», де FundingPips Corp і MEX Atlantic стоять поряд).
+     Тому MT5_PATH_CRYPTOFUNDTRADER на VPS може вказувати на ту саму
+     terminal64.exe, що й MT5_PATH_FUNDINGPIPS — воркер і так відкриває
+     термінал наново на кожен рахунок незалежно від фірми. */
+  {
+    id: 'cryptofundtrader',
+    name: 'CryptoFundTrader',
+    domain: 'cryptofundtrader.com',
+    tint: '#2fa89e',
+    icon: 'https://www.google.com/s2/favicons?domain=cryptofundtrader.com&sz=128',
+    plate: 'light',
+    standard: true,
+    company: 'RL Crates, S.L.',
+  },
 ];
 
 /* Запасний варіант для НЕВІДОМОГО id.
