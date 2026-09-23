@@ -1244,11 +1244,13 @@ export default function Notes() {
                 }}
               >
                 {[
-                  { v: folders.length, t: plural(folders.length, 'папка', 'папки', 'папок'), c: 'var(--edge-text)', icon: FolderIcon },
-                  { v: active.length, t: plural(active.length, 'запис', 'записи', 'записів'), c: 'var(--edge-text)', icon: NotebookPen },
-                  /* На телефоні «за тиждень» не влазить і обрізається
-                     трьома крапками — там коротший підпис. */
-                  { v: `+${weekCount}`, t: 'за тиждень', tShort: 'тиждень', c: 'var(--edge-ok)', icon: TrendingUp },
+                  { v: folders.length, t: plural(folders.length, 'папка', 'папки', 'папок'), tShort: 'папок', c: 'var(--edge-text)', icon: FolderIcon },
+                  { v: active.length, t: plural(active.length, 'запис', 'записи', 'записів'), tShort: 'зап.', c: 'var(--edge-text)', icon: NotebookPen },
+                  /* На вузькому екрані навіть короткий підпис не
+                     влазить поруч із двома іншими клітинками — тому
+                     нижче min-360px підпису нема зовсім, лишається
+                     тільки іконка й число: вони самі по собі зрозумілі. */
+                  { v: `+${weekCount}`, t: 'за тиждень', tShort: 'тижд.', c: 'var(--edge-ok)', icon: TrendingUp },
                 ].map(({ v, t, tShort, c, icon: I }, i) => (
                   /* На телефоні три клітинки ділять ширину порівну й
                      центруються, на ширшому екрані — тиснуться вліво
@@ -1258,19 +1260,20 @@ export default function Notes() {
                     <span className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2.5 lg:flex-none lg:justify-start lg:gap-2 lg:px-4">
                       <I size={13} strokeWidth={1.9} style={{ color: c === 'var(--edge-text)' ? 'var(--edge-text3)' : c, flex: 'none' }} />
                       <span className="text-[16px] font-bold leading-none" style={{ fontFamily: T.display, color: c }}>{v}</span>
-                      <span className="truncate text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
-                        {tShort ? <><span className="lg:hidden">{tShort}</span><span className="hidden lg:inline">{t}</span></> : t}
+                      <span className="hidden truncate text-[12.5px] font-semibold min-[360px]:inline" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
+                        <span className="lg:hidden">{tShort}</span>
+                        <span className="hidden lg:inline">{t}</span>
                       </span>
                     </span>
                   </div>
                 ))}
               </div>
 
-            <div className="flex w-full items-center gap-2.5 lg:w-auto">
+            <div className="flex w-full flex-wrap items-center gap-2.5 lg:w-auto lg:flex-nowrap">
               <div
                 onMouseEnter={() => setShelfHover(true)}
                 onMouseLeave={() => setShelfHover(false)}
-                className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-[13px] py-0 pl-[15px] pr-2 lg:w-[270px] lg:flex-none"
+                className="flex h-11 min-w-0 basis-full items-center gap-2.5 rounded-[13px] py-0 pl-[15px] pr-2 lg:w-[270px] lg:basis-auto lg:flex-none"
                 style={{
                   /* Ховер — той самий стан, що й фокус, тільки в
                      піввсили: поле має відгукнутись на наближення

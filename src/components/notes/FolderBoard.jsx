@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Pin, X, Plus, Sparkles, Smile } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
@@ -160,9 +161,9 @@ function ActionBtn({ title, onClick, danger, active, d }) {
   );
 }
 
-function Actions({ pinned, onPin, onEdit, onDelete, style }) {
+function Actions({ pinned, onPin, onEdit, onDelete, style, className }) {
   return (
-    <div style={style}>
+    <div className={className} style={style}>
       <ActionBtn title={pinned ? 'Відкріпити' : 'Закріпити'} onClick={onPin} active={pinned} d={PATHS.pin} />
       <ActionBtn title="Перейменувати" onClick={onEdit} d={PATHS.pencil} />
       <ActionBtn title="Видалити" onClick={onDelete} danger d={PATHS.trash} />
@@ -427,14 +428,15 @@ function Row({ folder, count, preview, updated, color, dragging, plain, onOpen, 
         </div>
       </div>
 
-      <div style={{ flex: 'none', width: 96, textAlign: 'right', fontFamily: T.mono, fontSize: 10.5, letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 700, color: empty ? 'var(--edge-text4)' : `${c}ee` }}>
+      <div style={{ flex: 'none', width: 76, textAlign: 'right', fontFamily: T.mono, fontSize: 10.5, letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 700, color: empty ? 'var(--edge-text4)' : `${c}ee` }}>
         {metaOf(count)}
       </div>
 
-      <div style={{ flex: 'none', width: 64, textAlign: 'right', fontFamily: T.mono, fontSize: 10.5, color: 'var(--edge-text4)' }}>{updated}</div>
+      <div className="hidden sm:block" style={{ flex: 'none', width: 64, textAlign: 'right', fontFamily: T.mono, fontSize: 10.5, color: 'var(--edge-text4)' }}>{updated}</div>
 
       {plain ? (
         <div
+          className="hidden sm:block"
           style={{
             flex: 'none',
             width: 131,
@@ -457,10 +459,10 @@ function Row({ folder, count, preview, updated, color, dragging, plain, onOpen, 
           onPin={onPin}
           onEdit={onEdit}
           onDelete={onDelete}
+          className="hidden sm:flex"
           style={{
             flex: 'none',
             width: 131,
-            display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
             gap: 6,
@@ -615,7 +617,13 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
     if (e.key === 'Escape') { e.stopPropagation(); onClose(); }
   };
 
-  return (
+  /* Портал на body — інакше модалка живе всередині розкладки сторінки,
+     і будь-який предок з transform чи z-index (мобільний хедер, шапка
+     стрічки) стає стелею для її z-[220]: вона опиняється НАД
+     затемненням, але ПІД хедером, а сама затемнена підложка скролиться
+     разом зі сторінкою замість того, щоб стояти нерухомо на весь
+     екран. */
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -1025,7 +1033,8 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
           </div>
         </motion.div>
       </div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }
 
@@ -1180,15 +1189,16 @@ export default function FolderBoard({
             <div style={{ flex: 'none', width: 40 }} />
             {[
               { w: 0, t: 'Назва', a: 'left' },
-              { w: 96, t: 'Записів', a: 'right' },
-              { w: 64, t: 'Зміна', a: 'right' },
-            ].map(({ w, t, a }) => (
+              { w: 76, t: 'Записів', a: 'right' },
+              { w: 64, t: 'Зміна', a: 'right', hideBelowSm: true },
+            ].map(({ w, t, a, hideBelowSm }) => (
               <div
                 key={t}
+                className={hideBelowSm ? 'hidden sm:block' : undefined}
                 style={{
                   flex: w ? 'none' : 1,
                   width: w || undefined,
-                  minWidth: w ? undefined : 0,
+                  minWidth: w ? undefined : 60,
                   textAlign: a,
                   fontFamily: T.mono,
                   fontSize: 9,
@@ -1201,7 +1211,7 @@ export default function FolderBoard({
                 {t}
               </div>
             ))}
-            <div style={{ flex: 'none', width: 131 }} />
+            <div className="hidden sm:block" style={{ flex: 'none', width: 131 }} />
           </div>
 
           {list.map((f) => <Row key={f.id} {...propsOf(f, false)} />)}

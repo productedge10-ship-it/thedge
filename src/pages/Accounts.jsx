@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -121,7 +122,7 @@ function AddAccountCta({ onClick }) {
       type="button"
       data-tour="acc-add"
       onClick={onClick}
-      className="acc-burst inline-flex h-[48px] flex-1 shrink-0 items-center justify-center gap-2 rounded-2xl px-4 text-[13.5px] font-bold sm:h-[54px] sm:ml-1 sm:px-6 sm:text-[14.5px] md:flex-none"
+      className="acc-burst inline-flex h-[48px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl px-4 text-[13.5px] font-bold sm:h-[54px] sm:ml-1 sm:px-6 sm:text-[14.5px] md:flex-none"
       style={{
         background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
         border: '1px solid rgba(139,123,255,0.5)',
@@ -450,7 +451,7 @@ return (
         <div className="flex w-full shrink-0 items-center gap-2.5 md:w-auto">
           <button
             onClick={() => setShowArchive((v) => !v)}
-            className="acc-archive-btn inline-flex h-[48px] flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 text-[13px] font-bold sm:h-[54px] sm:gap-2.5 sm:pl-2.5 sm:pr-5 sm:text-[14px] md:flex-none"
+            className="acc-archive-btn inline-flex h-[48px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 text-[13px] font-bold sm:h-[54px] sm:gap-2.5 sm:pl-2.5 sm:pr-5 sm:text-[14px]"
             style={{
               background: showArchive
                 ? 'linear-gradient(145deg, rgba(139,123,255,0.16), rgba(139,123,255,0.05))'
@@ -463,7 +464,7 @@ return (
             <span className="acc-archive-icon">
               <Archive size={13.5} strokeWidth={2.4} style={{ color: 'var(--edge-acc, var(--edge-acc))' }} />
             </span>
-            {showArchive ? 'Back to accounts' : 'Archive'}
+            {showArchive ? <><span className="sm:hidden">Back</span><span className="hidden sm:inline">Back to accounts</span></> : 'Archive'}
             {!showArchive && closedAccounts.length > 0 && (
               <span
                 className="grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold"
@@ -588,42 +589,42 @@ return (
                           <Lock size={11} strokeWidth={2.6} /> Closed
                         </span>
                       )}
-                      <div className="relative z-10 flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-3.5">
+                      <div className="relative z-10 flex items-start justify-between gap-2 sm:gap-3">
+                        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
                           <div
-                            className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
+                            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl sm:h-12 sm:w-12"
                             style={{ background: T.sunken, border: `1px solid ${T.line}` }}
                           >
-                            <Building2 size={21} strokeWidth={2} style={{ color: isClosed ? T.text4 : T.acc }} />
+                            <Building2 size={19} strokeWidth={2} style={{ color: isClosed ? T.text4 : T.acc }} />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="truncate text-[18px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.015em' }}>
+                            <h3 className="truncate text-[16px] font-bold sm:text-[18px]" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.015em' }}>
                               {acc.firm_name}
                             </h3>
                             <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold" style={{ fontFamily: T.sans, color: isClosed ? T.text4 : T.ok }}>
-                              <span className="h-1.5 w-1.5 rounded-full" style={{ background: isClosed ? T.text4 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: isClosed ? T.text4 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
                               {isClosed ? 'Closed' : 'Active'}
                             </div>
                           </div>
                         </div>
-                        <div className={`flex shrink-0 gap-1.5 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100 ${isClosed ? 'opacity-0' : 'opacity-100'}`}>
+                        <div className={`flex shrink-0 gap-1 transition-opacity duration-200 sm:gap-1.5 md:opacity-0 md:group-hover:opacity-100 ${isClosed ? 'opacity-0' : 'opacity-100'}`}>
                           <button
                             onClick={(e) => openEditModal(e, acc)}
-                            className="grid h-8 w-8 place-items-center rounded-lg transition-colors"
+                            className="grid h-7 w-7 place-items-center rounded-lg transition-colors sm:h-8 sm:w-8"
                             style={{ border: `1px solid ${T.line}`, color: T.text4 }}
                             onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
                             onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
                           >
-                            <Pencil size={13} strokeWidth={2.2} />
+                            <Pencil size={12.5} strokeWidth={2.2} />
                           </button>
                           <button
                             onClick={(e) => deleteAccount(e, acc.id)}
-                            className="grid h-8 w-8 place-items-center rounded-lg transition-colors"
+                            className="grid h-7 w-7 place-items-center rounded-lg transition-colors sm:h-8 sm:w-8"
                             style={{ border: `1px solid ${T.line}`, color: T.text4 }}
                             onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; }}
                             onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; }}
                           >
-                            <Trash2 size={13} strokeWidth={2.2} />
+                            <Trash2 size={12.5} strokeWidth={2.2} />
                           </button>
                         </div>
                       </div>
@@ -709,7 +710,12 @@ return (
       </motion.div>
     </motion.div>
 
-    {/* МОДАЛКА: ДОДАВАННЯ / РЕДАГУВАННЯ */}
+    {/* МОДАЛКА: ДОДАВАННЯ / РЕДАГУВАННЯ
+        Портал на body — інакше вона живе в розкладці сторінки, і
+        мобільний хедер (свій z-index) лягає НАД нею замість того,
+        щоб вона стояла зверху. Той самий фікс, що й для FolderDialog
+        та AccountDetails. */}
+    {createPortal(
     <AnimatePresence>
       {isModalOpen && (
         <motion.div 
@@ -825,7 +831,7 @@ return (
                         whileTap={{ scale: 0.97 }}
                         type="button" 
                         onClick={() => setNewFirm(firm)}
-                        className={`flex items-center gap-3 p-3.5 rounded-xl border transition-colors duration-300 group text-left ${
+                        className={`flex min-w-0 items-center gap-3 p-3.5 rounded-xl border transition-colors duration-300 group text-left ${
                           isSelected 
                             ? 'bg-[var(--edge-acc)]/10 border-[var(--edge-acc)]/40 shadow-[0_0_20px_rgba(139,123,255,0.05)]' 
                             : 'bg-[#111218] border-[var(--edge-line)] hover:border-white/15'
@@ -845,7 +851,7 @@ return (
                           ) : null}
                           <Building2 size={12} className="text-[var(--edge-text3)]" style={{ display: domain ? 'none' : 'flex' }} />
                         </div>
-                        <span className={`text-xs font-black tracking-wide leading-tight transition-colors ${isSelected ? 'text-[var(--edge-acc)]' : 'text-[var(--edge-text2)] group-hover:text-[var(--edge-text)]'}`}>
+                        <span className={`min-w-0 break-words text-xs font-black tracking-wide leading-tight transition-colors ${isSelected ? 'text-[var(--edge-acc)]' : 'text-[var(--edge-text2)] group-hover:text-[var(--edge-text)]'}`}>
                           {firm}
                         </span>
                       </motion.button>
@@ -1020,7 +1026,9 @@ return (
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
+    )}
 
     {/* ─────────── ДЕТАЛКА АКАУНТА ─────────── */}
     <AnimatePresence>

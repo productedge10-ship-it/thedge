@@ -452,7 +452,7 @@ export default function Analytics() {
               >
                 <div
                   ref={barRef}
-                  className="relative flex flex-wrap items-center gap-0.5 rounded-[15px] p-1"
+                  className="no-scrollbar relative flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-[15px] p-1 lg:flex-wrap lg:overflow-visible"
                   style={{ background: hair(0.022), border: `1px solid ${hair(0.055)}` }}
                 >
                   {/* Пігулка їде під активну вкладку — один елемент на

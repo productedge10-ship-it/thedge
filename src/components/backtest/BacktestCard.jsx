@@ -135,7 +135,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
     >
       <div style={{ padding: '18px 20px 0' }}>
         <div className="flex items-center justify-between" style={{ gap: 10 }}>
-          <div className="flex min-w-0 items-center" style={{ gap: 7 }}>
+          <div className="flex min-w-0 items-center overflow-hidden" style={{ gap: 7 }}>
             <Chip>{session.pair}</Chip>
             {session.strategy_name && <Chip soft>{session.strategy_name}</Chip>}
             {session.demo && <Chip soft>демо</Chip>}
@@ -184,7 +184,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
             </div>
           </div>
 
-          <div className="shrink-0" style={{ width: 132 }}>
+          <div className="w-[96px] shrink-0 sm:w-[132px]">
             <Spark points={spark} color={color} id={`spark-${session.id}`} />
           </div>
         </div>
@@ -243,11 +243,13 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
              видалення тут не б'ється об базу. Показуємо, поки видно
              приклад, а не ховаємо кнопку тільки тому, що рядок
              несправжній. */}
+          {/* На тачі наведення немає — там кнопки видно завжди й вони
+             більші (32px), інакше видалити демо з телефона було неможливо. */}
           {onDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(session); }}
               title="Видалити бектест"
-              className="grid h-[26px] w-0 place-items-center overflow-hidden rounded-lg opacity-0 transition-all duration-200 group-hover:mr-1.5 group-hover:w-[26px] group-hover:opacity-100"
+              className="grid h-[26px] w-0 place-items-center overflow-hidden rounded-lg opacity-0 transition-all duration-200 group-hover:mr-1.5 group-hover:w-[26px] group-hover:opacity-100 [@media(hover:none)]:mr-1.5 [@media(hover:none)]:w-8 [@media(hover:none)]:h-8 [@media(hover:none)]:opacity-100 max-lg:mr-1.5 max-lg:h-8 max-lg:w-8 max-lg:opacity-100"
               style={{ color: T.text3 }}
               onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.background = 'transparent'; }}
@@ -268,7 +270,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
               className={`grid h-[26px] place-items-center overflow-hidden rounded-lg transition-all duration-200 ${
                 session.is_public
                   ? 'mr-2 w-[26px]'
-                  : 'w-0 opacity-0 group-hover:mr-2 group-hover:w-[26px] group-hover:opacity-100'
+                  : 'w-0 opacity-0 group-hover:mr-2 group-hover:w-[26px] group-hover:opacity-100 [@media(hover:none)]:mr-2 [@media(hover:none)]:w-8 [@media(hover:none)]:h-8 [@media(hover:none)]:opacity-100 max-lg:mr-2 max-lg:h-8 max-lg:w-8 max-lg:opacity-100'
               }`}
               style={{ color: session.is_public ? ACT.tint : T.text3 }}
               onMouseEnter={(e) => { e.currentTarget.style.color = ACT.tint; e.currentTarget.style.background = act(0.12); }}

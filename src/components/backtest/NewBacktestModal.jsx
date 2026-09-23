@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2, ArrowRight } from 'lucide-react';
 
@@ -187,39 +188,53 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
     { k: 'Депозит', v: money(dep) },
   ];
 
-  return (
+  /* Портал у body, а не рендер на місці: <main> сторінки має свій
+     stacking context (position: relative; z-index: 0), і будь-який
+     z-index усередині нього порівнюється з мобільною шапкою
+     застосунку (z-60) вже програно — модалка опинялась намальованою
+     ПІД нею, а не поверх. Портал виносить її з цієї пастки зовсім,
+     так само як в TradeModal і TradeDetailsModal. */
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      className="fixed inset-0 z-[220] flex items-center justify-center overflow-y-auto p-4 sm:p-6"
+      className="fixed inset-0 z-[220] flex items-end justify-center sm:items-center sm:overflow-y-auto sm:p-6"
       style={{ background: 'rgba(6,6,8,0.86)', backdropFilter: 'blur(10px)' }}
     >
       <motion.div
-        initial={{ opacity: 0, y: 16, scale: 0.99 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 12, scale: 0.99 }}
+        /* На телефоні — аркуш знизу: виїжджає з-під пальця, займає
+           всю ширину й прокручується всередині, а кнопки лишаються
+           внизу під рукою. З sm — звична модалка по центру. */
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 30 }}
         transition={{ duration: 0.3, ease: EASE }}
-        className="relative my-auto w-full"
+        /* max-h у dvh рахується від справжнього вʼюпорту, а не від
+           контейнера, у якому фактично лежить цей fixed-шар (мобільна
+           шапка застосунку зменшує його висоту). При довгій формі
+           аркуш через це виростав вище своєї коробки, і назва
+           «Новий бектест» ховалась під шапкою. calc(100% - …) рахує
+           від реального контейнера, тому так не станеться. */
+        className="relative flex max-h-[calc(100%-16px)] w-full flex-col rounded-t-[22px] sm:my-auto sm:max-h-none sm:rounded-[26px]"
         style={{
           maxWidth: 820,
-          borderRadius: 26,
           background: T.surface,
           border: `1px solid ${T.lineHi}`,
           boxShadow: '0 44px 100px -34px #000',
         }}
       >
-        <div className="flex items-center justify-between" style={{ gap: 20, padding: '22px 26px' }}>
+        {/* ручка аркуша — лише на телефоні */}
+        <span aria-hidden className="mx-auto mt-2.5 block h-1 w-10 shrink-0 rounded-full sm:hidden" style={{ background: T.lineHi }} />
+
+        <div className="flex shrink-0 items-center justify-between gap-4 px-4 pb-3.5 pt-3 sm:gap-5 sm:px-[26px] sm:py-[22px]">
           <div className="min-w-0">
             <div
               style={{ fontFamily: T.display, fontSize: 20, fontWeight: 600, letterSpacing: '-0.4px', color: T.text }}
             >
               Новий бектест
-            </div>
-            <div style={{ fontFamily: T.sans, marginTop: 5, fontSize: 13, color: T.text2 }}>
-              Крок 1 з 1 · далі одразу додаєш угоди
             </div>
           </div>
 
@@ -235,11 +250,11 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
           </button>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_282px]" style={{ borderTop: `1px solid ${T.line}` }}>
+        <div className="grid min-h-0 flex-1 overflow-y-auto overscroll-contain sm:overflow-visible lg:grid-cols-[1fr_282px]" style={{ borderTop: `1px solid ${T.line}` }}>
 
           <div
-            className="flex flex-col lg:border-r"
-            style={{ padding: 26, gap: 14, borderColor: T.line }}
+            className="flex flex-col gap-3 p-4 sm:gap-3.5 sm:p-[26px] lg:border-r"
+            style={{ borderColor: T.line }}
           >
             <FloatField
               label="Назва бектесту"
@@ -271,7 +286,9 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
                 mono
               />
 
-              <div className="flex" style={{ gap: 7, marginTop: 9 }}>
+              {/* На вузькому екрані чотири суми в ряд не влазять —
+                  стають сіткою 2×2 замість обрізаних «$100 0…». */}
+              <div className="grid grid-cols-2 min-[400px]:grid-cols-4" style={{ gap: 7, marginTop: 9 }}>
                 {PRESETS.map((p) => {
                   const val = p.replace(/\s/g, '');
                   const on = String(f.initial_balance).replace(/[^\d]/g, '') === val;
@@ -279,9 +296,9 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
                     <button
                       key={p}
                       onClick={() => set({ initial_balance: val })}
-                      className="flex flex-1 items-center justify-center"
+                      className="flex items-center justify-center"
                       style={{
-                        height: 32, borderRadius: 9,
+                        height: 36, borderRadius: 9,
                         ...mono(11.5, { fontWeight: 600 }),
                         color: on ? T.text : T.text2,
                         background: on ? `rgba(${ACT.rgb},0.18)` : 'rgba(255,255,255,0.03)',
@@ -301,8 +318,8 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
 
           {/* ---------- підсумок ---------- */}
           <div
-            className="flex flex-col"
-            style={{ padding: '26px 24px', gap: 18, background: T.bg, borderRadius: '0 0 26px 0' }}
+            className="flex flex-col gap-4 p-4 sm:gap-[18px] sm:px-6 sm:py-[26px] lg:rounded-br-[26px]"
+            style={{ background: T.bg }}
           >
             <div
               className="uppercase"
@@ -388,25 +405,28 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
               ))}
             </div>
 
-            <p style={{ fontFamily: T.sans, marginTop: 'auto', fontSize: 12.5, lineHeight: 1.5, color: T.text3 }}>
+            <p className="hidden sm:block" style={{ fontFamily: T.sans, marginTop: 'auto', fontSize: 12.5, lineHeight: 1.5, color: T.text3 }}>
               Ризик фіксований, тому кожна угода рахується в R — результати різних депозитів можна порівнювати.
             </p>
           </div>
         </div>
 
         <div
-          className="flex flex-wrap items-center justify-between"
-          style={{ gap: 16, padding: '18px 26px 22px', borderTop: `1px solid ${T.line}` }}
+          className="flex shrink-0 flex-wrap items-center justify-between gap-4 px-4 pb-[var(--sb)] pt-3 sm:px-[26px] sm:pb-[22px] sm:pt-[18px]"
+          style={{ borderTop: `1px solid ${T.line}`, '--sb': 'max(16px, env(safe-area-inset-bottom))' }}
         >
-          <span style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text3 }}>
+          <span className="hidden sm:inline" style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text3 }}>
             Назву й актив можна змінити пізніше
           </span>
 
-          <div className="flex items-center" style={{ gap: 10 }}>
+          {/* На телефоні дві кнопки на всю ширину, «Створити» ширша —
+              головна дія має бути найбільшою ціллю під пальцем. */}
+          <div className="flex w-full items-center sm:w-auto" style={{ gap: 10 }}>
             <button
               onClick={onClose}
+              className="flex-1 sm:flex-none"
               style={{
-                fontFamily: T.sans, height: 44, padding: '0 22px', borderRadius: 12,
+                fontFamily: T.sans, height: 46, padding: '0 18px', borderRadius: 12,
                 fontSize: 14.5, fontWeight: 600, color: T.text2, transition: 'all .18s',
               }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = T.text; }}
@@ -418,9 +438,9 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
             <button
               onClick={submit}
               disabled={!canSave || saving}
-              className="flex items-center"
+              className="flex flex-[1.6] items-center justify-center sm:flex-none"
               style={{
-                fontFamily: T.sans, gap: 9, height: 44, padding: '0 24px', borderRadius: 12,
+                fontFamily: T.sans, gap: 9, height: 46, padding: '0 22px', borderRadius: 12,
                 background: `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`,
                 fontSize: 14.5, fontWeight: 600, color: '#fff',
                 boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 30px -12px rgba(${ACT.rgb},0.9)`,
@@ -445,6 +465,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }

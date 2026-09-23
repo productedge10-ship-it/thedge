@@ -116,7 +116,7 @@ function MiniMonth({ monthDate, tradesByDate, selectedDate, setSelectedDate, max
   }, [monthDate]);
 
   return (
-    <div style={{ flex: '1 1 240px', minWidth: 210 }}>
+    <div className="min-w-0 sm:min-w-[210px]" style={{ flex: '1 1 240px' }}>
       <div style={{ fontFamily: T.mono, fontSize: 11.5, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: '#d6d6e4', marginBottom: 11 }}>
         {UKR_MONTHS[monthDate.getMonth()]}
       </div>
@@ -259,7 +259,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <NavBtn onClick={handlePrev}><ChevronLeft size={14} strokeWidth={2} /></NavBtn>
-          <div style={{ minWidth: 190, textAlign: 'center', fontSize: 18, fontWeight: 700, letterSpacing: '-.01em', color: '#fff' }}>
+          <div className="min-w-[130px] sm:min-w-[190px]" style={{ textAlign: 'center', fontSize: 18, fontWeight: 700, letterSpacing: '-.01em', color: '#fff' }}>
             {periodLabel}
           </div>
           <NavBtn onClick={handleNext}><ChevronRight size={14} strokeWidth={2} /></NavBtn>
@@ -290,7 +290,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
       <div style={{ display: 'flex', gap: 34, alignItems: 'stretch', flexWrap: 'wrap', paddingTop: 22 }}>
 
         {/* календар */}
-        <div style={{ flex: viewMode === 'quarter' ? '1 1 620px' : '1 1 440px', minWidth: 300, display: 'flex', flexDirection: 'column' }}>
+        <div className="min-w-0 sm:min-w-[300px]" style={{ flex: viewMode === 'quarter' ? '1 1 620px' : '1 1 440px', display: 'flex', flexDirection: 'column' }}>
           {viewMode === 'quarter' ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
               {quarterMonths.map((m) => (
@@ -361,16 +361,16 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
             </>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, fontFamily: T.mono, fontSize: 9.5, letterSpacing: '.16em', color: '#8a8aa0' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 16, fontFamily: T.mono, fontSize: 9.5, letterSpacing: '.16em', color: '#8a8aa0' }}>
             <span>−5R</span>
-            <span style={{ flex: '0 0 120px', height: 5, borderRadius: 3, background: 'linear-gradient(90deg,#ff5f6d,rgba(255,255,255,.1) 50%,#2ee6a8)' }} />
+            <span style={{ flex: '1 1 60px', maxWidth: 120, height: 5, borderRadius: 3, background: 'linear-gradient(90deg,#ff5f6d,rgba(255,255,255,.1) 50%,#2ee6a8)' }} />
             <span>+5R</span>
             <span style={{ marginLeft: 'auto' }}>{stats.count ? `${stats.count} АКТИВНИХ ДНІВ` : 'НЕМАЄ УГОД'}</span>
           </div>
         </div>
 
         {/* права колонка — результат періоду */}
-        <div style={{ flex: '1 1 280px', minWidth: 260, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="min-w-0 sm:min-w-[260px]" style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           <div
             style={{
@@ -502,7 +502,7 @@ export default function History({ s }) {
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      <div className="flex items-baseline gap-4 mb-2">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1.5 mb-2">
         <h2 className="font-['Instrument_Serif',serif] text-[30px] font-normal m-0 tracking-[0.2px] text-[var(--edge-text)]">Історія угод</h2>
         <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">
           Всього {s.trades.length} записів
@@ -560,7 +560,7 @@ export default function History({ s }) {
                       <div className="bg-[var(--edge-surface-hi)]/60 backdrop-blur-md border border-[var(--edge-hair)] rounded-[14px] p-4 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 transition-colors hover:border-[var(--edge-hair-strong)] group/row cursor-default">
                         
                         {/* ЛІВА ЧАСТИНА: Дата, Актив, Напрямок */}
-                        <div className="flex items-center gap-5 min-w-[260px] shrink-0">
+                        <div className="flex items-center gap-5 shrink-0 xl:min-w-[260px]">
                           <div className="flex flex-col gap-1 w-[80px]">
                             <span className="text-[14px] font-black text-[var(--edge-text)]">{t.asset}</span>
                             <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider" style={{ color: t.side === 'LONG' ? '#34d399' : '#f87171' }}>

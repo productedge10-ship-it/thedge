@@ -317,12 +317,13 @@ function Block({
       value={block}
       dragListener={false}
       dragControls={controls}
-      className="group/block relative"
-      style={{ marginTop: gap.mt, marginBottom: gap.mb, paddingLeft: compact ? 0 : 40 }}
+      className={`group/block relative ${compact ? '' : 'pl-0 sm:pl-10'}`}
+      style={{ marginTop: gap.mt, marginBottom: gap.mb }}
     >
-      {/* жолоб з ручкою — з'являється при наведенні на блок */}
+      {/* жолоб з ручкою — з'являється при наведенні на блок; на дотику
+          ховер не спрацьовує, тож на мобільному гутер під неї не займаємо */}
       {!compact && (
-        <div className="absolute left-0 top-0 flex items-center gap-1 opacity-0 transition-opacity duration-150 no-print group-hover/block:opacity-100">
+        <div className="absolute left-0 top-0 hidden items-center gap-1 opacity-0 transition-opacity duration-150 no-print group-hover/block:opacity-100 sm:flex">
           <button
             onPointerDown={(e) => controls.start(e)}
             title="Перетягнути"
@@ -341,7 +342,7 @@ function Block({
         <button
           onClick={onDelete}
           title="Видалити блок"
-          className="absolute -right-8 top-0 z-10 grid h-6 w-6 place-items-center rounded-[7px] opacity-0 transition-all duration-150 no-print group-hover/block:opacity-100"
+          className="absolute -right-8 top-0 z-10 hidden h-6 w-6 place-items-center rounded-[7px] opacity-0 transition-all duration-150 no-print group-hover/block:opacity-100 sm:grid"
           style={{ color: T.text4 }}
           onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.background = 'transparent'; }}
@@ -435,8 +436,8 @@ export default function BlockEditor({ blocks, onChange, onFullscreen, depth = 0,
       {!compact && (
         <button
           onClick={addAtEnd}
-          className="mt-[10px] flex w-full items-center justify-center gap-2.5 rounded-[12px] py-4 text-[13.5px] transition-all duration-150 no-print"
-          style={{ fontFamily: T.sans, fontWeight: 400, color: T.text4, border: `1px solid ${T.line}`, background: 'transparent', marginLeft: 40, width: 'calc(100% - 40px)' }}
+          className="mt-[10px] flex w-full items-center justify-center gap-2.5 rounded-[12px] py-4 text-[13.5px] transition-all duration-150 no-print sm:ml-10 sm:!w-[calc(100%-40px)]"
+          style={{ fontFamily: T.sans, fontWeight: 400, color: T.text4, border: `1px solid ${T.line}`, background: 'transparent' }}
           onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.4)`; e.currentTarget.style.background = `rgba(${T.accRgb},0.04)`; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; e.currentTarget.style.background = 'transparent'; }}
         >

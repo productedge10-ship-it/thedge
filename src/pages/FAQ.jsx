@@ -373,15 +373,24 @@ export default function FAQ() {
       <div className="w-full max-w-[1200px] mx-auto pb-32 pt-4 relative z-10">
 
         {/* ================= FLOATING STICKY DOCK ================= */}
-        <div className="sticky top-4 z-50 flex justify-center w-full pointer-events-none mb-12">
-          <div className="pointer-events-auto flex items-center p-1.5 bg-[#0a0c10]/80 backdrop-blur-xl border border-[var(--edge-hair-strong)] rounded-full shadow-[0_20px_40px_rgba(0,0,0,0.6)]">
+        {/* На вузькому екрані чотири пункти з іконкою й підписом не
+            влазять у пігулку одним рядком — «Модулі» просто зникав за
+            краєм екрана без жодного натяку, що там ще щось є. Замість
+            ховати підписи чи переносити в два рядки, пігулка сама їде
+            вбік: той самий жест, що й гортання стрічки карток нижче. */}
+        <style>{`.faq-dock::-webkit-scrollbar{display:none}`}</style>
+        <div className="sticky top-4 z-50 flex justify-center w-full pointer-events-none mb-12 px-1 sm:px-0">
+          <div
+            className="faq-dock pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto p-1.5 bg-[#0a0c10]/80 backdrop-blur-xl border border-[var(--edge-hair-strong)] rounded-full shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
+            style={{ scrollbarWidth: 'none' }}
+          >
             {navItems.map((item) => {
               const isActive = activeSection === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => scrollTo(item.id)}
-                  className={`relative flex items-center gap-2 px-4 py-2 rounded-full text-[12px] font-bold transition-colors duration-300 z-10
+                  className={`relative flex shrink-0 items-center gap-2 px-3.5 sm:px-4 py-2 rounded-full text-[12px] font-bold whitespace-nowrap transition-colors duration-300 z-10
                     ${isActive ? 'text-[var(--edge-text)]' : 'text-[#6f7f93] hover:text-[#e4ebf4]'}
                   `}
                 >

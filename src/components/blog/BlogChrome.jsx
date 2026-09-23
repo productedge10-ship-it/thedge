@@ -721,7 +721,7 @@ export const BLOG_CSS = `
 }
 @media (max-width:860px){
   .bl-root{--bl-shell:calc(100% - 36px)}
-  .bl-head-in{height:58px;gap:12px}
+  .bl-head-in{height:58px;gap:8px}
   .bl-wrap{padding:22px 0 48px}
   .bl-article{padding:22px 0 34px}
   .bl-cols{grid-template-columns:minmax(0,1fr)}
@@ -736,6 +736,18 @@ export const BLOG_CSS = `
   .bl-btn--head{display:none}
   .bl-panel{right:14px;left:14px;width:auto;bottom:76px}
   .bl-fabs{right:14px;bottom:14px}
+
+  /* Хедер: лого + два перемикачі (тема, мова) на 375px впритул один
+     до одного мали 34px недостачі — «EN» впиралось у самий край.
+     Тут не ховаємо жоден перемикач, а стискаємо відступи всередині
+     них, залишаючи обидва повністю робочими. */
+  .bl-head-right{gap:8px}
+  .bl-head .bl-seg{gap:2px;padding:3px}
+  .bl-head .bl-seg button{padding:5px 7px}
+}
+@media (max-width:360px){
+  .bl-head .bl-seg button{padding:5px 6px}
+  .bl-word{display:none}
 }
 
 @media (prefers-reduced-motion: reduce){

@@ -95,9 +95,10 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
           />
 
           <div
+            className="items-start overflow-y-auto p-3 sm:items-center sm:p-6"
             style={{
               position: 'fixed', inset: 0, zIndex: Z + 1, display: 'flex',
-              alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none',
+              justifyContent: 'center', pointerEvents: 'none',
             }}
           >
             <motion.div
@@ -236,7 +237,7 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
               </div>
 
               <div
-                className="flex items-center justify-between gap-4 px-5 py-3.5"
+                className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 sm:flex-nowrap sm:gap-4"
                 style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)' }}
               >
                 <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>

@@ -58,7 +58,7 @@ export default function ErrorStats({ entries }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: EASE }}
-      className="relative mb-5 overflow-hidden rounded-[20px] px-7"
+      className="relative mb-5 overflow-hidden rounded-[20px] px-4 sm:px-7"
       style={{
         background: 'linear-gradient(140deg, var(--edge-surface-hi), var(--edge-surface) 54%, var(--edge-surface))',
         border: `1px solid ${T.line}`,
@@ -72,7 +72,7 @@ export default function ErrorStats({ entries }) {
 
       <div className="relative flex flex-wrap items-stretch">
         {/* ─── всього записів ─── */}
-        <div className="w-[248px] flex-none py-6 pr-7">
+        <div className="w-full py-5 sm:w-[248px] sm:flex-none sm:py-6 sm:pr-7">
           <div
             className="text-[10.5px] font-bold uppercase"
             style={{ fontFamily: T.mono, letterSpacing: '2px', color: 'var(--edge-text3)' }}
@@ -112,13 +112,22 @@ export default function ErrorStats({ entries }) {
           </div>
         </div>
 
+        {/* Розділювач: горизонтальна риска, поки блоки йдуть один під
+            одним, і вертикальна — щойно зʼявляється ряд. Два окремих
+            елементи — інакше один градієнт довелось би розтягувати в
+            обидва боки, і на вузькому екрані риска ставала суцільним
+            кольором замість плавного згасання. */}
         <div
-          className="my-5 w-px flex-none"
+          className="h-px w-full flex-none sm:hidden"
+          style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-hair-rgb),0.11) 22%,rgba(var(--edge-hair-rgb),0.11) 78%,transparent)' }}
+        />
+        <div
+          className="my-5 hidden w-px flex-none sm:block"
           style={{ background: 'linear-gradient(180deg,transparent,rgba(var(--edge-hair-rgb),0.11) 22%,rgba(var(--edge-hair-rgb),0.11) 78%,transparent)' }}
         />
 
         {/* ─── що повторюється ─── */}
-        <div className="min-w-[320px] flex-1 py-6 pl-7">
+        <div className="min-w-0 w-full py-5 sm:min-w-[320px] sm:w-auto sm:flex-1 sm:py-6 sm:pl-7">
           <div className="flex items-baseline justify-between gap-3">
             <div
               className="text-[10.5px] font-bold uppercase"
@@ -138,7 +147,7 @@ export default function ErrorStats({ entries }) {
               {breakdown.map((b) => (
                 <div key={b.id} className="flex items-center gap-3.5">
                   <div
-                    className="w-[140px] flex-none truncate text-[13.5px] font-semibold"
+                    className="w-[84px] flex-none truncate text-[13.5px] font-semibold sm:w-[140px]"
                     style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
                   >
                     {b.label}

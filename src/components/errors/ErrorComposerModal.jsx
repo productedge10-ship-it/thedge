@@ -32,6 +32,26 @@ import ChartShot from '../ui/ChartShot';
 
 const Z = 2000;
 const A = (a) => `rgba(${T.accRgb}, ${a})`;
+const mix = (color, pct) => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+
+/* Нижче lg колонки складаються одна під одну, і причини йдуть суцільним
+   стовпцем чіпів без жодного дихання між групами — тому нижче тут групи
+   отримують власну картку, а на десктопі лишається як було. Рахуємо через
+   matchMedia, а не клас: колір картки міксується в JS (color-mix), інлайн-
+   стилем це не перемкнути самим лише брейкпоінтом. */
+function useBelowLg() {
+  const [below, setBelow] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 1024 : false));
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)');
+    const onChange = () => setBelow(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return below;
+}
 
 /* Колір групи причин: він же колір обраних чіпів усередині неї —
    так у списку обраних видно, з якої області промах. */
@@ -187,6 +207,7 @@ function ShotsField({ shots, setShots }) {
 function ReasonPanel({ value, onChange, invalid }) {
   const [q, setQ] = useState('');
   const [focus, setFocus] = useState(false);
+  const belowLg = useBelowLg();
 
   /* Через useMemo, а не `value || []`: інакше кожен рендер створює
      новий масив, і всі меми нижче перераховуються дарма. */
@@ -271,7 +292,20 @@ function ReasonPanel({ value, onChange, invalid }) {
         </div>
 
         {picked.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          /* Нижче lg список обраних росте з кожним вибором і на вузькому
+             екрані зжирає висоту, потрібну самому переліку причин під
+             ним — після трьох-чотирьох виборів картки лишались смужкою
+             в палець завширшки. Тому тут власна невисока прокрутка: як
+             довго б не був список, він не тисне на те, що нижче. */
+          <div
+            className="mt-3 flex flex-wrap items-center gap-1.5 lg:max-h-none lg:overflow-visible"
+            style={belowLg ? {
+              maxHeight: 80,
+              overflowY: 'auto',
+              WebkitMaskImage: 'linear-gradient(180deg, black 78%, transparent 100%)',
+              maskImage: 'linear-gradient(180deg, black 78%, transparent 100%)',
+            } : undefined}
+          >
             {picked.map((id) => {
               const c = colorOf(id);
               return (
@@ -279,7 +313,9 @@ function ReasonPanel({ value, onChange, invalid }) {
                   key={id}
                   onClick={() => toggle(id)}
                   className="flex items-center gap-2 rounded-full px-3 py-[6px] text-[13px] font-bold"
-                  style={{ fontFamily: T.sans, background: `${c}26`, border: `1px solid ${c}73`, color: c, transition: 'all .16s' }}
+                  style={belowLg
+                    ? { fontFamily: T.sans, background: mix(c, 22), border: `1px solid ${mix(c, 55)}`, color: c, transition: 'all .16s' }
+                    : { fontFamily: T.sans, background: `${c}26`, border: `1px solid ${c}73`, color: c, transition: 'all .16s' }}
                 >
                   {reasonLabel(id)}
                   <X size={10} strokeWidth={3} />
@@ -305,25 +341,50 @@ function ReasonPanel({ value, onChange, invalid }) {
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
         {groups.map((g) => {
           const main = !!g.main;
-          return (
-            <div
-              key={g.group}
-              className="mt-4"
-              style={main ? {
+          /* Нижче lg кожна група стає власною карткою — інакше на
+             вузькому екрані всі шість груп зливаються в одну стіну
+             чіпів без жодного орієнтира, де закінчується одна тема й
+             починається інша. На lg+ поведінка не зачіпається взагалі —
+             там лишається рівно той самий об'єкт стилю, що був. */
+          const boxStyle = belowLg
+            ? {
+              padding: 14,
+              borderRadius: 16,
+              background: `linear-gradient(165deg, ${mix(g.color, main ? 14 : 10)}, rgba(var(--edge-hair-rgb),0.01))`,
+              border: `1px solid ${mix(g.color, main ? 32 : 24)}`,
+            }
+            : main
+              ? {
                 padding: 14,
                 borderRadius: 16,
                 background: `linear-gradient(165deg, ${g.color}12, rgba(var(--edge-hair-rgb),0.015))`,
                 border: `1px solid ${g.color}2b`,
-              } : undefined}
-            >
+              }
+              : undefined;
+
+          return (
+            <div key={g.group} className="mt-4" style={boxStyle}>
               <div className="flex items-center gap-2.5">
-                <span
-                  className="h-1.5 w-1.5 flex-none rounded-full"
-                  style={{ background: g.color, boxShadow: `0 0 8px 1px ${g.color}99` }}
-                />
+                {belowLg ? (
+                  <span
+                    className="grid h-7 w-7 flex-none place-items-center rounded-[9px]"
+                    style={{ background: mix(g.color, 20), border: `1px solid ${mix(g.color, 42)}` }}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: g.color, boxShadow: `0 0 8px 1px ${mix(g.color, 65)}` }} />
+                  </span>
+                ) : (
+                  <span
+                    className="h-1.5 w-1.5 flex-none rounded-full"
+                    style={{ background: g.color, boxShadow: `0 0 8px 1px ${g.color}99` }}
+                  />
+                )}
                 <span
                   className="whitespace-nowrap text-[11.5px] font-bold uppercase"
-                  style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: main ? `${g.color}ee` : 'var(--edge-text3)' }}
+                  style={{
+                    fontFamily: T.mono,
+                    letterSpacing: '1.8px',
+                    color: belowLg ? mix(g.color, 92) : main ? `${g.color}ee` : 'var(--edge-text3)',
+                  }}
                 >
                   {GROUP_TITLE[g.group] || g.group}
                 </span>
@@ -346,7 +407,15 @@ function ReasonPanel({ value, onChange, invalid }) {
                       key={r.id}
                       onClick={() => toggle(r.id)}
                       className="flex items-center gap-1.5 rounded-full px-3.5 py-[8px] text-[13.5px] font-semibold"
-                      style={{
+                      style={belowLg ? {
+                        fontFamily: T.sans,
+                        lineHeight: 1.2,
+                        background: on ? mix(g.color, 26) : 'rgba(var(--edge-hair-rgb),0.05)',
+                        border: `1px solid ${on ? mix(g.color, 60) : 'var(--edge-line)'}`,
+                        color: on ? 'var(--edge-text)' : 'var(--edge-text2)',
+                        boxShadow: on ? `0 0 18px -8px ${mix(g.color, 75)}` : 'none',
+                        transition: 'all .16s',
+                      } : {
                         fontFamily: T.sans,
                         lineHeight: 1.2,
                         background: on ? `${g.color}2b` : 'rgba(var(--edge-hair-rgb),0.03)',
@@ -367,12 +436,29 @@ function ReasonPanel({ value, onChange, invalid }) {
         })}
 
         {ownShown.length > 0 && (
-          <div className="mt-4">
+          <div
+            className="mt-4"
+            style={belowLg ? {
+              padding: 14,
+              borderRadius: 16,
+              background: 'linear-gradient(165deg, rgba(var(--edge-ok-rgb),0.10), rgba(var(--edge-hair-rgb),0.01))',
+              border: '1px solid rgba(var(--edge-ok-rgb),0.24)',
+            } : undefined}
+          >
             <div className="flex items-center gap-2.5">
-              <span className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: 'var(--edge-ok)', boxShadow: '0 0 8px 1px rgba(var(--edge-ok-rgb),0.60)' }} />
+              {belowLg ? (
+                <span
+                  className="grid h-7 w-7 flex-none place-items-center rounded-[9px]"
+                  style={{ background: 'rgba(var(--edge-ok-rgb),0.20)', border: '1px solid rgba(var(--edge-ok-rgb),0.42)' }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--edge-ok)', boxShadow: '0 0 8px 1px rgba(var(--edge-ok-rgb),0.60)' }} />
+                </span>
+              ) : (
+                <span className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: 'var(--edge-ok)', boxShadow: '0 0 8px 1px rgba(var(--edge-ok-rgb),0.60)' }} />
+              )}
               <span
                 className="whitespace-nowrap text-[11.5px] font-bold uppercase"
-                style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: 'var(--edge-text2)' }}
+                style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: belowLg ? 'var(--edge-ok)' : 'var(--edge-text2)' }}
               >
                 Свої
               </span>
@@ -473,9 +559,10 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
           />
 
           <div
+            className="p-3 sm:p-6"
             style={{
               position: 'fixed', inset: 0, zIndex: Z + 1, display: 'flex',
-              alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none',
+              alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
             }}
           >
             <motion.div
@@ -561,11 +648,11 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                   перетворювались на довгий сувій. На 560 в рядок
                   лягає два-три, і більшість груп видно без прокрутки
                   взагалі. */}
-              <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1fr_560px]">
+              <div className="grid min-h-0 flex-1 overflow-y-auto lg:overflow-hidden lg:grid-cols-[1fr_560px]">
                 {/* ліворуч: те, що людина пише сама */}
                 <div
-                  className="flex min-w-0 flex-col overflow-y-auto px-[22px] pb-[18px] pt-5"
-                  style={{ borderRight: '1px solid var(--edge-line)' }}
+                  className="flex min-w-0 flex-col overflow-y-auto border-b px-4 pb-[18px] pt-5 lg:border-b-0 lg:border-r lg:px-[22px]"
+                  style={{ borderColor: 'var(--edge-line)', scrollbarGutter: 'stable' }}
                 >
                   <Cap>Пара</Cap>
                   <div
@@ -644,7 +731,10 @@ export default function ErrorComposerModal({ isOpen, onClose, form, setForm, onS
                 </div>
 
                 {/* праворуч: те, що людина вибирає */}
-                <div className="flex min-h-0 min-w-0 flex-col overflow-hidden" style={{ background: 'var(--edge-sunken)' }}>
+                <div
+                  className="flex min-h-0 min-w-0 flex-col overflow-visible rounded-t-[22px] shadow-[0_-16px_28px_-22px_rgba(0,0,0,0.55)] lg:overflow-hidden lg:rounded-none lg:shadow-none"
+                  style={{ background: 'var(--edge-sunken)' }}
+                >
                   <ReasonPanel
                     value={form.reasons}
                     onChange={(v) => setForm({ ...form, reasons: v })}
