@@ -59,6 +59,24 @@ export const TRIAL_DAYS = 14;
 export const TRIAL_HOLD = 1;
 export const TRIAL_HOLD_LABEL = '$1';
 
+/* Сума з валютою так, як її пишуть люди: «$15», а не «15 USD».
+
+   Гривня окремою гілкою, бо Intl для UAH в англійській локалі дає
+   «UAH 599», а в українській — «599,00 грн». Обидва правильні й
+   обидва чужі на цьому екрані. Гривня тут лишається для старих
+   платежів в історії — переписати їх доларами означало б збрехати
+   про те, скільки людина заплатила. */
+export const fmtMoney = (amount, currency = CURRENCY) => {
+  const n = Number(amount) || 0;
+  if (String(currency).toUpperCase() === 'UAH') return `${n.toLocaleString('uk-UA')} ₴`;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+};
+
 /* ==================================================================
    Що входить у Free, а що ні.
 

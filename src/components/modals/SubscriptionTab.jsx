@@ -5,7 +5,9 @@ import {
 } from 'lucide-react';
 import { T } from '../trading/planTheme';
 import { EdgeMonogram, EdgeWordmark } from '../core/Layout';
-import { PLANS, PRO_FEATURES, TRIAL_DAYS, startCheckout, cancelSubscription } from '../../lib/billing';
+import {
+  PLANS, PRO_FEATURES, TRIAL_DAYS, TRIAL_HOLD_LABEL, fmtMoney, startCheckout, cancelSubscription,
+} from '../../lib/billing';
 import SubscriptionScene from './SubscriptionScene';
 
 /* ==================================================================
@@ -248,12 +250,18 @@ function Price({ plan }) {
           exit={{ y: -26, opacity: 0, filter: 'blur(7px)', position: 'absolute' }}
           transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
         >
-          {plan.amount.toLocaleString('uk-UA')} ₴
+          {/* Велика цифра — завжди ціна за місяць, і для річного теж.
+
+              Так $12 стоїть поруч із $15 в одних одиницях, і вигоду
+              видно без калькулятора. Повну річну суму не ховаємо —
+              вона в примітці одразу під ціною, бо рахунок прийде
+              саме на неї. */}
+          {plan.perMonth}
         </motion.span>
       </AnimatePresence>
 
       <span className="text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-        / {plan.period === 'yearly' ? 'рік' : 'місяць'}
+        / місяць
       </span>
     </div>
   );
@@ -285,11 +293,11 @@ const FAKE = {
   card: '44****4242',
   cardType: 'Visa',
   lastPaidAt: new Date(Date.now() - 8 * 86400000).toISOString(),
-  lastAmount: 599,
+  lastAmount: 15,
   orders: [
-    { ref: 'EJ-DEMO-000003', plan: 'pro_monthly', amount: 599, currency: 'UAH', status: 'approved', at: new Date(Date.now() - 8 * 86400000).toISOString() },
-    { ref: 'EJ-DEMO-000002', plan: 'pro_monthly', amount: 599, currency: 'UAH', status: 'declined', at: new Date(Date.now() - 38 * 86400000).toISOString() },
-    { ref: 'EJ-DEMO-000001', plan: 'pro_monthly', amount: 1, currency: 'UAH', status: 'approved', at: new Date(Date.now() - 52 * 86400000).toISOString() },
+    { ref: 'EJ-DEMO-000003', plan: 'pro_monthly', amount: 15, currency: 'USD', status: 'approved', at: new Date(Date.now() - 8 * 86400000).toISOString() },
+    { ref: 'EJ-DEMO-000002', plan: 'pro_monthly', amount: 15, currency: 'USD', status: 'declined', at: new Date(Date.now() - 38 * 86400000).toISOString() },
+    { ref: 'EJ-DEMO-000001', plan: 'pro_monthly', amount: 1, currency: 'USD', status: 'refunded', at: new Date(Date.now() - 52 * 86400000).toISOString() },
   ],
 };
 
@@ -510,7 +518,10 @@ export default function SubscriptionTab({ sub, onChanged }) {
 
                     <span className="flex shrink-0 items-center gap-2.5">
                       <span className="text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
-                        {o.amount.toLocaleString('uk-UA')} ₴
+                        {/* Валюта — з самого платежу, а не з поточних
+                            цін: старі оплати були в гривні, і показати
+                            їх доларами означало б переписати історію. */}
+                        {fmtMoney(o.amount, o.currency)}
                       </span>
                       <span
                         className="rounded-md px-2 py-[3px] text-[10px] font-bold uppercase"
@@ -756,7 +767,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
               делікатність, а пастка. */}
           <p className="mt-3 text-center text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text2 }}>
             {trialAvailable
-              ? `1 ₴ за перевірку картки. Перше списання — через ${TRIAL_DAYS} днів, скасувати можна раніше.`
+              ? `${TRIAL_HOLD_LABEL} за перевірку картки. Перше списання — через ${TRIAL_DAYS} днів, скасувати можна раніше.`
               : 'Пробний період уже використано на цьому акаунті.'}
           </p>
 

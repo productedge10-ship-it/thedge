@@ -54,7 +54,12 @@ const TABS = [
   { id: 'profile', label: 'Profile', icon: User, eyebrow: 'PERSONAL', hint: 'What we should call you' },
   { id: 'goal', label: 'Weekly goal', icon: Target, eyebrow: 'RHYTHM', hint: 'What the “Week” tile on the Launchpad shows' },
   { id: 'journal', label: 'Journal', icon: BookOpen, eyebrow: 'PRACTICE', hint: 'How many questions to ask after every trade' },
-  { id: 'connect', label: 'Connections', icon: Plug, eyebrow: 'SYNC', hint: 'Connect your trading account — the trades will sync automatically' },
+  /* «AutoImport MT5», а не «AutoImport MT5»: назва має казати, що
+     станеться, а не що тут технічно лежить. «Підключення» чого до
+     чого — незрозуміло; «угоди з MT5 приїжджають самі» — зрозуміло
+     одразу. id лишається 'connect': на нього посилаються openSettings
+     з інших сторінок, і перейменування зламало б ці переходи. */
+  { id: 'connect', label: 'AutoImport MT5', icon: Plug, eyebrow: 'SYNC', hint: 'Connect your trading account — the trades will sync automatically' },
   { id: 'telegram', label: 'Telegram', icon: Send, eyebrow: 'NOTIFY', hint: 'Alerts, new trades and the daily wrap — straight to your chat' },
   /* Підписка стоїть одразу після платних розділів, а не в кінці
      списку: людина потрапляє сюди саме з них, побачивши замок. */
@@ -192,7 +197,7 @@ export default function SettingsModal() {
   useEffect(() => {
     const onOpen = (e) => {
       /* Вкладку задає той, хто відкриває: з «Accounts» ведуть одразу
-         в «Connections», і змушувати шукати її очима було б дивно. */
+         в «AutoImport MT5», і змушувати шукати її очима було б дивно. */
       const want = e?.detail?.tab;
       if (want) setTab(want);
       setOpen(true);
@@ -229,13 +234,13 @@ export default function SettingsModal() {
 
      Початкове значення й так було 'profile', але воно спрацьовувало
      рівно один раз за життя компонента. Далі вкладка лишалась там,
-     де її покинули: зайшов у «Connections», закрив вікно — і завтра
-     воно відкривається на «Connections». Виглядає як памʼять про твій
+     де її покинули: зайшов у «AutoImport MT5», закрив вікно — і завтра
+     воно відкривається на «AutoImport MT5». Виглядає як памʼять про твій
      вибір, а насправді це просто невимкнений стан: вибору ніхто не
      робив, людина просто востаннє щось дивилась.
 
      Скидаємо саме на закритті, а не на відкритті. Відкрити вікно
-     можна з кількох місць, а «з Accounts одразу в Connections» саме й
+     можна з кількох місць, а «з Accounts одразу в AutoImport MT5» саме й
      задає вкладку перед показом — скидання на відкритті затирало б
      цей намір. */
   useEffect(() => {

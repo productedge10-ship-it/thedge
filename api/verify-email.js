@@ -51,14 +51,30 @@ export default async function handler(req, res) {
   if (!tokenHash) return back(res, 'error')
   if (!ALLOWED_TYPES.has(type)) return back(res, 'error')
 
+  /* Імена змінних — ті самі, що в функціях оплати, плюс старі як
+     запасні.
+
+     Цей файл писався раніше за оплату і чекав SUPABASE_KEY та
+     SUPABASE_SERVICE_ROLE_KEY. Оплата ж узяла SUPABASE_SERVICE_KEY, і
+     на сервері завели саме її. Результат: кожне посилання з листа
+     закінчувалось ?verified=error, і жоден користувач не міг
+     підтвердити пошту. Два імені для одного ключа — пастка, тож
+     основне тепер одне на весь проєкт, а старе лишається лише щоб не
+     зламати вже налаштоване десь іще. */
   const url = process.env.SUPABASE_URL
-  const anonKey = process.env.SUPABASE_KEY
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  /* Публічний ключ для verifyOtp. Якщо окремо не заданий — службовий.
+     Це безпечно: перевірка токена — звичайна публічна операція
+     авторизації, і службовий ключ тут не дає нічого понад те, що дав
+     би публічний. Зате не треба заводити на сервері ще одну змінну
+     заради одного виклику. */
+  const anonKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || serviceKey
 
   /* Мовчазний редірект тут був би найгіршим варіантом: юзер бачить
      «не вдалось» і не розуміє, що просто не дописані ключі. */
-  if (!url || !anonKey || !serviceKey) {
-    console.error('verify-email: не задані SUPABASE_URL / SUPABASE_KEY / SUPABASE_SERVICE_ROLE_KEY')
+  if (!url || !serviceKey) {
+    console.error('verify-email: не задані SUPABASE_URL / SUPABASE_SERVICE_KEY')
     return back(res, 'error')
   }
 

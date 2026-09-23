@@ -234,7 +234,7 @@ export const OPEN_EVENT = 'edge:settings';
 
 /* Необовʼязковий аргумент — вкладка, на якій відкритись. Потрібен,
    коли в налаштування ведуть не з меню, а з конкретного місця: з
-   «Accounts» логічно потрапити одразу в «Connections», а не шукати
+   «Accounts» логічно потрапити одразу в «AutoImport MT5», а не шукати
    потрібну вкладку самому. */
 export const openSettings = (tab) =>
   window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: tab ? { tab } : null }));

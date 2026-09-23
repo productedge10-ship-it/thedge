@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Globe, Menu, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { useEdgeFonts } from '../lib/theme';
 import { C, F, A, Cat, KEYFRAMES } from '../components/landing/v3/base';
 import Hero, { Ticker } from '../components/landing/v3/Hero';
@@ -217,7 +219,33 @@ function Header() {
   );
 }
 
+/* Корінь сайту для залогіненого — одразу застосунок.
+
+   Вітрина продає продукт тому, хто його ще не має. Людині, яка вже
+   працює в журналі, вона заважає: відкрила theedgecat.com — і
+   замість своїх угод бачить кнопку «Вхід», хоча сесія жива. Це
+   читається як «мене розлогінило», і саме з цим приходять у
+   підтримку.
+
+   Окрема обгортка, а не ранній return усередині сторінки: у ній
+   одразу на початку йдуть хуки, і умовний вихід перед ними поламав
+   би порядок хуків між рендерами.
+
+   Мигання не буде: AuthProvider не малює нічого, доки не дізнається
+   сесію, тож `user` тут уже остаточний.
+
+   `/?home` лишає вітрину відкритою й для залогіненого — щоб
+   подивитись, як вона виглядає після деплою, не виходячи з акаунта. */
 export default function Landing() {
+  const { user } = useAuth();
+  const stay = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).has('home');
+
+  if (user && !stay) return <Navigate to="/app" replace />;
+  return <LandingPage />;
+}
+
+function LandingPage() {
   useEdgeFonts();
 
   /* Прапорець «перший кадр уже намальовано».
