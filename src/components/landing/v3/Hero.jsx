@@ -192,7 +192,7 @@ export default function Hero() {
                 letterSpacing: '-0.2px', color: C.text3, textWrap: 'pretty',
               }}
             >
-              Журнал угод з імпортом із MetaTrader 5 і аналітика по сесіях
+              Торговий журнал трейдера з автоімпортом угод з MetaTrader 5
             </span>
           </h1>
 

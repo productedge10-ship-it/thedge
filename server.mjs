@@ -318,11 +318,15 @@ function renderPage(rawPath) {
     if (r.body) {
       const b = r.body;
       const body = [
-        `<main><h1>${escText(b.h1)}</h1>`,
+        /* Стилі прямо в тезі: поки вантажиться JS (пів секунди на
+           повільному зв'язку), людина може побачити цей текст, і він
+           має виглядати як спокійна сторінка в темі сайту, а не як
+           чорні літери на чорному тлі. */
+        `<main style="max-width:720px;margin:12vh auto 0;padding:0 24px;color:#9a9aae;font:16px/1.6 system-ui,sans-serif"><h1 style="color:#ededf5;font-size:28px;line-height:1.2">${escText(b.h1)}</h1>`,
         b.text ? `<p>${escText(b.text)}</p>` : '',
         b.article ? `<article><p>${escText(b.article)}</p></article>` : '',
         b.links?.length
-          ? `<ul>${b.links.map((l) => `<li><a href="${escAttr(l.href)}">${escText(l.text)}</a></li>`).join('')}</ul>`
+          ? `<ul>${b.links.map((l) => `<li><a style="color:#b3a9ff" href="${escAttr(l.href)}">${escText(l.text)}</a></li>`).join('')}</ul>`
           : '',
         '</main>',
       ].join('');
