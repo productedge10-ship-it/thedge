@@ -2430,7 +2430,7 @@ function LinkedRow({ row, onGone }) {
             style={{ gap: 8 }}
           >
             <span style={{ fontFamily: T.sans, fontSize: 11.5, color: T.text3 }}>
-              Unlink?
+              Unlink and remove its trades?
             </span>
             <button
               type="button"

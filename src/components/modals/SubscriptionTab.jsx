@@ -6,7 +6,8 @@ import {
 import { T } from '../trading/planTheme';
 import { EdgeMonogram, EdgeWordmark } from '../core/Layout';
 import {
-  PLANS, PRO_FEATURES, TRIAL_DAYS, TRIAL_HOLD_LABEL, fmtMoney, startCheckout, cancelSubscription,
+  PLANS, PRO_FEATURES, TRIAL_DAYS, fmtMoney, startCheckout, cancelSubscription,
+  useUahRate, toUah, fmtUah,
 } from '../../lib/billing';
 import SubscriptionScene from './SubscriptionScene';
 
@@ -238,6 +239,11 @@ function Runway({ left, total, rgb }) {
    розмиття й робить рух дорогим: без нього це підміна тексту, з
    ним — рух фізичного барабана. */
 function Price({ plan }) {
+  /* Гривня поруч дрібніше: тариф живе в доларах, а гривня — довідка
+     за курсом НБУ на сьогодні. */
+  const rate = useUahRate();
+  const perMonthUsd = plan.period === 'yearly' ? plan.amount / 12 : plan.amount;
+  const uah = toUah(perMonthUsd, rate);
   return (
     <div className="relative flex h-[52px] items-baseline gap-2 overflow-hidden">
       <AnimatePresence mode="popLayout" initial={false}>
@@ -261,7 +267,7 @@ function Price({ plan }) {
       </AnimatePresence>
 
       <span className="text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-        / місяць
+        / місяць{uah ? <span style={{ color: T.text4 }}> · ≈ {fmtUah(uah)}</span> : null}
       </span>
     </div>
   );
@@ -767,7 +773,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
               делікатність, а пастка. */}
           <p className="mt-3 text-center text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text2 }}>
             {trialAvailable
-              ? `${TRIAL_HOLD_LABEL} за перевірку картки. Перше списання — через ${TRIAL_DAYS} днів, скасувати можна раніше.`
+              ? `Лише привʼязка картки, без списання. Перше списання — через ${TRIAL_DAYS} днів, скасувати можна раніше.`
               : 'Пробний період уже використано на цьому акаунті.'}
           </p>
 

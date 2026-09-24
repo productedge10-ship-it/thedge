@@ -45,6 +45,16 @@ export default function Terms() {
     return () => io.disconnect();
   }, [ids]);
 
+  /* Посилання виду /terms#billing («Повернення коштів» у підвалі).
+     Сторінка малюється вже після того, як браузер спробував знайти
+     якір, тому доскролюємо самі. */
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const t = setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }), 60);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div className="min-h-screen" style={{ background: T.bg, color: T.text }}>
       <div className="mx-auto w-[92%] max-w-[1120px] pb-28 pt-8 lg:pt-12">

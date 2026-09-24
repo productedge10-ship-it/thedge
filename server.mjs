@@ -75,6 +75,7 @@ const NODE_ROUTES = {
   '/api/news': './api/news.js',
   '/api/verify-email': './api/verify-email.js',
   '/api/img': './api/img.js',
+  '/api/rate': './api/rate.js',
 };
 
 /* ------------------------------------------------------------------

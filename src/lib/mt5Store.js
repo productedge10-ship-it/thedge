@@ -301,9 +301,42 @@ export async function getTradeCandles(trade) {
   return out;
 }
 
+/* Відвʼязати рахунок — разом з його імпортованими угодами.
+
+   Раніше угоди лишались у журналі після відвʼязки. Виглядало
+   нешкідливо, поки рахунок не підключили в іншому акаунті: чужі
+   угоди висіли в першому журналі назавжди, і кожен, хто відвʼязав
+   рахунок, продовжував бачити його статистику як свою.
+
+   Видаляємо тільки те, що приїхало з цього термінала (source = mt5,
+   external_id починається з логіна) і тільки своє (user_id). Угоди,
+   заведені руками, не чіпаються. Рахунок у розділі Accounts лишається
+   як історія — його людина прибирає сама.
+
+   Якщо цей самий рахунок потім підключити знову — будь-де, у цьому
+   чи іншому акаунті, — це новий рядок mt5_accounts без backfilled_at,
+   і воркер забере повну історію з нуля. */
 export async function removeMt5Account(id) {
+  const { data: row } = await supabase
+    .from('mt5_accounts')
+    .select('login, user_id')
+    .eq('id', id)
+    .maybeSingle();
+
   const { error } = await supabase.from('mt5_accounts').delete().eq('id', id);
   if (error) throw error;
+
+  if (row?.login && row?.user_id) {
+    const { error: tErr } = await supabase
+      .from('trades')
+      .delete()
+      .eq('user_id', row.user_id)
+      .eq('source', 'mt5')
+      .like('external_id', `${row.login}:%`);
+    /* Не кидаємо: рахунок уже відвʼязано, і повторна спроба все одно
+       нічого не зламає — це прибирання, а не основна дія. */
+    if (tErr) console.error('remove mt5 trades', tErr);
+  }
 }
 
 /* Людина відкрила журнал — просимо чергу оновити її рахунки першими.

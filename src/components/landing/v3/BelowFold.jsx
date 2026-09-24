@@ -5,6 +5,7 @@ import AutoImport from './AutoImport';
 import Product from './Product';
 import Coach from './Coach';
 import { Rhythm, NotDoing, Pricing, FinalFaq } from './Closing';
+import { OWNER } from '../../../lib/terms';
 
 /* ==================================================================
    Усе, що нижче першого екрана.
@@ -35,7 +36,7 @@ const FOOTER_COLS = [
   /* Окрема колонка, а не рядок дрібним шрифтом унизу. Умови шукають
      тоді, коли вже щось сталося, — і знаходити їх мають там, де
      шукають решту посилань, а не в підвалі підвалу. */
-  { title: 'ПРАВО', links: [['/terms', 'Умови користування']] },
+  { title: 'ПРАВО', links: [['/terms', 'Публічна оферта'], ['/terms#billing', 'Оплата і повернення коштів'], ['/terms#contacts', 'Контакти']] },
 ];
 
 function Footer() {
@@ -78,6 +79,20 @@ function Footer() {
         <div style={{ flex: '0 1 150px', textAlign: 'right', fontFamily: F.mono, fontSize: 12, color: C.dim }}>
           © 2026 Edge Journal
         </div>
+      </div>
+
+      {/* Реквізити продавця. Платіжні сервіси й банки перевіряють їх
+          на сайті перед підключенням, а покупцю вони потрібні, щоб
+          знати, з ким укладає договір. Показуємо лише заповнене:
+          заглушка {{…}} на сайті гірша за відсутній рядок. */}
+      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 28px', fontFamily: F.sans, fontSize: 12, lineHeight: 1.7, color: '#5d5d70' }}>
+        {[
+          OWNER.name,
+          OWNER.code && `РНОКПП / ЄДРПОУ ${OWNER.code}`,
+          OWNER.address,
+          OWNER.email,
+          OWNER.phone,
+        ].filter((v) => v && !String(v).includes('{{')).join(' · ')}
       </div>
     </footer>
   );

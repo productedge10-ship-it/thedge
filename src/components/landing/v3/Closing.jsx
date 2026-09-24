@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowRight, Ban, Check, ChevronDown, Gift, TriangleAlert } from 'lucide-react';
 import { C, F, A, reducedMotion, SHELL, SoonTag, PriceRoll } from './base';
+import { useUahRate, toUah, fmtUah, TRIAL_DAYS } from '../../../lib/billing';
 
 /* ==================================================================
    Хвіст сторінки: ритм дня, чого ми не робимо, ціни, питання, футер.
@@ -149,6 +150,9 @@ const COMPARE_GRID = 'minmax(0,2fr) minmax(0,1fr) minmax(0,1fr)';
 
 export function Pricing() {
   const [yearly, setYearly] = useState(false);
+  const rate = useUahRate();
+  const uahMonth = toUah(yearly ? 12 : 15, rate);
+  const uahYear = toUah(144, rate);
   const reduced = reducedMotion();
 
   /* Кнопка більше не має власного фону. Підсвітка — одна плашка, що
@@ -251,7 +255,11 @@ export function Pricing() {
               size={46}
               style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}
             />
-            <span style={{ fontFamily: F.sans, fontSize: 15, color: '#7d7d90' }}>/ місяць</span>
+            <span style={{ fontFamily: F.sans, fontSize: 15, color: '#7d7d90' }}>
+              / місяць
+              {/* Гривня за курсом НБУ на сьогодні — довідково, поруч із доларом. */}
+              {uahMonth ? <span style={{ color: '#5d5d70' }}> · ≈ {fmtUah(uahMonth)}</span> : null}
+            </span>
           </div>
 
           <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22, minHeight: 21 }}>
@@ -270,7 +278,9 @@ export function Pricing() {
                 animation: reduced ? 'none' : 'lnSubIn .42s cubic-bezier(.4,0,.2,1) .16s both',
               }}
             >
-              {yearly ? '$144 на рік — на $36 дешевше' : 'Усе з Free, плюс те, що змінює поведінку'}
+              {yearly
+                ? `$144 на рік${uahYear ? ` (≈ ${fmtUah(uahYear)})` : ''} — на $36 дешевше`
+                : `${TRIAL_DAYS} днів безкоштовно · лише привʼязка картки`}
             </span>
           </div>
 

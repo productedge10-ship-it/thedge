@@ -1,6 +1,6 @@
 import { Sparkles } from 'lucide-react';
 import { T } from '../trading/planTheme';
-import { PRO_FEATURES, TRIAL_DAYS, TRIAL_HOLD_LABEL } from '../../lib/billing';
+import { PRO_FEATURES, TRIAL_DAYS } from '../../lib/billing';
 import GateScene from './GateScene';
 
 /* ==================================================================
@@ -92,7 +92,7 @@ export default function ProGate({ feature, onStart }) {
       {/* Умови списання лишаються: саме цей рядок вирішує, чи буде
           потім повернення й чарджбек. */}
       <span className="mt-3 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-        {TRIAL_HOLD_LABEL} за перевірку картки · скасувати можна будь-коли
+        Лише привʼязка картки, без списання · скасувати можна будь-коли
       </span>
     </div>
   );
