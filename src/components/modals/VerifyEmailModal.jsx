@@ -102,8 +102,12 @@ export default function VerifyEmailModal() {
 
   useEffect(() => () => clearInterval(timer.current), []);
 
-  const startCooldown = useCallback(() => {
-    setLeft(COOLDOWN);
+  /* Відлік приймає число секунд: коли Supabase відмовляє через ліміт,
+     він сам каже, скільки лишилось. Раніше тут завжди ставилось 60, і
+     кнопка показувала «56 с», а сповіщення поруч — «19 с»: два різні
+     годинники на одну й ту саму паузу. Тепер годинник один — серверний. */
+  const startCooldown = useCallback((seconds = COOLDOWN) => {
+    setLeft(seconds);
     clearInterval(timer.current);
     timer.current = setInterval(() => {
       setLeft((v) => {
@@ -126,8 +130,11 @@ export default function VerifyEmailModal() {
       const raw = String(e?.message || '');
       const seconds = raw.match(/after (\d+) seconds?/i)?.[1];
       if (seconds) {
-        startCooldown();
-        notify.error('Зачекайте трохи', `Наступний лист можна надіслати через ${seconds} с.`);
+        /* Кнопка вже сама показує відлік, тож окреме сповіщення з
+           цифрою тільки дублює її — і розходиться з нею, щойно одне
+           з двох оновиться на секунду пізніше. Лишаємо коротке «чому». */
+        startCooldown(Number(seconds));
+        notify.error('Зачекайте трохи', 'Лист уже надсилали нещодавно. Кнопка стане активною, щойно мине пауза.');
       } else {
         notify.error('Не вдалось надіслати', raw || 'Спробуйте ще раз за хвилину.');
       }
