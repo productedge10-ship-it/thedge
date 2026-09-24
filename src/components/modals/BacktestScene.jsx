@@ -17,8 +17,10 @@ import { T } from '../../lib/theme';
      ціні зі стопом і тейком 1:2;
    • швидкість ×1 / ×4 / ×16 і пауза (пробіл);
    • перехрестя з ціною під курсором.
-   Поруч торгує «стратегія» — її угоди фіолетові, твої — кольорові.
-   Метрики рахуються по всіх закритих угодах, як у журналі.
+   На графіку лише угоди, які відкрила сама людина. Раніше поруч
+   торгувала ще й «стратегія», і це плутало: угоди з'являлись без
+   натискання, а метрики рахували чужі результати. Метрики — по твоїх
+   закритих угодах, як у журналі.
 
    Числа — випадкова симуляція, а не чиїсь результати. Це підписано.
 ================================================================== */
@@ -63,7 +65,7 @@ function makeSim() {
   const cur = newCandle(price, drift);
   return {
     candles, cur, f: 0, drift, idx: 0,
-    trades: [], seq: 0, lastAuto: 0,
+    trades: [], seq: 0,
     lo: price - 4, hi: price + 4,
     mouse: null, flash: [],
   };
@@ -96,21 +98,21 @@ export default function BacktestScene({ children }) {
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
-  /* Відкрити угоду. who: 'me' | 'bot'. */
-  const openTrade = useCallback((dir, who = 'me') => {
+  /* Відкрити угоду по поточній ціні. Одна за раз: так легше стежити,
+     чим закінчилась саме ця, і так поводиться більшість бектестів. */
+  const openTrade = useCallback((dir) => {
     const s = sim.current;
-    if (s.trades.some((t) => !t.done && t.who === who)) {
-      if (who === 'me') setToast('Одна угода за раз — спершу дочекайся стопа чи тейка');
+    if (s.trades.some((t) => !t.done)) {
+      setToast('Одна угода за раз — спершу дочекайся стопа чи тейка');
       return;
     }
     const entry = s.cur.close;
-    const rr = who === 'me' ? RR : [1.5, 2, 2.5][Math.floor(Math.random() * 3)];
     s.trades.push({
-      id: ++s.seq, who, dir, entry, rr,
-      sl: entry - dir * RISK, tp: entry + dir * RISK * rr,
+      id: ++s.seq, dir, entry, rr: RR,
+      sl: entry - dir * RISK, tp: entry + dir * RISK * RR,
       at: s.idx + s.f, done: false,
     });
-    if (who === 'me') setToast(null);
+    setToast(null);
   }, []);
 
   /* Головний цикл: симуляція + малювання. */
@@ -177,16 +179,6 @@ export default function BacktestScene({ children }) {
         s.cur = newCandle(c.close, s.drift);
         // Сцена може крутитись годинами — історію угод тримаємо обмеженою.
         if (s.trades.length > 80) s.trades = s.trades.slice(-60);
-
-        // Стратегія: раз на кілька свічок — у бік імпульсу останніх п'яти.
-        if (s.idx - s.lastAuto >= 9 && !s.trades.some((t) => !t.done && t.who === 'bot')) {
-          const k = s.candles.slice(-5);
-          const mom = k[k.length - 1].close - k[0].open;
-          if (Math.abs(mom) > 0.6) {
-            s.lastAuto = s.idx;
-            openTrade(mom > 0 ? 1 : -1, 'bot');
-          }
-        }
       }
     };
 
@@ -243,12 +235,12 @@ export default function BacktestScene({ children }) {
         ctx.fillStyle = `rgba(248,113,113,${a})`;
         ctx.fillRect(x0, Math.min(y(t.entry), y(t.sl)), x1 - x0, Math.abs(y(t.sl) - y(t.entry)));
         ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = t.who === 'bot' ? 'rgba(139,123,255,0.8)' : 'rgba(255,255,255,0.55)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
         ctx.beginPath(); ctx.moveTo(x0, y(t.entry)); ctx.lineTo(x1, y(t.entry)); ctx.stroke();
         ctx.setLineDash([]);
         ctx.beginPath();
         ctx.arc(x0, y(t.entry), 4, 0, Math.PI * 2);
-        ctx.fillStyle = t.who === 'bot' ? COL.acc : t.dir > 0 ? COL.up : COL.down;
+        ctx.fillStyle = t.dir > 0 ? COL.up : COL.down;
         ctx.fill();
       }
 
@@ -367,7 +359,7 @@ export default function BacktestScene({ children }) {
         const wins = closed.filter((t) => t.r > 0);
         const gain = wins.reduce((a, t) => a + t.r, 0);
         const loss = closed.length - wins.length;
-        const mine = sim.current.trades.find((t) => !t.done && t.who === 'me');
+        const mine = sim.current.trades.find((t) => !t.done);
         setStats({
           n: closed.length,
           wr: closed.length ? Math.round((wins.length / closed.length) * 100) : 0,
