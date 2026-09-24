@@ -69,7 +69,7 @@ function SectionTitle({ eyebrow, title, sub }) {
       </div>
       <h2
         className="text-[26px] md:text-[30px] font-bold text-[var(--edge-text)] leading-tight"
-        style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '-0.3px' }}
+        style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif", letterSpacing: '-0.3px' }}
       >
         {title}
       </h2>
@@ -409,7 +409,7 @@ export default function FAQ() {
             </div>
             <h1
               className="text-[34px] md:text-[44px] font-bold text-[var(--edge-text)] leading-[1.1] max-w-[760px]"
-              style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '-0.6px' }}
+              style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif", letterSpacing: '-0.6px' }}
             >
               Журнал, який не просто зберігає угоди —{' '}
               <span
@@ -438,7 +438,7 @@ export default function FAQ() {
                 background: `rgba(${ACCENT},0.10)`,
                 border: `1px solid rgba(${ACCENT},0.28)`,
                 color: ACCENT_HEX,
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--edge-sans, 'Golos Text'), system-ui, sans-serif",
               }}
               onMouseEnter={(e) => (e.currentTarget.style.background = `rgba(${ACCENT},0.16)`)}
               onMouseLeave={(e) => (e.currentTarget.style.background = `rgba(${ACCENT},0.10)`)}
@@ -459,7 +459,7 @@ export default function FAQ() {
                     >
                       <Bot size={22} strokeWidth={1.8} />
                     </div>
-                    <h3 className="text-[20px] font-bold text-[var(--edge-text)] mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    <h3 className="text-[20px] font-bold text-[var(--edge-text)] mb-3" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                       AI-психолог трейдера
                     </h3>
                     <p className="text-[14px] text-[var(--edge-text)]/55 leading-relaxed mb-4">
@@ -518,7 +518,7 @@ export default function FAQ() {
                 >
                   <Zap size={22} strokeWidth={1.8} />
                 </div>
-                <h3 className="text-[18px] font-bold text-[var(--edge-text)] mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <h3 className="text-[18px] font-bold text-[var(--edge-text)] mb-3" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                   Авто-імпорт з MT5
                 </h3>
                 <p className="text-[13.5px] text-[var(--edge-text)]/55 leading-relaxed mb-5">
@@ -554,7 +554,7 @@ export default function FAQ() {
                 >
                   <Layers size={22} strokeWidth={1.8} />
                 </div>
-                <h3 className="text-[18px] font-bold text-[var(--edge-text)] mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <h3 className="text-[18px] font-bold text-[var(--edge-text)] mb-3" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                   Абсолютна AI-екосистема
                 </h3>
                 <p className="text-[13.5px] text-[var(--edge-text)]/55 leading-relaxed mb-5">
@@ -608,7 +608,7 @@ export default function FAQ() {
                           >
                             <Icon size={22} strokeWidth={1.8} />
                           </div>
-                          <h3 className="text-[18px] font-bold text-[var(--edge-text)] mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                          <h3 className="text-[18px] font-bold text-[var(--edge-text)] mb-2" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                             {tab.title}
                           </h3>
                           <p className="text-[13px] text-[var(--edge-text)]/50 leading-relaxed">{tab.desc}</p>
@@ -665,7 +665,7 @@ export default function FAQ() {
                     <MessageCircle size={22} strokeWidth={1.8} />
                   </div>
                   <div>
-                    <h2 className="text-[var(--edge-text)] font-bold text-[15px] mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    <h2 className="text-[var(--edge-text)] font-bold text-[15px] mb-1" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                       Зв'язок зі мною
                     </h2>
                     <p className="text-[var(--edge-text)]/50 text-[13px] leading-relaxed">
@@ -732,7 +732,7 @@ export default function FAQ() {
                             >
                               {item.icon}
                             </div>
-                            <h4 className="text-[17px] font-bold text-[var(--edge-text)]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                            <h4 className="text-[17px] font-bold text-[var(--edge-text)]" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                               {item.title}
                             </h4>
                           </div>

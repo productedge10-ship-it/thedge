@@ -17,6 +17,9 @@ import StatStrip from '../components/backtest/StatStrip';
 import EquityCurve from '../components/backtest/EquityCurve';
 import BreakdownPanels from '../components/backtest/BreakdownPanels';
 import { ACT, act } from '../components/backtest/accent';
+import ErrorComposerModal from '../components/errors/ErrorComposerModal';
+import { fetchBacktestErrors, saveError, uid, todayISO } from '../lib/errorsStore';
+import { catsFromReasons } from '../components/errors/utils';
 
 /* ==================================================================
    Сторінка одного бектесту.
@@ -38,6 +41,66 @@ export default function BacktestSession() {
   const [saving, setSaving] = useState(false);
   const [sheet, setSheet] = useState(null);       // { trade } | { preset }
   const [confirm, setConfirm] = useState(null);
+
+  /* Помилки на угодах бектесту — та сама модалка, що в «Журналі
+     помилок», і та сама таблиця trade_errors (source = 'backtest').
+     Розбирати їх хочеться там само, де й помилки з реальних угод. */
+  const EMPTY_ERR = { pair: '', desc: '', tvLink: '', reasons: [], cats: [], shots: [] };
+  const [mistakes, setMistakes] = useState({});   // { [id угоди]: помилка }
+  const [errFor, setErrFor] = useState(null);     // угода, для якої відкрито модалку
+  const [errForm, setErrForm] = useState(EMPTY_ERR);
+
+  useEffect(() => {
+    if (demo || !user?.id || !trades.length) return undefined;
+    let alive = true;
+    fetchBacktestErrors(user.id, trades.map((t) => t.id)).then((m) => { if (alive) setMistakes(m); });
+    return () => { alive = false; };
+    /* Перечитуємо лише коли змінився набір угод, а не їхні поля. */
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [demo, user?.id, trades.map((t) => t.id).join(',')]);
+
+  const openMistake = (t) => {
+    if (demo) {
+      notify.error('Це демо', 'Помилки можна записувати у власному бектесті.');
+      return;
+    }
+    const found = mistakes[t.id];
+    setErrForm(found
+      ? { pair: found.pair, desc: found.desc, tvLink: found.tvLink || '', reasons: found.reasons || [], cats: found.cats || [], shots: found.shots || [] }
+      : { ...EMPTY_ERR, pair: pairOf(t) || session?.pair || '', shots: t.screenshot_url ? [t.screenshot_url] : [] });
+    setErrFor(t);
+  };
+
+  const saveMistake = async () => {
+    const t = errFor;
+    if (!t || !user?.id) return;
+    const reasons = errForm.reasons || [];
+    if (!reasons.length || errForm.desc.trim().length < 4) return;
+    const prev = mistakes[t.id];
+    const entry = {
+      id: prev?.id || uid(),
+      pair: (errForm.pair || '').trim().toUpperCase(),
+      /* Дата запису, а не дата угоди: бектест іде по історії 2023-го,
+         і помилка з датою угоди опинялась у самому низу журналу —
+         виглядало так, ніби вона не збереглась. */
+      date: prev?.date || todayISO(),
+      cats: errForm.cats?.length ? errForm.cats : catsFromReasons(reasons),
+      desc: errForm.desc.trim(),
+      tvLink: (errForm.tvLink || '').trim() || undefined,
+      shots: errForm.shots || [],
+      reasons,
+      source: 'backtest',
+      backtestTradeId: t.id,
+    };
+    setErrFor(null);
+    try {
+      const saved = await saveError(user.id, entry);
+      setMistakes((m) => ({ ...m, [t.id]: saved }));
+      notify.success('Помилку записано', 'Вона вже в Журналі помилок з позначкою «Бектест».');
+    } catch (e) {
+      notify.error('Не вдалось зберегти помилку', e.message);
+    }
+  };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [sessionId]);
 
@@ -360,8 +423,18 @@ export default function BacktestSession() {
           trades={stats.trades}
           onOpen={(t) => setSheet({ trade: t })}
           onDelete={(t) => setConfirm(t)}
+          onMistake={openMistake}
+          mistakes={mistakes}
         />
       </div>
+
+      <ErrorComposerModal
+        isOpen={!!errFor}
+        onClose={() => setErrFor(null)}
+        form={errForm}
+        setForm={setErrForm}
+        onSave={saveMistake}
+      />
 
       {/* ─────────── Модалка угоди ─────────── */}
       <AnimatePresence>

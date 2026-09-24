@@ -23,6 +23,7 @@ import { notify } from "../utils/notify";
 import { prefetchTradeCandles, nudgeMt5Sync } from "../lib/mt5Store";
 import { useAuth } from "../context/AuthContext";
 import { getTradeProfit } from "../utils/journalUtils";
+import { accountSize } from "../lib/accountsStore";
 import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
 
 import TradeModal from "../components/modals/TradeModal";
@@ -769,9 +770,9 @@ export default function TradingJournal() {
       if (data) {
         const map = {};
         data.forEach((a) => {
-          map[a.firm_name] = parseFloat(
-            a.account_size || a.balance || a.size || a.amount || 0
-          );
+          /* Розмір рахунку, а не поточний баланс: R і гроші угоди
+             рахуються від номіналу (100k), як у самого пропа. */
+          map[a.firm_name] = accountSize(a);
         });
         setAccountsMap(map);
       }

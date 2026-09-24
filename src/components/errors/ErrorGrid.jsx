@@ -104,6 +104,24 @@ function Card({ entry, onOpen }) {
               {entry.pair}
             </div>
           )}
+          {/* Помилка з бектесту — окремою позначкою: розбирати її
+              так само корисно, але коштувала вона не гроші. */}
+          {entry.source === 'backtest' && (
+            <span
+              className="ml-1.5 inline-flex h-[26px] items-center rounded-[7px] px-2 align-top"
+              style={{
+                background: 'rgba(var(--edge-info-rgb),0.10)',
+                border: '1px solid rgba(var(--edge-info-rgb),0.3)',
+                fontFamily: T.mono,
+                fontSize: 10.5,
+                letterSpacing: '1px',
+                fontWeight: 700,
+                color: 'var(--edge-info)',
+              }}
+            >
+              БЕКТЕСТ
+            </span>
+          )}
 
           {/* Дата дрібним моноширинним: місяць і рік уже стоять
               заголовком групи, тож на картці вона потрібна лише щоб

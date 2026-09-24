@@ -208,7 +208,7 @@ function SingleSetupModal({ setup, s, onClose }) {
             <div>
               <span className="block text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black mb-1">Аналітика сетапу</span>
               <div className="flex items-baseline gap-3">
-                <h3 className="text-[var(--edge-text)] text-[28px] leading-none font-normal m-0 font-['Instrument_Serif',serif] tracking-wide">{setup.key}</h3>
+                <h3 className="text-[var(--edge-text)] text-[22px] leading-none font-semibold m-0 font-[family-name:var(--edge-display,'Unbounded')] tracking-[-0.3px]">{setup.key}</h3>
                 <b className="text-[20px] font-black" style={{ color: isProfit ? '#34d399' : '#f87171' }}>{signed(setup.net, 2)}R</b>
               </div>
             </div>
@@ -338,7 +338,7 @@ function AllSetupsModal({ s, onClose }) {
         <div className="shrink-0 relative px-6 md:px-8 py-6 border-b border-[var(--edge-hair)] bg-[var(--edge-hair)]">
           <button onClick={onClose} className="absolute top-6 right-6 z-20 text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]"><X size={18} /></button>
           <div className="relative z-10">
-            <h3 className="text-[var(--edge-text)] text-[28px] leading-none font-normal m-0 font-['Instrument_Serif',serif] tracking-wide flex items-center gap-3">
+            <h3 className="text-[var(--edge-text)] text-[22px] leading-none font-semibold m-0 font-[family-name:var(--edge-display,'Unbounded')] tracking-[-0.3px] flex items-center gap-3">
               <Layers className="text-[var(--edge-acc)]" size={28}/> Усі сетапи (Детальна аналітика)
             </h3>
             <p className="text-[13px] text-[var(--edge-text3)] mt-2 m-0">Порівняння ефективності всіх патернів, які ти торгуєш.</p>
@@ -487,7 +487,7 @@ export default function Assets({ s }) {
       </AnimatePresence>
 
       <motion.div variants={fadeUpVariant} className="flex items-baseline gap-4 relative z-10 mb-2">
-        <h2 className="font-['Instrument_Serif',serif] text-[30px] font-normal m-0 tracking-[0.2px] text-[var(--edge-text)]">Активи та Сетапи</h2>
+        <h2 className="font-[family-name:var(--edge-display,'Unbounded')] text-[24px] font-semibold m-0 tracking-[-0.3px] text-[var(--edge-text)]">Активи та Сетапи</h2>
         <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">
           {s.byAsset.length} активів в роботі · {s.bySetup.length} сетапів
         </span>

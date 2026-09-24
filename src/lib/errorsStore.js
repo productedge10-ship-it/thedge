@@ -60,6 +60,7 @@ const toApp = (row) => ({
   /* Скріни графіка: масив публічних адрес у сховищі. */
   shots: Array.isArray(row.shots) ? row.shots.filter(Boolean) : [],
   tradeId: row.trade_id || null,
+  backtestTradeId: row.backtest_trade_id || null,
   source: row.source || 'manual',
   resolved: !!row.resolved,
 });
@@ -86,6 +87,11 @@ const toRow = (e, userId) => {
     source: e.source || 'manual',
     updated_at: new Date().toISOString(),
   };
+
+  /* Колонка є лише після міграції 2026-09-24_backtest_errors.sql.
+     Пишемо її тільки для помилок із бектесту, щоб звичайний запис не
+     залежав від того, чи міграцію вже виконали. */
+  if (e.backtestTradeId) row.backtest_trade_id = e.backtestTradeId;
 
   /* Стан розбору чіпаємо тільки якщо про нього спитали. Форма
      редагування помилки його не містить, і якби ми писали сюди
@@ -142,8 +148,30 @@ export async function saveError(userId, entry) {
     ({ error } = await supabase.from('trade_errors').upsert(rest, { onConflict: 'id' }));
   }
 
+  /* Помилка з бектесту без міграції 2026-09-24_backtest_errors.sql:
+     кажемо прямо, а не «щось пішло не так». */
+  if (error && row.backtest_trade_id && (missingColumn(error, 'backtest_trade_id') || error.code === '23514')) {
+    throw new Error('База ще не готова до помилок з бектесту — виконай міграцію 2026-09-24_backtest_errors.sql.');
+  }
+
   if (error) throw error;
   return toApp(row);
+}
+
+/* Помилки угод одного бектесту: { [id угоди]: помилка }. */
+export async function fetchBacktestErrors(userId, tradeIds) {
+  if (!userId || !tradeIds?.length) return {};
+  const { data, error } = await supabase
+    .from('trade_errors')
+    .select(SELECT + ', backtest_trade_id')
+    .eq('user_id', userId)
+    .in('backtest_trade_id', tradeIds);
+  /* Без міграції колонки немає — просто жодної позначки, а не
+     зламаний бектест. */
+  if (error || !data) return {};
+  const out = {};
+  data.forEach((row) => { out[row.backtest_trade_id] = toApp(row); });
+  return out;
 }
 
 export async function removeError(userId, id) {

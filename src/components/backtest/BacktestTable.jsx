@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ArrowDown, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Image as ImageIcon, Trash2, AlertTriangle } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { rOf, sessionOf, qualityOf, tagsOf, pairOf } from '../../lib/backtestStats';
 import { ACT, act } from './accent';
@@ -24,12 +24,13 @@ const COLS = [
   { key: 'session', label: 'Сесія',           w: '90px',             align: 'left' },
   { key: 'quality', label: 'Якість',          w: '58px',             align: 'left' },
   { key: 'r',       label: 'R',               w: '78px',             align: 'right' },
+  { key: 'mis',     label: '',                w: '36px',             align: 'center', noSort: true },
   { key: 'del',     label: '',                w: '36px',             align: 'center', noSort: true },
 ];
 
-export default function BacktestTable({ trades, onOpen, onDelete, onShot, readOnly = false }) {
+export default function BacktestTable({ trades, onOpen, onDelete, onShot, onMistake, mistakes = {}, readOnly = false }) {
   const [sort, setSort] = useState({ key: 'num', dir: 'desc' });
-  const cols = readOnly ? COLS.filter((c) => c.key !== 'del') : COLS;
+  const cols = readOnly ? COLS.filter((c) => c.key !== 'del' && c.key !== 'mis') : COLS;
   const grid = cols.map((c) => c.w).join(' ');
 
   const rows = useMemo(() => {
@@ -191,6 +192,26 @@ export default function BacktestTable({ trades, onOpen, onDelete, onShot, readOn
 
                   {/* Власна колонка, а не накладка поверх рядка: інакше
                       кнопка з'їжджала на цифру R і затуляла її */}
+                  {/* Помилка на угоді бектесту. Якщо вже записана — значок
+                      горить завжди, щоб її було видно в списку; якщо ні —
+                      зʼявляється під курсором, як і кошик. */}
+                  {!readOnly && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onMistake?.(t); }}
+                    title={mistakes[t.id] ? 'Помилка записана — відкрити' : 'Зафіксувати помилку'}
+                    className={`grid h-8 w-8 place-items-center justify-self-center rounded-lg transition-all duration-200 ${
+                      mistakes[t.id] ? '' : 'opacity-60 lg:opacity-0 lg:group-hover:opacity-100'
+                    }`}
+                    style={mistakes[t.id]
+                      ? { background: `rgba(${T.warnRgb},0.12)`, border: `1px solid rgba(${T.warnRgb},0.4)`, color: T.warn }
+                      : { background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
+                    onMouseEnter={(e) => { if (!mistakes[t.id]) { e.currentTarget.style.color = T.warn; e.currentTarget.style.borderColor = `rgba(${T.warnRgb},0.4)`; } }}
+                    onMouseLeave={(e) => { if (!mistakes[t.id]) { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; } }}
+                  >
+                    <AlertTriangle size={13} strokeWidth={2.2} />
+                  </button>
+                  )}
+
                   {!readOnly && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onDelete(t); }}

@@ -227,7 +227,7 @@ const en = {
   coach: {
     eyebrow: 'Your coach',
     title: 'The cat has read every trade you logged.',
-    sub: 'Not a chatbot bolted onto a dashboard. It works from your own numbers — your adherence, your tilt trades, your best hours — and talks to you about the part no indicator covers: what happens in your head between the setup and the click.',
+    sub: 'Our cat analyses your trades, finds systematic mistakes and shows the patterns you might not notice yourself. The dashboard shows the numbers — the cat explains what’s behind them: what happens in your head between the setup and the click.',
     bullets: [
       'Tells you which habit is costing the most, with the R attached.',
       'Notices when you’re trading angry before you do.',
@@ -525,7 +525,7 @@ const uk = {
   coach: {
     eyebrow: 'Твій коуч',
     title: 'Кіт прочитав кожну твою угоду.',
-    sub: 'Не чатбот, прикручений до дашборда. Він працює з твоїми цифрами — дисципліна, угоди на тілті, найкращі години — і говорить про те, чого не покриє жоден індикатор: що коїться в голові між сетапом і кліком.',
+    sub: 'Фірмовий котик аналізує твої угоди, знаходить систематичні помилки, показує закономірності й те, що ти сам можеш не помічати. Дашборд показує цифри — кіт пояснює, що за ними стоїть: що коїться в голові між сетапом і кліком.',
     bullets: [
       'Каже, яка звичка коштує найдорожче, з цифрою в R.',
       'Помічає, що ти торгуєш злий, раніше за тебе.',
@@ -823,7 +823,7 @@ const ru = {
   coach: {
     eyebrow: 'Твой коуч',
     title: 'Кот прочитал каждую твою сделку.',
-    sub: 'Не чатбот, прикрученный к дашборду. Он работает с твоими цифрами — дисциплина, сделки на тильте, лучшие часы — и говорит о том, чего не покроет ни один индикатор: что творится в голове между сетапом и кликом.',
+    sub: 'Фирменный котик анализирует твои сделки, находит систематические ошибки, показывает закономерности и то, что ты сам можешь не замечать. Дашборд показывает цифры — кот объясняет, что за ними стоит: что творится в голове между сетапом и кликом.',
     bullets: [
       'Говорит, какая привычка стоит дороже всего, с цифрой в R.',
       'Замечает, что ты торгуешь злой, раньше тебя.',

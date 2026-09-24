@@ -228,7 +228,10 @@ function useCandlestickChart(canvasRef) {
     host.addEventListener('mouseleave', onLeave);
     host.addEventListener('mousedown', onDown);
 
-    const particles = Array.from({ length: 42 }, () => ({
+    /* Летючих крапок більше немає: на сторінці входу вони відволікали
+       й виглядали як сміття на екрані. Масив лишається порожнім, щоб
+       не чіпати цикл малювання нижче. */
+    const particles = Array.from({ length: 0 }, () => ({
       x: Math.random(),
       y: Math.random(),
       s: Math.random() * 1.6 + 0.4,
@@ -462,147 +465,6 @@ function useCandlestickChart(canvasRef) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Flow field — 3D streams of light that trail the cursor             */
-/*  Particles ride a slowly rotating vector field. Each one carries a  */
-/*  depth value: far strands are dim, thin and parallax-lag behind the */
-/*  cursor, near strands are bright, thick and lead it — which is what */
-/*  sells the 3D. Near the cursor the field turns into a vortex, so    */
-/*  the streams curl around the pointer and stretch out behind it.     */
-/* ------------------------------------------------------------------ */
-const TRAIL = 16;
-
-function useFlowField(canvasRef, pointerRef) {
-  useEffect(() => {
-    const cv = canvasRef.current;
-    if (!cv) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    const ctx = cv.getContext('2d');
-    let W = 0, H = 0, dpr = 1, raf, t = 0;
-
-    const resize = () => {
-      const parent = cv.parentNode;
-      if (!parent) return;
-      const r = parent.getBoundingClientRect();
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = r.width; H = r.height;
-      cv.width = W * dpr; cv.height = H * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    window.addEventListener('resize', resize);
-
-    const COUNT = 90;
-    const spawn = (p) => {
-      p.x = Math.random() * (W + 200) - 100;
-      p.y = Math.random() * (H + 200) - 100;
-      p.z = 0.25 + Math.random() * 0.75;   // depth: 0 far … 1 near
-      p.life = 60 + Math.random() * 200;
-      p.trail.length = 0;
-      return p;
-    };
-    const parts = Array.from({ length: COUNT }, () => spawn({ trail: [] }));
-
-    // smoothed pointer, so the streams lag elegantly instead of snapping
-    const cur = { x: -9999, y: -9999, amt: 0 };
-
-    const frame = () => {
-      if (!W) { raf = requestAnimationFrame(frame); return; }
-      ctx.clearRect(0, 0, W, H);
-      t += 0.0042;
-
-      const ptr = pointerRef.current;
-      cur.amt += ((ptr.in ? 1 : 0) - cur.amt) * 0.06;
-      if (ptr.in) {
-        if (cur.x < -999) { cur.x = ptr.x; cur.y = ptr.y; }
-        cur.x += (ptr.x - cur.x) * 0.12;
-        cur.y += (ptr.y - cur.y) * 0.12;
-      }
-
-      for (const p of parts) {
-        // ambient field angle
-        let a = Math.sin(p.x * 0.0042 + t * 1.7) * 1.7
-              + Math.cos(p.y * 0.0049 - t * 1.3) * 1.7;
-        let speed = 0.55 + p.z * 1.5;
-
-        // vortex around the pointer — streams curl, then stream away behind it
-        if (cur.amt > 0.01) {
-          const dx = p.x - cur.x, dy = p.y - cur.y;
-          const d = Math.hypot(dx, dy) + 0.001;
-          const pull = Math.exp(-(d * d) / (2 * 165 * 165)) * cur.amt;
-          if (pull > 0.002) {
-            const tangent = Math.atan2(dy, dx) + Math.PI * 0.5;
-            let diff = tangent - a;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            a += diff * pull * 0.85;
-            speed += pull * 3.4 * p.z;
-          }
-        }
-
-        p.x += Math.cos(a) * speed;
-        p.y += Math.sin(a) * speed;
-
-        p.trail.push(p.x, p.y);
-        if (p.trail.length > TRAIL * 2) p.trail.splice(0, 2);
-
-        if (--p.life < 0 || p.x < -140 || p.x > W + 140 || p.y < -140 || p.y > H + 140) spawn(p);
-      }
-
-      // parallax offset per depth layer — the real 3D tell
-      const shiftX = cur.amt ? (cur.x - W / 2) * 0.035 : 0;
-      const shiftY = cur.amt ? (cur.y - H / 2) * 0.035 : 0;
-
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.globalCompositeOperation = 'lighter';
-
-      for (const p of parts) {
-        const n = p.trail.length / 2;
-        if (n < 3) continue;
-        const par = (1 - p.z);            // far strands drift opposite the cursor
-        const ox = shiftX * par * 2.4;
-        const oy = shiftY * par * 2.4;
-
-        const fade = Math.min(1, p.life / 45);
-        const alpha = (0.05 + p.z * 0.30) * fade;
-
-        ctx.beginPath();
-        ctx.moveTo(p.trail[0] + ox, p.trail[1] + oy);
-        for (let i = 1; i < n; i++) ctx.lineTo(p.trail[i * 2] + ox, p.trail[i * 2 + 1] + oy);
-        ctx.strokeStyle = `rgba(${ACCENT},${alpha})`;
-        ctx.lineWidth = 0.4 + p.z * 1.5;
-        ctx.stroke();
-
-        // bright head, brighter the closer the strand is
-        const hx = p.trail[(n - 1) * 2] + ox, hy = p.trail[(n - 1) * 2 + 1] + oy;
-        ctx.beginPath();
-        ctx.arc(hx, hy, 0.5 + p.z * 1.4, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${190 + p.z * 65},${180 + p.z * 70},255,${(0.12 + p.z * 0.5) * fade})`;
-        ctx.fill();
-      }
-
-      // soft light carried by the cursor
-      if (cur.amt > 0.02) {
-        const lg = ctx.createRadialGradient(cur.x, cur.y, 0, cur.x, cur.y, 200);
-        lg.addColorStop(0, `rgba(${ACCENT},${0.09 * cur.amt})`);
-        lg.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = lg;
-        ctx.fillRect(cur.x - 200, cur.y - 200, 400, 400);
-      }
-
-      ctx.globalCompositeOperation = 'source-over';
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', resize);
-    };
-  }, [canvasRef, pointerRef]);
-}
-
-/* ------------------------------------------------------------------ */
 /*  UI atoms                                                           */
 /* ------------------------------------------------------------------ */
 function EdgeLogo({ large = false }) {
@@ -632,7 +494,7 @@ function TickerMarquee({ data, small = false }) {
     <div className="overflow-hidden" style={{ maskImage: mask, WebkitMaskImage: mask }}>
       <div
         className={`flex ${small ? 'gap-5 text-[11px]' : 'gap-[34px] text-[12px]'} w-max`}
-        style={{ fontFamily: "'JetBrains Mono', monospace", animation: `edgeMarquee ${small ? 22 : 26}s linear infinite` }}
+        style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", animation: `edgeMarquee ${small ? 22 : 26}s linear infinite` }}
       >
         {loop.map((tk, i) => (
           <div key={i} className="flex items-center gap-2 whitespace-nowrap">
@@ -657,7 +519,7 @@ function FieldInput({ icon: Icon, ...props }) {
       <input
         {...props}
         className="w-full h-[54px] pl-11 pr-4 rounded-[13px] bg-white/[0.03] border border-white/[0.09] text-[#e8eaed] text-[14.5px] font-medium placeholder:text-[#e8eaed]/30 outline-none transition-all duration-200 focus:border-[rgba(139,123,255,0.6)] focus:bg-white/[0.05] focus:shadow-[0_0_0_3px_rgba(139,123,255,0.22)]"
-        style={{ fontFamily: "'Manrope', sans-serif" }}
+        style={{ fontFamily: "var(--edge-sans, 'Golos Text'), system-ui, sans-serif" }}
       />
     </div>
   );
@@ -739,7 +601,7 @@ function PrimaryButton({ children, loading, withArrow = false, disabled, ...prop
         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
         className="relative w-full h-[54px] rounded-[13px] px-1 text-white font-bold text-[12.5px] uppercase flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-60"
         style={{
-          fontFamily: "'Manrope', sans-serif",
+          fontFamily: "var(--edge-sans, 'Golos Text'), system-ui, sans-serif",
           /* Фіксовані 2px розрядки — добре на коротких словах («Увійти»),
              але на довшій фразі («Надіслати посилання») розтягують текст
              мало не впритул до країв кнопки. Клемп зменшує розрядку саме
@@ -818,12 +680,12 @@ function FeatureRow({ feature, index }) {
         <Icon size={18} strokeWidth={1.8} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="font-semibold text-[13.5px] text-[#eef1f4]" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+        <div className="font-semibold text-[13.5px] text-[#eef1f4]" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
           {title}
         </div>
         <div className="text-[11.5px] text-[#e8eaed]/45 mt-0.5">{desc}</div>
       </div>
-      <div className="text-[12px] font-semibold" style={{ fontFamily: "'JetBrains Mono', monospace", color }}>
+      <div className="text-[12px] font-semibold" style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", color }}>
         {stat}
       </div>
     </motion.div>
@@ -939,10 +801,8 @@ export default function Auth() {
   }, []);
 
   /* ---- right panel: flow field + 3D card tilt ---- */
-  const flowRef = useRef(null);
   const cardRef = useRef(null);
   const pointer = useRef({ x: -9999, y: -9999, in: false });
-  useFlowField(flowRef, pointer);
 
   const tilt = { stiffness: 110, damping: 18, mass: 0.5 };
   const nx = useMotionValue(0.5); // cursor position across the card, 0..1
@@ -1102,7 +962,6 @@ export default function Auth() {
     }
   };
 
-  const gridMask = 'radial-gradient(120% 100% at 68% 42%, #000 28%, transparent 74%)';
 
   /* Уже залогінений — нічого показувати, одразу в застосунок.
 
@@ -1116,7 +975,7 @@ export default function Auth() {
   return (
     <div
       className="fixed inset-0 flex bg-[#08090b] text-[#e8eaed] overflow-hidden"
-      style={{ fontFamily: "'Manrope', sans-serif" }}
+      style={{ fontFamily: "var(--edge-sans, 'Golos Text'), system-ui, sans-serif" }}
     >
       <style>{`
         @keyframes edgeAurora { 0%{transform:translate(0,0) scale(1);} 50%{transform:translate(6%,-4%) scale(1.15);} 100%{transform:translate(0,0) scale(1);} }
@@ -1217,19 +1076,19 @@ export default function Auth() {
           <div className="max-w-[520px]">
             <div
               className="text-[11px] uppercase mb-[22px]"
-              style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: 4, color: ACCENT_HEX }}
+              style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 4, color: ACCENT_HEX }}
             >
               Trading Terminal Access
             </div>
             <div
               className="font-semibold text-[32px] leading-[1.08] text-[#f6f8fa] sm:text-[46px]"
-              style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '-0.5px' }}
+              style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif", letterSpacing: '-0.5px' }}
             >
               Торгуй з перевагою,<br />яку можна виміряти.
             </div>
             <div
               className="mt-6 text-[10.5px] uppercase text-[#e8eaed]/35"
-              style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: 2.5 }}
+              style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2.5 }}
             >
               Клікни по графіку — розжени ринок ↗
             </div>
@@ -1241,7 +1100,7 @@ export default function Auth() {
             </div>
             <div
               className="flex items-center gap-[10px] text-[10.5px] uppercase text-[#e8eaed]/40"
-              style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: 2.5 }}
+              style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2.5 }}
             >
               <span
                 className="w-[7px] h-[7px] rounded-full"
@@ -1264,18 +1123,8 @@ export default function Auth() {
       >
         {/* everything decorative is clipped to the panel so nothing can create a scrollbar */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* dotted grid texture */}
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0)',
-              backgroundSize: '34px 34px',
-              maskImage: gridMask,
-              WebkitMaskImage: gridMask,
-            }}
-          />
-          {/* streams of light trailing the cursor */}
-          <canvas ref={flowRef} className="absolute inset-0 w-full h-full block" />
+          {/* Крапкова сітка й «потоки» крапок за курсором прибрані —
+              фон лишається чистим, тримається лише на світлі. */}
           {/* accent glow, top-right */}
           <div
             className="absolute rounded-full"
@@ -1294,7 +1143,7 @@ export default function Auth() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="flex items-center justify-between mb-5 text-[10.5px] uppercase text-[#e8eaed]/42"
-            style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: 2 }}
+            style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2 }}
           >
             <div className="flex items-center gap-2">
               <span
@@ -1388,10 +1237,10 @@ export default function Auth() {
                 {mode === 'login' && (
                   <motion.div key="login" {...screenMotion}>
                     <div className="text-center mb-7">
-                      <div className="font-bold text-[28px] tracking-[1px] text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      <div className="font-bold text-[28px] tracking-[1px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                         ВХІД
                       </div>
-                      <div className="text-[10px] tracking-[3.5px] text-[#e8eaed]/40 mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <div className="text-[10px] tracking-[3.5px] text-[#e8eaed]/40 mt-2" style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace" }}>
                         TRADING TERMINAL ACCESS
                       </div>
                     </div>
@@ -1424,10 +1273,10 @@ export default function Auth() {
                 {mode === 'register' && (
                   <motion.div key="register" {...screenMotion}>
                     <div className="text-center mb-7">
-                      <div className="font-bold text-[28px] tracking-[1px] text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      <div className="font-bold text-[28px] tracking-[1px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                         РЕЄСТРАЦІЯ
                       </div>
-                      <div className="text-[10px] tracking-[3.5px] text-[#e8eaed]/40 mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <div className="text-[10px] tracking-[3.5px] text-[#e8eaed]/40 mt-2" style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace" }}>
                         TRADING TERMINAL ACCESS
                       </div>
                     </div>
@@ -1487,7 +1336,7 @@ export default function Auth() {
                       >
                         <Key size={22} color={ACCENT_HEX} strokeWidth={1.7} />
                       </div>
-                      <div className="font-bold text-[25px] tracking-[0.5px] text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      <div className="font-bold text-[25px] tracking-[0.5px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                         Відновлення
                       </div>
                       <div className="text-[13px] leading-[1.5] text-[#e8eaed]/50 mt-[11px]">
@@ -1520,7 +1369,7 @@ export default function Auth() {
                       >
                         <Lock size={22} color={ACCENT_HEX} strokeWidth={1.7} />
                       </div>
-                      <div className="font-bold text-[25px] tracking-[0.5px] text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                      <div className="font-bold text-[25px] tracking-[0.5px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                         Новий пароль
                       </div>
                       <div className="text-[13px] leading-[1.5] text-[#e8eaed]/50 mt-[11px]">
@@ -1550,7 +1399,7 @@ export default function Auth() {
                     >
                       <MailCheck size={28} color={ACCENT_HEX} strokeWidth={1.6} />
                     </div>
-                    <div className="font-bold text-[24px] tracking-[0.5px] text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    <div className="font-bold text-[24px] tracking-[0.5px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                       Перевірте пошту
                     </div>
                     <div className="text-[13.5px] leading-[1.6] text-[#e8eaed]/55 mt-3 mb-[26px] max-w-[320px] mx-auto">
@@ -1585,7 +1434,7 @@ export default function Auth() {
 
           <div
             className="text-center mt-5 text-[10px] uppercase text-[#e8eaed]/28"
-            style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: 2 }}
+            style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2 }}
           >
             © 2026 THE EDGE · SOC 2 · 256-BIT
           </div>

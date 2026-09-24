@@ -11,6 +11,7 @@ import { T } from '../lib/theme';
 import AssetIcon, { CURRENCY_TO_FLAG } from '../components/ui/AssetIcon';
 import ResultsBoard from '../components/calculator/ResultsBoard';
 import AssetSearchModal from '../components/modals/AssetSearchModal';
+import { accountSize } from '../lib/accountsStore';
 
 /* ==================================================================
    Калькулятор позиції.
@@ -42,8 +43,9 @@ const QUICK_SELECT_SYMBOLS = ['BTC/USD', 'EUR/USD', 'GER40', 'ETH/USD', 'GBP/USD
    1% на рахунку з +$6,000 зверху рахувався б уже не від $100,000, а
    від $106,000, і ризик непомітно ріс би разом із самим рахунком.
    initial_balance фіксується один раз при створенні рахунку; старі
-   записи, заведені до цього поля, підстраховані відкатом на balance. */
-const initialBalanceOf = (acc) => String(Number(acc?.initial_balance ?? acc?.balance) || 0);
+   записи й рахунки, заведені воркером MT5, беруть найближчий стандартний
+   розмір пропа (accountSize у lib/accountsStore). */
+const initialBalanceOf = (acc) => String(accountSize(acc) || 0);
 
 const container = {
   hidden: { opacity: 0 },
@@ -634,7 +636,7 @@ export default function Calculator() {
                               {acc.firm_name}
                             </span>
                             <span className="truncate text-[16px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: on ? T.text : T.text3 }}>
-                              ${Number(acc.initial_balance ?? acc.balance).toLocaleString('uk-UA')}
+                              ${Number(accountSize(acc)).toLocaleString('uk-UA')}
                             </span>
                           </button>
                         );

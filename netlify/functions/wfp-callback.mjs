@@ -156,6 +156,21 @@ export default async (req) => {
     authCode, cardPan, transactionStatus, reasonCode,
   ]);
 
+  /* Без секрету підпис рахувався б від порожнього ключа — такий
+     «підпис» може порахувати будь-хто. */
+  if (!SECRET) {
+    console.error('wfp callback: не задано WFP_SECRET_KEY');
+    return new Response(null, { status: 500 });
+  }
+
+  /* Лист має бути про наш магазин. Підпис це вже гарантує, але
+     зайва перевірка тут коштує один рядок. */
+  const OUR = process.env.WFP_MERCHANT_ACCOUNT;
+  if (OUR && merchantAccount !== OUR) {
+    console.error('wfp callback: чужий merchantAccount', merchantAccount);
+    return new Response(null, { status: 400 });
+  }
+
   if (!sameSignature(expected, body.merchantSignature)) {
     console.error('wfp callback: підпис не збігся', orderReference);
     /* Навмисно без пояснень у тілі: тому, хто підбирає підпис, не

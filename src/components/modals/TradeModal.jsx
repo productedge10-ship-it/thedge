@@ -16,7 +16,7 @@ import { useSettings } from '../../context/SettingsContext';
 import { notify } from '../../utils/notify';
 import { T, EASE, SPRING, useEdgeFonts } from '../../lib/theme';
 import { syncErrorFromTrade, fetchErrorForTrade, catsFromTrade } from '../../lib/errorsStore';
-import { logTradeMovement } from '../../lib/accountsStore';
+import { logTradeMovement, accountSize } from '../../lib/accountsStore';
 import { getTradeProfit } from '../../utils/journalUtils';
 import { CATS } from '../errors/utils';
 import ErrorComposerModal from '../errors/ErrorComposerModal';
@@ -1197,7 +1197,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       setAccounts(listCache.accounts);
       if (!accToSet) setAccount(firstOpen(listCache.accounts) || '');
     } else {
-      supabase.from('prop_accounts').select('id, firm_name, balance, status').then(({ data }) => {
+      supabase.from('prop_accounts').select('id, firm_name, balance, initial_balance, status').then(({ data }) => {
         if (data) {
           listCache.accounts = data;
           setAccounts(data);
@@ -1279,7 +1279,9 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
      не всередині розмітки, бо потрібні у двох місцях і не мають
      перераховуватись двічі. */
   const riskPct = parseFloat(String(risk).replace('%', '').replace(',', '.')) || 0;
-  const accountBalance = Number(accounts.find((a) => a.firm_name === account)?.balance) || null;
+  /* 1R — від розміру рахунку (100k), а не від поточного балансу:
+     інакше та сама «1%» мінялась би разом із P&L. */
+  const accountBalance = accountSize(accounts.find((a) => a.firm_name === account)) || null;
   const oneR = accountBalance ? Math.round((accountBalance * riskPct) / 100) : null;
   const rNum = parseFloat(String(rr).replace(',', '.'));
   const hasR = !Number.isNaN(rNum);
@@ -1403,7 +1405,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
         try {
           const accRow = accounts.find((a) => a.firm_name === account);
           if (accRow) {
-            const accountsMap = { [account]: Number(accRow.balance) || 0 };
+            const accountsMap = { [account]: accountSize(accRow) };
             const profit = getTradeProfit(payload, accountsMap);
             if (profit) {
               const { account: updatedAcc } = await logTradeMovement(user?.id, accRow, {

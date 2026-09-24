@@ -42,6 +42,8 @@ export default async function handler(req, res) {
   try {
     const upstream = await fetch(target.toString(), {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; EdgeJournal/1.0)' },
+      /* Редірект міг би вивести запит за межі дозволених хостів. */
+      redirect: 'error',
     });
     if (!upstream.ok) return res.status(upstream.status).json({ error: 'upstream' });
 

@@ -89,6 +89,18 @@ const isMajor = (r) => r.impact !== "Low";
    середину. Спершу те, чим торгують найчастіше, решта за абеткою. */
 const CCY_ORDER = ["EUR", "USD", "GBP", "JPY"];
 
+/* Мультивибір валют, як на Forex Factory: позначаєш кілька — бачиш
+   новини тільки по них. Порожній набір = усі валюти. Вибір
+   памʼятаємо: хто торгує EUR і USD, щодня відкриває календар саме під
+   них. */
+const CCY_KEY = "edge_news_ccys";
+const readCcys = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(CCY_KEY) || "[]");
+    return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+  } catch { return []; }
+};
+
 /* Тиждень — це зсув від поточного: 0 сьогоднішній, -1 минулий, 2
    через два. Раніше стрілки ходили по трьох фіксованих словах, бо
    стільки віддавав старий фід; тепер джерело знає довільні дати. */
@@ -1316,7 +1328,12 @@ export default function News() {
   const [busy, setBusy] = useState(true);
   const [err, setErr] = useState(null);
   const [imp, setImp] = useState(MAJOR);
-  const [ccy, setCcy] = useState("all");
+  const [ccys, setCcys] = useState(readCcys);
+  useEffect(() => {
+    try { localStorage.setItem(CCY_KEY, JSON.stringify(ccys)); } catch { /* приватний режим */ }
+  }, [ccys]);
+  const ccyOk = useCallback((c) => ccys.length === 0 || ccys.includes(c), [ccys]);
+  const toggleCcy = (c) => setCcys((s) => (s.includes(c) ? s.filter((x) => x !== c) : [...s, c]));
 
   const [impOpen, setImpOpen] = useState(false);
   const [ccyOpen, setCcyOpen] = useState(false);
@@ -1412,10 +1429,10 @@ export default function News() {
       rows.filter((r) => {
         if (imp === MAJOR ? !isMajor(r) : imp !== "all" && r.impact !== imp)
           return false;
-        if (ccy !== "all" && r.ccy !== ccy) return false;
+        if (!ccyOk(r.ccy)) return false;
         return true;
       }),
-    [rows, imp, ccy],
+    [rows, imp, ccyOk],
   );
 
   const shown = useMemo(
@@ -1679,12 +1696,12 @@ export default function News() {
   ];
 
   const impCur = LEVELS.find((l) => l.id === imp) || impactOf(imp);
-  const hasFilter = imp !== MAJOR || ccy !== "all" || !!soloDay;
+  const hasFilter = imp !== MAJOR || ccys.length > 0 || !!soloDay;
   const impCount = (id) =>
     rows.filter(
       (r) =>
         (id === "all" || (id === MAJOR ? isMajor(r) : r.impact === id)) &&
-        (ccy === "all" || r.ccy === ccy),
+        ccyOk(r.ccy),
     ).length;
 
   return (
@@ -1840,7 +1857,7 @@ export default function News() {
             <div className="relative order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:flex-none">
               <DropButton
                 open={ccyOpen}
-                active={ccy !== "all"}
+                active={ccys.length > 0}
                 color={T.acc}
                 onClick={() => {
                   setCcyOpen((v) => !v);
@@ -1856,22 +1873,25 @@ export default function News() {
                   className="min-w-0 flex-1 truncate text-left text-[12.5px] font-semibold"
                   style={{ fontFamily: T.sans, color: "var(--edge-text)" }}
                 >
-                  {ccy === "all" ? "Всі валюти" : ccy}
+                  {ccys.length === 0
+                    ? "Всі валюти"
+                    : ccys.length <= 3
+                      ? ccys.join(", ")
+                      : `${ccys.length} валюти`}
                 </span>
               </DropButton>
 
               {ccyOpen && (
-                <Panel width={242} align="left">
+                <Panel width={262} align="left">
                   <button
                     onClick={() => {
-                      setCcy("all");
-                      setCcyOpen(false);
+                      setCcys([]);
                     }}
                     className="flex h-9 w-full items-center gap-2.5 rounded-[10px] px-2.5 text-[12.5px] font-semibold"
                     style={{
                       fontFamily: T.sans,
-                      background: ccy === "all" ? A(0.17) : "transparent",
-                      color: ccy === "all" ? "var(--edge-text)" : "var(--edge-text3)",
+                      background: ccys.length === 0 ? A(0.17) : "transparent",
+                      color: ccys.length === 0 ? "var(--edge-text)" : "var(--edge-text3)",
                     }}
                   >
                     <span className="flex-1 text-left">Всі валюти</span>
@@ -1893,13 +1913,12 @@ export default function News() {
 
                   <div className="grid grid-cols-3 gap-[5px]">
                     {currencies.map((c) => {
-                      const on = ccy === c;
+                      const on = ccys.includes(c);
                       return (
                         <button
                           key={c}
                           onClick={() => {
-                            setCcy(on ? "all" : c);
-                            setCcyOpen(false);
+                            toggleCcy(c);
                           }}
                           className="flex h-8 items-center justify-center gap-1.5 rounded-[9px]"
                           style={{
@@ -1919,6 +1938,7 @@ export default function News() {
                       );
                     })}
                   </div>
+
                 </Panel>
               )}
             </div>
@@ -2183,7 +2203,7 @@ export default function News() {
                 transition={SPRING_SOFT}
                 onClick={() => {
                   setImp(MAJOR);
-                  setCcy("all");
+                  setCcys([]);
                   setSoloDay(null);
                 }}
                 className="flex h-[34px] items-center gap-[7px] rounded-[10px] px-3 text-[11.5px] font-semibold"
@@ -2361,7 +2381,7 @@ export default function News() {
             затримки вже нема, щоб не гальмувати щоденну роботу. */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={`${week}-${imp}-${ccy}-${soloDay || ""}`}
+            key={`${week}-${imp}-${ccys.join(".")}-${soloDay || ""}`}
             initial={{ opacity: 0, y: 16, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.99 }}

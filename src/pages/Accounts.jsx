@@ -10,7 +10,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { notify } from '../utils/notify';
 import { T } from '../lib/theme';
-import { money, money2 } from '../lib/accountsStore';
+import { money, money2, accountSize } from '../lib/accountsStore';
 import { supabase as sb } from '../lib/supabase';
 import AccountDetails from '../components/accounts/AccountDetails';
 import AssetIcon from '../components/ui/AssetIcon';
@@ -321,7 +321,7 @@ export default function Accounts() {
     const activeIds = new Set(activeAccounts.map((a) => a.id));
     const activePayouts = payouts.filter((p) => activeIds.has(p.account_id));
     const capital = activeAccounts.reduce((s, a) => s + Number(a.balance || 0), 0);
-    const size = activeAccounts.reduce((s, a) => s + Number(a.initial_balance ?? a.balance ?? 0), 0);
+    const size = activeAccounts.reduce((s, a) => s + accountSize(a), 0);
     const paid = activePayouts.reduce((s, p) => s + Number(p.amount || 0), 0);
     const byAcc = {};
     payouts.forEach((p) => { byAcc[p.account_id] = (byAcc[p.account_id] || 0) + Number(p.amount || 0); });
@@ -458,19 +458,37 @@ return (
         className="flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6 mb-7 sm:mb-8"
       >
         <div className="min-w-0">
-          <div
-            className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]"
-            style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-acc, var(--edge-acc))' }}
-          >
-            Capital
+          {/* Шапка — один в один як у «Журналі помилок»: надпис із
+              крапкою, заголовок фірмовим Unbounded з градієнтом, підпис
+              Golos. Тут стояв Roboto — сторінка виглядала як із іншого
+              застосунку. */}
+          <div className="flex items-center gap-[9px]">
+            <span
+              className="h-[5px] w-[5px] rounded-full"
+              style={{ background: 'var(--edge-acc)', boxShadow: `0 0 12px 2px rgba(${T.accRgb},0.67)` }}
+            />
+            <span
+              className="text-[11px] font-bold uppercase"
+              style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-acc)' }}
+            >
+              Capital
+            </span>
           </div>
           <h1
-            className="text-[34px] font-bold leading-none sm:text-[42px]"
-            style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-text, var(--edge-text))', letterSpacing: '-0.03em' }}
+            className="mt-3 text-[32px] font-bold sm:text-[40px] lg:text-[48px]"
+            style={{
+              fontFamily: T.display,
+              letterSpacing: '-1.9px',
+              lineHeight: 1,
+              backgroundImage: `linear-gradient(170deg, ${T.text} 34%, ${T.text3})`,
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
           >
             Accounts
           </h1>
-          <p className="mt-2.5 text-[14px]" style={{ fontFamily: "'Roboto', system-ui, sans-serif", color: 'var(--edge-text3, var(--edge-text3))' }}>
+          <p className="mt-3.5 text-[15.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.55 }}>
             How much capital is at work and how it's behaving
           </p>
         </div>
@@ -573,7 +591,7 @@ return (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
             <AnimatePresence mode="popLayout">
               {shownAccounts.map((acc) => {
-                const size = Number(acc.initial_balance ?? acc.balance) || 0;
+                const size = accountSize(acc);
                 const bal = Number(acc.balance) || 0;
                 const open = bal - size;
                 const paid = totals.byAcc[acc.id] || 0;

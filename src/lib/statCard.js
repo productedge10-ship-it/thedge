@@ -143,7 +143,10 @@ export function buildCard(stats, { title, period, metrics, author }) {
 /* ---------- SVG ---------- */
 
 const esc = (s) => String(s)
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  /* Лапки теж: картка йде в сторінку через innerHTML, і текст,
+     що колись потрапить в атрибут, не має з нього вирватись. */
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 
 

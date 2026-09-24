@@ -226,18 +226,46 @@ async function sendFile(res, file, { immutable = false } = {}) {
    рівно те, що в ньому написано. */
 const safeFile = (pathname) => {
   const file = path.resolve(DIST, `.${decodeURIComponent(pathname)}`);
-  return file.startsWith(DIST) ? file : null;
+  /* З роздільником, а не просто startsWith(DIST): інакше «/../dist-old»
+     дає /app/dist-old, і перевірка вважає його своїм. */
+  return file === DIST || file.startsWith(DIST + path.sep) ? file : null;
 };
 
 /* ------------------------------------------------------------------
    Сам сервер.
 ------------------------------------------------------------------ */
+/* Заголовки безпеки на кожну відповідь.
+   • nosniff — браузер не вгадує тип файлу (картинка не стане скриптом);
+   • SAMEORIGIN — сайт не можна вбудувати в чужу сторінку й «клікнути»
+     кнопку оплати чи видалення руками обманутої людини;
+   • HSTS — після першого візиту браузер ходить лише по HTTPS;
+   • Referrer-Policy — адреси сторінок (з id і токенами поширення) не
+     витікають на сторонні сайти;
+   • Permissions-Policy — камера, мікрофон і геолокація сайту не потрібні. */
+const SECURITY_HEADERS = {
+  'x-content-type-options': 'nosniff',
+  'x-frame-options': 'SAMEORIGIN',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+};
+
 const server = http.createServer(async (req, res) => {
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
+
   /* Повна адреса потрібна конструктору Request і розбору ?query.
-     За проксі (nginx, Coolify) справжню схему знає лише заголовок. */
+     За проксі (nginx, Coolify) справжню схему знає лише заголовок.
+     Кривий Host не має класти весь процес — тому в try. */
   const proto = req.headers['x-forwarded-proto'] || 'http';
   const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${PORT}`;
-  const url = new URL(req.url, `${proto}://${host}`);
+  let url;
+  try {
+    url = new URL(req.url, `${proto}://${host}`);
+  } catch {
+    res.statusCode = 400;
+    res.end();
+    return;
+  }
   const { pathname } = url;
 
   try {

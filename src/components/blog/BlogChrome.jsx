@@ -354,8 +354,9 @@ export const BLOG_CSS = `
 .bl-crumb-sep{margin:0 6px;color:var(--bl-text4)}
 
 .bl-h1{
-  font-size:clamp(30px,3.4vw,46px);line-height:1.05;letter-spacing:-1.5px;
-  font-weight:700;margin:0 0 12px;text-wrap:balance;
+  font-family:var(--edge-display,'Unbounded'),system-ui,sans-serif;
+  font-size:clamp(28px,3.1vw,42px);line-height:1.08;letter-spacing:-1.2px;
+  font-weight:600;margin:0 0 12px;text-wrap:balance;
   animation:blUp .5s cubic-bezier(.22,.61,.36,1) backwards;
 }
 .bl-lede{
@@ -416,7 +417,8 @@ export const BLOG_CSS = `
 .bl-card:hover .bl-card-title{color:var(--bl-acc-text)}
 .bl-card-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
 .bl-card-title{
-  font-size:16.5px;line-height:1.3;font-weight:600;letter-spacing:-.3px;
+  font-family:var(--edge-display,'Unbounded'),system-ui,sans-serif;
+  font-size:15.5px;line-height:1.32;font-weight:600;letter-spacing:-.3px;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
   transition:color .2s;
 }
@@ -468,7 +470,7 @@ export const BLOG_CSS = `
   border:1px solid var(--bl-acc-line);border-radius:16px;padding:18px;
   background:linear-gradient(160deg,var(--bl-acc-soft),transparent 70%),var(--bl-surface);
 }
-.bl-promo h4{margin:0 0 6px;font-size:16.5px;font-weight:700;letter-spacing:-.3px}
+.bl-promo h4{font-family:var(--edge-display,'Unbounded'),system-ui,sans-serif;margin:0 0 6px;font-size:16.5px;font-weight:700;letter-spacing:-.3px}
 .bl-promo p{margin:0 0 14px;font-size:13.5px;line-height:1.5;color:var(--bl-text3)}
 .bl-rail-box{background:var(--bl-surface);border:1px solid var(--bl-line);border-radius:16px;padding:16px}
 .bl-rail-box h4{margin:0 0 12px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--bl-text4);font-weight:700}
@@ -556,12 +558,12 @@ export const BLOG_CSS = `
 }
 .bl-prose>*{margin:0 0 1.15em}
 .bl-prose h2{
-  font-family:var(--edge-sans,'Roboto',sans-serif);
-  font-size:1.42em;line-height:1.22;letter-spacing:-.6px;font-weight:700;
+  font-family:var(--edge-display,'Unbounded'),system-ui,sans-serif;
+  font-size:1.32em;line-height:1.25;letter-spacing:-.5px;font-weight:600;
   color:var(--bl-text);margin:2em 0 .7em;scroll-margin-top:96px;
 }
 .bl-prose h3{
-  font-family:var(--edge-sans,'Roboto',sans-serif);
+  font-family:var(--edge-display,'Unbounded'),system-ui,sans-serif;
   font-size:1.15em;line-height:1.3;font-weight:600;
   color:var(--bl-text);margin:1.7em 0 .6em;scroll-margin-top:96px;
 }
@@ -642,7 +644,7 @@ export const BLOG_CSS = `
   border:1px solid var(--bl-acc-line);
   background:linear-gradient(160deg,var(--bl-acc-soft),transparent 75%),var(--bl-surface);
 }
-.bl-art-cta h3{margin:0 0 8px;font-size:20px;font-weight:700;letter-spacing:-.4px;color:var(--bl-text)}
+.bl-art-cta h3{font-family:var(--edge-display,'Unbounded'),system-ui,sans-serif;margin:0 0 8px;font-size:20px;font-weight:700;letter-spacing:-.4px;color:var(--bl-text)}
 .bl-art-cta p{margin:0 0 18px;font-size:14px;color:var(--bl-text3)}
 .bl-related{width:var(--bl-shell);margin:0 auto;padding:0 0 56px}
 .bl-related>h3{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--bl-text4);margin:0 0 16px;font-weight:700}

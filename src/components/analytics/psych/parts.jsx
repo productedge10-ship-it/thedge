@@ -257,7 +257,7 @@ function NeuroScanner({ neuro, active, setActive }) {
         <div className="absolute inset-0 flex flex-col items-center justify-end pb-1 pointer-events-none">
           <span className="text-[9px] tracking-[0.24em] uppercase text-[#7A7A85] font-black">Нейро-індекс</span>
           <div className="flex items-baseline gap-1">
-            <span className="font-['Instrument_Serif',serif] text-[40px] leading-none text-[var(--edge-text)]">{neuro.index}</span>
+            <span className="font-[family-name:var(--edge-display,'Unbounded')] font-semibold text-[34px] leading-none tracking-[-0.5px] text-[var(--edge-text)]">{neuro.index}</span>
             <span className="text-[13px] text-[#7A7A85] font-bold">/100</span>
           </div>
           <span className="mt-1 text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: neuro.tier.color }}>
@@ -323,7 +323,7 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
               <Brain size={24} style={{ color: neuro.tier.color }} />
             </div>
             <div className="min-w-0">
-              <h3 className="text-[var(--edge-text)] text-[24px] leading-none font-normal m-0 font-['Instrument_Serif',serif] tracking-wide">
+              <h3 className="text-[var(--edge-text)] text-[19px] leading-none font-semibold m-0 font-[family-name:var(--edge-display,'Unbounded')] tracking-[-0.3px]">
                 Нейропрофіль трейдера
               </h3>
               <p className="text-[12.5px] text-[#7A7A85] mt-2 m-0">

@@ -14,6 +14,40 @@ import { supabase } from './supabase';
    перераховувати, вона вже готова до малювання.
 ================================================================== */
 
+/* ------------------------------------------------------------------
+   Розмір рахунку — база для ризику й R.
+
+   Ризик у пропі рахують від номіналу рахунку (10k, 100k), а не від
+   поточного балансу: 1% на рахунку 100k — це $1 000 і при балансі
+   $104 000, і при $97 000. Рахувати від балансу означало б, що той
+   самий «1R» гуляє разом з P&L, і R перестає бути одиницею.
+
+   Номінал пропа завжди круглий (10k, 50k, 100k), а рахунки, які завів
+   воркер MT5, записували в initial_balance баланс на момент першої
+   синхронізації — $9 569 замість 10k, $45 970 замість 50k. Тому і
+   initial_balance, і баланс «притягуємо» до найближчого стандартного
+   розміру, якщо до нього не далі 10%. Далі — не вгадуємо й беремо
+   число як є: це, найімовірніше, особистий рахунок.
+------------------------------------------------------------------ */
+const STD_SIZES = [2500, 5000, 6000, 10000, 15000, 20000, 25000, 50000, 60000, 75000,
+  80000, 100000, 125000, 150000, 200000, 250000, 300000, 400000, 500000];
+
+export function guessAccountSize(balance) {
+  const b = Number(balance) || 0;
+  if (b <= 0) return 0;
+  let best = null;
+  for (const s of STD_SIZES) {
+    const d = Math.abs(b - s) / s;
+    if (d <= 0.1 && (!best || d < best.d)) best = { s, d };
+  }
+  return best ? best.s : b;
+}
+
+export const accountSize = (acc) => {
+  const init = Number(acc?.initial_balance);
+  return guessAccountSize(init > 0 ? init : acc?.balance);
+};
+
 export const KINDS = {
   start:   { label: 'Старт',        sign: 0 },
   payout:  { label: 'Виплата',      sign: -1 },
@@ -91,7 +125,7 @@ export async function fetchEvents(accountId) {
 export async function ensureStart(userId, account, events) {
   if (events.some((e) => e.kind === 'start')) return events;
 
-  const size = Number(account.initial_balance ?? account.balance) || 0;
+  const size = accountSize(account);
   const row = {
     user_id: userId,
     account_id: account.id,
@@ -142,7 +176,7 @@ export async function ensurePhase(userId, account, phases) {
     user_id: userId,
     account_id: account.id,
     label: 'Фаза 1',
-    starting_balance: Number(account.initial_balance ?? account.balance) || 0,
+    starting_balance: accountSize(account),
     status: 'active',
     started_at: account.created_at || new Date().toISOString(),
   };

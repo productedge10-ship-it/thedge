@@ -12,7 +12,7 @@ import { T, EASE, SPRING } from '../../lib/theme';
 import {
   fetchEvents, ensureStart, addEvent, removeEvent, setBalance, fetchAccountTrades,
   tradeStats, money, money2, todayLocal, KINDS_EN, CLOSE_REASONS, closeAccount,
-  fetchPhases, ensurePhase, advancePhase, failPhase, PHASE_STATUS,
+  fetchPhases, ensurePhase, advancePhase, failPhase, PHASE_STATUS, accountSize,
 } from '../../lib/accountsStore';
 import DateField from '../ui/DateField';
 import BalanceChart from './BalanceChart';
@@ -92,7 +92,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
   const [closing, setClosing] = useState(false);
 
   const acc = account;
-  const initial = Number(acc.initial_balance ?? acc.balance) || 0;
+  const initial = accountSize(acc);
   const balance = Number(acc.balance) || 0;
   const isClosed = acc.status === 'Closed';
 
