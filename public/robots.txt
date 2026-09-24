@@ -7,4 +7,4 @@ Disallow: /auth
 Disallow: /demo
 Disallow: /shared/
 
-Sitemap: https://theedge.space/sitemap.xml
+Sitemap: https://theedgecat.com/sitemap.xml
