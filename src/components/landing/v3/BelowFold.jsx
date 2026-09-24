@@ -88,8 +88,10 @@ function Footer() {
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 28px', fontFamily: F.sans, fontSize: 12, lineHeight: 1.7, color: '#5d5d70' }}>
         {[
           OWNER.name,
-          OWNER.code && `РНОКПП / ЄДРПОУ ${OWNER.code}`,
+          OWNER.code && `РНОКПП ${OWNER.code}`,
+          OWNER.tax,
           OWNER.address,
+          OWNER.iban && `IBAN ${OWNER.iban}`,
           OWNER.email,
           OWNER.phone,
         ].filter((v) => v && !String(v).includes('{{')).join(' · ')}
