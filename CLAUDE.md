@@ -4,7 +4,7 @@
 
 ## Стек
 
-React 19 + Vite 8 (rolldown), Tailwind 3 + інлайнові стилі на токенах, Supabase (auth + Postgres з RLS + Storage), деплой Vercel (`vercel.json` переписує все на `index.html`, `/api/*` — serverless).
+React 19 + Vite 8 (rolldown), Tailwind 3 + інлайнові стилі на токенах, Supabase (auth + Postgres з RLS + Storage), деплой — Docker на Coolify: `server.mjs` (власний Node-сервер без Express) віддає `dist`, підставляє SEO-теги й виконує `/api/*` (`api/*.js` у стилі Vercel, `netlify/functions/wfp-*.mjs` у веб-стандарті). `vercel.json` / `netlify.toml` — залишки попередніх платформ.
 Збірка йде **тільки на Windows-машині користувача**: `node_modules` мають нативний бінарник rolldown під win32, у Linux-оболонці `npm run build` падає. Перевіряти можна лише синтаксис, імпорти й прев'ю в контейнері.
 
 ## Точки входу
@@ -54,7 +54,8 @@ React 19 + Vite 8 (rolldown), Tailwind 3 + інлайнові стилі на т
 - `src/pages/*` — сторінки застосунку: Hub, DailyPlan, TradingJournal, Analytics, Reviews, Backtest, TwentyTrades, Accounts, Todo, Notes(Dashboard), ErrorLog, News, Calculator, FAQ, TradingSystem, Demo.
 - `src/lib/*Store.js` — доступ до даних відповідних розділів.
 - `src/db/*.sql` — міграції Supabase, за датами.
-- `api/news.js`, `api/verify-email.js` — serverless.
+- `api/news.js`, `api/verify-email.js`, `api/rate.js`, `api/img.js` — серверні функції (маршрути перелічені в `server.mjs`).
+- **Аналітика поведінки**: `src/lib/analytics.js` (трекер: перегляди, активний час, прокрутка, кліки, лютові кліки, помилки JS, швидкість; вантажиться ліниво з `App.jsx`) → `api/ev.js` (приймач: перевіряє токен, країна з Cloudflare або з часового поясу через `api/_tzgeo.js`, пише ключем service_role) → таблиця `analytics_events`. SQL і звіти — в адмінці, `supabase/06_analytics.sql`. Вимкнути для себе: `?notrack=1`; локально увімкнути: `?track=1`. Аварійно для всіх: змінна `ANALYTICS_OFF=1` або вимикач в адмінці.
 
 ## Правила, які не варто ламати
 

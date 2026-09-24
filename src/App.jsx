@@ -247,6 +247,19 @@ const router = createBrowserRouter([
   { path: '*', element: page(NotFound) },
 ]);
 
+/* Аналітика поведінки — окремим шматком і лише коли браузер
+   звільнився після першого малювання. Трекер не має права ні
+   сповільнити відкриття сторінки, ні зламати її: якщо шматок не
+   довантажився, помилку ковтаємо тут, а не ведемо на самовідновлення
+   з перезавантаженням, як для сторінок. */
+if (typeof window !== 'undefined') {
+  const bootAnalytics = () => import('./lib/analytics')
+    .then((m) => m.startAnalytics(router))
+    .catch(() => {});
+  if ('requestIdleCallback' in window) window.requestIdleCallback(bootAnalytics, { timeout: 3000 });
+  else setTimeout(bootAnalytics, 1500);
+}
+
 export default function App() {
   return (
     <AuthProvider>

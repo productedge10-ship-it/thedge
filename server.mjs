@@ -76,6 +76,7 @@ const NODE_ROUTES = {
   '/api/verify-email': './api/verify-email.js',
   '/api/img': './api/img.js',
   '/api/rate': './api/rate.js',
+  '/api/ev': './api/ev.js',
 };
 
 /* ------------------------------------------------------------------
