@@ -233,6 +233,113 @@ const safeFile = (pathname) => {
 };
 
 /* ------------------------------------------------------------------
+   Сторінка застосунку з правильними тегами.
+
+   index.html один на всі адреси, і в ньому теги головної. Для статей
+   блогу це означало: робот, який не дочекався JS, бачив у кожної з них
+   заголовок і canonical головної — тобто копію головної, яку індексувати
+   не треба. Тепер теги кожної публічної сторінки підставляємо тут,
+   ще до відправки (карту складає scripts/seo-routes.mjs під час збірки).
+
+   І друге: невідома адреса тепер відповідає 404, а не 200. Сторінка
+   для людини та сама — React малює свою 404, — але пошуковик більше
+   не вважає биті посилання повноцінними сторінками.
+------------------------------------------------------------------ */
+let INDEX_HTML = null;
+let SEO_ROUTES = {};
+const loadPageTemplates = () => {
+  try { INDEX_HTML = fs.readFileSync(path.join(DIST, 'index.html'), 'utf8'); } catch { INDEX_HTML = null; }
+  try { SEO_ROUTES = JSON.parse(fs.readFileSync(path.join(DIST, 'seo-routes.json'), 'utf8')); } catch { SEO_ROUTES = {}; }
+};
+loadPageTemplates();
+
+/* Адреси, які існують у застосунку (див. src/App.jsx). Усе інше — 404.
+   Приватні розділи існують, але в індекс їм не треба: там або форма
+   входу, або чужі дані. Новий розділ у App.jsx — додай і сюди. */
+const PUBLIC_EXACT = new Set(['/', '/auth', '/terms', '/blog']);
+const PUBLIC_PREFIX = ['/demo', '/view/', '/shared/'];
+const APP_PREFIX = [
+  '/app', '/notes', '/analyses', '/plan', '/accounts', '/journal', '/error',
+  '/analytics', '/todo', '/reviews', '/faq', '/system', '/backtest',
+  '/20-trades', '/checklist', '/calculator', '/news',
+];
+const BLOG_RE = /^\/[a-z]{2}\/blog(\/.*)?$/;
+const underPrefix = (p, list) => list.some((x) => p === x.replace(/\/$/, '') || p.startsWith(x.endsWith('/') ? x : `${x}/`));
+
+const escAttr = (s) => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const escText = (s) => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/* Заміна одного тега в <head>. Теги в index.html бувають розбиті на
+   кілька рядків, тому між атрибутами шукаємо \s+. */
+const setMeta = (html, attr, name, content) => {
+  const re = new RegExp(`<meta\\s+${attr}="${name}"\\s+content="[^"]*"\\s*/?>`);
+  const tag = `<meta ${attr}="${name}" content="${escAttr(content)}" />`;
+  return re.test(html) ? html.replace(re, tag) : html.replace('</head>', `    ${tag}\n  </head>`);
+};
+
+function renderPage(rawPath) {
+  const p = rawPath.length > 1 ? rawPath.replace(/\/+$/, '') : rawPath;
+  if (!INDEX_HTML) loadPageTemplates();
+  let html = INDEX_HTML || '<!doctype html><div id="root"></div>';
+
+  const known = PUBLIC_EXACT.has(p) || underPrefix(p, PUBLIC_PREFIX)
+    || underPrefix(p, APP_PREFIX) || BLOG_RE.test(p);
+  const status = known ? 200 : 404;
+  const privatePage = underPrefix(p, APP_PREFIX) || p === '/auth' || underPrefix(p, ['/view/', '/shared/']);
+
+  const r = SEO_ROUTES[p];
+  if (r) {
+    html = html
+      .replace(/<html lang="[^"]*">/, `<html lang="${escAttr(r.lang || 'uk')}">`)
+      .replace(/<title>[\s\S]*?<\/title>/, `<title>${escText(r.title)}</title>`)
+      .replace(/<link rel="canonical" href="[^"]*"\s*\/?>/, `<link rel="canonical" href="${escAttr(r.canonical)}" />`);
+    html = setMeta(html, 'name', 'description', r.description);
+    html = setMeta(html, 'property', 'og:type', r.type || 'website');
+    html = setMeta(html, 'property', 'og:url', r.canonical);
+    html = setMeta(html, 'property', 'og:title', r.title);
+    html = setMeta(html, 'property', 'og:description', r.description);
+    html = setMeta(html, 'name', 'twitter:title', r.title);
+    html = setMeta(html, 'name', 'twitter:description', r.description);
+    if (r.published) html = setMeta(html, 'property', 'article:published_time', r.published);
+
+    const extra = [
+      ...(r.alternates || []).map((a) =>
+        `<link rel="alternate" hreflang="${escAttr(a.lang)}" href="${escAttr(a.href)}" />`),
+      // «<» екрануємо, щоб текст статті не міг закрити тег script.
+      r.jsonLd ? `<script type="application/ld+json">${JSON.stringify(r.jsonLd).replace(/</g, '\\u003c')}</script>` : '',
+    ].filter(Boolean).join('\n    ');
+    if (extra) html = html.replace('</head>', `    ${extra}\n  </head>`);
+
+    /* Короткий текст сторінки всередині #root. React при старті однаково
+       замінить вміст #root своїм — людина цього не побачить, а робот
+       без JS отримує справжній заголовок, опис і текст статті. */
+    if (r.body) {
+      const b = r.body;
+      const body = [
+        `<main><h1>${escText(b.h1)}</h1>`,
+        b.text ? `<p>${escText(b.text)}</p>` : '',
+        b.article ? `<article><p>${escText(b.article)}</p></article>` : '',
+        b.links?.length
+          ? `<ul>${b.links.map((l) => `<li><a href="${escAttr(l.href)}">${escText(l.text)}</a></li>`).join('')}</ul>`
+          : '',
+        '</main>',
+      ].join('');
+      html = html.replace('<div id="root"></div>', `<div id="root">${body}</div>`);
+    }
+  } else if (status === 404 || privatePage) {
+    /* Для битих адрес і приватних сторінок canonical на головну —
+       неправда. Прибираємо його й кажемо роботу не індексувати. */
+    html = html
+      .replace(/<link rel="canonical" href="[^"]*"\s*\/?>\s*/, '')
+      .replace(/<meta name="robots" content="[^"]*"\s*\/?>/, '<meta name="robots" content="noindex, follow" />');
+  }
+
+  return { html, status, noindex: status === 404 || privatePage };
+}
+
+/* ------------------------------------------------------------------
    Сам сервер.
 ------------------------------------------------------------------ */
 /* Заголовки безпеки на кожну відповідь.
@@ -316,8 +423,12 @@ const server = http.createServer(async (req, res) => {
     /* Інакше — сторінка застосунку. Маршрутизація в React Router, і
        сервер про неї нічого не знає: /journal, /uk/blog/… і будь-що
        інше має віддати той самий index.html. */
-    res.statusCode = 200;
-    await sendFile(res, path.join(DIST, 'index.html'));
+    const page = renderPage(pathname);
+    res.statusCode = page.status;
+    res.setHeader('content-type', 'text/html; charset=utf-8');
+    res.setHeader('cache-control', 'no-cache');
+    if (page.noindex) res.setHeader('x-robots-tag', 'noindex');
+    res.end(page.html);
   } catch (e) {
     /* У лог — усе, у відповідь — нічого зайвого. Текст помилки може
        містити шляхи на сервері й шматки конфігурації. */

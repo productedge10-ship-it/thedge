@@ -167,6 +167,14 @@ export function BlogHeader({ lang, children, nav = true }) {
   return (
     <header className="bl-head">
       <div className="bl-head-in">
+        {/* Дорога назад на сайт. Лого веде на головну блогу, і людина,
+            яка прийшла з лендінга чи із застосунку, не мала очевидного
+            способу повернутись — лише кнопку «назад» у браузері.
+            Залогіненого повертаємо в застосунок, гостя — на лендінг. */}
+        <a className="bl-back" href={user ? '/app' : '/'} aria-label={lang === 'en' ? 'Back to site' : 'На сайт'}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
+          <span>{lang === 'en' ? 'Back to site' : 'На сайт'}</span>
+        </a>
         <Link to={blogPath(lang)} className="bl-brand" aria-label="The Edge">
           <BlogCat size={42} />
           <EdgeWordmark height={36} className="bl-word" />
@@ -279,6 +287,12 @@ export const BLOG_CSS = `
   width:var(--bl-shell);margin:0 auto;height:66px;
   display:flex;align-items:center;gap:26px;
 }
+.bl-back{display:inline-flex;align-items:center;gap:6px;flex:none;height:38px;padding:0 14px 0 10px;border-radius:12px;
+  border:1px solid var(--bl-line);background:var(--bl-surface,transparent);color:var(--bl-text2);font-size:13.5px;font-weight:600;
+  transition:color .18s,border-color .18s,background .18s,transform .18s}
+.bl-back:hover{color:var(--bl-text);border-color:var(--bl-acc-line);transform:translateX(-2px)}
+.bl-back svg{flex:none}
+@media (max-width:640px){.bl-back{padding:0;width:38px;justify-content:center}.bl-back span{display:none}}
 .bl-brand{display:inline-flex;align-items:center;gap:10px;flex:none}
 .bl-word{color:var(--bl-text);transition:color .32s ease,transform .3s cubic-bezier(.22,.61,.36,1),filter .3s}
 .bl-brand:hover .bl-word{transform:translateY(-1px);filter:drop-shadow(0 0 12px var(--bl-acc-line))}

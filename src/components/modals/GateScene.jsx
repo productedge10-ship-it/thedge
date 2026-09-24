@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { T } from '../trading/planTheme';
-import BacktestScene from './BacktestScene';
 
 /* ==================================================================
    Сцени на замкнених розділах.
@@ -277,6 +276,5 @@ function TelegramScene() {
 export default function GateScene({ feature }) {
   if (feature === 'telegram') return <TelegramScene />;
   if (feature === 'mt5') return <Mt5Scene />;
-  if (feature === 'backtest') return <BacktestScene />;
   return null;
 }

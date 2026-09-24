@@ -1198,14 +1198,18 @@ h1, h2, h3, h4, h5, h6 {
    властивостями. У Chrome вони, навпаки, вимикають усі webkit-правила
    нижче — разом із шириною й відступом, — тому вони тут тільки для
    браузерів без webkit-псевдоелементів. */
-@supports not selector(::-webkit-scrollbar) {
-  .sidebar-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(var(--edge-acc-rgb, 139, 123, 255), 0.34) transparent;
-  }
+/* Смугу прокрутки в сайдбарі тепер не показуємо зовсім: навіть
+   тонка й прозора, вона лягала поруч із рамкою панелі й читалась як
+   зайва вертикальна лінія. Прокрутка колесом і пальцем лишається —
+   зникає лише сама смуга. */
+.sidebar-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .sidebar-scroll::-webkit-scrollbar {
-  width: 7px;
+  width: 0;
+  height: 0;
+  display: none;
 }
 .sidebar-scroll::-webkit-scrollbar-track {
   background: transparent;
