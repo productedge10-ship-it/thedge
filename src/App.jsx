@@ -1,4 +1,4 @@
-import { createElement, lazy, Suspense } from 'react';
+import { createElement, lazy as reactLazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { demoClient } from './lib/demoDb';
 import { sharedClient } from './lib/sharedDb';
@@ -37,6 +37,29 @@ import Landing from './pages/Landing';
    заголовком: майже мегабайт коду, з якого на лендінгу не
    виконувалось три чверті.
 ================================================================== */
+/* Лінива сторінка, яка переживає деплой.
+
+   Після кожного оновлення сайту старі файли сторінок (з хешем у назві)
+   зникають із сервера. Людина з давно відкритою вкладкою клікає на
+   блог, браузер просить файл, якого вже немає, — і замість сторінки
+   бачить «Failed to fetch dynamically imported module».
+
+   Тому при такій помилці один раз тихо перезавантажуємо сторінку: новий
+   index.html приведе вже нові файли. Позначка в sessionStorage не дає
+   зациклитись, якщо файл справді зламаний, — тоді помилка покажеться
+   як є. */
+const RELOAD_KEY = 'edge:chunk-reload';
+const lazy = (load) => reactLazy(() => load()
+  .then((m) => { sessionStorage.removeItem(RELOAD_KEY); return m; })
+  .catch((e) => {
+    if (!sessionStorage.getItem(RELOAD_KEY)) {
+      sessionStorage.setItem(RELOAD_KEY, '1');
+      window.location.reload();
+      return new Promise(() => {});
+    }
+    throw e;
+  }));
+
 const Auth = lazy(() => import('./pages/Auth'));
 const Terms = lazy(() => import('./pages/Terms'));
 const DemoShell = lazy(() => import('./pages/DemoShell'));

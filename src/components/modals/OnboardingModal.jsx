@@ -31,6 +31,9 @@ import {
      сталося, вчить, що заповнювати анкети тут безглуздо.
 ================================================================== */
 
+/* Показувати анкету новим юзерам самостійно, без натискання. */
+const AUTO_OPEN = false;
+
 export default function OnboardingModal() {
   const navigate = useNavigate();
   const [state, setState, { ready }] = useCloudState(KEY, EMPTY, { normalize });
@@ -40,10 +43,12 @@ export default function OnboardingModal() {
   /* 'ask' — питання, 'portrait' — висновок, 'mt5' — підключення терміналу */
   const [stage, setStage] = useState('ask');
 
-  /* Відкриваємо тільки коли стан справді приїхав: інакше анкета
-     блимне перед людиною, яка вже все заповнила з іншого пристрою. */
+  /* Автоматичний показ новим юзерам поки вимкнено: анкета на 25
+     питань одразу після реєстрації зустрічала людину раніше за сам
+     продукт. Лишається відкриття вручну кнопкою «Про тебе». Щоб
+     повернути автопоказ — поверни AUTO_OPEN у true. */
   useEffect(() => {
-    if (!ready) return;
+    if (!AUTO_OPEN || !ready) return;
     if (state.status === 'new') setOpen(true);
   }, [ready, state.status]);
 
