@@ -124,7 +124,7 @@ export default function AssetPicker({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.16, ease: EASE }}
-            className="absolute left-0 top-[calc(100%+8px)] z-40 w-[300px] max-w-[92vw] overflow-hidden rounded-[14px]"
+            className="absolute left-0 top-[calc(100%+8px)] z-40 w-full min-w-[240px] max-w-[340px] overflow-hidden rounded-[14px]"
             style={{
               background: T.surfaceHi,
               border: `1px solid ${T.lineHi}`,

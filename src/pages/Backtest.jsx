@@ -72,16 +72,24 @@ function Summary({ sessions }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+    /* sm: (640px) рахує за шириною вікна, а не за вільним місцем —
+       на цій сторінці ліворуч завжди сидить бічна панель ~300px, тож
+       на екрані 768px під сітку лишається реальних ~450px, і три
+       вузькі стовпці знову обрізають «+15.20R» до «+15.2…». lg:
+       вмикається вже там, де ця різниця відпрацьована. */
+    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3 lg:gap-3 xl:grid-cols-5">
       {items.map((it, i) => (
         <motion.div
           key={it.label}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, delay: i * 0.04, ease: EASE }}
-          className="group relative min-w-0 overflow-hidden"
+          /* Пʼять плиток на два стовпці лишають одну сиротою в
+             останньому рядку — вона розтягується на всю ширину, поки
+             ґрати не стануть рівними. */
+          className={`group relative min-w-0 overflow-hidden ${i === items.length - 1 ? 'col-span-2 lg:col-span-1' : ''}`}
           style={{
-            padding: '16px 18px',
+            padding: '14px 16px',
             borderRadius: 16,
             background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.surface})`,
             border: `1px solid ${T.line}`,
@@ -116,11 +124,8 @@ function Summary({ sessions }) {
             {it.label}
           </div>
           <div
-            className="relative mt-2 truncate tabular-nums leading-none"
-            style={{
-              fontFamily: T.mono, fontSize: it.big ? 26 : 24,
-              fontWeight: 600, letterSpacing: '-0.8px', color: it.hue,
-            }}
+            className={`relative mt-2 truncate tabular-nums leading-none ${it.big ? 'text-[21px] lg:text-[26px]' : 'text-[19px] lg:text-[24px]'}`}
+            style={{ fontFamily: T.mono, fontWeight: 600, letterSpacing: '-0.8px', color: it.hue }}
             title={String(it.value)}
           >
             {it.value}
@@ -456,22 +461,53 @@ export default function Backtest() {
                 розділу, і читається він до того, як щось відбирати. */}
             {sessions.length > 0 && <Summary sessions={sessions} />}
 
-            {/* ─────────── Фільтри ─────────── */}
+            {/* ─────────── Фільтри ───────────
+                На телефоні пошук іде першим (ним і починають шукати
+                конкретний бектест), а сортування — горизонтальною
+                стрічкою без переносу, що виходить за бічні поля
+                сторінки: три пігулки в 320px не влазять в один рядок,
+                а перенесення лишало одну сиротою окремим рядком
+                зліва. Від sm — звичний ряд: сортування ліворуч,
+                пошук фіксованої ширини праворуч. */}
             <div
-              className="flex flex-wrap items-center justify-between"
+              className="flex flex-col gap-3 pt-3.5 pb-[18px] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4"
               style={{
-                gap: 16, marginTop: 22, padding: '14px 6px 18px',
+                marginTop: 22,
                 borderTop: `1px solid ${T.line}`,
                 borderBottom: `1px solid ${T.line}`,
               }}
             >
-              <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
+              <div
+                className="edge-search order-1 flex w-full items-center sm:order-2 sm:w-[250px]"
+                style={{
+                  gap: 10, height: 40, padding: '0 15px', borderRadius: 11,
+                  background: T.sunken, border: `1px solid ${T.line}`,
+                  transition: 'border-color .18s, box-shadow .18s',
+                }}
+              >
+                <Search size={15} strokeWidth={2} className="shrink-0" style={{ color: T.text3 }} />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Пошук"
+                  className="min-w-0 flex-1 bg-transparent outline-none"
+                  style={{ fontFamily: T.sans, fontSize: 14, color: T.text }}
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} className="shrink-0" style={{ color: T.text3 }}>
+                    <X size={14} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
+
+              <div className="no-scrollbar order-2 -mx-4 flex items-center gap-2 overflow-x-auto px-4 sm:order-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
                 {SORTS.map((x) => {
                   const on = sort === x.key;
                   return (
                     <button
                       key={x.key}
                       onClick={() => setSort(x.key)}
+                      className="shrink-0"
                       style={{
                         fontFamily: T.sans, height: 36, padding: '0 16px', borderRadius: 10,
                         fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap',
@@ -491,29 +527,6 @@ export default function Backtest() {
                     </button>
                   );
                 })}
-              </div>
-
-              <div
-                className="edge-search flex items-center"
-                style={{
-                  gap: 10, height: 40, padding: '0 15px', width: 250, borderRadius: 11,
-                  background: T.sunken, border: `1px solid ${T.line}`,
-                  transition: 'border-color .18s, box-shadow .18s',
-                }}
-              >
-                <Search size={15} strokeWidth={2} className="shrink-0" style={{ color: T.text3 }} />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Пошук"
-                  className="min-w-0 flex-1 bg-transparent outline-none"
-                  style={{ fontFamily: T.sans, fontSize: 14, color: T.text }}
-                />
-                {search && (
-                  <button onClick={() => setSearch('')} className="shrink-0" style={{ color: T.text3 }}>
-                    <X size={14} strokeWidth={2.5} />
-                  </button>
-                )}
               </div>
             </div>
 
@@ -552,7 +565,9 @@ export default function Backtest() {
               <motion.div
                 layout
                 className="grid gap-[18px]"
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))' }}
+                /* min(330px, 100%): на телефоні 320px колонка вужча за 330 — без
+                   min() картка вилазила за екран і з'являвся горизонтальний скрол. */
+                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(330px, 100%), 1fr))' }}
               >
                 <AnimatePresence mode="popLayout" initial={false}>
                   {visible.map((s) => (

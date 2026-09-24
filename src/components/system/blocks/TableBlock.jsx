@@ -32,7 +32,7 @@ export default function TableBlock({ block, onChange }) {
   return (
     <div className="group/table w-full">
       <div className="overflow-x-auto">
-        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+        <table className="w-full" style={{ borderCollapse: 'collapse', minWidth: cols * 132 }}>
           <tbody>
             {rows.map((row, r) => (
               <tr key={r} className="group/row">

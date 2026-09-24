@@ -19,7 +19,7 @@ import { WEEK_PAIR } from './weekPlan';
 
 /* Версія в ключі — щоб зміна насіння підхопилась у всіх, хто вже
    відкривав демо: старий кеш під іншим ключем просто ігнорується. */
-const KEY = 'edge.demo.db.v11';
+const KEY = 'edge.demo.db.v12';
 
 export const DEMO_USER_ID = 'demo-user-0000-0000-000000000001';
 
@@ -300,6 +300,24 @@ const seed = () => ({
     { pair: 'GER40', setup: 'Ретест OB', rr: 1.6, res: 'Win', ses: 'Франкфурт', plan: true, mood: {}, d: -41, h: 11, hold: 39, er: 'tp' },
     { pair: 'BTCUSD', setup: 'Азійський діапазон', rr: 2.3, res: 'Win', ses: 'Азія', plan: true, mood: {}, d: -47, h: 8, hold: 67, er: 'tp' },
     { pair: 'EURUSD', setup: 'Без сетапу', rr: -1, res: 'Lose', ses: 'Нью-Йорк', plan: false, mood: { psy_repeat: true }, d: -55, h: 13, hold: 11, er: 'manual' },
+    /* Ще одна хвиля історії: нові інструменти й сетапи, аби журнал
+       не виглядав однаково з місяця в місяць, і глибша хронологія
+       для річної розбивки в аналітиці. */
+    { pair: 'GBPJPY', setup: 'FVG на 4h', rr: 2.0, res: 'Win', ses: 'Лондон', plan: true, mood: {}, d: -60, h: 9, hold: 38, er: 'tp' },
+    { pair: 'USDJPY', setup: 'Азійська консолідація', rr: 1.3, res: 'Win', ses: 'Азія', plan: true, mood: {}, d: -63, h: 8, hold: 52, er: 'tp' },
+    { pair: 'XAGUSD', setup: 'Пробій рівня', rr: -1, res: 'Lose', ses: 'Нью-Йорк', plan: true, mood: {}, d: -66, h: 14, hold: 19, er: 'sl' },
+    { pair: 'USOIL', setup: 'Новинний імпульс', rr: -1.6, res: 'Lose', ses: 'Нью-Йорк', plan: false, mood: { psy_fear: true }, d: -70, h: 15, hold: 7, er: 'manual' },
+    { pair: 'SPX500', setup: 'Тренд-слідування', rr: 2.8, res: 'Win', ses: 'Нью-Йорк', plan: true, mood: {}, d: -74, h: 16, hold: 61, er: 'tp' },
+    { pair: 'US30', setup: 'Ретест хая тижня', rr: 1.7, res: 'Win', ses: 'Нью-Йорк', plan: true, mood: {}, d: -79, h: 15, hold: 33, er: 'tp' },
+    { pair: 'ETHUSD', setup: 'Азійський діапазон', rr: 1.9, res: 'Win', ses: 'Азія', plan: true, mood: {}, d: -84, h: 9, hold: 45, er: 'tp' },
+    { pair: 'AUDUSD', setup: 'Контр-тренд від рівня', rr: -1, res: 'Lose', ses: 'Азія', plan: true, mood: {}, d: -88, h: 8, hold: 14, er: 'sl' },
+    { pair: 'USDCAD', setup: 'Judas swing', rr: 1.5, res: 'Win', ses: 'Нью-Йорк', plan: true, mood: {}, d: -93, h: 14, hold: 28, er: 'tp' },
+    { pair: 'GBPJPY', setup: 'Скальп на відкритті NY', rr: -1.2, res: 'Lose', ses: 'Нью-Йорк', plan: false, mood: { psy_revenge: true }, d: -97, h: 15, hold: 5, er: 'manual' },
+    { pair: 'XAUUSD', setup: 'Реверсал по дивергенції', rr: 2.5, res: 'Win', ses: 'Лондон', plan: true, mood: { psy_confident: true }, d: -102, h: 10, hold: 56, er: 'tp' },
+    { pair: 'CHFJPY', setup: 'Лондонський флет', rr: 0.9, res: 'Win', ses: 'Лондон', plan: true, mood: {}, d: -108, h: 9, hold: 22, er: 'manual' },
+    { pair: 'NAS100', setup: 'Пізній вхід', rr: -1.8, res: 'Lose', ses: 'Нью-Йорк', plan: false, mood: { psy_repeat: true }, d: -115, h: 16, hold: 9, er: 'manual' },
+    { pair: 'US30', setup: 'Judas swing', rr: 2.2, res: 'Win', ses: 'Франкфурт', plan: true, mood: {}, d: -124, h: 11, hold: 40, er: 'tp' },
+    { pair: 'XAGUSD', setup: 'Свінг + FVG', rr: 1.6, res: 'Win', ses: 'Лондон', plan: true, mood: {}, d: -135, h: 10, hold: 49, er: 'tp' },
   ].map((t) => ({
     id: uid(), user_id: DEMO_USER_ID,
     plan_date: today(t.d), plan_pair: t.pair, account_name: 'Основний',
@@ -372,6 +390,33 @@ const seed = () => ({
       daily_dd: null, total_dd: null, profit_target: null,
       created_at: iso(-90), updated_at: iso(-2),
     },
+    /* Ще один активний виклик — щоб на сторінці «Accounts» була не
+       одна ситуація, а декілька паралельних, як буває у трейдера з
+       кількома проп-фірмами одночасно. */
+    {
+      id: 'demo-acc-3', user_id: DEMO_USER_ID, firm_name: 'FundedNext · 50K',
+      balance: 52640, initial_balance: 50000, status: 'Active',
+      daily_dd: 4, total_dd: 8, profit_target: 8,
+      created_at: iso(-22), updated_at: iso(-1),
+    },
+    /* Закритий і успішний: пройдений виклик з випискою — показує,
+       що «Closed» на цій сторінці не завжди означає провал. */
+    {
+      id: 'demo-acc-4', user_id: DEMO_USER_ID, firm_name: 'The5ers · 60K',
+      balance: 66300, initial_balance: 60000, status: 'Closed',
+      daily_dd: 5, total_dd: 10, profit_target: 8,
+      closed_reason: 'Account passed / paid out', closed_at: iso(-45),
+      created_at: iso(-130), updated_at: iso(-45),
+    },
+    /* Закритий і невдалий: чесна історія зливу теж має бути в демо,
+       інакше сторінка виглядає як реклама без жодного мінусу. */
+    {
+      id: 'demo-acc-5', user_id: DEMO_USER_ID, firm_name: 'MyFundedFX · 25K',
+      balance: 23100, initial_balance: 25000, status: 'Closed',
+      daily_dd: 4, total_dd: 8, profit_target: 8,
+      closed_reason: 'Max daily loss breached', closed_at: iso(-58),
+      created_at: iso(-95), updated_at: iso(-58),
+    },
   ],
 
   account_events: [
@@ -379,6 +424,13 @@ const seed = () => ({
     { id: uid(), user_id: DEMO_USER_ID, account_id: 'demo-acc-1', kind: 'trade', amount: 3200, balance_after: 103200, note: 'Тиждень за планом', happened_at: today(-20), created_at: iso(-20) },
     { id: uid(), user_id: DEMO_USER_ID, account_id: 'demo-acc-1', kind: 'payout', amount: 1400, balance_after: 104820, note: 'Перша виплата', happened_at: today(-6), created_at: iso(-6) },
     { id: uid(), user_id: DEMO_USER_ID, account_id: 'demo-acc-2', kind: 'start', amount: 5000, balance_after: 5000, note: '', happened_at: today(-90), created_at: iso(-90) },
+    { id: uid(), user_id: DEMO_USER_ID, account_id: 'demo-acc-3', kind: 'start', amount: 50000, balance_after: 50000, note: '', happened_at: today(-22), created_at: iso(-22) },
+    { id: uid(), user_id: DEMO_USER_ID, account_id: 'demo-acc-3', kind: 'trade', amount: 2640, balance_after: 52640, note: 'Фаза 1 закрита', happened_at: today(-4), created_at: iso(-4) },
+    { id: uid(), user_id: DEMO_USER_ID, account_id: 'demo-acc-4', kind: 'start', amount: 60000, balance_after: 60000, note: '', happened_at: today(-130), created_at: iso(-130) },
+    { id: uid(), user_id: DEMO_USER_ID, account_id: 'demo-acc-4', kind: 'trade', amount: 4900, balance_after: 64900, note: 'Пройшов оцінку', happened_at: today(-70), created_at: iso(-70) },
+    { id: uid(), user_id: DEMO_USER_ID, account_id: 'demo-acc-4', kind: 'payout', amount: 2600, balance_after: 66300, note: 'Виплата після паспорту', happened_at: today(-45), created_at: iso(-45) },
+    { id: uid(), user_id: DEMO_USER_ID, account_id: 'demo-acc-5', kind: 'start', amount: 25000, balance_after: 25000, note: '', happened_at: today(-95), created_at: iso(-95) },
+    { id: uid(), user_id: DEMO_USER_ID, account_id: 'demo-acc-5', kind: 'trade', amount: -1900, balance_after: 23100, note: 'Перевищив денний ліміт на новині', happened_at: today(-58), created_at: iso(-58) },
   ],
   backtest_sessions: [],
   backtest_trades: [],

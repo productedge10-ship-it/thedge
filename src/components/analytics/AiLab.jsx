@@ -250,7 +250,7 @@ function FeatureCard({ icon, title, text, i, reduced }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        position: 'relative', overflow: 'hidden', padding: '28px 26px 30px', borderRadius: 24,
+        position: 'relative', overflow: 'hidden', padding: 'clamp(18px,5vw,28px) clamp(16px,4.5vw,26px) clamp(20px,5vw,30px)', borderRadius: 24,
         border: `1px solid ${hover ? 'rgba(46,230,168,.3)' : 'rgba(255,255,255,.07)'}`,
         background: 'linear-gradient(165deg, rgba(20,21,31,.9), rgba(9,10,15,.9))',
         transform: hover ? 'translateY(-6px)' : 'none',
@@ -331,7 +331,7 @@ export default function AiLab({ s }) {
       style={{
         position: 'relative', overflow: 'hidden',
         background: 'transparent', color: '#e9e9f2', fontFamily: F.sans,
-        paddingTop: 'clamp(52px,7vw,96px)', paddingBottom: 96,
+        paddingTop: 'clamp(40px,7vw,96px)', paddingBottom: 'clamp(48px,10vw,96px)',
       }}
     >
       <style>{KEYFRAMES + COACH_KF}</style>
@@ -441,12 +441,18 @@ export default function AiLab({ s }) {
           </span>
         </h2>
 
+<<<<<<< HEAD
         {/* Текст погоджений із командою: спершу — що кіт робить, потім —
             чим він відрізняється від звичайних графіків дашборда. */}
         <p style={{ margin: '0 0 64px', maxWidth: 620, fontFamily: F.sans, fontSize: 17, lineHeight: 1.65, color: '#8a8aa0' }}>
           Фірмовий котик аналізує твої угоди, знаходить систематичні помилки,
           показує закономірності й те, що ти сам можеш не помічати. Дашборд
           показує цифри — кіт пояснює, що за ними стоїть.
+=======
+        <p style={{ margin: '0 0 clamp(32px,8vw,64px)', maxWidth: 620, fontFamily: F.sans, fontSize: 17, lineHeight: 1.65, color: '#8a8aa0' }}>
+          Не чатбот, прикручений до дашборда. Поки модель не вміє сказати про твої
+          угоди те, чого ти сам у них не бачиш, її тут не буде.
+>>>>>>> origin/dev-anton
         </p>
 
         <div className="ln-ai-grid">
@@ -532,7 +538,7 @@ export default function AiLab({ s }) {
           >
             <div
               style={{
-                borderRadius: 29, padding: '30px 32px 26px', backdropFilter: 'blur(20px)',
+                borderRadius: 29, padding: 'clamp(18px,5vw,30px) clamp(16px,5vw,32px) clamp(18px,4vw,26px)', backdropFilter: 'blur(20px)',
                 background: 'linear-gradient(180deg, rgba(16,17,26,.96), rgba(8,9,13,.96))',
               }}
             >
@@ -621,7 +627,7 @@ export default function AiLab({ s }) {
         </div>
 
         {/* ---------- що готується ---------- */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 18, marginTop: 72 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 18, marginTop: 'clamp(40px,9vw,72px)' }}>
           {FEATURES.map((f, i) => (
             <FeatureCard key={f.title} icon={f.icon} title={f.title} text={f.text} i={i} reduced={reduced} />
           ))}
@@ -629,7 +635,7 @@ export default function AiLab({ s }) {
 
         <p
           style={{
-            margin: '66px auto 0', maxWidth: 640, textAlign: 'center', fontFamily: F.sans,
+            margin: 'clamp(36px,8vw,66px) auto 0', maxWidth: 640, textAlign: 'center', fontFamily: F.sans,
             fontSize: 13.5, lineHeight: 1.7, color: '#9c9cb2',
           }}
         >

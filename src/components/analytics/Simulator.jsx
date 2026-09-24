@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FlaskConical, ShieldAlert } from 'lucide-react';
+import { FlaskConical, ShieldAlert, Check } from 'lucide-react';
 import { T } from '../../lib/theme';
 import { fromTrades } from '../../lib/monteCarlo';
 import WhatIf from './WhatIf';
@@ -52,48 +52,52 @@ function Rail({ step, setStep, carried }) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl px-5 py-4"
+      className="relative overflow-hidden rounded-2xl"
       style={{ background: T.sunken, border: `1px solid ${T.line}` }}
     >
-      {/* Рейку під вузлами прибрано: вона йшла на висоті заголовка й
-          читалась як смуга позаду тексту, а не шлях між кроками. Два
-          кружки з підписами й самі по собі зрозумілі як послідовність. */}
-      <div className="relative flex items-stretch gap-3">
+      {/* Список на всю ширину, а не два стиснутих стовпці: підказка
+          кожного кроку — окремий рядок тексту, який має право
+          перенестись, а не обрізатись на середині слова. Активний
+          крок підсвічений заливкою й смужкою зліва, пройдений —
+          зеленою галочкою замість номера. */}
+      <div className="relative flex flex-col">
         {STEPS.map((s, i) => {
           const on = s.id === step;
           const done = i < idx;
           const Icon = s.icon;
-          const color = on ? T.acc : done ? T.text3 : T.text4;
+          const color = on ? T.acc : done ? T.ok : T.text4;
 
           return (
             <button
               key={s.id}
               type="button"
               onClick={() => setStep(s.id)}
-              className="relative flex flex-1 flex-col items-start gap-2 rounded-xl px-2 py-1 text-left transition-colors duration-150"
-              style={{ minWidth: 0 }}
+              className="relative flex items-start gap-3 px-4 py-3.5 text-left transition-colors duration-150"
+              style={{
+                background: on ? `rgba(${T.accRgb},0.07)` : 'transparent',
+                borderBottom: i < STEPS.length - 1 ? `1px solid ${T.line}` : 'none',
+              }}
             >
-              <span className="flex items-center gap-2.5">
-                <span
-                  className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-[13px] font-bold tabular-nums transition-all duration-200"
-                  style={{
-                    fontFamily: T.mono,
-                    background: on ? `rgba(${T.accRgb},0.14)` : T.surface,
-                    border: `1px solid ${on ? T.lineAcc : T.line}`,
-                    color,
-                    boxShadow: on ? `0 0 22px -6px rgba(${T.accRgb},0.9)` : 'none',
-                  }}
-                >
-                  {s.n}
+              {on && <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: T.acc }} />}
+              <span
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[12.5px] font-bold tabular-nums transition-all duration-200"
+                style={{
+                  fontFamily: T.mono,
+                  background: on ? `rgba(${T.accRgb},0.16)` : done ? `rgba(${T.okRgb},0.14)` : T.surface,
+                  border: `1px solid ${on ? T.lineAcc : done ? `rgba(${T.okRgb},0.4)` : T.line}`,
+                  color,
+                  boxShadow: on ? `0 0 22px -6px rgba(${T.accRgb},0.9)` : 'none',
+                }}
+              >
+                {done ? <Check size={13} strokeWidth={2.6} /> : s.n}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: on ? T.text : T.text3 }}>
+                  <Icon size={13} strokeWidth={2.2} style={{ color }} />
+                  {s.title}
                 </span>
-                <span className="flex min-w-0 flex-col">
-                  <span className="flex items-center gap-1.5 text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: on ? T.text : T.text3 }}>
-                    <Icon size={13} strokeWidth={2.2} style={{ color }} />
-                    {s.title}
-                  </span>
-                  <span className="truncate text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                    {s.hint}
-                  </span>
+                <span className="mt-0.5 block text-[11.5px] leading-[1.45]" style={{ fontFamily: T.sans, color: T.text4 }}>
+                  {s.hint}
                 </span>
               </span>
             </button>
@@ -106,14 +110,14 @@ function Rail({ step, setStep, carried }) {
       <AnimatePresence initial={false}>
         {carried && step === 'future' && (
           <motion.div
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: 'auto', marginTop: 14 }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
             <div
-              className="rounded-xl px-3.5 py-2.5 text-[12px]"
+              className="mx-4 mb-4 mt-3.5 rounded-xl px-3.5 py-2.5 text-[12px]"
               style={{
                 fontFamily: T.sans,
                 color: T.text3,

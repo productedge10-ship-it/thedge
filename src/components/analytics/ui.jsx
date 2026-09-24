@@ -7,8 +7,8 @@ export const Panel = ({ title, right, children, className = '', accent }) => (
     style={accent ? { borderTopColor: accent } : undefined}
   >
     {(title || right) && (
-      <header className="flex justify-between items-center gap-3 mb-4">
-        <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">
+      <header className="flex flex-wrap justify-between items-center gap-x-3 gap-y-2 mb-4">
+        <span className="inline-flex min-w-0 items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">
           {title}
         </span>
         {right && (

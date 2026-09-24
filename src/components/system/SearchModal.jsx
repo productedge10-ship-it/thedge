@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Search, CornerDownLeft } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
@@ -37,7 +38,7 @@ export default function SearchModal({ pages, onOpen, onClose }) {
     return () => window.removeEventListener('keydown', onKey, true);
   }, [results, active, onOpen, onClose]);
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
@@ -113,6 +114,7 @@ export default function SearchModal({ pages, onOpen, onClose }) {
           })}
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }

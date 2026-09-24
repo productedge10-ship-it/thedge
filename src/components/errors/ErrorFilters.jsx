@@ -51,6 +51,7 @@ const Panel = ({ width, children }) => (
     style={{
       top: '100%',
       width,
+      maxWidth: 'calc(100vw - 32px)',
       background: 'var(--edge-surface)',
       border: '1px solid var(--edge-line-hi)',
       boxShadow: '0 26px 54px -18px #000',

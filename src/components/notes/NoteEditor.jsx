@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, ImagePlus, Link2, Check, Loader2, Maximize2, Pencil, Plus, ChevronDown, Link, Eye, Mic,
@@ -117,8 +118,15 @@ const TOOLS = [
    за нього. Міряємо, скільки місця під кнопкою й над нею, і
    відкриваємось у той бік, де його більше — та ще й обмежуємо висоту
    тим, що є насправді. */
+/* Позиція випадашки — у координатах вʼюпорта, а не батька. Раніше
+   панель стояла `position:absolute` усередині форми: коли вона
+   відкривалась угору й не влазила в залишок висоти, вона просто
+   перекривала список папок над собою — виглядало як зверстана криво,
+   а не як плаваючий шар. Тепер координати рахуються від
+   getBoundingClientRect() тригера й панель летить порталом у body з
+   `position:fixed` — тоді вона ніде не «застряє» в чужому скролі. */
 function useDropSpace(open, ref) {
-  const [box, setBox] = useState({ up: false, max: 320 });
+  const [box, setBox] = useState(null);
 
   useEffect(() => {
     if (!open || !ref.current) return undefined;
@@ -128,15 +136,62 @@ function useDropSpace(open, ref) {
       const below = window.innerHeight - r.bottom - 16;
       const above = r.top - 16;
       const up = below < 260 && above > below;
-      setBox({ up, max: Math.max(180, Math.min(up ? above : below, 460)) });
+      setBox({
+        up,
+        max: Math.max(180, Math.min(up ? above : below, 460)),
+        left: r.left,
+        right: window.innerWidth - r.right,
+        width: r.width,
+        top: r.bottom,
+        bottom: window.innerHeight - r.top,
+      });
     };
 
     measure();
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
   }, [open, ref]);
 
   return box;
+}
+
+/* Плаваюча панель — портал у body з фіксованими координатами від
+   useDropSpace. Підложка не прозора: панель, яка розкривається вгору,
+   майже завжди лягає поверх чогось на формі (папок, тегів), і без
+   затемнення це читається як зверстана криво, а не як спливний шар
+   над рештою поля. Той самий прийом, що й у FolderDialog. */
+function DropPanel({ drop, align = 'right', onClose, className, style, children }) {
+  if (!drop) return null;
+  return createPortal(
+    <>
+      <div
+        className="fixed inset-0 z-[230]"
+        style={{ background: 'rgba(4,4,7,0.5)', backdropFilter: 'blur(2px)' }}
+        onClick={onClose}
+      />
+      <div
+        className={className}
+        style={{
+          position: 'fixed',
+          zIndex: 231,
+          left: align === 'left' || align === 'stretch' ? drop.left : undefined,
+          right: align === 'right' ? drop.right : undefined,
+          width: align === 'stretch' ? drop.width : undefined,
+          top: drop.up ? undefined : drop.top + 8,
+          bottom: drop.up ? drop.bottom + 8 : undefined,
+          ...style,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </>,
+    document.body,
+  );
 }
 
 function ToolButton({ tool, onClick }) {
@@ -555,7 +610,12 @@ export default function NoteEditor({
 
   /* ================================================================ */
 
-  return (
+  /* Портал на body — без нього модалка живе в розкладці сторінки,
+     і мобільний хедер (свій position/z-index) лягає НАД полем
+     редактора, а сама підложка скролиться разом зі сторінкою замість
+     того, щоб стояти нерухомо на весь екран. Той самий фікс, що й
+     для FolderDialog. */
+  return createPortal(
     <>
       {/* Плейсхолдери в темному вікні читаються гірше за все інше:
           браузер малює їх ще блідішими за вказаний колір. Задаємо
@@ -1116,14 +1176,13 @@ export default function NoteEditor({
                   )}
 
                   {tradeOpen && !card.trade && (
-                    <div
-                      className="absolute left-0 right-0 z-40 overflow-auto rounded-[14px] p-1.5"
+                    <DropPanel
+                      drop={tradeDrop}
+                      align="stretch"
+                      onClose={() => setTradeOpen(false)}
+                      className="overflow-auto rounded-[14px] p-1.5"
                       style={{
-                        top: tradeDrop.up ? undefined : '100%',
-                        bottom: tradeDrop.up ? '100%' : undefined,
-                        marginTop: tradeDrop.up ? 0 : 8,
-                        marginBottom: tradeDrop.up ? 8 : 0,
-                        maxHeight: Math.min(tradeDrop.max, 240),
+                        maxHeight: Math.min(tradeDrop?.max ?? 240, 240),
                         background: 'var(--edge-surface)',
                         border: '1px solid var(--edge-line-hi)',
                         boxShadow: `0 24px 50px -18px #000, 0 0 0 1px ${A(0.1)}`,
@@ -1154,7 +1213,7 @@ export default function NoteEditor({
                           {t.pair && <span className="shrink-0 text-[11px]" style={{ fontFamily: T.mono, color: 'var(--edge-text4)' }}>{t.pair}</span>}
                         </button>
                       ))}
-                    </div>
+                    </DropPanel>
                   )}
                 </div>
               </div>
@@ -1198,14 +1257,14 @@ export default function NoteEditor({
               </button>
 
               {lookOpen && (
-                <div
-                  className="absolute right-0 z-40 w-[296px] overflow-auto rounded-2xl p-3.5"
+                <DropPanel
+                  drop={lookDrop}
+                  align="right"
+                  onClose={() => setLookOpen(false)}
+                  className="overflow-auto rounded-2xl p-3.5"
                   style={{
-                    top: lookDrop.up ? undefined : '100%',
-                    bottom: lookDrop.up ? '100%' : undefined,
-                    marginTop: lookDrop.up ? 0 : 8,
-                    marginBottom: lookDrop.up ? 8 : 0,
-                    maxHeight: lookDrop.max,
+                    width: 'min(296px, calc(100vw - 24px))',
+                    maxHeight: lookDrop?.max,
                     background: 'var(--edge-surface)',
                     border: '1px solid var(--edge-line-hi)',
                     boxShadow: `0 28px 60px -20px #000, 0 0 0 1px ${A(0.1)}`,
@@ -1409,7 +1468,7 @@ export default function NoteEditor({
                       </div>
                     </div>
                   </div>
-                </div>
+                </DropPanel>
               )}
             </div>
           </div>
@@ -1454,7 +1513,8 @@ export default function NoteEditor({
       </motion.div>
       </div>
     </motion.div>
-    </>
+    </>,
+    document.body,
   );
 }
 

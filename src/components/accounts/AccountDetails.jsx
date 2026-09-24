@@ -668,8 +668,12 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                   className="invisible block whitespace-pre px-2 text-[20px] font-bold sm:text-[23px]"
                   style={{ fontFamily: T.display, letterSpacing: '-0.025em' }}
                 >
-                  {nameDraft || acc.firm_name || ' '}
+                  {(nameDraft || acc.firm_name || ' ')}&nbsp;
                 </span>
+                {/* Рамку на ховері/фокусі малюємо тінню, а не border:
+                    border забирає свій піксель з бокса вводу, а
+                    невидимий двійник поруч про це не знає — і останню
+                    літеру назви підрізало впритул під border-box. */}
                 <input
                   value={nameDraft}
                   onChange={(e) => setNameDraft(e.target.value)}
@@ -680,12 +684,12 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                     if (e.key === 'Escape') { setNameDraft(acc.firm_name); e.currentTarget.blur(); }
                   }}
                   spellCheck={false}
-                  className="absolute inset-0 w-full rounded-lg bg-transparent px-2 text-[20px] font-bold outline-none transition-colors duration-200 sm:text-[23px]"
+                  className="absolute inset-0 w-full rounded-lg border-none bg-transparent px-2 text-[20px] font-bold outline-none transition-shadow duration-200 sm:text-[23px]"
                   style={{
                     fontFamily: T.display,
                     color: T.text,
                     letterSpacing: '-0.025em',
-                    border: `1px solid ${nameHot ? T.lineAcc : 'transparent'}`,
+                    boxShadow: nameHot ? `inset 0 0 0 1px ${T.lineAcc}` : 'inset 0 0 0 1px transparent',
                     background: nameHot ? T.sunken : 'transparent',
                   }}
                 />

@@ -186,7 +186,11 @@ function Stats({ items }) {
       {items.map((s) => (
         <div key={s.label} className="flex min-w-0 flex-col gap-1.5 px-5 py-4 sm:px-6" style={{ background: T.surface }}>
           <span className="text-[10.5px] font-bold uppercase tracking-[0.2em]" style={{ fontFamily: T.sans, color: T.text4 }}>{s.label}</span>
-          <span className="truncate text-[18px] font-bold leading-tight" style={{ fontFamily: s.mono ? T.mono : T.sans, color: s.color || T.text }}>{s.value}</span>
+          {/* Нижче sm плитка вужча за «23 вересня 2026 р.» чи повний
+              напрям дня — на 18px це різало текст до нечитабельного
+              «23 верес...». Менший кегль на вузькому екрані лишає
+              рядок однорядковим і читабельним без переносу. */}
+          <span className="truncate text-[14.5px] font-bold leading-tight sm:text-[18px]" style={{ fontFamily: s.mono ? T.mono : T.sans, color: s.color || T.text }}>{s.value}</span>
         </div>
       ))}
     </div>
@@ -420,7 +424,7 @@ export default function SharedPlan() {
                   </span>
 
                   <h1
-                    className="text-[38px] font-bold leading-[1.02] sm:text-[56px]"
+                    className="text-[28px] font-bold leading-[1.02] sm:text-[56px]"
                     style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.035em' }}
                   >
                     {isWeekly ? weekRangeLabel(plan.date) : (d.title || plan.pair)}

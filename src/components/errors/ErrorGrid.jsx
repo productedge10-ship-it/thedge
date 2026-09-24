@@ -245,7 +245,7 @@ export default function ErrorGrid({ groups, onOpenCard }) {
 
           <div
             className="mt-3.5 grid items-stretch gap-3.5"
-            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(340px,100%), 1fr))' }}
           >
             {g.items.map((e) => (
               <Card key={e.id} entry={e} onOpen={onOpenCard} />

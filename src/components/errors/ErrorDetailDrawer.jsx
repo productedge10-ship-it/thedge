@@ -213,9 +213,10 @@ export default function ErrorDetailDrawer({
           />
 
           <div
+            className="p-3 sm:p-6"
             style={{
               position: 'fixed', inset: 0, zIndex: Z + 1, display: 'flex',
-              alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none',
+              alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
             }}
           >
             <motion.div
@@ -299,10 +300,10 @@ export default function ErrorDetailDrawer({
               {/* Крутиться кожна колонка окремо, а не вікно цілком:
                   інакше, щоб дістатись до графіка, доводиться прогортати
                   повз бічну панель, а вона при цьому їде за край. */}
-              <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[1fr_340px]">
+              <div className="grid min-h-0 flex-1 overflow-y-auto lg:overflow-hidden lg:grid-cols-[1fr_340px]">
                 <div
-                  className="flex min-h-0 min-w-0 flex-col overflow-y-auto px-7 pb-6 pt-6 xl:px-9 xl:pb-8 xl:pt-8"
-                  style={{ borderRight: '1px solid var(--edge-line)' }}
+                  className="flex min-h-0 min-w-0 flex-col overflow-y-auto border-b px-7 pb-6 pt-6 xl:px-9 xl:pb-8 xl:pt-8 lg:border-b-0 lg:border-r"
+                  style={{ borderColor: 'var(--edge-line)' }}
                 >
 
                   <div className="flex flex-wrap items-center gap-3.5">

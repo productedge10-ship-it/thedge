@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Printer, Trash2, X, ChevronLeft, RotateCcw, Search,
@@ -174,7 +175,7 @@ function TBtn({ label, onClick, danger, children }) {
       onMouseLeave={(e) => { e.currentTarget.style.color = base; e.currentTarget.style.background = 'transparent'; }}
     >
       {children}
-      <span data-lbl className="hidden md:inline">{label}</span>
+      <span data-lbl className="hidden xl:inline">{label}</span>
     </button>
   );
 }
@@ -203,7 +204,7 @@ function NewSection({ open, onClose, onCreate }) {
     onClose();
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -343,7 +344,8 @@ function NewSection({ open, onClose, onCreate }) {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 
@@ -585,10 +587,9 @@ export default function TradingSystem() {
                     value={root.title}
                     onChange={(e) => patchPage(root.id, { title: e.target.value })}
                     placeholder="Моя торгова система"
-                    className="w-full max-w-[620px] bg-transparent outline-none placeholder:opacity-30"
+                    className="w-full max-w-[620px] bg-transparent text-[22px] outline-none placeholder:opacity-30 sm:text-[30px] lg:text-[38px] xl:text-[46px]"
                     style={{
                       fontFamily: T.display,
-                      fontSize: 'clamp(28px, 5vw, 46px)',
                       fontWeight: 700,
                       letterSpacing: '-0.035em',
                       color: T.text,
@@ -611,7 +612,7 @@ export default function TradingSystem() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {sections.map((s, i) => (
                   <SectionCard
                     key={s.id}
@@ -676,16 +677,18 @@ export default function TradingSystem() {
                   <div className="flex min-w-0 items-center gap-4">
                     <button
                       onClick={() => open(page.parentId === root.id ? null : page.parentId)}
-                      className="group flex items-center gap-[9px] rounded-[10px] py-[7px] pl-[9px] pr-[13px] text-[13.5px] transition-colors duration-150"
+                      className="group flex shrink-0 items-center gap-[9px] whitespace-nowrap rounded-[10px] py-[7px] pl-[9px] pr-[13px] text-[13.5px] transition-colors duration-150"
                       style={{ fontFamily: T.sans, color: T.text2, border: '1px solid transparent' }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-text-rgb),0.045)'; e.currentTarget.style.color = T.text; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
                     >
                       <span className="text-[14px] leading-none opacity-70">‹</span>
-                      {page.parentId === root.id ? 'Усі розділи' : 'Назад'}
+                      <span className="hidden min-[420px]:inline">
+                        {page.parentId === root.id ? 'Усі розділи' : 'Назад'}
+                      </span>
                     </button>
-                    <span className="hidden h-4 w-px sm:block" style={{ background: T.lineHi }} />
-                    <span className="hidden truncate text-[10.5px] uppercase sm:block" style={{ fontFamily: T.mono, letterSpacing: '0.22em', color: T.text4 }}>
+                    <span className="hidden h-4 w-px lg:block" style={{ background: T.lineHi }} />
+                    <span className="hidden truncate text-[10.5px] uppercase lg:block" style={{ fontFamily: T.mono, letterSpacing: '0.22em', color: T.text4 }}>
                       {page.parentId !== root.id
                         ? `${pages.find((p) => p.id === page.parentId)?.title || ''} / ${page.title}`
                         : page.title}
@@ -733,7 +736,7 @@ export default function TradingSystem() {
                       onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `0 6px 20px rgba(${tint},0.28), inset 0 1px 0 rgba(255,255,255,0.35)`; }}
                     >
                       <Plus size={13} strokeWidth={2.6} />
-                      <span className="hidden sm:inline">Підрозділ</span>
+                      <span className="hidden lg:inline">Підрозділ</span>
                     </button>
                   </div>
                 </div>
@@ -782,7 +785,7 @@ export default function TradingSystem() {
 
                   <div className="relative mx-auto max-w-[1180px] px-6 sm:px-[34px]">
                     <div style={{ marginTop: -56 }}>
-                      <div data-herorow className="flex flex-col items-start gap-5 sm:flex-row sm:items-end sm:gap-7">
+                      <div data-herorow className="flex flex-col items-start gap-5 lg:flex-row lg:items-end lg:gap-7">
                         <button
                           onClick={() => setEmojiOpen((v) => !v)}
                           title="Змінити іконку"
@@ -816,9 +819,9 @@ export default function TradingSystem() {
                             value={page.title}
                             onChange={(e) => patchPage(page.id, { title: e.target.value })}
                             placeholder="Назва розділу"
-                            className="mt-2.5 w-full bg-transparent outline-none placeholder:opacity-25"
+                            className="mt-2.5 w-full bg-transparent text-[28px] outline-none placeholder:opacity-25 sm:text-[42px] lg:text-[56px] xl:text-[68px]"
                             style={{
-                              fontFamily: T.display, fontSize: 'clamp(40px, 7vw, 68px)', fontWeight: 900,
+                              fontFamily: T.display, fontWeight: 900,
                               letterSpacing: '-0.042em', color: T.text, lineHeight: 0.98,
                             }}
                           />
@@ -831,7 +834,7 @@ export default function TradingSystem() {
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: -6, scale: 0.98 }}
                               transition={{ duration: 0.16, ease: EASE }}
-                              className="absolute left-0 top-[120px] z-50 w-[290px] rounded-2xl p-2 no-print"
+                              className="absolute left-0 top-[120px] z-50 w-[min(290px,calc(100vw-64px))] rounded-2xl p-2 no-print"
                               style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 28px 64px -20px var(--edge-panel-glow, rgba(0,0,0,0.7))' }}
                             >
                               <div className="grid grid-cols-8 gap-0.5">
@@ -866,7 +869,7 @@ export default function TradingSystem() {
                         value={page.hint || ''}
                         onChange={(e) => patchPage(page.id, { hint: e.target.value })}
                         placeholder="Про що цей розділ — одним рядком"
-                        className="mt-2.5 w-full max-w-[640px] bg-transparent text-[17px] outline-none placeholder:opacity-25"
+                        className="mt-2.5 w-full max-w-[640px] bg-transparent text-[14px] outline-none placeholder:opacity-25 sm:text-[17px]"
                         style={{ fontFamily: T.sans, fontWeight: 400, color: T.text, lineHeight: 1.55 }}
                       />
 
@@ -953,7 +956,7 @@ export default function TradingSystem() {
                     </button>
                   </div>
 
-                  <div className="mt-[26px] grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+                  <div className="mt-[26px] grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px,100%), 1fr))' }}>
                     {kids.map((k, ki) => (
                       <button
                         key={k.id}
@@ -1009,6 +1012,7 @@ export default function TradingSystem() {
       </AnimatePresence>
 
       {/* ─────────── Лайтбокс ─────────── */}
+      {createPortal(
       <AnimatePresence>
         {lightbox && (
           <motion.div
@@ -1030,9 +1034,12 @@ export default function TradingSystem() {
             />
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body,
+      )}
 
       {/* ─────────── Підтвердження ─────────── */}
+      {createPortal(
       <AnimatePresence>
         {confirm && (
           <motion.div
@@ -1084,7 +1091,9 @@ export default function TradingSystem() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body,
+      )}
     </div>
   );
 }
