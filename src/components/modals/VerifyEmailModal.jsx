@@ -44,6 +44,12 @@ export default function VerifyEmailModal() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [left, setLeft] = useState(0);
+  /* Людина щойно повернулась з листа і пошта справді підтверджена.
+     Окремий стан, а не open: open закривається сам, щойно
+     emailVerified стає true, — а саме в цю мить і треба показати
+     «готово». Маленьке сповіщення в кутку тут губилось: людина йшла з
+     пошти з питанням «спрацювало чи ні», і відповідь має бути по центру. */
+  const [done, setDone] = useState(false);
   const timer = useRef(null);
 
   /* Повернення з листа. Параметр ?verified=1 — лише натяк від сервера,
@@ -65,7 +71,7 @@ export default function VerifyEmailModal() {
 
         if (fresh?.email_verified) {
           if (user?.id) sessionStorage.removeItem(dismissKey(user.id));
-          notify.success('Пошту підтверджено', 'Тепер доступні всі можливості.');
+          setDone(true);
         } else {
           notify.error('Не вдалось підтвердити', 'Спробуйте ще раз — надішліть новий лист.');
         }
@@ -144,6 +150,7 @@ export default function VerifyEmailModal() {
   };
 
   const dismiss = () => {
+    if (done) { setDone(false); return; }
     if (user?.id) sessionStorage.setItem(dismissKey(user.id), '1');
     setOpen(false);
   };
@@ -152,7 +159,7 @@ export default function VerifyEmailModal() {
 
   return createPortal(
     <AnimatePresence>
-      {open && (
+      {(open || done) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -192,6 +199,44 @@ export default function VerifyEmailModal() {
               <X size={16} strokeWidth={2.4} />
             </button>
 
+            {done ? (
+            <div className="flex flex-col items-center px-7 pb-7 pt-9 text-center">
+              <motion.span
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ ...SPRING, delay: 0.05 }}
+                className="grid h-14 w-14 place-items-center rounded-2xl"
+                style={{ background: `rgba(${T.okRgb},0.12)`, border: `1px solid rgba(${T.okRgb},0.3)` }}
+              >
+                <Check size={26} strokeWidth={2.6} style={{ color: T.ok }} />
+              </motion.span>
+
+              <h2
+                className="mt-5 text-[22px] font-bold"
+                style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
+              >
+                Пошту підтверджено
+              </h2>
+
+              <p className="mt-2.5 text-[14px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text2 }}>
+                Усе готово. Тепер можна створювати акаунти, записувати угоди
+                й підключати MT5.
+              </p>
+
+              <button
+                onClick={() => setDone(false)}
+                className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[14.5px] font-bold"
+                style={{
+                  fontFamily: T.sans,
+                  background: T.acc,
+                  color: 'var(--edge-on-acc, #0A0A0C)',
+                  boxShadow: `0 12px 30px -12px rgba(${T.accRgb},0.8)`,
+                }}
+              >
+                Почати
+              </button>
+            </div>
+            ) : (
             <div className="flex flex-col items-center px-7 pb-7 pt-9 text-center">
               <span
                 className="grid h-14 w-14 place-items-center rounded-2xl"
@@ -268,6 +313,7 @@ export default function VerifyEmailModal() {
                 Пізніше
               </button>
             </div>
+            )}
           </motion.div>
         </motion.div>
       )}
