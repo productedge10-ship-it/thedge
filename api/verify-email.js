@@ -27,14 +27,30 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-/* Куди повертати юзера після кліку. На хостингу задається змінною
-   середовища, локально лишається дефолт дев-сервера. */
-const site = () => (process.env.SITE_URL || 'http://localhost:5173').replace(/\/+$/, '')
+/* Куди повертати юзера після кліку.
+
+   Раніше тут було «SITE_URL або localhost». На Coolify SITE_URL не
+   завели, і кнопка в листі після успішної перевірки кидала людину на
+   localhost:5173 — пошта підтверджувалась, а людина бачила сторінку,
+   що не відкривається.
+
+   Тепер порядок такий: SITE_URL, якщо заданий; інакше домен, з якого
+   прийшов сам запит, але лише наш — Host підставляє клієнт, і без
+   перевірки це був би відкритий редірект на будь-який сайт; і тільки
+   локально — дев-сервер. */
+const OUR_HOSTS = /^(www\.)?theedgecat\.com$/
+
+function site(req) {
+  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/+$/, '')
+  const host = String(req.headers?.['x-forwarded-host'] || req.headers?.host || '').split(',')[0].trim().toLowerCase()
+  if (OUR_HOSTS.test(host)) return `https://${host}`
+  return 'http://localhost:5173'
+}
 
 /* Ведемо одразу в застосунок, а не на корінь: корінь — це лендінг,
    і він миттєво перекидає залогіненого далі, зʼїдаючи параметр разом
    із повідомленням про результат. */
-const back = (res, status) => res.redirect(302, `${site()}/app?verified=${status}`)
+const back = (req, res, status) => res.redirect(302, `${site(req)}/app?verified=${status}`)
 
 /* Типи, з якими цей обробник узагалі має справу. Список закритий
    навмисно: type приходить із рядка запиту, а отже підконтрольний
@@ -48,8 +64,8 @@ const ALLOWED_TYPES = new Set(['magiclink', 'email', 'signup'])
 export default async function handler(req, res) {
   const { token_hash: tokenHash, type = 'magiclink' } = req.query || {}
 
-  if (!tokenHash) return back(res, 'error')
-  if (!ALLOWED_TYPES.has(type)) return back(res, 'error')
+  if (!tokenHash) return back(req, res, 'error')
+  if (!ALLOWED_TYPES.has(type)) return back(req, res, 'error')
 
   /* Імена змінних — ті самі, що в функціях оплати, плюс старі як
      запасні.
@@ -75,7 +91,7 @@ export default async function handler(req, res) {
      «не вдалось» і не розуміє, що просто не дописані ключі. */
   if (!url || !serviceKey) {
     console.error('verify-email: не задані SUPABASE_URL / SUPABASE_SERVICE_KEY')
-    return back(res, 'error')
+    return back(req, res, 'error')
   }
 
   try {
@@ -90,7 +106,7 @@ export default async function handler(req, res) {
     const { data, error } = await pub.auth.verifyOtp({ token_hash: tokenHash, type })
     if (error || !data?.user) {
       console.error('verify-email: токен не пройшов перевірку', error?.message)
-      return back(res, 'error')
+      return back(req, res, 'error')
     }
 
     /* 2. Тільки тепер ставимо прапорець — службовим ключем, бо
@@ -106,12 +122,12 @@ export default async function handler(req, res) {
 
     if (upError) {
       console.error('verify-email: не вдалось оновити profiles', upError)
-      return back(res, 'error')
+      return back(req, res, 'error')
     }
 
-    return back(res, '1')
+    return back(req, res, '1')
   } catch (e) {
     console.error('verify-email:', e)
-    return back(res, 'error')
+    return back(req, res, 'error')
   }
 }

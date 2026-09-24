@@ -441,18 +441,12 @@ export default function AiLab({ s }) {
           </span>
         </h2>
 
-<<<<<<< HEAD
         {/* Текст погоджений із командою: спершу — що кіт робить, потім —
             чим він відрізняється від звичайних графіків дашборда. */}
-        <p style={{ margin: '0 0 64px', maxWidth: 620, fontFamily: F.sans, fontSize: 17, lineHeight: 1.65, color: '#8a8aa0' }}>
+        <p style={{ margin: '0 0 clamp(32px,8vw,64px)', maxWidth: 620, fontFamily: F.sans, fontSize: 17, lineHeight: 1.65, color: '#8a8aa0' }}>
           Фірмовий котик аналізує твої угоди, знаходить систематичні помилки,
           показує закономірності й те, що ти сам можеш не помічати. Дашборд
           показує цифри — кіт пояснює, що за ними стоїть.
-=======
-        <p style={{ margin: '0 0 clamp(32px,8vw,64px)', maxWidth: 620, fontFamily: F.sans, fontSize: 17, lineHeight: 1.65, color: '#8a8aa0' }}>
-          Не чатбот, прикручений до дашборда. Поки модель не вміє сказати про твої
-          угоди те, чого ти сам у них не бачиш, її тут не буде.
->>>>>>> origin/dev-anton
         </p>
 
         <div className="ln-ai-grid">

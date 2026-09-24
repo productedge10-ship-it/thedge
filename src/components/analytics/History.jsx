@@ -502,13 +502,8 @@ export default function History({ s }) {
 
   return (
     <div className="flex flex-col gap-6 w-full">
-<<<<<<< HEAD
-      <div className="flex items-baseline gap-4 mb-2">
-        <h2 className="font-[family-name:var(--edge-display,'Unbounded')] text-[24px] font-semibold m-0 tracking-[-0.3px] text-[var(--edge-text)]">Історія угод</h2>
-=======
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1.5 mb-2">
-        <h2 className="font-['Instrument_Serif',serif] text-[30px] font-normal m-0 tracking-[0.2px] text-[var(--edge-text)]">Історія угод</h2>
->>>>>>> origin/dev-anton
+        <h2 className="font-[family-name:var(--edge-display,'Unbounded')] text-[24px] font-semibold m-0 tracking-[-0.3px] text-[var(--edge-text)]">Історія угод</h2>
         <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">
           Всього {s.trades.length} записів
         </span>
