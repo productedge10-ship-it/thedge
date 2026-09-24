@@ -57,17 +57,30 @@ export default function VerifyEmailModal() {
      спершу перечитуємо профіль і повідомляємо про успіх тільки якщо
      прапорець справді стоїть у базі. Інакше застосунок радісно вітав
      би з підтвердженням, якого не було. */
+  /* Живий, поки змонтований компонент, — а не поки не змінилась адреса.
+
+     Раніше тут був прапорець alive, який скидала очистка ефекту. Але
+     ефект сам же одразу прибирає ?verified з адреси, адреса міняється,
+     ефект перезапускається — і очистка вбивала ще не завершене
+     перечитування профілю. Помилка показувалась (вона без очікування),
+     а успіх — ніколи: людина підтверджувала пошту й не бачила нічого. */
+  const mounted = useRef(true);
+  useEffect(() => {
+    // true ставимо і тут: StrictMode монтує ефекти двічі, і без цього
+    // після першої «пробної» очистки прапорець лишався б false назавжди.
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get('verified');
     if (!status) return;
 
-    let alive = true;
-
     (async () => {
       if (status === '1') {
         const fresh = await refreshProfile();
-        if (!alive) return;
+        if (!mounted.current) return;
 
         if (fresh?.email_verified) {
           if (user?.id) sessionStorage.removeItem(dismissKey(user.id));
@@ -83,8 +96,6 @@ export default function VerifyEmailModal() {
     params.delete('verified');
     const rest = params.toString();
     navigate({ pathname: location.pathname, search: rest ? `?${rest}` : '' }, { replace: true });
-
-    return () => { alive = false; };
   }, [location.search, location.pathname, navigate, refreshProfile, user?.id]);
 
   /* emailVerified === undefined означає «ще не знаємо» — у цей момент

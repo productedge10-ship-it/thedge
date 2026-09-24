@@ -6,7 +6,7 @@ import {
   useTransform,
 } from "framer-motion";
 import { ArrowLeft, Home } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useMonoFont } from "../lib/theme";
 
@@ -263,6 +263,38 @@ export default function NotFound() {
               </button>
             </Magnetic>
           </motion.div>
+
+          {/* Куди ще можна піти.
+
+              Дві кнопки вище відповідають на «як звідси вибратись», але не
+              на «куди я взагалі хотів». Людина з битим посиланням найчастіше
+              шукала один із головних розділів — тож даємо їх одразу, без
+              повернення на головну й пошуку в меню. Набір різний для
+              залогіненого й гостя: гостю журнал однаково відкриється лише
+              після входу. */}
+          <motion.nav
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-7 flex flex-wrap items-center justify-center gap-x-1 gap-y-2 font-mono text-[12.5px]"
+            style={{ transform: "translateZ(40px)" }}
+            aria-label="Розділи"
+          >
+            {(user
+              ? [["/journal", "журнал"], ["/analytics", "аналітика"], ["/plan", "план"], ["/error", "помилки"], ["/uk/blog", "блог"]]
+              : [["/", "головна"], ["/uk/blog", "блог"], ["/auth", "увійти"], ["/terms", "умови"]]
+            ).map(([to, label], i) => (
+              <span key={to} className="inline-flex items-center">
+                {i > 0 && <span className="px-1.5 text-white/20">·</span>}
+                <Link
+                  to={to}
+                  className="rounded-md px-1.5 py-0.5 text-[#C4B5FD]/70 transition-colors hover:bg-[#8B7BFF]/15 hover:text-white"
+                >
+                  {label}
+                </Link>
+              </span>
+            ))}
+          </motion.nav>
         </motion.div>
       </motion.div>
 
