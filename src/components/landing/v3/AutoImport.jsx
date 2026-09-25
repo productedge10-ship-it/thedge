@@ -152,10 +152,6 @@ export default function AutoImport() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(47,191,143,.07)', border: '1px solid rgba(47,191,143,.26)', borderRadius: 999, padding: '9px 16px' }}>
-          <span style={{ position: 'relative', width: 7, height: 7, display: 'block' }}>
-            <span style={{ position: 'absolute', inset: 0, borderRadius: 999, background: C.ok, display: 'block' }} />
-            <span style={{ position: 'absolute', inset: 0, borderRadius: 999, background: C.ok, display: 'block', animation: 'lnPing 1.6s ease-out infinite' }} />
-          </span>
           <span style={{ fontFamily: F.mono, fontSize: 11.5, letterSpacing: '1.3px', color: C.ok, whiteSpace: 'nowrap' }}>
             {done ? 'СИНХРОНІЗОВАНО' : 'СИНХРОНІЗАЦІЯ АКТИВНА'}
           </span>

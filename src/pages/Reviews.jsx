@@ -290,7 +290,7 @@ export default function Reviews() {
                 Розбори
               </div>
               <h1
-                className="text-[28px] leading-none sm:text-[38px]"
+                className="edge-page-title"
                 style={{ fontFamily: T.display, marginTop: 13, fontWeight: 600, color: T.text, letterSpacing: '-1px' }}
               >
                 Висновки

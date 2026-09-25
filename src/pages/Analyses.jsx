@@ -393,7 +393,7 @@ export default function Analyses() {
                 Аналізи
               </div>
               <h1
-                className="text-[26px] font-bold leading-none sm:text-[34px] lg:text-[42px]"
+                className="edge-page-title"
                 style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
               >
                 Журнал планів

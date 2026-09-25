@@ -1754,7 +1754,7 @@ export default function News() {
 
             <div className="mt-3 flex flex-wrap items-baseline gap-[18px]">
               <h1
-                className="text-[34px] font-bold sm:text-[44px]"
+                className="edge-page-title"
                 style={{
                   fontFamily: T.display,
                   letterSpacing: "-1.8px",

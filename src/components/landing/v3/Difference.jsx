@@ -236,7 +236,6 @@ export default function Difference() {
               </defs>
               <path d={curveArea} fill="url(#lnCurveFill)" />
               <polyline points={curvePoints} fill="none" stroke={accent} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-              <circle cx={pts[19].x.toFixed(1)} cy={pts[19].y.toFixed(1)} r="3.4" fill={accent} style={{ filter: `drop-shadow(0 0 8px ${accent})` }} />
             </svg>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 14, marginTop: 18, paddingTop: 18, borderTop: '1px solid rgba(255,255,255,.06)' }}>

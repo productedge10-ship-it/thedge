@@ -382,7 +382,7 @@ export default function Analytics() {
                   {/* Назва градієнтом: від тексту до акценту — та сама
                       пара кольорів, що тримає всю шапку. */}
                   <h1
-                    className="m-0 text-[30px] font-extrabold leading-[0.96] sm:text-[36px] lg:text-[40px]"
+                    className="edge-page-title m-0"
                     style={{
                       fontFamily: T.display,
                       letterSpacing: '-0.045em',

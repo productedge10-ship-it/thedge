@@ -711,7 +711,7 @@ export default function PlanHeader({
         {weekly && <WeekArrow dir="prev" onClick={onPrevWeek} />}
 
         <h1
-          className="text-[28px] font-bold capitalize leading-none sm:text-[38px] lg:text-[46px]"
+          className="edge-page-title capitalize"
           style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
         >
           {title}

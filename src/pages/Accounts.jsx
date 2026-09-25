@@ -476,7 +476,7 @@ return (
             </span>
           </div>
           <h1
-            className="mt-3 text-[32px] font-bold sm:text-[40px] lg:text-[48px]"
+            className="edge-page-title mt-3"
             style={{
               fontFamily: T.display,
               letterSpacing: '-1.9px',

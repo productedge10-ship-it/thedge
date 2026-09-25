@@ -49,8 +49,7 @@ export function Rhythm() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(250px,100%),1fr))', gap: 24, position: 'relative' }}>
           {RHYTHM.map((r) => (
             <div key={r.time} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <span style={{ width: 14, height: 14, borderRadius: 999, background: C.panel2, border: `2px solid ${C.acc}`, boxShadow: `0 0 16px ${A(0.6)}`, display: 'block', marginBottom: 18 }} />
-              <div style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '1.2px', color: C.accSoft, marginBottom: 8 }}>{r.time}</div>
+              <div style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '1.2px', color: C.accSoft, marginTop: 18, marginBottom: 8 }}>{r.time}</div>
               <div style={{ fontFamily: F.sans, fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 14 }}>{r.label}</div>
 
               <div style={{ width: '100%', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 14, padding: 15, textAlign: 'left' }}>

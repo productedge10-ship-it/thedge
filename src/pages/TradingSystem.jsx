@@ -587,7 +587,7 @@ export default function TradingSystem() {
                     value={root.title}
                     onChange={(e) => patchPage(root.id, { title: e.target.value })}
                     placeholder="Моя торгова система"
-                    className="w-full max-w-[620px] bg-transparent text-[22px] outline-none placeholder:opacity-30 sm:text-[30px] lg:text-[38px] xl:text-[46px]"
+                    className="edge-page-title w-full max-w-[620px] bg-transparent outline-none placeholder:opacity-30"
                     style={{
                       fontFamily: T.display,
                       fontWeight: 700,

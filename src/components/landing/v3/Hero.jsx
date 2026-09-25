@@ -156,7 +156,6 @@ export default function Hero() {
               color: C.accSoft, marginBottom: 28,
             }}
           >
-            <span style={{ width: 5, height: 5, borderRadius: 999, background: C.acc, display: 'block', flexShrink: 0 }} />
             Робочий простір · Аналітика · AI-коуч
           </div>
 
@@ -274,10 +273,6 @@ export default function Hero() {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 18px', borderBottom: `1px solid ${C.lineSoft}` }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: F.mono, fontSize: 11.5, fontWeight: 600, letterSpacing: '1.3px', color: C.text4 }}>
-                <span style={{ position: 'relative', width: 6, height: 6, display: 'block' }}>
-                  <span style={{ position: 'absolute', inset: 0, borderRadius: 999, background: C.ok, display: 'block' }} />
-                  <span style={{ position: 'absolute', inset: 0, borderRadius: 999, background: C.ok, display: 'block', animation: 'lnPing 1.8s ease-out infinite' }} />
-                </span>
                 ЖУРНАЛ · {onCount} З {rows.length} УГОД
               </span>
 
@@ -474,7 +469,6 @@ export function Ticker() {
             {TICKER.map((label) => (
               <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 38, fontFamily: F.mono, fontSize: 13, letterSpacing: '1.4px', color: C.dim, whiteSpace: 'nowrap' }}>
                 {label}
-                <span style={{ width: 4, height: 4, borderRadius: 999, background: '#2b2b38', display: 'block' }} />
               </span>
             ))}
           </div>

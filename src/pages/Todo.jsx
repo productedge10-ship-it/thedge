@@ -345,7 +345,7 @@ export default function Todo() {
               Завдання
             </div>
             <h1
-              className="text-[28px] font-bold leading-none sm:text-[38px] lg:text-[46px]"
+              className="edge-page-title"
               style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
             >
               План дня

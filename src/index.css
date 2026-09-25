@@ -1585,6 +1585,27 @@ h1, h2, h3, h4, h5, h6 {
   transition: background-color 9999s ease-in-out 0s;
 }
 
+/* Заголовок розділу застосунку. Раніше кожна сторінка тримала свій
+   кегль (від 38 до 58px), і при переході між розділами заголовок
+   «стрибав». Тепер одна шкала для всіх; !important — бо на сторінках
+   лишились інлайнові letterSpacing/fontWeight, і правити кожен стиль
+   окремо означало б знову розвести їх з часом. Чекліст і калькулятор
+   навмисно не чіпаємо: це інструменти, там заголовок дрібніший. */
+.edge-page-title {
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  letter-spacing: -0.03em !important;
+}
+/* У полі вводу (назва торгової системи) рядок 1.0 зрізає хвости «р», «у». */
+input.edge-page-title { line-height: 1.15 !important; }
+@media (min-width: 640px) {
+  .edge-page-title { font-size: 36px !important; }
+}
+@media (min-width: 1024px) {
+  .edge-page-title { font-size: 42px !important; }
+}
+
 .edge-add-btn {
   background: #17151f;
   border: 1px solid rgba(139, 123, 255, 0.5);

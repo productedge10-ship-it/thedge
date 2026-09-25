@@ -1126,7 +1126,7 @@ export default function TradingJournal() {
             </div>
             <div className="flex items-baseline gap-3">
               <h1
-                className="text-[28px] font-bold leading-none sm:text-[38px] lg:text-[46px]"
+                className="edge-page-title"
                 style={{
                   fontFamily: T.display,
                   color: T.text,

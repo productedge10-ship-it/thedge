@@ -1207,7 +1207,7 @@ export default function Notes() {
               </div>
 
               <h1
-                className="mt-3.5 text-[40px] font-bold sm:text-[52px] lg:text-[58px]"
+                className="edge-page-title mt-3.5"
                 style={{
                   fontFamily: T.display,
                   letterSpacing: '-2.4px',

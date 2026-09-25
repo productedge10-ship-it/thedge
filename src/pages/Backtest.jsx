@@ -429,7 +429,7 @@ export default function Backtest() {
             </div>
 
             <h1
-              className="text-[30px] sm:text-[40px]"
+              className="edge-page-title"
               style={{
                 fontFamily: T.display, marginTop: 13, fontWeight: 600,
                 letterSpacing: '-1.3px', lineHeight: 1, color: T.text,
