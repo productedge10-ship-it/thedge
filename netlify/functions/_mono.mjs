@@ -11,9 +11,12 @@
    WayForPay списував регулярні платежі сам. У mono регулярного
    списання «з відкладеним стартом» немає, тому схема інша:
 
-   1. Тріал. Рахунок типу `verification` на 0 ₴ з saveCard: людина
-      вводить картку, банк її перевіряє, гроші не знімаються, а нам
-      приходить токен картки. Доступ Pro — одразу, на 14 днів.
+   1. Тріал. Рахунок на 1 ₴ з saveCard: людина платить карткою, Apple
+      Pay чи Google Pay, нам приходить токен, і гривню ми одразу
+      повертаємо (invoice/cancel). Доступ Pro — на 14 днів.
+      Не `verification` на 0 ₴: на такій сторінці mono показує лише
+      поле номера картки, без Apple Pay / Google Pay, а підтримка mono
+      підтвердила, що перевірити їх без суми неможливо.
    2. Далі списуємо ми самі: server.mjs раз на 15 хвилин запускає
       runDueCharges(), яка знаходить підписки з next_charge_at у
       минулому й платить токеном (wallet/payment, initiationKind =
@@ -40,6 +43,8 @@ import { usdUahRate } from '../../api/rate.js';
 
 export const API = 'https://api.monobank.ua';
 export const TRIAL_DAYS = 14;
+/* Перевірочне списання під тріал, у гривнях. Повертається одразу. */
+export const TRIAL_CHECK_UAH = 1;
 
 /* Скільки після дати списання доступ ще живе. Списання йде раз на 15
    хвилин і може застрягнути в банку — людина не має втрачати Pro
@@ -211,7 +216,7 @@ async function thankYou(db, userId, kind, { nextCharge, amount, currency }) {
       'Дякуємо, що з нами!',
       [
         'Картку привʼязано, Pro уже працює: автоімпорт з MetaTrader 5, Telegram-бот, бектест і до 5 рахунків.',
-        `Наступні ${TRIAL_DAYS} днів безкоштовні. Перше списання — <b style="color:#fafafa">${fmtDay(nextCharge)}</b>. Скасувати можна будь-коли в налаштуваннях, до цієї дати гроші не знімаються.`,
+        `Наступні ${TRIAL_DAYS} днів безкоштовні: 1 ₴ за перевірку картки ми вже повернули. Перше списання — <b style="color:#fafafa">${fmtDay(nextCharge)}</b>. Скасувати можна будь-коли в налаштуваннях, до цієї дати гроші не знімаються.`,
       ],
       { href: app, text: 'Відкрити журнал' },
     ));
@@ -327,6 +332,16 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
          тріал. */
       ...(order.kind === 'verify' && !sub?.trial_used_at ? { trial_used_at: now.toISOString() } : {}),
     }, { onConflict: 'user_id' }), 'subscriptions');
+
+    /* Перевірочну гривню повертаємо одразу. Після запису доступу і без
+       права зірвати його: не повернулась — видно в логах, повернемо
+       руками в кабінеті, а людина тим часом уже має свій тріал. */
+    if (order.kind === 'verify' && Number(order.amount) > 0 && (invoiceId || order.invoice_id)) {
+      await mono('/api/merchant/invoice/cancel', {
+        method: 'POST',
+        body: { invoiceId: invoiceId || order.invoice_id, extRef: `refund-${order.reference}` },
+      }).catch((e) => console.error('mono: перевірочну гривню не повернуто —', order.reference, e.message));
+    }
 
     if (order.kind !== 'renew') {
       await thankYou(db, order.user_id, order.kind, {

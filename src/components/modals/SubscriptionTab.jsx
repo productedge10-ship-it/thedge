@@ -550,6 +550,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
                         {o.status === 'approved' && !o.amount ? 'картка'
                           : o.status === 'approved' ? 'сплачено'
                           : o.status === 'declined' ? 'відхилено'
+                            : o.status === 'refunded' ? 'повернено'
                             : o.status === 'trial' ? 'тріал' : 'очікує'}
                       </span>
                     </span>
@@ -781,21 +782,14 @@ export default function SubscriptionTab({ sub, onChanged }) {
               делікатність, а пастка. */}
           <p className="mt-3 text-center text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text2 }}>
             {trialAvailable
-              ? `Лише привʼязка картки, без списання. Перше списання — через ${TRIAL_DAYS} днів, скасувати можна раніше.`
+              ? `Для перевірки картки спишемо 1 ₴ і одразу повернемо. Перше списання за підписку — через ${TRIAL_DAYS} днів, скасувати можна раніше.`
               : 'Пробний період уже використано на цьому акаунті.'}
           </p>
           {/* Брендбук mono дозволяє текстом уточнити способи оплати —
               це знімає питання «а якщо в мене не моно». */}
-          {/* Лише для звичайної оплати. Привʼязка картки під тріал
-              (verification) приймає тільки номер картки: токен Apple Pay
-              чи Google Pay не можна списувати без участі людини, тому
-              mono їх там не показує, і обіцяти їх тут означало б
-              обманювати. */}
-          {!trialAvailable && (
-            <p className="mt-1 text-center text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              Картка будь-якого банку, Apple Pay або Google Pay
-            </p>
-          )}
+          <p className="mt-1 text-center text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+            Картка будь-якого банку, Apple Pay або Google Pay
+          </p>
 
           {err && (
             <p className="mt-2 text-center text-[12.5px]" style={{ fontFamily: T.sans, color: T.bad }}>

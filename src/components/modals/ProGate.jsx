@@ -94,7 +94,7 @@ export default function ProGate({ feature, onStart }) {
             </p>
             <TrialButton onStart={onStart} className="mt-5 w-full" />
             <div className="mt-2.5 text-center text-[12px]" style={{ fontFamily: T.sans, color: 'rgba(237,236,247,0.45)' }}>
-              Лише привʼязка картки, без списання · скасувати будь-коли
+              1 ₴ на перевірку картки, одразу повертаємо · скасувати будь-коли
             </div>
           </div>
         </BacktestScene>
@@ -129,7 +129,7 @@ export default function ProGate({ feature, onStart }) {
       {/* Умови списання лишаються: саме цей рядок вирішує, чи буде
           потім повернення й чарджбек. */}
       <span className="mt-3 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-        Лише привʼязка картки, без списання · скасувати можна будь-коли
+        1 ₴ на перевірку картки, одразу повертаємо · скасувати можна будь-коли
       </span>
     </div>
   );

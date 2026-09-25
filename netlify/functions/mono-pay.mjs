@@ -8,7 +8,7 @@
 ================================================================== */
 
 import {
-  PLANS, TRIAL_DAYS, json, site, admin, newReference, mono, priceFor,
+  PLANS, TRIAL_DAYS, TRIAL_CHECK_UAH, json, site, admin, newReference, mono, priceFor,
 } from './_mono.mjs';
 
 export default async (req) => {
@@ -51,7 +51,11 @@ export default async (req) => {
 
   let price;
   try {
-    price = trial ? { amount: 0, minor: 0, ccy: 980, currency: 'UAH' } : await priceFor(planId);
+    /* Тріал — перевірочна гривня, а не verification на 0 ₴. Сторінка
+       verification приймає лише номер картки, а Apple Pay / Google Pay
+       mono показує тільки там, де є списання (підтверджено підтримкою
+       mono). Гривню повертаємо одразу після успіху — див. applyInvoice. */
+    price = trial ? { amount: TRIAL_CHECK_UAH, minor: TRIAL_CHECK_UAH * 100, ccy: 980, currency: 'UAH' } : await priceFor(planId);
   } catch (e) {
     console.error('mono pay: курс —', e.message);
     return json({ error: 'Не вдалось порахувати суму, спробуй за хвилину' }, 502);
@@ -80,9 +84,7 @@ export default async (req) => {
       body: {
         amount: price.minor,
         ccy: price.ccy,
-        /* verification — перевірка картки без списання (сума 0). Саме
-           так тріал лишається справді безкоштовним. */
-        paymentType: trial ? 'verification' : 'debit',
+        paymentType: 'debit',
         /* Гаманець — id користувача: один гаманець на людину, і токен
            завжди можна знайти, навіть якщо вебхук із ним загубився. */
         saveCardData: { saveCard: true, walletId: user.id },
@@ -90,9 +92,10 @@ export default async (req) => {
           reference,
           destination: title,
           customerEmails: user.email ? [user.email] : [],
-          ...(trial ? {} : {
-            basketOrder: [{ name: title, qty: 1, sum: price.minor, total: price.minor, unit: 'шт.', code: planId }],
-          }),
+          basketOrder: [{
+            name: trial ? 'Перевірка картки (буде повернено)' : title,
+            qty: 1, sum: price.minor, total: price.minor, unit: 'шт.', code: trial ? 'card_check' : planId,
+          }],
         },
         redirectUrl: `${site()}/app?paid=1`,
         webHookUrl: `${site()}/api/mono-callback`,

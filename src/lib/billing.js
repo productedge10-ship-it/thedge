@@ -55,12 +55,12 @@ export const PLANS = {
    відсіяти неробочі картки.
 
    TRIAL_HOLD лишається для старих замовлень WayForPay, де привʼязка
-   йшла списанням $1. Новий платіжний сервіс привʼязуватиме картку
-   без списання. */
+   йшла списанням $1. У mono привʼязка — 1 ₴, яку сервер одразу
+   повертає: без суми mono не показує Apple Pay / Google Pay. */
 export const TRIAL_DAYS = 14;
 export const TRIAL_HOLD = 1;
 export const TRIAL_HOLD_LABEL = 'Безкоштовно';
-export const TRIAL_NOTE = 'Лише привʼязка картки, без списання';
+export const TRIAL_NOTE = 'Привʼязка картки: 1 ₴ на перевірку, одразу повертаємо';
 
 /* ------------------------------------------------------------------
    Ціна в гривнях за курсом НБУ.
@@ -217,7 +217,10 @@ export async function readSubscription() {
      на себе відповідальність там, де можна не брати. Тут вони просто
      лежать у збереженій відповіді банку, яку ми й так зобовʼязані
      мати для розборів. */
-  const paid = (orders || []).find((o) => o.status === 'approved');
+  /* Перевірочна гривня тріалу одразу повертається (refunded), але
+     картку саме нею й привʼязали — тож маску беремо і звідти. */
+  const paid = (orders || []).find((o) => o.status === 'approved')
+    || (orders || []).find((o) => o.status === 'refunded' && o.payload?.paymentInfo?.maskedPan);
   /* WayForPay кладе маску в cardPan, mono — у paymentInfo.maskedPan. */
   const card = paid?.payload?.cardPan || paid?.payload?.paymentInfo?.maskedPan || null;
   const sys = paid?.payload?.paymentInfo?.paymentSystem;
