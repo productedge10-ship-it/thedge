@@ -360,7 +360,7 @@ function buildTemplate() {
    Заповнений шаблон новачок не читав і не писав — він лише заважав
    би, і людина видаляла б чужий текст замість того, щоб писати свій.
    Шаблон лишається кнопкою «Приклад» (resetDoc). */
-function buildBlank() {
+export function buildBlank() {
   return {
     pages: [{ ...newPage(null, 'Моя торгова система'), icon: '🎯', hint: '', blocks: [] }],
     openId: null,
@@ -377,6 +377,12 @@ export function loadDoc() {
   } catch {
     return buildBlank();
   }
+}
+
+/* Для useCloudState: з бази чи дзеркала може прийти що завгодно —
+   порожній або зламаний документ замінюємо чистою обкладинкою. */
+export function normalizeDoc(v) {
+  return v && Array.isArray(v.pages) && v.pages.length ? v : buildBlank();
 }
 
 export function saveDoc(doc) {

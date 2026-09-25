@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import {
-  KEYS, SEED_TASKS, DEFAULT_SETTINGS, newId,
+  KEYS, DEFAULT_SETTINGS, newId,
   normalizeTasks, normalizeSessions, normalizeSettings,
   today, addDays, isOverdue, todayPomodoros, dayKey, relativeDay,
 } from '../lib/todoData';
@@ -47,7 +47,7 @@ export default function Todo() {
   /* Усе живе в базі під ключем: завдання, помодоро, налаштування
      таймера. На цьому пристрої лишається лише дзеркало для швидкого
      старту, а те, що було в localStorage до переїзду, переноситься. */
-  const [tasks, setTasks] = useCloudState('todo_tasks', SEED_TASKS, {
+  const [tasks, setTasks] = useCloudState('todo_tasks', [], {
     legacyKey: KEYS.tasks, normalize: normalizeTasks,
   });
   const [sessions, setSessions] = useCloudState('todo_sessions', [], {

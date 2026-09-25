@@ -59,7 +59,7 @@ export function loadGroups() {
 }
 
 export function normalizeItems(parsed) {
-  if (!Array.isArray(parsed)) return DEFAULT_ITEMS;
+  if (!Array.isArray(parsed)) return [];
   return parsed.map((i) => ({
     id: i.id,
     text: String(i.text || ''),

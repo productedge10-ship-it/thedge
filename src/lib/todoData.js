@@ -266,7 +266,8 @@ export const SEED_TASKS = [
 /* Нормалізація приходить у гру і для локальних, і для хмарних даних —
    структура завдання не має залежати від того, звідки воно прилетіло */
 export const normalizeTasks = (list) => {
-  if (!Array.isArray(list)) return SEED_TASKS;
+  /* Порожньо, а не приклади: нова людина не має бачити чужих справ. */
+  if (!Array.isArray(list)) return [];
   return list.map((t) => ({
     id: t.id,
     text: String(t.text || ''),

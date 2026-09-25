@@ -5,7 +5,7 @@ import { X, ListChecks, Check, Flame } from 'lucide-react';
 import { T } from '../../lib/theme';
 import { notify } from '../../utils/notify';
 import useCloudState from '../../hooks/useCloudState';
-import { DEFAULT_ITEMS, DEFAULT_GROUPS, KEYS, normalizeItems } from '../../lib/checklistData';
+import { DEFAULT_GROUPS, KEYS, normalizeItems } from '../../lib/checklistData';
 import { reasonLabel } from './utils';
 
 /* ==================================================================
@@ -37,7 +37,7 @@ const GROUP_GUESS = [
 ];
 
 export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
-  const [items, setItems] = useCloudState('checklist_items', DEFAULT_ITEMS, {
+  const [items, setItems] = useCloudState('checklist_items', [], {
     legacyKey: KEYS.items,
     normalize: normalizeItems,
   });

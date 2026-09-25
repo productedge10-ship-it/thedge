@@ -8,11 +8,16 @@ import {
 
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import {
-  loadDoc, saveDoc, resetDoc, descendants, newPage, buildPreset, PRESETS, HUES,
+  resetDoc, descendants, newPage, buildPreset, PRESETS, HUES,
+  buildBlank, normalizeDoc, STORAGE_KEY,
 } from '../lib/systemDoc';
 import BlockEditor from '../components/system/BlockEditor';
 import SearchModal from '../components/system/SearchModal';
 import useImageAttach from '../hooks/useImageAttach';
+import useCloudState from '../hooks/useCloudState';
+
+/* Один раз на модуль: інакше щорендер новий обʼєкт і нові id сторінок. */
+const BLANK_DOC = buildBlank();
 
 /* ==================================================================
    Торгова система.
@@ -354,7 +359,13 @@ function NewSection({ open, onClose, onCreate }) {
 export default function TradingSystem() {
   useEdgeFonts();
 
-  const [doc, setDoc] = useState(loadDoc);
+  /* Система живе в акаунті (user_state), а не лише в браузері: інакше
+     з іншого пристрою її не видно, а другий акаунт на тому самому
+     компʼютері бачив систему першого. Старий локальний документ
+     переноситься в базу при першому відкритті — лише власнику пристрою. */
+  const [doc, setDoc] = useCloudState('system_doc', BLANK_DOC, {
+    legacyKey: STORAGE_KEY, normalize: normalizeDoc,
+  });
   const [searchOpen, setSearchOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
@@ -362,7 +373,6 @@ export default function TradingSystem() {
   const [lightbox, setLightbox] = useState(null);
   const coverRef = useRef(null);
 
-  useEffect(() => saveDoc(doc), [doc]);
 
   const pages = doc.pages;
   const root = useMemo(() => pages.find((p) => !p.parentId) || pages[0], [pages]);

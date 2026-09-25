@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { claimDevice } from '../lib/deviceScope';
 
 /* ==================================================================
    Сесія користувача + статус підтвердження пошти.
@@ -53,7 +54,11 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Перевіряємо поточну сесію
+    /* claimDevice — до setUser: сторінки ще не змонтовані, і дані
+       попереднього акаунта на цьому пристрої встигаємо прибрати раніше,
+       ніж їх хтось прочитає. */
     supabase.auth.getSession().then(({ data: { session } }) => {
+      claimDevice(session?.user?.id);
       setUser(session?.user ?? null);
       setLoading(false);
       loadProfile(session?.user?.id);
@@ -61,6 +66,7 @@ export const AuthProvider = ({ children }) => {
 
     // Слухаємо зміни (вхід/вихід)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      claimDevice(session?.user?.id);
       setUser(session?.user ?? null);
       setLoading(false);
       loadProfile(session?.user?.id);

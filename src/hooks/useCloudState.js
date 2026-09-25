@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { isSharedView } from '../lib/sandbox';
+import { isDeviceOwner } from '../lib/deviceScope';
 
 /* ==================================================================
    Стан сторінки, який живе в базі.
@@ -39,12 +40,22 @@ export default function useCloudState(key, initial, options = {}) {
      журнал, побачив би чужі розкладки. Окремий ключ і жодного запису
      в базу: гість нічого не зберігає. */
   const viewOnly = isSharedView();
-  const mirrorKey = viewOnly ? `edge_view_${key}` : `edge_cloud_${key}`;
+  /* Дзеркало з id користувача в ключі. Без нього новий акаунт на тому
+     самому пристрої стартував із дзеркала попереднього — і, бачачи
+     порожню базу, заливав чуже собі як «перенесені дані». */
+  const uid = user?.id || 'anon';
+  const mirrorKey = viewOnly ? `edge_view_${key}` : `edge_cloud_${uid}_${key}`;
+  /* Старі безіменні ключі (дзеркало до цієї правки й legacyKey) читаємо
+     лише якщо пристрій належить саме цьому акаунту — див. deviceScope. */
+  const readOld = () => {
+    if (viewOnly || !isDeviceOwner(user?.id)) return undefined;
+    return readLocal(`edge_cloud_${key}`) ?? (legacyKey ? readLocal(legacyKey) : undefined);
+  };
   const norm = useCallback((v) => (normalize ? normalize(v) : v), [normalize]);
 
   /* Стартуємо з локального дзеркала — сторінка не блимає порожнечею */
   const [value, setValue] = useState(() => {
-    const local = readLocal(mirrorKey) ?? (legacyKey && !viewOnly ? readLocal(legacyKey) : undefined);
+    const local = readLocal(mirrorKey) ?? readOld();
     return local === undefined ? initial : norm(local);
   });
 
@@ -78,8 +89,7 @@ export default function useCloudState(key, initial, options = {}) {
       }
 
       /* У базі порожньо — переносимо те, що лишилось на цьому пристрої */
-      const legacy = legacyKey && !viewOnly ? readLocal(legacyKey) : undefined;
-      const local = readLocal(mirrorKey) ?? legacy;
+      const local = readLocal(mirrorKey) ?? readOld();
       const seed = local === undefined ? initial : norm(local);
 
       setValue(seed);
