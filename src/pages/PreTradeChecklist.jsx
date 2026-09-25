@@ -270,7 +270,7 @@ export default function PreTradeChecklist() {
   const [groups, setGroups] = useCloudState('checklist_groups', DEFAULT_GROUPS, {
     legacyKey: KEYS.groups, normalize: normalizeGroups,
   });
-  const [items, setItems] = useCloudState('checklist_items', DEFAULT_ITEMS, {
+  const [items, setItems] = useCloudState('checklist_items', [], {
     legacyKey: KEYS.items, normalize: normalizeItems,
   });
   const [checked, setChecked] = useCloudState('checklist_checked', [], {
@@ -290,6 +290,7 @@ export default function PreTradeChecklist() {
   const addRef = useRef(null);
 
   const verdict = useMemo(() => verdictOf(items, checked), [items, checked]);
+  const showEmpty = !items.length && !editMode;
 
   /* Плаский список у тому порядку, в якому пункти читаються на
      екрані — по блоках згори вниз. На ньому й живе клавіатура. */
@@ -512,12 +513,12 @@ export default function PreTradeChecklist() {
                   icon={ShieldCheck}
                   onClick={() => setConfirm({
                     kind: 'restore',
-                    title: 'Повернути стандартний чекліст?',
-                    text: 'Твої блоки й пункти будуть замінені на початковий набір.',
-                    cta: 'Повернути',
+                    title: 'Взяти приклад чекліста?',
+                    text: 'Твої блоки й пункти будуть замінені на наш приклад.',
+                    cta: 'Замінити',
                   })}
                 >
-                  Стандартний
+                  Приклад
                 </Btn>
                 <Btn
                   icon={Eraser}
@@ -546,6 +547,34 @@ export default function PreTradeChecklist() {
             Без бордера взагалі. Стан тут і так сказаний тричі —
             кольором заголовка, кільцем і смугою прогресу; обведення
             додавало тільки ще одну лінію на екран. */}
+        {showEmpty ? (
+          /* Новий акаунт починає з порожнього чекліста: чужі правила,
+             які людина не писала, вона не читає, а просто проклацує.
+             Приклад лишається на відстані одного кліку — для тих, кому
+             треба від чого відштовхнутись. */
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: EASE }}
+            className="flex flex-col items-center gap-4 rounded-2xl px-6 py-12 text-center"
+            style={{ background: 'var(--edge-panel, rgba(20,20,24,0.94))', border: `1px dashed ${T.line}` }}
+          >
+            <ShieldCheck size={30} strokeWidth={1.7} style={{ color: T.acc }} />
+            <div>
+              <div className="text-[18px] font-bold" style={{ fontFamily: T.display, color: T.text }}>
+                Чекліст поки порожній
+              </div>
+              <p className="mx-auto mt-1.5 max-w-[420px] text-[13.5px] leading-[1.55]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                Запиши пункти, які перевіряєш перед кожним входом. Або візьми наш приклад і переріж під себе.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Btn icon={Plus} tone="acc" onClick={() => setEditMode(true)}>Створити свій</Btn>
+              <Btn icon={ShieldCheck} onClick={restoreDefaults}>Взяти приклад</Btn>
+            </div>
+          </motion.div>
+        ) : (
+        <>
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -900,6 +929,8 @@ export default function PreTradeChecklist() {
             );
           })}
         </div>
+        </>
+        )}
 
       </div>
 

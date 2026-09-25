@@ -608,7 +608,7 @@ export default function TradingSystem() {
                 <div className="flex shrink-0 items-center gap-1">
                   <IconBtn icon={Search} label="Пошук" onClick={() => setSearchOpen(true)} />
                   <IconBtn icon={Printer} label="PDF" onClick={() => window.print()} />
-                  <IconBtn icon={RotateCcw} label="Шаблон" tone={T.warn} onClick={() => setConfirm({ reset: true })} />
+                  <IconBtn icon={RotateCcw} label="Приклад" tone={T.warn} onClick={() => setConfirm({ reset: true })} />
                 </div>
               </div>
 
@@ -1065,11 +1065,11 @@ export default function TradingSystem() {
                 <Trash2 size={22} strokeWidth={1.9} style={{ color: T.bad }} />
               </div>
               <div className="mb-2.5 text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text, overflowWrap: 'anywhere' }}>
-                {confirm.reset ? 'Повернути шаблон?' : `Видалити «${confirm.title}»?`}
+                {confirm.reset ? 'Замінити на приклад?' : `Видалити «${confirm.title}»?`}
               </div>
               <p className="mb-6 text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
                 {confirm.reset
-                  ? 'Усі розділи й весь текст будуть замінені початковим шаблоном.'
+                  ? 'Усі розділи й весь текст будуть замінені нашим прикладом системи.'
                   : 'Разом із розділом зникнуть усі його підрозділи.'}
               </p>
               <div className="flex gap-2.5">
@@ -1085,7 +1085,7 @@ export default function TradingSystem() {
                   className="h-11 flex-1 rounded-xl text-[14px] font-bold"
                   style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
-                  {confirm.reset ? 'Повернути' : 'Видалити'}
+                  {confirm.reset ? 'Замінити' : 'Видалити'}
                 </button>
               </div>
             </motion.div>

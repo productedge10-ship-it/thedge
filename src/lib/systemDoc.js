@@ -356,15 +356,26 @@ function buildTemplate() {
 
 /* ---------- сховище ---------- */
 
+/* Порожня система для нового акаунта: лише обкладинка без розділів.
+   Заповнений шаблон новачок не читав і не писав — він лише заважав
+   би, і людина видаляла б чужий текст замість того, щоб писати свій.
+   Шаблон лишається кнопкою «Приклад» (resetDoc). */
+function buildBlank() {
+  return {
+    pages: [{ ...newPage(null, 'Моя торгова система'), icon: '🎯', hint: '', blocks: [] }],
+    openId: null,
+  };
+}
+
 export function loadDoc() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return buildTemplate();
+    if (!raw) return buildBlank();
     const parsed = JSON.parse(raw);
-    if (!parsed?.pages?.length) return buildTemplate();
+    if (!parsed?.pages?.length) return buildBlank();
     return parsed;
   } catch {
-    return buildTemplate();
+    return buildBlank();
   }
 }
 
