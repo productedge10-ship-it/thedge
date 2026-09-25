@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { onlyMine } from './myId';
 
 /* ==================================================================
    Тарифи й підписка.
@@ -187,14 +188,15 @@ export const FREE_LIMITS = {
    за SQL-міграцію. Тоді читаємо старий набір — екран підписки не
    має ламатись через порядок деплою. */
 const readSubRow = async () => {
-  const r = await supabase.from('subscriptions')
-    .select('plan,status,valid_until,trial_used_at,next_charge_at,plan_id,provider').maybeSingle();
+  /* onlyMine повертає вже виконаний запит, тож maybeSingle — всередині. */
+  const r = await onlyMine(supabase.from('subscriptions')
+    .select('plan,status,valid_until,trial_used_at,next_charge_at,plan_id,provider').maybeSingle());
   if (!r.error) return r;
-  return supabase.from('subscriptions').select('plan,status,valid_until,trial_used_at').maybeSingle();
+  return onlyMine(supabase.from('subscriptions').select('plan,status,valid_until,trial_used_at').maybeSingle());
 };
 
 export async function readSubscription() {
-  const [{ data: sub }, { data: pro }, { data: orders }] = await Promise.all([
+  const [{ data: sub }, { data: pro }, { data: orders }, { data: promos }] = await Promise.all([
     readSubRow(),
     supabase.rpc('is_pro'),
     /* Історія платежів — щоб екран підписки показував факти, а не
@@ -203,12 +205,21 @@ export async function readSubscription() {
        Беремо пʼять останніх: більше на цьому екрані нікому не
        потрібно, а хто захоче повну — питатиме в підтримці, і там
        усе одно дивитимуться в базу. */
-    supabase
+    onlyMine(supabase
       .from('payment_orders')
       .select('reference,plan,amount,currency,status,created_at,paid_at,payload')
       .order('created_at', { ascending: false })
-      .limit(5),
+      .limit(5)),
+    /* Активна знижка за промокодом. Таблиці може ще не бути (SQL не
+       виконано) — тоді просто без знижки. */
+    onlyMine(supabase
+      .from('promo_redemptions')
+      .select('percent,charges_left')
+      .eq('kind', 'percent')
+      .gt('charges_left', 0)
+      .limit(1)).catch(() => ({ data: null })),
   ]);
+  const promo = promos?.[0] || null;
 
   /* Маску картки дістаємо з тіла останнього вдалого колбека.
 
@@ -243,6 +254,8 @@ export async function readSubscription() {
        їх уже витратив. */
     trialUsed: !!sub?.trial_used_at,
     isPro: pro === true,
+    /* { percent, left } — знижка, яку сервер застосує до наступних оплат. */
+    discount: promo ? { percent: promo.percent, left: promo.charges_left } : null,
 
     /* Чим і коли платили востаннє. */
     card,
@@ -260,6 +273,19 @@ export async function readSubscription() {
       at: o.paid_at || o.created_at,
     })),
   };
+}
+
+/* Погасити промокод. Усі перевірки — у функції бази redeem_promo:
+   активність, строк, ліміт, один раз на людину. Тут лише показуємо
+   відповідь. */
+export async function redeemPromo(code) {
+  const { data, error } = await supabase.rpc('redeem_promo', { p_code: code });
+  if (error) {
+    if (error.code === 'PGRST202') throw new Error('Промокоди ще не ввімкнені');
+    throw new Error(error.message || 'Не вдалось застосувати промокод');
+  }
+  if (!data?.ok) throw new Error(data?.error || 'Такого промокоду немає');
+  return data;
 }
 
 /* Почати оплату (plata by mono).

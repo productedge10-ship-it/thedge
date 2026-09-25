@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  AlertTriangle, Bitcoin, Check, Eye, Loader2, Send, TerminalSquare, X,
+  AlertTriangle, Bitcoin, Check, Eye, Loader2, Send, TerminalSquare, Ticket, X,
 } from 'lucide-react';
 import { T } from '../trading/planTheme';
 import { EdgeMonogram, EdgeWordmark } from '../core/Layout';
 import {
   PLANS, PRO_FEATURES, TRIAL_DAYS, fmtMoney, startCheckout, cancelSubscription, startCryptoCheckout,
+  redeemPromo,
   useUahRate, toUah, fmtUah,
 } from '../../lib/billing';
 import SubscriptionScene from './SubscriptionScene';
@@ -321,6 +322,104 @@ const previewAllowed = () => {
   }
 };
 
+/* Промокод.
+
+   Згорнутий у тихе посилання: хто має код, той його шукає, а решті
+   порожнє поле «введи промокод» лише підказує, що десь є знижка, якої
+   в них немає, — і відправляє шукати її замість оплати. */
+function PromoBox({ discount, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null); // { ok, text }
+
+  const apply = async (e) => {
+    e?.preventDefault();
+    if (!code.trim() || busy) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await redeemPromo(code);
+      setMsg({
+        ok: true,
+        text: r.kind === 'percent'
+          ? `Знижка ${r.percent}% застосується до ${r.months === 1 ? 'наступної оплати' : `наступних ${r.months} оплат`}`
+          : `Pro відкрито до ${fmtDate(r.valid_until)}`,
+      });
+      setCode('');
+      await onDone?.();
+    } catch (err) {
+      setMsg({ ok: false, text: err.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      {discount && (
+        <div
+          className="flex items-center gap-2 rounded-xl px-3.5 py-2.5"
+          style={{ background: `rgba(${T.okRgb},0.09)`, border: `1px solid rgba(${T.okRgb},0.26)` }}
+        >
+          <Ticket size={14} strokeWidth={2.2} style={{ color: T.ok }} />
+          <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.ok }}>
+            Знижка {discount.percent}% ще на {discount.left === 1 ? '1 оплату' : `${discount.left} оплат${discount.left < 5 ? 'и' : ''}`}
+          </span>
+        </div>
+      )}
+
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-1.5 self-start text-[12.5px] font-medium transition-colors duration-200"
+          style={{ fontFamily: T.sans, color: T.text3 }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
+        >
+          <Ticket size={13} strokeWidth={2.2} />
+          Є промокод?
+        </button>
+      ) : (
+        <form onSubmit={apply} className="flex gap-2">
+          <input
+            autoFocus
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="XXXXXXXXXXXX"
+            maxLength={20}
+            spellCheck={false}
+            autoComplete="off"
+            className="h-[42px] min-w-0 flex-1 rounded-xl px-3.5 text-[14px] outline-none"
+            style={{
+              fontFamily: T.mono, letterSpacing: '0.12em', color: T.text,
+              background: T.sunken, border: `1px solid ${T.line}`,
+            }}
+          />
+          <button
+            type="submit"
+            disabled={busy || !code.trim()}
+            className="flex h-[42px] items-center gap-1.5 rounded-xl px-4 text-[13.5px] font-bold transition-opacity duration-200"
+            style={{
+              fontFamily: T.sans, color: T.text,
+              background: `rgba(${T.accRgb},0.14)`, border: `1px solid ${T.lineAcc}`,
+              opacity: busy || !code.trim() ? 0.55 : 1,
+            }}
+          >
+            {busy && <Loader2 size={13} strokeWidth={3} className="animate-spin" />}
+            Застосувати
+          </button>
+        </form>
+      )}
+
+      {msg && (
+        <p className="text-[12.5px]" style={{ fontFamily: T.sans, color: msg.ok ? T.ok : T.bad }}>{msg.text}</p>
+      )}
+    </div>
+  );
+}
+
 export default function SubscriptionTab({ sub, onChanged }) {
   const [period, setPeriod] = useState('pro_monthly');
   const [busy, setBusy] = useState(false);
@@ -441,6 +540,8 @@ export default function SubscriptionTab({ sub, onChanged }) {
     const rgb = trialing ? T.accRgb : T.okRgb;
     const total = trialing ? TRIAL_DAYS : periodDays(view.planId || view.plan);
     const isCrypto = view.provider === 'crypto';
+    /* Pro за промокодом: картки немає, списувати нічого й скасовувати теж. */
+    const isPromo = view.provider === 'promo';
     const subPlan = PLANS[view.planId || view.plan] || plan;
 
     return (
@@ -469,7 +570,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
                 {left != null ? left : '∞'}
               </span>
               <span className="text-[15px] font-medium" style={{ fontFamily: T.sans, color: T.text2 }}>
-                {left == null ? 'активна' : isCrypto ? `${plural(left)} оплачено` : `${plural(left)} до списання`}
+                {left == null ? 'активна' : isCrypto ? `${plural(left)} оплачено` : isPromo ? `${plural(left)} у подарунок` : `${plural(left)} до списання`}
               </span>
             </div>
 
@@ -479,7 +580,9 @@ export default function SubscriptionTab({ sub, onChanged }) {
                 Людина, яку списання заскочило зненацька, не продовжує
                 підписку — вона йде в підтримку й лишає одну зірку. */}
             <div className="mt-4 text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              {isCrypto
+              {isPromo
+                ? <>Pro за промокодом до <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(view.validUntil)}</span>. Картку не привʼязано — нічого не спишемо, доступ просто закінчиться</>
+                : isCrypto
                 ? <>Оплачено криптою до <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(view.validUntil)}</span>. Автосписань немає — нагадаємо за 3 дні</>
                 : trialing
                 ? <>Далі {subPlan.label.toLowerCase()} — перше списання <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(chargeAt)}</span></>
@@ -611,7 +714,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
 
             Скасовано — показуємо стан чесно, разом із датою, до якої
             доступ ще працює. */}
-        {isCrypto ? (
+        {isPromo ? null : isCrypto ? (
           /* Крипта — передоплата: скасовувати нічого, є лише «продовжити
              наперед». Новий період додається до вже оплаченої дати. */
           <div>
@@ -682,6 +785,8 @@ export default function SubscriptionTab({ sub, onChanged }) {
             )}
           </div>
         )}
+
+        {!preview && <PromoBox discount={view.discount} onDone={onChanged} />}
 
         {previewBar}
       </div>
@@ -860,6 +965,8 @@ export default function SubscriptionTab({ sub, onChanged }) {
         Журнал, аналітика й калькулятор лишаються безкоштовними назавжди, без обмежень
         на кількість угод. Платне — те, що працює, поки ти спиш.
       </p>
+
+      {!preview && <PromoBox discount={view.discount} onDone={onChanged} />}
 
       {previewBar}
     </div>

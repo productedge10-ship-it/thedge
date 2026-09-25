@@ -9,6 +9,7 @@
 
 import {
   PLANS, TRIAL_DAYS, TRIAL_CHECK_UAH, json, site, admin, newReference, mono, priceFor,
+  promoFor, discounted,
 } from './_mono.mjs';
 
 export default async (req) => {
@@ -49,13 +50,18 @@ export default async (req) => {
   const plan = PLANS[planId];
   const reference = newReference();
 
+  /* Знижка — лише на справжню оплату. Перевірочна гривня тріалу
+     знижки не зʼїдає: вона дістанеться першому списанню після тріалу. */
+  const promo = trial ? null : await promoFor(db, user.id);
+
   let price;
   try {
     /* Тріал — перевірочна гривня, а не verification на 0 ₴. Сторінка
        verification приймає лише номер картки, а Apple Pay / Google Pay
        mono показує тільки там, де є списання (підтверджено підтримкою
        mono). Гривню повертаємо одразу після успіху — див. applyInvoice. */
-    price = trial ? { amount: TRIAL_CHECK_UAH, minor: TRIAL_CHECK_UAH * 100, ccy: 980, currency: 'UAH' } : await priceFor(planId);
+    price = trial ? { amount: TRIAL_CHECK_UAH, minor: TRIAL_CHECK_UAH * 100, ccy: 980, currency: 'UAH' }
+      : discounted(await priceFor(planId), promo?.percent);
   } catch (e) {
     console.error('mono pay: курс —', e.message);
     return json({ error: 'Не вдалось порахувати суму, спробуй за хвилину' }, 502);
@@ -70,6 +76,7 @@ export default async (req) => {
     status: 'pending',
     provider: 'mono',
     kind: trial ? 'verify' : 'charge',
+    ...(promo ? { promo_id: promo.id } : {}),
   });
   if (insErr) {
     console.error('mono pay: замовлення —', insErr.message);

@@ -1166,13 +1166,6 @@ export default function Auth() {
               className="flex items-center gap-[10px] text-[10.5px] uppercase text-[#e8eaed]/40"
               style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2.5 }}
             >
-              <span
-                className="w-[7px] h-[7px] rounded-full"
-                style={{
-                  background: '#00e0a4', boxShadow: '0 0 10px rgba(0,224,164,0.8)',
-                  animation: 'edgePulse 2.4s ease-in-out infinite',
-                }}
-              />
               SOC 2 · 256-BIT ENCRYPTION
             </div>
           </div>

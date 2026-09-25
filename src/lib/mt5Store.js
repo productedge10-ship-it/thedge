@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { inSandbox } from './sandbox';
+import { onlyMine } from './myId';
 
 /* ==================================================================
    Підключення торгового рахунку MT5.
@@ -201,13 +202,13 @@ export async function readMt5Status(id) {
 /* Список підключень. Пароль звідси не повертаємо взагалі — він і в
    зашифрованому вигляді інтерфейсу не потрібен. */
 export async function listMt5Accounts() {
-  const { data, error } = await supabase
+  const { data, error } = await onlyMine(supabase
     .from('mt5_accounts')
     .select(
       'id, platform, broker, server, login, status, last_error, last_sync_at, created_at, '
       + 'account_title, currency, leverage, balance, equity, stat_at',
     )
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }));
 
   if (error) throw error;
   return data || [];

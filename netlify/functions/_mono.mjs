@@ -121,6 +121,33 @@ export async function priceFor(planId) {
   return { ccy: 980, currency: 'UAH', amount: uah, minor: uah * 100 };
 }
 
+/* ---------- знижка за промокодом ----------
+
+   Береться з бази, а не з браузера: відсоток, який прислав клієнт, —
+   це відсоток, який він собі й намалював. Лічильник знижених оплат
+   зменшується лише в applyInvoice, коли банк справді провів платіж:
+   відмова картки не має зʼїдати людині знижку. */
+export async function promoFor(db, userId) {
+  const { data } = await db.from('promo_redemptions')
+    .select('id,percent,charges_left')
+    .eq('user_id', userId).eq('kind', 'percent').gt('charges_left', 0)
+    .order('redeemed_at', { ascending: true }).limit(1);
+  const r = data?.[0];
+  return r && r.percent > 0 && r.percent < 100 ? r : null;
+}
+
+export function discounted(price, percent) {
+  if (!percent) return price;
+  const k = 1 - percent / 100;
+  if (price.ccy === 840) {
+    const minor = Math.max(100, Math.round(price.minor * k));
+    return { ...price, minor, amount: minor / 100 };
+  }
+  /* Гривня — ціла, як і в priceFor. */
+  const uah = Math.max(1, Math.round(price.amount * k));
+  return { ...price, amount: uah, minor: uah * 100 };
+}
+
 const CCY_CODE = { UAH: 980, USD: 840, EUR: 978 };
 
 /* ---------- підпис вебхука ----------
@@ -313,6 +340,17 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
 
     must(await patchOrder({ status: 'approved', paid_at: now.toISOString() }), 'payment_orders');
 
+    /* Оплата зі знижкою пройшла — списуємо одну з N знижених оплат.
+       Сюди доходимо один раз на замовлення: повторний вебхук по вже
+       approved зупиняється вище. */
+    if (order.promo_id) {
+      const { data: pr } = await db.from('promo_redemptions')
+        .select('charges_left').eq('id', order.promo_id).maybeSingle();
+      if (pr?.charges_left > 0) {
+        await db.from('promo_redemptions').update({ charges_left: pr.charges_left - 1 }).eq('id', order.promo_id);
+      }
+    }
+
     must(await db.from('subscriptions').upsert({
       user_id: order.user_id,
       plan: 'pro',
@@ -479,10 +517,12 @@ async function chargeOne(db, s) {
     return;
   }
 
-  const price = await priceFor(planId);
+  const promo = await promoFor(db, s.user_id);
+  const price = discounted(await priceFor(planId), promo?.percent);
   const { error: insErr } = await db.from('payment_orders').insert({
     user_id: s.user_id, reference, plan: planId, amount: price.amount,
     currency: price.currency, status: 'pending', provider: 'mono', kind: 'renew',
+    ...(promo ? { promo_id: promo.id } : {}),
   });
   if (insErr) throw new Error(`payment_orders: ${insErr.message}`);
 
