@@ -239,19 +239,33 @@ function Runway({ left, total, rgb }) {
    Стара цифра йде вгору й розмивається, нова приходить знизу. Саме
    розмиття й робить рух дорогим: без нього це підміна тексту, з
    ним — рух фізичного барабана. */
-function Price({ plan }) {
+function Price({ plan, discount }) {
   /* Гривня поруч дрібніше: тариф живе в доларах, а гривня — довідка
      за курсом НБУ на сьогодні. */
   const rate = useUahRate();
   const perMonthUsd = plan.period === 'yearly' ? plan.amount / 12 : plan.amount;
-  const uah = toUah(perMonthUsd, rate);
+  /* Зі знижкою за промокодом стара ціна лишається поруч, перекреслена:
+     без неї нова цифра — просто цифра, а не вигода. Сума тут —
+     довідка; що саме списати, вирішує сервер тим самим відсотком. */
+  const pct = discount?.percent || 0;
+  const nowUsd = pct ? perMonthUsd * (1 - pct / 100) : perMonthUsd;
+  const uah = toUah(nowUsd, rate);
+  const usd = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
   return (
     <div className="relative flex h-[52px] items-baseline gap-2 overflow-hidden">
+      {pct > 0 && (
+        <span
+          className="text-[22px] font-bold leading-none line-through"
+          style={{ fontFamily: T.display, color: T.text4, letterSpacing: '-0.03em', textDecorationThickness: 2 }}
+        >
+          {plan.perMonth}
+        </span>
+      )}
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
           key={plan.id}
           className="text-[44px] font-bold leading-none"
-          style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.04em' }}
+          style={{ fontFamily: T.display, color: pct ? T.ok : T.text, letterSpacing: '-0.04em' }}
           initial={{ y: 26, opacity: 0, filter: 'blur(7px)' }}
           animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
           exit={{ y: -26, opacity: 0, filter: 'blur(7px)', position: 'absolute' }}
@@ -263,13 +277,25 @@ function Price({ plan }) {
               видно без калькулятора. Повну річну суму не ховаємо —
               вона в примітці одразу під ціною, бо рахунок прийде
               саме на неї. */}
-          {plan.perMonth}
+          {pct ? usd(nowUsd) : plan.perMonth}
         </motion.span>
       </AnimatePresence>
 
       <span className="text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
         / місяць{uah ? <span style={{ color: T.text4 }}> · ≈ {fmtUah(uah)}</span> : null}
       </span>
+
+      {pct > 0 && (
+        <span
+          className="ml-auto self-center rounded-lg px-2 py-1 text-[12px] font-bold"
+          style={{
+            fontFamily: T.sans, color: T.ok,
+            background: `rgba(${T.okRgb},0.1)`, border: `1px solid rgba(${T.okRgb},0.26)`,
+          }}
+        >
+          −{pct}%
+        </span>
+      )}
     </div>
   );
 }
@@ -840,7 +866,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
           </div>
 
           <div className="mt-5">
-            <Price plan={plan} />
+            <Price plan={plan} discount={view.discount} />
           </div>
 
           {/* Висота зарезервована під підпис, навіть коли його немає.
@@ -935,7 +961,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
               делікатність, а пастка. */}
           <p className="mt-3 text-center text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text2 }}>
             {trialAvailable
-              ? `Для перевірки картки спишемо 1 ₴ і одразу повернемо. Перше списання за підписку — через ${TRIAL_DAYS} днів, скасувати можна раніше.`
+              ? `Для перевірки картки спишемо 1 ₴ і одразу повернемо. Перше списання за підписку${view.discount ? ` (зі знижкою ${view.discount.percent}%)` : ''} — через ${TRIAL_DAYS} днів, скасувати можна раніше.`
               : 'Пробний період уже використано на цьому акаунті.'}
           </p>
           {/* Брендбук mono дозволяє текстом уточнити способи оплати —

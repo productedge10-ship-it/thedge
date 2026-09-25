@@ -70,7 +70,9 @@ const LIFT_SPRING = { type: 'spring', stiffness: 380, damping: 28, mass: 0.5 };
 ================================================================== */
 
 const GAP = 14;   /* той самий проміжок, що був у gap-3.5 */
-const ROW = 164;  /* висота плитки: фіксована, інакше рядки «дихають» */
+/* Висота плитки: фіксована, інакше рядки «дихають». Без підпису під
+   назвою 164 лишали порожню смугу внизу — 124 якраз на іконку й назву. */
+const ROW = 124;
 
 const colsFor = (w) => (w < 640 ? 1 : w < 1180 ? 2 : 4);
 
@@ -508,21 +510,16 @@ function Tile({ item, state, index, onGo, edit, onHide, size, onSize }) {
         )}
       </div>
 
+      {/* Лише назва: розділи людина впізнає за назвою й іконкою, а
+          підпис під кожною плиткою перетворював сітку на стіну тексту.
+          Опис лишається підказкою під курсором. */}
       <h3
-        className="relative mb-1.5 text-[16.5px] font-bold"
+        className="relative text-[16.5px] font-bold"
         style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.015em' }}
+        title={item.text}
       >
         {item.title}
       </h3>
-
-      {/* Висота плитки фіксована, тому підпис обрізаємо на двох
-          рядках: довший текст інакше виліз би за нижню межу. */}
-      <p
-        className="relative line-clamp-2 text-[13.5px]"
-        style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.6 }}
-      >
-        {item.text}
-      </p>
 
       <ArrowRight
         size={15}
