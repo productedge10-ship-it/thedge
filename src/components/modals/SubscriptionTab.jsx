@@ -786,9 +786,16 @@ export default function SubscriptionTab({ sub, onChanged }) {
           </p>
           {/* Брендбук mono дозволяє текстом уточнити способи оплати —
               це знімає питання «а якщо в мене не моно». */}
-          <p className="mt-1 text-center text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            Картка будь-якого банку, Apple Pay або Google Pay
-          </p>
+          {/* Лише для звичайної оплати. Привʼязка картки під тріал
+              (verification) приймає тільки номер картки: токен Apple Pay
+              чи Google Pay не можна списувати без участі людини, тому
+              mono їх там не показує, і обіцяти їх тут означало б
+              обманювати. */}
+          {!trialAvailable && (
+            <p className="mt-1 text-center text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+              Картка будь-якого банку, Apple Pay або Google Pay
+            </p>
+          )}
 
           {err && (
             <p className="mt-2 text-center text-[12.5px]" style={{ fontFamily: T.sans, color: T.bad }}>
