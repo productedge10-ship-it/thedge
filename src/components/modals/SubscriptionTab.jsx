@@ -353,7 +353,10 @@ export default function SubscriptionTab({ sub, onChanged }) {
   };
 
   const plan = PLANS[period];
-  const left = daysLeft(view.validUntil);
+  /* Рахуємо до дня списання, а не до кінця доступу: у mono доступ
+     живе на добу довше (запас на затримку банку). */
+  const chargeAt = view.nextChargeAt || view.validUntil;
+  const left = daysLeft(chargeAt);
 
   const go = async ({ trial }) => {
     if (preview) return;
@@ -398,7 +401,8 @@ export default function SubscriptionTab({ sub, onChanged }) {
     const trialing = view.status === 'trialing';
     const tone = trialing ? 'acc' : 'ok';
     const rgb = trialing ? T.accRgb : T.okRgb;
-    const total = periodDays(view.plan);
+    const total = trialing ? TRIAL_DAYS : periodDays(view.planId || view.plan);
+    const subPlan = PLANS[view.planId || view.plan] || plan;
 
     return (
       <div className="flex flex-col gap-4">
@@ -437,8 +441,8 @@ export default function SubscriptionTab({ sub, onChanged }) {
                 підписку — вона йде в підтримку й лишає одну зірку. */}
             <div className="mt-4 text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.text3 }}>
               {trialing
-                ? <>Далі {(PLANS[view.plan]?.label || plan.label).toLowerCase()} — перше списання <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(view.validUntil)}</span></>
-                : <>Наступне списання <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(view.validUntil)}</span></>}
+                ? <>Далі {subPlan.label.toLowerCase()} — перше списання <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(chargeAt)}</span></>
+                : <>Наступне списання <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(chargeAt)}</span></>}
             </div>
           </div>
         </Stage>
@@ -450,7 +454,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
           >
             <AlertTriangle size={15} strokeWidth={2.2} style={{ color: T.warn, marginTop: 1 }} />
             <span className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.warn }}>
-              Останнє списання не пройшло. Доступ працює до {fmtDate(view.validUntil)} — онови картку, щоб він не обірвався.
+              Останнє списання не пройшло. Доступ працює до {fmtDate(view.validUntil)}, наступна спроба — через добу. Перевір, чи на картці є кошти.
             </span>
           </div>
         )}
@@ -543,7 +547,8 @@ export default function SubscriptionTab({ sub, onChanged }) {
                             : o.status === 'declined' ? `rgba(${T.badRgb},0.28)` : T.line}`,
                         }}
                       >
-                        {o.status === 'approved' ? 'сплачено'
+                        {o.status === 'approved' && !o.amount ? 'картка'
+                          : o.status === 'approved' ? 'сплачено'
                           : o.status === 'declined' ? 'відхилено'
                             : o.status === 'trial' ? 'тріал' : 'очікує'}
                       </span>
@@ -761,7 +766,10 @@ export default function SubscriptionTab({ sub, onChanged }) {
 
             <span className="sub-cta-label inline-flex items-center gap-2">
               {busy && <Loader2 size={15} strokeWidth={3} className="animate-spin" style={{ color: T.acc }} />}
-              {trialAvailable ? `${TRIAL_DAYS} днів безкоштовно` : 'Оформити підписку'}
+              {/* Без тріалу це кнопка оплати — підпис за брендбуком
+                  plata by mono: назва способу оплати, без логотипів
+                  платіжних систем. */}
+              {trialAvailable ? `${TRIAL_DAYS} днів безкоштовно` : 'Онлайн-оплата карткою'}
             </span>
 
           </button>
@@ -775,6 +783,11 @@ export default function SubscriptionTab({ sub, onChanged }) {
             {trialAvailable
               ? `Лише привʼязка картки, без списання. Перше списання — через ${TRIAL_DAYS} днів, скасувати можна раніше.`
               : 'Пробний період уже використано на цьому акаунті.'}
+          </p>
+          {/* Брендбук mono дозволяє текстом уточнити способи оплати —
+              це знімає питання «а якщо в мене не моно». */}
+          <p className="mt-1 text-center text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+            Картка будь-якого банку, Apple Pay або Google Pay
           </p>
 
           {err && (

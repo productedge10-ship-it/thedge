@@ -183,9 +183,19 @@ export const FREE_LIMITS = {
    Читаємо функцію бази, а не рахуємо дати в браузері. Термін дії,
    порахований клієнтом, — це термін дії, який клієнт може й
    переписати. */
+/* Нові колонки mono можуть ще не існувати, якщо код викотили раніше
+   за SQL-міграцію. Тоді читаємо старий набір — екран підписки не
+   має ламатись через порядок деплою. */
+const readSubRow = async () => {
+  const r = await supabase.from('subscriptions')
+    .select('plan,status,valid_until,trial_used_at,next_charge_at,plan_id').maybeSingle();
+  if (!r.error) return r;
+  return supabase.from('subscriptions').select('plan,status,valid_until,trial_used_at').maybeSingle();
+};
+
 export async function readSubscription() {
   const [{ data: sub }, { data: pro }, { data: orders }] = await Promise.all([
-    supabase.from('subscriptions').select('plan,status,valid_until,trial_used_at').maybeSingle(),
+    readSubRow(),
     supabase.rpc('is_pro'),
     /* Історія платежів — щоб екран підписки показував факти, а не
        саму лише дату наступного списання.
@@ -208,12 +218,19 @@ export async function readSubscription() {
      лежать у збереженій відповіді банку, яку ми й так зобовʼязані
      мати для розборів. */
   const paid = (orders || []).find((o) => o.status === 'approved');
-  const card = paid?.payload?.cardPan || null;
+  /* WayForPay кладе маску в cardPan, mono — у paymentInfo.maskedPan. */
+  const card = paid?.payload?.cardPan || paid?.payload?.paymentInfo?.maskedPan || null;
+  const sys = paid?.payload?.paymentInfo?.paymentSystem;
 
   return {
     plan: sub?.plan || 'free',
     status: sub?.status || 'inactive',
     validUntil: sub?.valid_until || null,
+    /* Дата списання окремо від кінця доступу: у mono доступ живе на
+       добу довше за дату списання (запас на затримку банку), і
+       показувати людині треба саме день, коли знімуть гроші. */
+    nextChargeAt: sub?.next_charge_at || null,
+    planId: sub?.plan_id || null,
     /* Чи горів уже пробний період. Кнопку це не «захищає» — рішення
        все одно ухвалює сервер, — але дозволяє чесно підписати її
        заздалегідь, а не показувати «14 днів безкоштовно» тому, хто
@@ -223,7 +240,7 @@ export async function readSubscription() {
 
     /* Чим і коли платили востаннє. */
     card,
-    cardType: paid?.payload?.cardType || null,
+    cardType: paid?.payload?.cardType || (sys ? sys[0].toUpperCase() + sys.slice(1) : null),
     lastPaidAt: paid?.paid_at || null,
     lastAmount: paid ? Number(paid.amount) : null,
 
@@ -239,21 +256,16 @@ export async function readSubscription() {
   };
 }
 
-/* Почати оплату.
+/* Почати оплату (plata by mono).
 
-   Уся робота — на сервері: він створює замовлення, рахує підпис і
-   віддає готовий набір полів. Браузер лише складає з них форму й
-   сабмітить. Секретний ключ мерчанта сюди не потрапляє й потрапити
-   не може.
-
-   Форму саме сабмітимо, а не відкриваємо посилання: WayForPay чекає
-   POST, а в POST поля масивів (`productName[]`) передаються так, як
-   їх не запхати в query-рядок. */
+   Уся робота — на сервері: він вирішує суму й право на тріал,
+   створює рахунок у mono й віддає посилання на платіжну сторінку.
+   Браузер лише переходить за ним. Токен мерчанта сюди не потрапляє. */
 export async function startCheckout(planId, { trial = false } = {}) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Треба увійти');
 
-  const r = await fetch('/api/wfp-pay', {
+  const r = await fetch('/api/mono-pay', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -262,33 +274,10 @@ export async function startCheckout(planId, { trial = false } = {}) {
     body: JSON.stringify({ plan: planId, trial }),
   });
 
-  if (!r.ok) {
-    const { error } = await r.json().catch(() => ({}));
-    throw new Error(error || 'Не вдалось створити рахунок');
-  }
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok || !out.url) throw new Error(out.error || 'Не вдалось створити рахунок');
 
-  const { action, fields } = await r.json();
-
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = action;
-  form.acceptCharset = 'utf-8';
-  form.style.display = 'none';
-
-  Object.entries(fields).forEach(([name, value]) => {
-    /* Масиви йдуть окремими полями з тим самим імʼям — так їх і
-       розбирає приймальна сторона. */
-    (Array.isArray(value) ? value : [value]).forEach((v) => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = name;
-      input.value = String(v);
-      form.appendChild(input);
-    });
-  });
-
-  document.body.appendChild(form);
-  form.submit();
+  window.location.assign(out.url);
 }
 
 /* Скасувати підписку.
@@ -305,7 +294,9 @@ export async function cancelSubscription() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Треба увійти');
 
-  const r = await fetch('/api/wfp-cancel', {
+  /* Один маршрут для обох систем: сервер сам знає, чим оформлена
+     підписка (mono чи старий WayForPay). */
+  const r = await fetch('/api/billing-cancel', {
     method: 'POST',
     headers: { Authorization: `Bearer ${session.access_token}` },
   });

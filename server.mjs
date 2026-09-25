@@ -68,6 +68,11 @@ const WEB_ROUTES = {
   '/api/wfp-callback': './netlify/functions/wfp-callback.mjs',
   '/api/wfp-return': './netlify/functions/wfp-return.mjs',
   '/api/wfp-cancel': './netlify/functions/wfp-cancel.mjs',
+  /* mono. WayForPay-маршрути лишаються: старі підписки ще живуть там
+     і шлють колбеки про свої регулярні списання. */
+  '/api/mono-pay': './netlify/functions/mono-pay.mjs',
+  '/api/mono-callback': './netlify/functions/mono-callback.mjs',
+  '/api/billing-cancel': './netlify/functions/billing-cancel.mjs',
 };
 
 /* Стиль Vercel: (req, res) */
@@ -455,6 +460,35 @@ server.listen(PORT, () => {
   }
   console.log(`edge-journal слухає :${PORT}`);
 });
+
+/* ------------------------------------------------------------------
+   Чергові списання mono.
+
+   mono, на відміну від WayForPay, сам не списує раз на місяць — це
+   робимо ми токеном картки. Планувальник живе тут, у тому ж процесі:
+   окремий cron-контейнер означав би ще одну річ, яка може тихо
+   впасти. Подвійного списання при двох процесах не буде — підписку
+   захоплює атомарний update (див. runDueCharges у _mono.mjs).
+
+   Вимкнути без деплою: MONO_BILLING_OFF=1. Без MONO_TOKEN не робить
+   нічого.
+------------------------------------------------------------------ */
+const BILLING_EVERY = 15 * 60_000;
+let billingBusy = false;
+const billingTick = async () => {
+  if (billingBusy) return; // попередній прохід ще не закінчився
+  billingBusy = true;
+  try {
+    const m = await import('./netlify/functions/_mono.mjs');
+    await m.runDueCharges();
+  } catch (e) {
+    console.error('mono cron:', e.message);
+  } finally {
+    billingBusy = false;
+  }
+};
+setTimeout(billingTick, 60_000).unref();
+setInterval(billingTick, BILLING_EVERY).unref();
 
 /* Коректне завершення. Coolify під час деплою шле SIGTERM і чекає;
    без цього обробника процес помирає миттєво разом із запитом, який
