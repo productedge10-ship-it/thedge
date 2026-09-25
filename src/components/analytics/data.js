@@ -469,7 +469,14 @@ export function useStats(trades, reviews) {
       pfCurve.push({ date: x.date.slice(5), net: +(pfLoss ? pfGross / pfLoss : pfGross).toFixed(2) });
     });
 
+    /* PnL у грошах: лише по угодах, де суму є з чого взяти. pnlCount
+       потрібен, щоб картка не показала $0 там, де грошей просто немає. */
+    const withPnl = t.filter((x) => typeof x.pnl === 'number' && Number.isFinite(x.pnl));
+    const pnl = +sum(withPnl.map((x) => x.pnl)).toFixed(2);
+    const pnlCount = withPnl.length;
+
     return {
+      pnl, pnlCount,
       trades: t, wins, losses, be, gross, grossLoss, net, equity, maxDD,
       wr: wins.length + losses.length
         ? Math.round((wins.length / (wins.length + losses.length)) * 100)

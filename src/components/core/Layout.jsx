@@ -21,7 +21,6 @@ import CatChat from './CatChat';
 import ThemeSweep from './ThemeSweep';
 import { openOnboarding } from '../../lib/onboarding';
 import { NAV, openSettings } from '../../lib/settings';
-import { openCatChat } from '../../lib/catChat';
 import { useSettings } from '../../context/SettingsContext';
 import appVersion from '../../version.json';
 import { inSandbox, isSharedView, withSandbox, VIEW_ROUTES } from '../../lib/sandbox';
@@ -240,15 +239,14 @@ export function EdgeMonogram() {
     }
   };
 
-  /* Клік відкриває чат. Рахунок до десяти кліків прибрано не через
-     примху: з чатом на першому ж кліку до десятого не дійти ніколи.
-     Секретка ціла — вона й раніше вмикалась довгим натисканням, тепер
-     це єдиний шлях до неї. */
+  /* Клік по коту чат більше не відкриває: вікно вискакувало від
+     випадкового дотику до логотипа й заважало. Кіт лишається живим
+     (реакції на наведення, довге натискання — секретка). Повернути
+     чат — викликати тут openCatChat() з '../../lib/catChat'. */
   const handleClick = () => {
     if (lickMode || longPressed.current) return;
     clearTimeout(clickTimer.current);
     setClickCount(0);
-    openCatChat();
   };
 
   const handlePressStart = () => {
@@ -1230,20 +1228,20 @@ export default function Layout() {
           питання мають зустріти її будь-де. */}
       {/* У чужому журналі за посиланням — нічого від імені власника:
           ні анкети, ні нагадування про пошту, ні налаштувань, ні туру,
-          ні чату. Гість лише дивиться. */}
-      {!isSharedView() && (
-      <>
-      <OnboardingModal />
-      {/* Нагадування підтвердити пошту. Теж живе тут, а не на сторінці
-          входу: з вимкненим «Confirm email» реєстрація одразу видає
-          сесію, і людина потрапляє в застосунок, не побачивши жодного
-          екрана авторизації після кнопки «Зареєструватись». */}
-      <VerifyEmailModal />
-      <SettingsModal />
-      <Tour />
-      <CatChat />
-      </>
-      )}
+          ні чату. Гість лише дивиться. */}
+      {!isSharedView() && (
+      <>
+      <OnboardingModal />
+      {/* Нагадування підтвердити пошту. Теж живе тут, а не на сторінці
+          входу: з вимкненим «Confirm email» реєстрація одразу видає
+          сесію, і людина потрапляє в застосунок, не побачивши жодного
+          екрана авторизації після кнопки «Зареєструватись». */}
+      <VerifyEmailModal />
+      <SettingsModal />
+      <Tour />
+      <CatChat />
+      </>
+      )}
       <ThemeSweep />
     </div>
   );

@@ -30,6 +30,16 @@ const P = {
 
 const r2 = (v) => Math.round(Number(v) * 100) / 100;
 const signR = (v) => `${v > 0 ? '+' : ''}${r2(v)}R`;
+/* Великі суми скорочуємо (12.4K): у клітинці картки вміщається
+   близько семи знаків, «+$12,431.57» туди вже не лізе. */
+const fmtMoney = (v) => {
+  const n = Number(v) || 0;
+  const a = Math.abs(n);
+  const body = a >= 10000
+    ? `${(a / 1000).toFixed(a >= 100000 ? 0 : 1)}K`
+    : a.toLocaleString('en-US', { maximumFractionDigits: a >= 1000 ? 0 : 2 });
+  return `${n > 0 ? '+' : n < 0 ? '−' : ''}$${body}`;
+};
 
 /* ---------- що взагалі можна показати ----------
    Порядок тут = порядок у списку вибору. Перші чотири ввімкнені
@@ -42,7 +52,14 @@ export const METRICS = [
   { id: 'net',        label: 'Net R',            hint: 'сумарний результат',
     en: 'Net R',              enHint: 'total result',            def: true,
     get: (s) => ({ value: signR(s.net), tone: s.net >= 0 ? 'ok' : 'bad' }) },
-  { id: 'wr',         label: 'Win rate',         hint: 'частка прибуткових',
+  /* PnL у доларах. За замовчуванням вимкнений: не кожен хоче світити
+     суми, а R показує те саме без розміру рахунку. */
+  { id: 'pnl',        label: 'PnL',              hint: 'результат у $',
+    en: 'PnL',                enHint: 'net profit, $',           def: false,
+    get: (s) => (s.pnlCount
+      ? { value: fmtMoney(s.pnl), tone: s.pnl >= 0 ? 'ok' : 'bad' }
+      : { value: '—', tone: 'plain' }) },
+  { id: 'wr',         label: 'Win rate',       hint: 'частка прибуткових',
     en: 'Win Rate',           enHint: 'winning trades',          def: true,
     get: (s) => ({ value: `${s.wr}%`, tone: s.wr >= 50 ? 'ok' : 'plain' }) },
   { id: 'pf',         label: 'Profit factor',    hint: 'прибуток до збитку',

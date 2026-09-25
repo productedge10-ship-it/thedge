@@ -1,4 +1,6 @@
 import { supabase } from './supabase';
+import { getTradeProfit } from '../utils/journalUtils';
+import { accountSize } from './accountsStore';
 
 /* ==================================================================
    Угоди для аналітики.
@@ -64,7 +66,7 @@ function emotionOf(row) {
 /* Сесія в базі може бути порожньою — у старих записах її не питали */
 const sessionOf = (row) => row.session || 'Не вказано';
 
-const toApp = (row) => {
+const toApp = (row, sizes = {}) => {
   const date = row.plan_date || (row.created_at || '').slice(0, 10);
   const d = date ? new Date(`${date}T12:00:00`) : null;
 
@@ -97,6 +99,10 @@ const toApp = (row) => {
     exitReason: row.exit_reason || null,
     holdMin: holdOf(row.entry_time, row.exit_time),
     note: row.trade_description || '',
+    /* Гроші — тим самим правилом, що в журналі угод (брокерський
+       profit_money, інакше ризик × R), щоб PnL на картці збігався з
+       журналом. null — суму порахувати нема з чого. */
+    pnl: getTradeProfit(row, sizes),
   };
 };
 
@@ -107,7 +113,7 @@ export async function fetchTrades(userId, { from, to } = {}) {
       id, plan_date, plan_pair, account_name, type, result, rr, risk, session,
       setup, entry_time, exit_time,
       followed_plan, rushed, has_mistake, mistake_category, trade_description, exit_reason,
-      psy_confident, psy_fear, psy_repeat, psy_revenge, created_at
+      psy_confident, psy_fear, psy_repeat, psy_revenge, created_at, profit_money
     `)
     .eq('user_id', userId)
     .order('plan_date', { ascending: true })
@@ -116,13 +122,23 @@ export async function fetchTrades(userId, { from, to } = {}) {
   if (from) q = q.gte('plan_date', from);
   if (to) q = q.lte('plan_date', to);
 
-  const { data, error } = await q;
+  /* Розміри рахунків потрібні лише для PnL угод, внесених руками з
+     ризиком у відсотках. Якщо запит не вдався — аналітика однаково
+     працює, просто в таких угод суми не буде. */
+  const [{ data, error }, accRes] = await Promise.all([
+    q,
+    supabase.from('prop_accounts').select('firm_name, balance, initial_balance').eq('user_id', userId)
+      .then((r) => r, () => ({ data: [] })),
+  ]);
   if (error) throw error;
+
+  const sizes = {};
+  (accRes?.data || []).forEach((a) => { if (a.firm_name) sizes[a.firm_name] = accountSize(a); });
 
   /* Незакриті й пропущені угоди відсіюємо тут, а не в кожному
      графіку окремо: інакше «кількість угод» у різних розділах
      розходилась би між собою. */
-  return (data || []).map(toApp).filter((t) => t.result);
+  return (data || []).map((row) => toApp(row, sizes)).filter((t) => t.result);
 }
 
 /* Межі періодів рахуємо на клієнті: вибірка все одно невелика, а
