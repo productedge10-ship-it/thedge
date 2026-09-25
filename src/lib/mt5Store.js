@@ -160,7 +160,19 @@ export async function connectMt5({ broker = 'other', server, login, password }) 
     .select('id')
     .single();
 
-  if (error) throw error;
+  /* Базу охороняє тригер mt5_trial_guard: на пробному періоді не можна
+     підключити рахунок, який уже підключали на пробному з іншого
+     акаунта. Сирий код із бази перекладаємо на людську мову тут, щоб
+     форма знала, що показати кнопку підтримки. */
+  if (error) {
+    if (String(error.message || '').includes('TRIAL_MT5_USED')) {
+      throw Object.assign(new Error(
+        'Цей MT5-рахунок уже був привʼязаний до іншого акаунта, тож пробний період для нього ми видати не можемо. '
+        + 'З оплаченою підпискою він підключиться без обмежень. Якщо це помилка — напиши нам.',
+      ), { code: 'trial_mt5_used' });
+    }
+    throw error;
+  }
   return row.id;
 }
 

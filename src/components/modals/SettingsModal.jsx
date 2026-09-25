@@ -1948,8 +1948,14 @@ const SYNC_STATE = {
   },
 };
 
-function SyncStatus({ phase, msg, onRetry, onDone }) {
-  const v = SYNC_STATE[phase] || SYNC_STATE.checking;
+function SyncStatus({ phase, msg, support, onRetry, onDone }) {
+  /* support — відмову дала не біржа, а наше правило (тріал на вже
+     використаному рахунку). Тоді інший заголовок і кнопка підтримки:
+     людина, в якої справді помилка, має знати, куди писати. «Try
+     again» лишаємо — раптом вона хоче підключити інший рахунок. */
+  const v = support
+    ? { ...SYNC_STATE.fail, title: 'Пробний період недоступний для цього рахунку' }
+    : SYNC_STATE[phase] || SYNC_STATE.checking;
   const rgb = v.rgb();
   const waiting = phase === 'checking' || phase === 'slow';
 
@@ -1993,6 +1999,12 @@ function SyncStatus({ phase, msg, onRetry, onDone }) {
         >
           {v.text || msg}
         </p>
+
+        {support && (
+          <div style={{ marginTop: 12 }}>
+            <TelegramButton label="Написати в Telegram" />
+          </div>
+        )}
 
         {(phase === 'fail' || phase === 'ok') && (
           <button
@@ -2929,6 +2941,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
      піти, ніж крутити спінер, який нічого не означає. */
   const [phase, setPhase] = useState('form');
   const [failMsg, setFailMsg] = useState('');
+  const [failSupport, setFailSupport] = useState(false);
 
   /* Скільки рахунків уже привʼязано.
 
@@ -3025,6 +3038,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
     if (!ready || busy) return;
     setBusy(true);
     setFailMsg('');
+    setFailSupport(false);
 
     try {
       const id = await connectMt5({ broker, server, login, password: pass });
@@ -3058,6 +3072,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
       }, 45000);
     } catch (e) {
       setFailMsg(e?.message || 'Couldn’t save it.');
+      setFailSupport(e?.code === 'trial_mt5_used');
       setPhase('fail');
     } finally {
       setBusy(false);
@@ -3418,7 +3433,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
                 {busy ? 'Saving…' : 'Connect account'}
               </button>
             ) : (
-              <SyncStatus phase={phase} msg={failMsg} onRetry={retry} onDone={onClose} />
+              <SyncStatus phase={phase} msg={failMsg} support={phase === 'fail' && failSupport} onRetry={retry} onDone={onClose} />
             )}
           </motion.div>
         ) : (
