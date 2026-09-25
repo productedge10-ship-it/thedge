@@ -268,7 +268,12 @@ export const SEED_TASKS = [
 export const normalizeTasks = (list) => {
   /* Порожньо, а не приклади: нова людина не має бачити чужих справ. */
   if (!Array.isArray(list)) return [];
-  return list.map((t) => ({
+  /* Приклади раніше записувались кожному новому акаунту в базу як
+     його власні завдання. Прибираємо їх при читанні — лише незмінені
+     (той самий id і той самий текст), щоб не зачепити справжні справи.
+     Очищений список сам поїде назад у базу. */
+  const seed = new Map(SEED_TASKS.map((s) => [s.id, s.text]));
+  return list.filter((t) => !(t && seed.get(t.id) === t.text)).map((t) => ({
     id: t.id,
     text: String(t.text || ''),
     done: !!t.done,

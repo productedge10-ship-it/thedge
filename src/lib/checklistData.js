@@ -60,6 +60,13 @@ export function loadGroups() {
 
 export function normalizeItems(parsed) {
   if (!Array.isArray(parsed)) return [];
+  /* Незмінений стандартний набір (ті самі 13 пунктів з тими самими id)
+     колись записувався кожному новому акаунту автоматично — людина його
+     не обирала. Такий вважаємо порожнім. Кнопка «Взяти приклад» дає
+     пунктам нові id, тож свідомо взятий приклад сюди не потрапляє. */
+  const untouchedSeed = parsed.length === DEFAULT_ITEMS.length
+    && parsed.every((i, n) => i && i.id === DEFAULT_ITEMS[n].id && i.text === DEFAULT_ITEMS[n].text);
+  if (untouchedSeed) return [];
   return parsed.map((i) => ({
     id: i.id,
     text: String(i.text || ''),

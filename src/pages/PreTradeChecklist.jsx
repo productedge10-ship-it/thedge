@@ -438,7 +438,10 @@ export default function PreTradeChecklist() {
 
   const restoreDefaults = () => {
     setGroups(DEFAULT_GROUPS);
-    setItems(DEFAULT_ITEMS);
+    /* Нові id — щоб свідомо взятий приклад не сплутати зі старим
+       автоматичним засівом, який normalizeItems прибирає. */
+    const base = Date.now();
+    setItems(DEFAULT_ITEMS.map((it, n) => ({ ...it, id: base + n })));
     setChecked([]);
   };
 
