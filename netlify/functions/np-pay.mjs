@@ -29,6 +29,14 @@ export default async (req) => {
   const { data: { user } = {}, error: authErr } = await db.auth.getUser(token);
   if (authErr || !user) return json({ error: 'Сесія застаріла' }, 401);
 
+  /* Купівля — лише з підтвердженою поштою: на неї йдуть листи про
+     списання й чеки. Прапорець ставить тільки наш сервер після кліку
+     в листі, тож з браузера його не підробити. */
+  const { data: prof } = await db.from('profiles').select('email_verified').eq('id', user.id).maybeSingle();
+  if (prof?.email_verified !== true) {
+    return json({ error: 'Підтверди пошту, щоб оформити підписку', code: 'email_unverified' }, 403);
+  }
+
   /* Діюча підписка карткою — криптою поверх неї не продаємо: людина
      платила б двічі за той самий час. Спершу скасувати картку.
      Крипто-підписку ж продовжувати наперед можна. */

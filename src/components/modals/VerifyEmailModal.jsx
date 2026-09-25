@@ -14,11 +14,10 @@ import { OPEN_EVENT } from '../../lib/emailGate';
 
    Правила, за якими це зроблено:
 
-   • Не двері, а нагадування. Людина заходить у застосунок і працює;
-     підтвердження потрібне лише для дій, що створюють дані. Замкнені
-     двері на першому екрані втрачають більше людей, ніж дає перевірка.
-   • Закрити можна завжди — але модалка повертається наступного сеансу.
-     Один сеанс тиші, не вічний.
+   • Не двері, а перевірка перед оплатою. Людина заходить у застосунок
+     і працює без жодних умов; пошта потрібна лише щоб купити підписку
+     (листи про списання й чеки мають іти на справжню скриньку). Сама
+     модалка не вискакує — лише з кнопки оплати або з налаштувань.
    • Кулдаун показуємо цифрами. Supabase все одно не дасть слати
      частіше ніж раз на хвилину, і мовчазна кнопка, яка «не працює»,
      виглядає як поломка.
@@ -98,14 +97,12 @@ export default function VerifyEmailModal() {
     navigate({ pathname: location.pathname, search: rest ? `?${rest}` : '' }, { replace: true });
   }, [location.search, location.pathname, navigate, refreshProfile, user?.id]);
 
-  /* emailVerified === undefined означає «ще не знаємо» — у цей момент
-     показувати нічого не можна, інакше модалка блимне й тому, хто
-     давно підтвердив. */
+  /* Сама модалка більше не вискакує після входу: пошта потрібна лише
+     для оплати підписки, а весь журнал працює й без неї. Відкривається
+     тільки на прохання — з кнопки оплати чи з налаштувань. Закриваємо,
+     щойно пошту підтвердили або вийшли з акаунта. */
   useEffect(() => {
-    if (emailVerified !== false || !user?.id) { setOpen(false); return undefined; }
-    if (sessionStorage.getItem(dismissKey(user.id))) return undefined;
-    const t = setTimeout(() => setOpen(true), 600);
-    return () => clearTimeout(t);
+    if (emailVerified !== false || !user?.id) setOpen(false);
   }, [emailVerified, user?.id]);
 
   /* Відкриття ззовні — коли натиснули заблоковану кнопку або пункт у
@@ -230,8 +227,7 @@ export default function VerifyEmailModal() {
               </h2>
 
               <p className="mt-2.5 text-[14px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text2 }}>
-                Усе готово. Тепер можна створювати акаунти, записувати угоди
-                й підключати MT5.
+                Усе готово. Тепер можна оформити підписку Pro.
               </p>
 
               <button
@@ -289,8 +285,8 @@ export default function VerifyEmailModal() {
                 >
                   <ShieldAlert size={16} strokeWidth={2.2} className="mt-0.5 shrink-0" style={{ color: T.acc }} />
                   <p className="text-[13px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text2 }}>
-                    Поки пошта не підтверджена, не вийде створювати акаунти й записувати угоди.
-                    Решта застосунку працює як зазвичай.
+                    Підтвердження потрібне лише для оплати підписки — щоб чеки й листи
+                    про списання приходили саме тобі. Решта застосунку працює як зазвичай.
                   </p>
                 </div>
               )}

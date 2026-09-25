@@ -11,6 +11,8 @@ import {
   useUahRate, toUah, fmtUah,
 } from '../../lib/billing';
 import SubscriptionScene from './SubscriptionScene';
+import { useAuth } from '../../context/AuthContext';
+import { openVerifyEmail } from '../../lib/emailGate';
 
 /* ==================================================================
    Підписка.
@@ -447,6 +449,7 @@ function PromoBox({ discount, onDone }) {
 }
 
 export default function SubscriptionTab({ sub, onChanged }) {
+  const { emailVerified } = useAuth();
   const [period, setPeriod] = useState('pro_monthly');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -491,6 +494,10 @@ export default function SubscriptionTab({ sub, onChanged }) {
 
   const go = async ({ trial }) => {
     if (preview) return;
+    /* Купити можна лише з підтвердженою поштою: на неї йдуть листи
+       про списання. Сервер перевіряє те саме — це лише щоб не ганяти
+       людину на платіжну сторінку й назад. */
+    if (emailVerified === false) { openVerifyEmail(); return; }
     setErr('');
     setBusy(true);
     try {
@@ -498,11 +505,15 @@ export default function SubscriptionTab({ sub, onChanged }) {
     } catch (e) {
       setErr(e.message || 'Не вдалось відкрити оплату');
       setBusy(false);
+      /* Сервер міг щойно відмовити в тріалі — перечитуємо стан, щоб
+         кнопка стала звичайною оплатою, а не пропонувала тріал знову. */
+      onChanged?.();
     }
   };
 
   const goCrypto = async (planId = period) => {
     if (preview) return;
+    if (emailVerified === false) { openVerifyEmail(); return; }
     setErr('');
     setBusy(true);
     try {
@@ -959,6 +970,18 @@ export default function SubscriptionTab({ sub, onChanged }) {
               Саме цей рядок вирішує, чи буде повернення й чарджбек, і
               ховати його в text4 на темному (контраст 2.3:1) — це не
               делікатність, а пастка. */}
+          {view.trialDenied && (
+            <div
+              className="mt-3 flex items-start gap-2.5 rounded-xl px-3.5 py-3"
+              style={{ background: `rgba(${T.warnRgb},0.09)`, border: `1px solid rgba(${T.warnRgb},0.26)` }}
+            >
+              <AlertTriangle size={15} strokeWidth={2.2} style={{ color: T.warn, marginTop: 1 }} />
+              <span className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.warn }}>
+                З цією карткою пробний період уже використано. 1 ₴ повернули — підписку можна оформити звичайною оплатою.
+              </span>
+            </div>
+          )}
+
           <p className="mt-3 text-center text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text2 }}>
             {trialAvailable
               ? `Для перевірки картки спишемо 1 ₴ і одразу повернемо. Перше списання за підписку${view.discount ? ` (зі знижкою ${view.discount.percent}%)` : ''} — через ${TRIAL_DAYS} днів, скасувати можна раніше.`

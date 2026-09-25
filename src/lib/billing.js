@@ -253,6 +253,9 @@ export async function readSubscription() {
        заздалегідь, а не показувати «14 днів безкоштовно» тому, хто
        їх уже витратив. */
     trialUsed: !!sub?.trial_used_at,
+    /* Останню привʼязку картки відхилено: з цією карткою тріал уже
+       брали на іншому акаунті. Гривню повернули — кажемо чому. */
+    trialDenied: orders?.[0]?.payload?.trial_denied === 'card',
     isPro: pro === true,
     /* { percent, left } — знижка, яку сервер застосує до наступних оплат. */
     discount: promo ? { percent: promo.percent, left: promo.charges_left } : null,

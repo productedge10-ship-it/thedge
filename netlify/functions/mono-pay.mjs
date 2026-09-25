@@ -9,7 +9,7 @@
 
 import {
   PLANS, TRIAL_DAYS, TRIAL_CHECK_UAH, json, site, admin, newReference, mono, priceFor,
-  promoFor, discounted,
+  promoFor, discounted, emailMark, isDisposable, markTakenByOther, claimMark,
 } from './_mono.mjs';
 
 export default async (req) => {
@@ -35,6 +35,14 @@ export default async (req) => {
   const { data: { user } = {}, error: authErr } = await db.auth.getUser(token);
   if (authErr || !user) return json({ error: 'Сесія застаріла' }, 401);
 
+  /* Купівля — лише з підтвердженою поштою: на неї йдуть листи про
+     списання й чеки. Прапорець ставить тільки наш сервер після кліку
+     в листі, тож з браузера його не підробити. */
+  const { data: prof } = await db.from('profiles').select('email_verified').eq('id', user.id).maybeSingle();
+  if (prof?.email_verified !== true) {
+    return json({ error: 'Підтверди пошту, щоб оформити підписку', code: 'email_unverified' }, 403);
+  }
+
   const { data: sub } = await db.from('subscriptions')
     .select('trial_used_at,status,valid_until,plan')
     .eq('user_id', user.id).maybeSingle();
@@ -46,7 +54,28 @@ export default async (req) => {
     && (!sub.valid_until || Date.parse(sub.valid_until) > Date.now());
   if (live) return json({ error: 'Підписка вже активна' }, 409);
 
-  const trial = body?.trial === true && !sub?.trial_used_at;
+  let trial = body?.trial === true && !sub?.trial_used_at;
+
+  /* Тріал на одноразову скриньку чи на пошту, з якої його вже брали
+     (з точністю до крапок і +тегів у Gmail), — не даємо. Не мовчки
+     повною ціною, а чесною відповіддю: людина бачить причину й сама
+     вирішує, чи платити. Картку перевіримо окремо, коли її привʼяжуть. */
+  if (trial) {
+    const mark = emailMark(user.email);
+    const reason = isDisposable(user.email) ? 'Пробний період недоступний для тимчасових скриньок'
+      : await markTakenByOther(db, 'email', mark, user.id) ? 'Пробний період з цією поштою вже використано'
+      : !(await claimMark(db, 'email', mark, user.id)) ? 'Пробний період з цією поштою вже використано'
+      : null;
+    if (reason) {
+      await db.from('subscriptions').upsert({
+        user_id: user.id,
+        ...(sub ? {} : { plan: 'free', status: 'inactive' }),
+        trial_used_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+      return json({ error: `${reason}. Підписку можна оформити звичайною оплатою.`, code: 'trial_used' }, 409);
+    }
+  }
   const plan = PLANS[planId];
   const reference = newReference();
 

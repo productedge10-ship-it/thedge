@@ -121,6 +121,67 @@ export async function priceFor(planId) {
   return { ccy: 980, currency: 'UAH', amount: uah, minor: uah * 100 };
 }
 
+/* ---------- захист пробного періоду ----------
+
+   Пробний період — один на людину, а не на акаунт: новий акаунт
+   створюється за хвилину. Тому памʼятаємо не акаунт, а те, що
+   змінити важче:
+
+   • картку — маска PAN (перші 6 і останні 4 цифри) і платіжна система.
+     Нову картку за хвилину не заведеш;
+   • пошту в нормальному вигляді — у Gmail «ivan.petrov+1@gmail.com» і
+     «ivanpetrov@gmail.com» одна скринька.
+
+   У базі лежить лише sha256 від цього — не сама маска й не адреса. */
+const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
+
+export function normEmail(email) {
+  const e = String(email || '').trim().toLowerCase();
+  const at = e.lastIndexOf('@');
+  if (at < 1) return e;
+  let local = e.slice(0, at).split('+')[0];
+  let domain = e.slice(at + 1);
+  if (domain === 'googlemail.com') domain = 'gmail.com';
+  if (domain === 'gmail.com') local = local.replace(/\./g, '');
+  return `${local}@${domain}`;
+}
+
+/* Одноразові скриньки: пробний період з них не даємо (оплатити
+   можна). Список короткий навмисно — найпоширеніші сервіси. */
+const DISPOSABLE = new Set([
+  'mailinator.com', 'yopmail.com', 'guerrillamail.com', 'guerrillamail.net', 'sharklasers.com',
+  '10minutemail.com', '10minutemail.net', 'temp-mail.org', 'tempmail.com', 'tempmail.net',
+  'temp-mail.io', 'tempmailo.com', 'throwawaymail.com', 'getnada.com', 'nada.email',
+  'dispostable.com', 'maildrop.cc', 'mohmal.com', 'fakeinbox.com', 'trashmail.com',
+  'mail.tm', 'mailto.plus', '1secmail.com', '1secmail.org', 'emailondeck.com', 'mintemail.com',
+  'spamgourmet.com', 'moakt.com', 'tmpmail.org', 'tmpmail.net', 'burnermail.io', 'inboxkitten.com',
+]);
+export const isDisposable = (email) => DISPOSABLE.has(normEmail(email).split('@')[1] || '');
+
+export const emailMark = (email) => sha(`email:${normEmail(email)}`);
+export function cardMark(info) {
+  const pan = String(info?.maskedPan || '').replace(/[^0-9*]/g, '');
+  if (!/^\d{6}\*+\d{4}$/.test(pan)) return null;
+  return sha(`card:${pan.slice(0, 6)}${pan.slice(-4)}:${String(info?.paymentSystem || '').toLowerCase()}`);
+}
+
+/* Чи вже брав тріал хтось ІНШИЙ з цією міткою. */
+export async function markTakenByOther(db, kind, hash, userId) {
+  if (!hash) return false;
+  const { data } = await db.from('trial_marks').select('user_id').eq('kind', kind).eq('hash', hash).limit(1);
+  return !!(data?.[0] && data[0].user_id !== userId);
+}
+
+/* Закріпити мітку за людиною. Первинний ключ (kind, hash) не дасть
+   двом акаунтам одночасно записати ту саму картку — другий побачить
+   чужого власника й тріалу не отримає. */
+export async function claimMark(db, kind, hash, userId) {
+  if (!hash) return true;
+  await db.from('trial_marks').upsert({ kind, hash, user_id: userId }, { onConflict: 'kind,hash', ignoreDuplicates: true });
+  const { data } = await db.from('trial_marks').select('user_id').eq('kind', kind).eq('hash', hash).limit(1);
+  return !data?.[0] || data[0].user_id === userId;
+}
+
 /* ---------- знижка за промокодом ----------
 
    Береться з бази, а не з браузера: відсоток, який прислав клієнт, —
@@ -312,6 +373,9 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
     .update({ payload: body, ...(invoiceId ? { invoice_id: invoiceId } : {}), ...fields })
     .eq('id', order.id);
 
+  /* Тріал уже відмовлено (картка чужа) — повтор листа нічого не міняє. */
+  if (order.payload?.trial_denied) return { ok: true, reason: 'done' };
+
   if (status === 'success') {
     /* Сума й валюта. Підпис доводить, що лист від mono, але не що
        списали стільки, скільки ми виставляли. */
@@ -325,6 +389,32 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
     const { data: sub } = await db.from('subscriptions')
       .select('next_charge_at,trial_used_at,card_token,wallet_id')
       .eq('user_id', order.user_id).maybeSingle();
+
+    /* Картку привʼязали для тріалу — перевіряємо, чи не брав уже тріал
+       хтось інший із цією карткою. Якщо брав: гривню повертаємо, тріалу
+       не даємо, а на екрані підписки людина побачить чому й зможе
+       оформити звичайну оплату. */
+    if (order.kind === 'verify') {
+      const mark = cardMark(body.paymentInfo);
+      const mine = await claimMark(db, 'card', mark, order.user_id);
+      if (!mine) {
+        must(await patchOrder({ status: 'refunded', payload: { ...body, trial_denied: 'card' } }), 'payment_orders');
+        must(await db.from('subscriptions').upsert({
+          user_id: order.user_id,
+          ...(sub ? {} : { plan: 'free', status: 'inactive' }),
+          trial_used_at: sub?.trial_used_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' }), 'subscriptions');
+        if (invoiceId || order.invoice_id) {
+          await mono('/api/merchant/invoice/cancel', {
+            method: 'POST',
+            body: { invoiceId: invoiceId || order.invoice_id, extRef: `refund-${order.reference}` },
+          }).catch((e) => console.error('mono: гривню не повернуто —', order.reference, e.message));
+        }
+        console.warn('mono: тріал відмовлено, картка вже використана', order.user_id);
+        return { ok: true, reason: 'trial_denied' };
+      }
+    }
 
     const now = new Date();
     const period = order.kind === 'verify' ? 'trial'
