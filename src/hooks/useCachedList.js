@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { onlyMine } from '../lib/myId';
 
 /* ==================================================================
    Невеликі довідники користувача — активи, сесії, рахунки.
@@ -26,7 +27,7 @@ export default function useCachedList(cacheKey, table, select, order) {
 
   useEffect(() => {
     if (listCache[cacheKey]) return;
-    supabase.from(table).select(select).order(order)
+    onlyMine(supabase.from(table).select(select).order(order))
       .then(({ data }) => {
         if (data) {
           listCache[cacheKey] = data;

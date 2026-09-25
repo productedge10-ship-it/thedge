@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
+import { readShared } from '../lib/sharedRead';
 import { tvImage } from '../lib/imageStore';
 import { useAuth } from '../context/AuthContext';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
@@ -202,9 +203,13 @@ export default function SharedTrade() {
   useEffect(() => {
     (async () => {
       try {
-        const { data, error: e } = await supabase.from('trades').select(COLUMNS)
-          .eq('id', id).eq('is_public', true).maybeSingle();
-        if (e) throw e;
+        /* Лише цей запис і лише ці поля — див. src/lib/sharedRead.js */
+        const data = await readShared('shared_trade', id, async () => {
+          const { data: d, error: e } = await supabase.from('trades').select(COLUMNS)
+            .eq('id', id).eq('is_public', true).maybeSingle();
+          if (e) throw e;
+          return d;
+        });
         if (!data) throw new Error('closed');
         setTrade(data);
       } catch (err) {

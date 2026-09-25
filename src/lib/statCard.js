@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { readShared } from './sharedRead';
 import { EDGE_LOGO } from './edgeLogo';
 
 /* ==================================================================
@@ -579,13 +580,14 @@ export async function saveCard(userId, card) {
 }
 
 export async function loadPublicCard(id) {
-  const { data, error } = await supabase
-    .from('stat_cards')
-    .select('id, data, created_at')
-    .eq('id', id)
-    .eq('is_public', true)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data?.data || null;
+  return readShared('shared_stat_card', id, async () => {
+    const { data, error } = await supabase
+      .from('stat_cards')
+      .select('id, data, created_at')
+      .eq('id', id)
+      .eq('is_public', true)
+      .maybeSingle();
+    if (error) throw error;
+    return data?.data || null;
+  });
 }

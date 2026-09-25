@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { supabase } from '../../lib/supabase'; // Перевір шлях
+import { onlyMine } from '../../lib/myId';
 import { motion, AnimatePresence } from 'framer-motion';
 import Fuse from 'fuse.js';
 import { Search as SearchIcon, X, Star, ChevronDown, ChevronRight, Check } from 'lucide-react';
@@ -46,7 +47,7 @@ export default function AssetPickerModal({ isOpen, onClose, onSelect, selectedAs
         const { data: session } = await supabase.auth.getSession();
         if (!session?.session?.user) return; 
 
-        const { data, error } = await supabase.from('user_assets').select('name');
+        const { data, error } = await onlyMine(supabase.from('user_assets').select('name'));
         if (error) throw error;
         if (data) {
           const dbFavs = data.map(item => item.name);

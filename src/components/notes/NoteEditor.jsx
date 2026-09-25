@@ -445,9 +445,15 @@ export default function NoteEditor({
   const loadTrades = async () => {
     if (trades !== null) return;
     try {
+      /* Лише свої бектести. Без явного user_id сюди потрапляли й чужі
+         поширені сесії: база віддає відкриті записи будь-кому. */
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id;
+      if (!uid) return;
       const { data, error } = await supabase
         .from('backtest_sessions')
         .select('id, name, pair')
+        .eq('user_id', uid)
         .order('created_at', { ascending: false })
         .limit(30);
       if (error) throw error;

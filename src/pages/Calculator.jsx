@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { supabase } from '../lib/supabase';
+import { onlyMine } from '../lib/myId';
 import { motion, AnimatePresence, useMotionValue, useMotionTemplate } from 'framer-motion';
 import Fuse from 'fuse.js';
 import {
@@ -225,7 +226,7 @@ export default function Calculator() {
   useEffect(() => {
     async function fetchAccounts() {
       try {
-        const { data: raw } = await supabase.from('prop_accounts').select('*').order('created_at', { ascending: false });
+        const { data: raw } = await onlyMine(supabase.from('prop_accounts').select('*').order('created_at', { ascending: false }));
         /* Архівні (Closed) рахунки сюди не потрапляють — калькулятор
            рахує наступну угоду, а по закритому рахунку її не буде. */
         const accData = (raw || []).filter((a) => a.status !== 'Closed');
@@ -267,7 +268,7 @@ export default function Calculator() {
       try {
         const { data: session } = await supabase.auth.getSession();
         if (!session?.session?.user) return;
-        const { data, error } = await supabase.from('user_assets').select('name');
+        const { data, error } = await onlyMine(supabase.from('user_assets').select('name'));
         if (error) throw error;
         if (data) {
           const dbFavs = data.map((i) => i.name);

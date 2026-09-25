@@ -12,6 +12,7 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { onlyMine } from '../../lib/myId';
 import PlanBackdrop from '../trading/PlanBackdrop';
 import OnboardingModal from '../modals/OnboardingModal';
 import VerifyEmailModal from '../modals/VerifyEmailModal';
@@ -1034,10 +1035,10 @@ export default function Layout() {
     if (!user) return;
 
     const fetchTasksCount = async () => {
-      const { count, error } = await supabase
+      const { count, error } = await onlyMine(supabase
         .from('tasks')
         .select('*', { count: 'exact', head: true })
-        .eq('is_completed', false);
+        .eq('is_completed', false));
 
       if (!error) setHasUncompleted(count > 0);
     };

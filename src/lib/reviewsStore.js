@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { readShared } from './sharedRead';
 
 /* ==================================================================
    Розбори в базі + матеріал, з якого вони збираються.
@@ -341,14 +342,16 @@ export async function setReviewPublic(userId, id, isPublic) {
 
 /* Публічне читання — без user_id, спирається на політику is_public */
 export async function loadPublicReview(id) {
-  const { data, error } = await supabase
-    .from('trader_reviews')
-    .select('id, period_from, period_to, score, lesson, data, created_at')
-    .eq('id', id)
-    .eq('is_public', true)
-    .maybeSingle();
-
-  if (error) throw error;
+  const data = await readShared('shared_review', id, async () => {
+    const { data: d, error } = await supabase
+      .from('trader_reviews')
+      .select('id, period_from, period_to, score, lesson, data, created_at')
+      .eq('id', id)
+      .eq('is_public', true)
+      .maybeSingle();
+    if (error) throw error;
+    return d;
+  });
   if (!data) return null;
   return fromRow({ ...data, is_public: true });
 }

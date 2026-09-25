@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { readShared } from './sharedRead';
 
 /* ==================================================================
    Публічний доступ до бектесту.
@@ -38,6 +39,11 @@ export async function setBacktestSummary(userId, sessionId, summary) {
 
 /* Читання без user_id — спирається на політику is_public */
 export async function loadPublicBacktest(sessionId) {
+  return readShared('shared_backtest', sessionId, () => loadPublicBacktestDirect(sessionId));
+}
+
+/* Старий шлях — лише доки не виконана міграція shared_by_id. */
+async function loadPublicBacktestDirect(sessionId) {
   const { data: session, error } = await supabase
     .from('backtest_sessions')
     .select('id, name, pair, strategy_name, initial_balance, summary, created_at')

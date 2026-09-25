@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
+import { onlyMine } from '../../lib/myId';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 import { notify } from '../../utils/notify';
@@ -1197,7 +1198,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       setAccounts(listCache.accounts);
       if (!accToSet) setAccount(firstOpen(listCache.accounts) || '');
     } else {
-      supabase.from('prop_accounts').select('id, firm_name, balance, initial_balance, status').then(({ data }) => {
+      onlyMine(supabase.from('prop_accounts').select('id, firm_name, balance, initial_balance, status')).then(({ data }) => {
         if (data) {
           listCache.accounts = data;
           setAccounts(data);

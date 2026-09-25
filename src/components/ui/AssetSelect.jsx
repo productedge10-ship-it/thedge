@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Search, Activity, CircleDot, Plus, Loader2, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase'; //
+import { onlyMine } from '../../lib/myId';
 
 const getIcon = (pair) => {
   const p = pair.toUpperCase();
@@ -32,10 +33,10 @@ export default function AssetSelect({ value, onChange }) {
   }, []);
 
   async function fetchUserAssets() {
-    const { data, error } = await supabase
+    const { data, error } = await onlyMine(supabase
       .from('user_assets')
       .select('name')
-      .order('name');
+      .order('name'));
     if (!error && data) setUserPairs(data.map(d => d.name));
   }
 

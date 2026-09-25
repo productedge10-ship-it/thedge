@@ -5,6 +5,7 @@ import { Layers, Crosshair, Radio, LineChart, Stethoscope, NotebookPen } from 'l
 import Fuse from 'fuse.js';
 
 import { supabase } from '../lib/supabase';
+import { onlyMine } from '../lib/myId';
 import { notify } from '../utils/notify';
 import { checkIsPlanEmpty } from '../utils/planUtils';
 import { syncErrorFromPlan } from '../lib/errorsStore';
@@ -467,7 +468,7 @@ export default function DailyPlan() {
       const cached = localStorage.getItem(KEY);
       if (cached) setFavorites(JSON.parse(cached));
       try {
-        const { data } = await supabase.from('user_assets').select('name');
+        const { data } = await onlyMine(supabase.from('user_assets').select('name'));
         if (data) {
           const favs = data.map((i) => i.name);
           setFavorites(favs);

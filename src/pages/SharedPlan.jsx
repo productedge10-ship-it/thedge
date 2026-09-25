@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
+import { readShared } from '../lib/sharedRead';
 import { tvImage } from '../lib/imageStore';
 import { useAuth } from '../context/AuthContext';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
@@ -217,13 +218,16 @@ export default function SharedPlan() {
       try {
         /* Тільки явно відкриті плани. Політика в базі теж це стереже,
            але фільтр тут дає зрозумілу помилку замість порожнечі. */
-        const { data, error: e } = await supabase
-          .from('trading_plans')
-          .select('id, date, pair, narrative, plan_data, plan_type')
-          .eq('id', id)
-          .eq('is_public', true)
-          .maybeSingle();
-        if (e) throw e;
+        const data = await readShared('shared_plan', id, async () => {
+          const { data: d, error: e } = await supabase
+            .from('trading_plans')
+            .select('id, date, pair, narrative, plan_data, plan_type')
+            .eq('id', id)
+            .eq('is_public', true)
+            .maybeSingle();
+          if (e) throw e;
+          return d;
+        });
         if (!data) throw new Error('closed');
         setPlan(data);
       } catch (err) {

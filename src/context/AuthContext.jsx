@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { claimDevice } from '../lib/deviceScope';
 
@@ -29,6 +29,8 @@ export const AuthProvider = ({ children }) => {
      невідомий — і вважати пошту непідтвердженою не можна. Інакше
      модалка блимала б секунду кожному, хто давно підтвердив. */
   const [profileReady, setProfileReady] = useState(false);
+  /* undefined — ще не знаємо, хто в сесії; null — ніхто. */
+  const lastUid = useRef(undefined);
 
   /* Повертає прочитане, щоб той, хто викликав, міг спиратись на
      справжній стан бази, а не на власні припущення. */
@@ -58,6 +60,7 @@ export const AuthProvider = ({ children }) => {
        попереднього акаунта на цьому пристрої встигаємо прибрати раніше,
        ніж їх хтось прочитає. */
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (lastUid.current === undefined) lastUid.current = session?.user?.id ?? null;
       claimDevice(session?.user?.id);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -66,6 +69,19 @@ export const AuthProvider = ({ children }) => {
 
     // Слухаємо зміни (вхід/вихід)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      /* Інший акаунт (або вихід) у тій самій вкладці — повне
+         перезавантаження. У памʼяті модулів живуть кеші попереднього
+         користувача (довідники активів і рахунків, сторінки журналу,
+         кешовані запити), і без перезавантаження новий акаунт бачив би
+         їх до першого F5. Оновлення токена того самого акаунта сюди не
+         потрапляє — id не змінюється. */
+      const nextId = session?.user?.id ?? null;
+      if (lastUid.current !== undefined && lastUid.current !== nextId && lastUid.current !== null) {
+        claimDevice(nextId);
+        window.location.replace(nextId ? '/app' : '/auth');
+        return;
+      }
+      lastUid.current = nextId;
       claimDevice(session?.user?.id);
       setUser(session?.user ?? null);
       setLoading(false);

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
+import { onlyMine } from '../../lib/myId';
 import { useAuth } from '../../context/AuthContext';
 import { deleteTrade } from '../../lib/tradesStore';
 import { notify } from '../../utils/notify';
@@ -565,7 +566,7 @@ export default function TradeDetailsModal({
   const [accounts, setAccounts] = useState([]);
   useEffect(() => {
     let alive = true;
-    supabase.from('prop_accounts').select('id, firm_name, balance, status')
+    onlyMine(supabase.from('prop_accounts').select('id, firm_name, balance, status'))
       .then(({ data }) => { if (alive && Array.isArray(data)) setAccounts(data); });
     return () => { alive = false; };
   }, []);
