@@ -167,7 +167,7 @@ const addPeriod = (from, period) => {
    Листи — приємний додаток, а не частина оплати: будь-яка помилка тут
    лише пишеться в лог і ніколи не зриває запис підписки. Немає ключа
    Resend — листів просто немає. */
-async function sendMail(to, subject, html) {
+export async function sendMail(to, subject, html) {
   const key = process.env.RESEND_API_KEY;
   if (!key || !to) return;
   try {
@@ -188,12 +188,12 @@ async function sendMail(to, subject, html) {
   }
 }
 
-const fmtDay = (d) => new Date(d).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+export const fmtDay = (d) => new Date(d).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
 
 /* Лист у кольорах застосунку. Табличною версткою й інлайн-стилями:
    поштові клієнти (особливо Gmail і Outlook) викидають <style> і
    половину сучасного CSS. */
-const letter = (title, lines, cta) => `<!doctype html><html><body style="margin:0;background:#0a0a0c;padding:32px 12px;font-family:Arial,Helvetica,sans-serif">
+export const letter = (title, lines, cta) => `<!doctype html><html><body style="margin:0;background:#0a0a0c;padding:32px 12px;font-family:Arial,Helvetica,sans-serif">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table role="presentation" width="100%" style="max-width:520px;background:#111116;border:1px solid #26262c;border-radius:18px" cellpadding="0" cellspacing="0">
 <tr><td style="padding:32px 32px 8px;color:#8b7bff;font-size:12px;font-weight:bold;letter-spacing:3px">THE EDGE</td></tr>

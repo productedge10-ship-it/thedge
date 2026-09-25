@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  AlertTriangle, Check, Eye, Loader2, Send, TerminalSquare, X,
+  AlertTriangle, Bitcoin, Check, Eye, Loader2, Send, TerminalSquare, X,
 } from 'lucide-react';
 import { T } from '../trading/planTheme';
 import { EdgeMonogram, EdgeWordmark } from '../core/Layout';
 import {
-  PLANS, PRO_FEATURES, TRIAL_DAYS, fmtMoney, startCheckout, cancelSubscription,
+  PLANS, PRO_FEATURES, TRIAL_DAYS, fmtMoney, startCheckout, cancelSubscription, startCryptoCheckout,
   useUahRate, toUah, fmtUah,
 } from '../../lib/billing';
 import SubscriptionScene from './SubscriptionScene';
@@ -307,6 +307,12 @@ const FAKE = {
   ],
 };
 
+/* Оплата криптою (NOWPayments) написана й працює на сервері, але
+   кнопку поки сховано: чекаємо на ключі NOWPayments і рішення
+   бухгалтера щодо ФОП. Увімкнути — поставити true (і повернути абзац
+   про крипту в src/lib/terms.js). */
+const CRYPTO_ENABLED = false;
+
 const previewAllowed = () => {
   try {
     return import.meta.env.DEV || new URLSearchParams(window.location.search).has('preview');
@@ -370,6 +376,38 @@ export default function SubscriptionTab({ sub, onChanged }) {
     }
   };
 
+  const goCrypto = async (planId = period) => {
+    if (preview) return;
+    setErr('');
+    setBusy(true);
+    try {
+      await startCryptoCheckout(planId);
+    } catch (e) {
+      setErr(e.message || 'Не вдалось відкрити оплату');
+      setBusy(false);
+    }
+  };
+
+  /* Друга кнопка — тихіша за основну: крипта для тих, хто шукає саме
+     її, і не має відтягувати увагу від тріалу. */
+  const cryptoBtn = (label, planId) => (
+    <button
+      type="button"
+      disabled={busy || preview}
+      onClick={() => goCrypto(planId)}
+      className="mt-2.5 inline-flex h-[46px] w-full items-center justify-center gap-2 rounded-2xl px-5 text-[13.5px] font-bold transition-colors duration-200"
+      style={{
+        fontFamily: T.sans, background: 'transparent', border: `1px solid ${T.line}`, color: T.text2,
+        opacity: busy || preview ? 0.55 : 1,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineAcc; e.currentTarget.style.color = T.text; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
+    >
+      <Bitcoin size={15} strokeWidth={2.2} />
+      {label}
+    </button>
+  );
+
   /* Кнопка перегляду. Внизу, тьмяна, моноширинним: це інструмент для
      того, хто цей екран малює, а не частина екрана. */
   const previewBar = canPreview && (
@@ -402,6 +440,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
     const tone = trialing ? 'acc' : 'ok';
     const rgb = trialing ? T.accRgb : T.okRgb;
     const total = trialing ? TRIAL_DAYS : periodDays(view.planId || view.plan);
+    const isCrypto = view.provider === 'crypto';
     const subPlan = PLANS[view.planId || view.plan] || plan;
 
     return (
@@ -430,7 +469,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
                 {left != null ? left : '∞'}
               </span>
               <span className="text-[15px] font-medium" style={{ fontFamily: T.sans, color: T.text2 }}>
-                {left != null ? `${plural(left)} до списання` : 'активна'}
+                {left == null ? 'активна' : isCrypto ? `${plural(left)} оплачено` : `${plural(left)} до списання`}
               </span>
             </div>
 
@@ -440,7 +479,9 @@ export default function SubscriptionTab({ sub, onChanged }) {
                 Людина, яку списання заскочило зненацька, не продовжує
                 підписку — вона йде в підтримку й лишає одну зірку. */}
             <div className="mt-4 text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              {trialing
+              {isCrypto
+                ? <>Оплачено криптою до <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(view.validUntil)}</span>. Автосписань немає — нагадаємо за 3 дні</>
+                : trialing
                 ? <>Далі {subPlan.label.toLowerCase()} — перше списання <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(chargeAt)}</span></>
                 : <>Наступне списання <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(chargeAt)}</span></>}
             </div>
@@ -570,7 +611,14 @@ export default function SubscriptionTab({ sub, onChanged }) {
 
             Скасовано — показуємо стан чесно, разом із датою, до якої
             доступ ще працює. */}
-        {view.status === 'canceled' ? (
+        {isCrypto ? (
+          /* Крипта — передоплата: скасовувати нічого, є лише «продовжити
+             наперед». Новий період додається до вже оплаченої дати. */
+          <div>
+            {cryptoBtn(`Продовжити криптою · $${subPlan.amount}`, view.planId || 'pro_monthly')}
+            {err && <p className="mt-2 text-center text-[12.5px]" style={{ fontFamily: T.sans, color: T.bad }}>{err}</p>}
+          </div>
+        ) : view.status === 'canceled' ? (
           <div className="rounded-xl px-3.5 py-3" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
             <span className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.text3 }}>
               Підписку скасовано. Доступ працює до {fmtDate(view.validUntil)} — далі розділи
@@ -790,6 +838,15 @@ export default function SubscriptionTab({ sub, onChanged }) {
           <p className="mt-1 text-center text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
             Картка будь-якого банку, Apple Pay або Google Pay
           </p>
+
+          {CRYPTO_ENABLED && (
+            <>
+              {cryptoBtn(`Оплатити криптою · ${plan.period === 'yearly' ? `$${plan.amount} за рік` : `$${plan.amount} за місяць`}`)}
+              <p className="mt-1.5 text-center text-[12px] leading-[17px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                USDT, BTC, ETH та інші. Оплата періоду наперед, без тріалу й без автосписань.
+              </p>
+            </>
+          )}
 
           {err && (
             <p className="mt-2 text-center text-[12.5px]" style={{ fontFamily: T.sans, color: T.bad }}>

@@ -188,7 +188,7 @@ export const FREE_LIMITS = {
    має ламатись через порядок деплою. */
 const readSubRow = async () => {
   const r = await supabase.from('subscriptions')
-    .select('plan,status,valid_until,trial_used_at,next_charge_at,plan_id').maybeSingle();
+    .select('plan,status,valid_until,trial_used_at,next_charge_at,plan_id,provider').maybeSingle();
   if (!r.error) return r;
   return supabase.from('subscriptions').select('plan,status,valid_until,trial_used_at').maybeSingle();
 };
@@ -234,6 +234,9 @@ export async function readSubscription() {
        показувати людині треба саме день, коли знімуть гроші. */
     nextChargeAt: sub?.next_charge_at || null,
     planId: sub?.plan_id || null,
+    /* crypto — передоплата без автосписань: екран підписки показує
+       «оплачено до» й кнопку продовження замість скасування. */
+    provider: sub?.provider || null,
     /* Чи горів уже пробний період. Кнопку це не «захищає» — рішення
        все одно ухвалює сервер, — але дозволяє чесно підписати її
        заздалегідь, а не показувати «14 днів безкоштовно» тому, хто
@@ -280,6 +283,22 @@ export async function startCheckout(planId, { trial = false } = {}) {
   const out = await r.json().catch(() => ({}));
   if (!r.ok || !out.url) throw new Error(out.error || 'Не вдалось створити рахунок');
 
+  window.location.assign(out.url);
+}
+
+/* Оплата криптою (NOWPayments). Лише повний період наперед — тріалу
+   немає, бо гаманець не можна привʼязати для списання через 14 днів. */
+export async function startCryptoCheckout(planId) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Треба увійти');
+
+  const r = await fetch('/api/np-pay', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ plan: planId }),
+  });
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok || !out.url) throw new Error(out.error || 'Не вдалось створити рахунок');
   window.location.assign(out.url);
 }
 

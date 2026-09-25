@@ -33,6 +33,11 @@ export default async (req) => {
     .select('provider,status,valid_until,card_token')
     .eq('user_id', user.id).maybeSingle();
 
+  /* Крипта — передоплата: автосписань немає, скасовувати нічого.
+     Доступ сам закінчиться в оплачену дату. */
+  if (sub?.provider === 'crypto') {
+    return json({ error: 'Оплата криптою не продовжується автоматично — скасовувати нічого' }, 400);
+  }
   if (sub?.provider !== 'mono') return wfpCancel(req);
 
   if (!['active', 'trialing', 'past_due'].includes(sub?.status)) {

@@ -525,6 +525,63 @@ function FieldInput({ icon: Icon, ...props }) {
   );
 }
 
+/* ---------- вимоги до пароля ----------
+   Раніше пароль перевіряла лише база, і лише на довжину 6 — «123456»
+   проходив. Тут чотири прості правила, які людина бачить наживо, а не
+   дізнається про них після відмови. Це підказка, а не замок: справжня
+   межа — налаштування пароля в Supabase Auth (мін. довжина, літери +
+   цифри), бо браузерну перевірку можна обійти.
+
+   Список найпопулярніших паролів короткий навмисно: це не захист від
+   перебору, а відсіювання тих, що підбирають першими. */
+const COMMON_PASSWORDS = new Set([
+  '12345678', '123456789', '1234567890', 'password', 'password1', 'qwerty123', 'qwertyuiop',
+  '11111111', '00000000', 'iloveyou', '1q2w3e4r', '1qaz2wsx', 'abc12345', 'trading1', 'trader123',
+  'forex123', 'password123', 'qwerty12', 'asdfghjk', 'zaq12wsx', 'йцукенгш',
+]);
+
+function passwordRules(pw, email) {
+  const p = String(pw || '');
+  const local = String(email || '').split('@')[0].toLowerCase();
+  return [
+    { id: 'len', ok: p.length >= 8, text: 'Щонайменше 8 символів' },
+    { id: 'mix', ok: /\p{L}/u.test(p) && /\d/.test(p), text: 'Літери й цифри' },
+    {
+      id: 'weak',
+      ok: p.length > 0 && !COMMON_PASSWORDS.has(p.toLowerCase())
+        && !(local.length >= 3 && p.toLowerCase().includes(local))
+        && !/^(.)\1+$/.test(p),
+      text: 'Не збігається з поштою й не з популярних',
+    },
+  ];
+}
+
+function PasswordRules({ password, email }) {
+  const rules = passwordRules(password, email);
+  return (
+    <div className="flex flex-col gap-1.5 px-1 -mt-1">
+      {rules.map((r) => (
+        <div
+          key={r.id}
+          className="flex items-center gap-2 text-[12px] transition-colors duration-200"
+          style={{ color: r.ok ? '#34d399' : 'rgba(232,234,237,0.42)' }}
+        >
+          <span
+            className="grid h-[15px] w-[15px] shrink-0 place-items-center rounded-full transition-all duration-200"
+            style={{
+              background: r.ok ? 'rgba(52,211,153,0.16)' : 'transparent',
+              border: `1px solid ${r.ok ? 'rgba(52,211,153,0.5)' : 'rgba(255,255,255,0.14)'}`,
+            }}
+          >
+            {r.ok && <Check size={9} strokeWidth={3.4} />}
+          </span>
+          {r.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Spinner() {
   return (
     <span
@@ -837,7 +894,9 @@ export default function Auth() {
     if (msg.includes('Email not confirmed')) return 'Будь ласка, підтвердіть вашу пошту (перейдіть за посиланням у листі).';
     if (msg.includes('Invalid login credentials')) return 'Неправильний email або пароль.';
     if (msg.includes('User already registered') || msg.includes('already exists')) return 'Акаунт з таким email вже існує.';
-    if (msg.includes('Password should be at least')) return 'Пароль має містити мінімум 6 символів.';
+    if (msg.includes('Password should be at least')) return 'Пароль закороткий: щонайменше 8 символів.';
+    if (msg.includes('Password should contain')) return 'Пароль має містити літери й цифри.';
+    if (msg.toLowerCase().includes('pwned') || msg.toLowerCase().includes('weak')) return 'Цей пароль засвічений у витоках — придумайте інший.';
     if (msg.includes('rate limit')) return 'Забагато спроб. Спробуйте пізніше.';
     if (msg.includes('invalid email')) return 'Некоректний формат email адреси.';
     if (msg.includes('Signups not allowed')) return 'Реєстрація нових користувачів вимкнена в базі.';
@@ -871,6 +930,11 @@ export default function Auth() {
         armReveal();
         navigate(from, { replace: true });
       } else if (mode === 'register') {
+        if (!passwordRules(password, email).every((r) => r.ok)) {
+          setMessage({ type: 'error', text: 'Пароль не відповідає вимогам під полем.' });
+          setLoading(false);
+          return;
+        }
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
 
@@ -924,8 +988,8 @@ export default function Auth() {
           setLoading(false);
           return;
         }
-        if (password.length < 6) {
-          setMessage({ type: 'error', text: 'Пароль має бути щонайменше 6 символів.' });
+        if (!passwordRules(password, email).every((r) => r.ok)) {
+          setMessage({ type: 'error', text: 'Пароль не відповідає вимогам під полем.' });
           setLoading(false);
           return;
         }
@@ -1286,6 +1350,7 @@ export default function Auth() {
                         value={email} onChange={handleInputChange(setEmail)} autoComplete="email" />
                       <FieldInput icon={Lock} type="password" placeholder="Пароль" required
                         value={password} onChange={handleInputChange(setPassword)} autoComplete="new-password" />
+                      {password && <PasswordRules password={password} email={email} />}
 
                       {/* Згода — окремою дією, а не дрібним рядком під
                           кнопкою. «Натискаючи, ви погоджуєтесь» технічно
@@ -1380,6 +1445,7 @@ export default function Auth() {
                     <form onSubmit={handleAuth} className="flex flex-col gap-3.5">
                       <FieldInput icon={Lock} type="password" placeholder="Новий пароль" required
                         value={password} onChange={handleInputChange(setPassword)} autoComplete="new-password" />
+                      {password && <PasswordRules password={password} email={email} />}
                       <FieldInput icon={Lock} type="password" placeholder="Повторіть пароль" required
                         value={password2} onChange={handleInputChange(setPassword2)} autoComplete="new-password" />
                       <PrimaryButton type="submit" loading={loading}>Зберегти пароль</PrimaryButton>

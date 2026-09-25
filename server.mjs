@@ -73,6 +73,9 @@ const WEB_ROUTES = {
   '/api/mono-pay': './netlify/functions/mono-pay.mjs',
   '/api/mono-callback': './netlify/functions/mono-callback.mjs',
   '/api/billing-cancel': './netlify/functions/billing-cancel.mjs',
+  /* Крипта (NOWPayments) — передоплата періоду, без автосписань. */
+  '/api/np-pay': './netlify/functions/np-pay.mjs',
+  '/api/np-callback': './netlify/functions/np-callback.mjs',
 };
 
 /* Стиль Vercel: (req, res) */
@@ -481,6 +484,10 @@ const billingTick = async () => {
   try {
     const m = await import('./netlify/functions/_mono.mjs');
     await m.runDueCharges();
+    /* Той самий тік нагадує крипто-підписникам продовжити: окремий
+       таймер тут не дав би нічого, крім ще однієї речі, що може впасти. */
+    const n = await import('./netlify/functions/_np.mjs');
+    await n.runCryptoReminders();
   } catch (e) {
     console.error('mono cron:', e.message);
   } finally {

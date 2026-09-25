@@ -98,6 +98,23 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
   const pasteRef = useRef(null);
   const imgRef = useRef(null);
 
+  /* Телефон. Ctrl+V і перетягування там не існують, а довге натискання
+     на звичайному блоці не показує «Вставити» — тільки на полі вводу.
+     Тому на сенсорних екранах замість підказки про клавіші — кнопка:
+     вона сама читає буфер, а якщо браузер не дав (Firefox, відмова в
+     дозволі) — відкриває поле, куди посилання вставляється довгим
+     натисканням. */
+  const touch = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+  const [linkOpen, setLinkOpen] = useState(false);
+  const pasteFromClipboard = async (e) => {
+    e.stopPropagation();
+    try {
+      const t = (await navigator.clipboard.readText()).trim();
+      if (t.startsWith('http')) { applyImage(t); return; }
+    } catch { /* немає дозволу — нижче поле вводу */ }
+    setLinkOpen(true);
+  };
+
   /* Розпізнавання відповідає з затримкою, а до того часу і TF, і
      приглушення могли змінитись. Тримаємо їх у рефах, щоб коллбек
      читав поточне, а не те, що було на момент вставки. */
@@ -274,10 +291,36 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
                 >
                   {dropHot ? 'Відпусти посилання' : 'Встав лінк з TradingView'}
                 </span>
-                <span className="text-[12px] font-medium" style={{ color: T.text4, fontFamily: T.sans }}>
-                  Ctrl+V або перетягни
-                </span>
+                {!touch && (
+                  <span className="text-[12px] font-medium" style={{ color: T.text4, fontFamily: T.sans }}>
+                    Ctrl+V або перетягни
+                  </span>
+                )}
               </div>
+
+              {touch && (linkOpen ? (
+                <input
+                  autoFocus
+                  inputMode="url"
+                  placeholder="Натисни й утримуй → Вставити"
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    if (v.startsWith('http')) { setLinkOpen(false); applyImage(v); }
+                  }}
+                  className="h-10 w-full max-w-[280px] rounded-xl px-3 text-[14px] outline-none"
+                  style={{ background: T.surface, border: `1px solid ${T.lineAcc}`, color: T.text, fontFamily: T.sans }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={pasteFromClipboard}
+                  className="h-10 rounded-xl px-4 text-[13.5px] font-bold transition-transform active:scale-95"
+                  style={{ background: `rgba(${T.accRgb},0.14)`, border: `1px solid ${T.lineAcc}`, color: T.text, fontFamily: T.sans }}
+                >
+                  Вставити посилання
+                </button>
+              ))}
             </motion.div>
           )}
           </AnimatePresence>
