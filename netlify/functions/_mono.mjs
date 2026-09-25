@@ -128,6 +128,8 @@ export async function priceFor(planId) {
    змінити важче:
 
    • картку — маска PAN (перші 6 і останні 4 цифри) і платіжна система.
+     З Apple / Google Pay банк бачить номер-замінник пристрою, тож
+     та сама картка вручну й через гаманець дає різні мітки.
      Нову картку за хвилину не заведеш;
    • пошту в нормальному вигляді — у Gmail «ivan.petrov+1@gmail.com» і
      «ivanpetrov@gmail.com» одна скринька.
@@ -161,7 +163,14 @@ export const isDisposable = (email) => DISPOSABLE.has(normEmail(email).split('@'
 export const emailMark = (email) => sha(`email:${normEmail(email)}`);
 export function cardMark(info) {
   const pan = String(info?.maskedPan || '').replace(/[^0-9*]/g, '');
-  if (!/^\d{6}\*+\d{4}$/.test(pan)) return null;
+  /* Потрібно щонайменше 4 останні цифри. mono зараз віддає маску
+     «43260979******08» — 8 цифр BIN і лише 2 останні. У всіх карток
+     одного продукту банку BIN однаковий, тож на 2 цифрах збіг — кожна
+     сота картка: при сотні клієнтів одного банку чесні люди масово
+     отримували б «картку вже використано». Тому з такою маскою картку
+     не перевіряємо взагалі (mark = null) — захищають пошта й MT5. Якщо
+     mono почне віддавати 4 цифри, перевірка ввімкнеться сама. */
+  if (!/^\d{6,8}\*+\d{4}$/.test(pan)) return null;
   return sha(`card:${pan.slice(0, 6)}${pan.slice(-4)}:${String(info?.paymentSystem || '').toLowerCase()}`);
 }
 
