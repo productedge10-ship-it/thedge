@@ -970,6 +970,22 @@ export default function SubscriptionTab({ sub, onChanged }) {
               Саме цей рядок вирішує, чи буде повернення й чарджбек, і
               ховати його в text4 на темному (контраст 2.3:1) — це не
               делікатність, а пастка. */}
+          {view.trialBlock === 'mt5' && (
+            <div
+              className="mt-3 flex items-start gap-2.5 rounded-xl px-3.5 py-3"
+              style={{ background: `rgba(${T.warnRgb},0.09)`, border: `1px solid rgba(${T.warnRgb},0.26)` }}
+            >
+              <AlertTriangle size={15} strokeWidth={2.2} style={{ color: T.warn, marginTop: 1 }} />
+              <span className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.warn }}>
+                Пробний період закрито: цей MT5-рахунок уже був привʼязаний до іншого акаунта.
+                Оформи повноцінну підписку — і рахунок підключиться. Якщо це помилка —{' '}
+                <a href="https://t.me/h1f3stt" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', color: T.text }}>
+                  напиши нам у Telegram
+                </a>.
+              </span>
+            </div>
+          )}
+
           {view.trialDenied && (
             <div
               className="mt-3 flex items-start gap-2.5 rounded-xl px-3.5 py-3"

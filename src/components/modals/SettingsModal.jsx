@@ -1954,7 +1954,7 @@ function SyncStatus({ phase, msg, support, onRetry, onDone }) {
      людина, в якої справді помилка, має знати, куди писати. «Try
      again» лишаємо — раптом вона хоче підключити інший рахунок. */
   const v = support
-    ? { ...SYNC_STATE.fail, title: 'Пробний період недоступний для цього рахунку' }
+    ? { ...SYNC_STATE.fail, title: 'Пробний період закрито' }
     : SYNC_STATE[phase] || SYNC_STATE.checking;
   const rgb = v.rgb();
   const waiting = phase === 'checking' || phase === 'slow';

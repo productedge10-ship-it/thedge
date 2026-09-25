@@ -196,7 +196,7 @@ const readSubRow = async () => {
 };
 
 export async function readSubscription() {
-  const [{ data: sub }, { data: pro }, { data: orders }, { data: promos }] = await Promise.all([
+  const [{ data: sub }, { data: pro }, { data: orders }, { data: promos }, { data: block }] = await Promise.all([
     readSubRow(),
     supabase.rpc('is_pro'),
     /* Історія платежів — щоб екран підписки показував факти, а не
@@ -218,6 +218,10 @@ export async function readSubscription() {
       .eq('kind', 'percent')
       .gt('charges_left', 0)
       .limit(1)).catch(() => ({ data: null })),
+    /* Окремим запитом: колонки може ще не бути, і тоді падає лише він,
+       а не весь стан підписки. */
+    onlyMine(supabase.from('subscriptions').select('trial_block').maybeSingle())
+      .catch(() => ({ data: null })),
   ]);
   const promo = promos?.[0] || null;
 
@@ -256,6 +260,9 @@ export async function readSubscription() {
     /* Останню привʼязку картки відхилено: з цією карткою тріал уже
        брали на іншому акаунті. Гривню повернули — кажемо чому. */
     trialDenied: orders?.[0]?.payload?.trial_denied === 'card',
+    /* Пробний період закрито, бо на ньому підключали MT5-рахунок,
+       уже використаний на пробному з іншого акаунта. */
+    trialBlock: block?.trial_block || null,
     isPro: pro === true,
     /* { percent, left } — знижка, яку сервер застосує до наступних оплат. */
     discount: promo ? { percent: promo.percent, left: promo.charges_left } : null,

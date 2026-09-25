@@ -101,6 +101,12 @@ export async function countMt5Accounts() {
   return count || 0;
 }
 
+async function trialBlockedByMt5(uid) {
+  const { data } = await supabase.from('subscriptions')
+    .select('trial_block').eq('user_id', uid).maybeSingle();
+  return data?.trial_block === 'mt5';
+}
+
 export async function connectMt5({ broker = 'other', server, login, password }) {
   const secret = await sealSecret(password);
 
@@ -160,19 +166,22 @@ export async function connectMt5({ broker = 'other', server, login, password }) 
     .select('id')
     .single();
 
-  /* Базу охороняє тригер mt5_trial_guard: на пробному періоді не можна
-     підключити рахунок, який уже підключали на пробному з іншого
-     акаунта. Сирий код із бази перекладаємо на людську мову тут, щоб
-     форма знала, що показати кнопку підтримки. */
-  if (error) {
-    if (String(error.message || '').includes('TRIAL_MT5_USED')) {
-      throw Object.assign(new Error(
-        'Цей MT5-рахунок уже був привʼязаний до іншого акаунта, тож пробний період для нього ми видати не можемо. '
-        + 'З оплаченою підпискою він підключиться без обмежень. Якщо це помилка — напиши нам.',
-      ), { code: 'trial_mt5_used' });
-    }
-    throw error;
+  /* Базу охороняє тригер mt5_trial_guard: рахунок, уже підключений на
+     пробному періоді з іншого акаунта, на пробному не записується, а
+     сам пробний період закривається (subscriptions.trial_block = 'mt5').
+     Помилки тригер не кидає — вона відкотила б і закриття тріалу, —
+     тож рядок просто не повертається. Тоді дивимось на trial_block і
+     кажемо людині чому. Код TRIAL_MT5_USED лишився від першої версії
+     тригера — на випадок, якщо новий SQL ще не виконано. */
+  const blocked = String(error?.message || '').includes('TRIAL_MT5_USED')
+    || (!row && await trialBlockedByMt5(data.user.id));
+  if (blocked) {
+    throw Object.assign(new Error(
+      'Цей MT5-рахунок уже був привʼязаний до іншого акаунта, тому пробний період закрито. '
+      + 'Щоб підключити його, оформи повноцінну підписку. Якщо це помилка — напиши нам.',
+    ), { code: 'trial_mt5_used' });
   }
+  if (error) throw error;
   return row.id;
 }
 
