@@ -979,7 +979,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
               <span className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.warn }}>
                 Пробний період закрито: цей MT5-рахунок уже був привʼязаний до іншого акаунта.
                 Оформи повноцінну підписку — і рахунок підключиться. Якщо це помилка —{' '}
-                <a href="https://t.me/h1f3stt" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', color: T.text }}>
+                <a href="https://t.me/thedgesupport" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', color: T.text }}>
                   напиши нам у Telegram
                 </a>.
               </span>

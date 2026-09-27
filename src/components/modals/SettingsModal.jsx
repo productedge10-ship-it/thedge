@@ -175,6 +175,44 @@ const ARRIVED_FOR_PASSWORD = typeof window !== 'undefined'
   && hadAuthTokenInUrl()
   && new URLSearchParams(window.location.search).get('newpass') === '1';
 
+/* Маленька кнопка соцмережі в бічній панелі налаштувань. */
+function SocialLink({ href, label, track, children }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-track={track}
+      className="flex items-center justify-center"
+      style={{
+        fontFamily: T.sans,
+        gap: 7,
+        height: 40,
+        borderRadius: 11,
+        fontSize: 12.5,
+        fontWeight: 600,
+        color: T.text3,
+        background: 'transparent',
+        border: `1px solid ${T.line}`,
+        transition: 'background .18s, border-color .18s, color .18s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = T.surfaceHi;
+        e.currentTarget.style.borderColor = T.lineHi;
+        e.currentTarget.style.color = T.text;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent';
+        e.currentTarget.style.borderColor = T.line;
+        e.currentTarget.style.color = T.text3;
+      }}
+    >
+      {children}
+      {label}
+    </a>
+  );
+}
+
 export default function SettingsModal() {
   const s = useSettings();
   const { user, emailVerified } = useAuth();
@@ -415,10 +453,26 @@ export default function SettingsModal() {
 
               <div className="flex-1" />
 
+              {/* Канал і Instagram — над підтримкою, дрібніше за неї.
+                  Підтримка — дія («щось зламалось»), соцмережі — просто
+                  «де нас почитати», і важити однаково вони не мають. */}
+              <div className="mb-2.5 grid grid-cols-2 gap-2">
+                <SocialLink href="https://t.me/theedgejournal" label="Channel" track="settings.telegram">
+                  <Send size={13} strokeWidth={2.2} style={{ color: T.acc }} />
+                </SocialLink>
+                <SocialLink href="https://www.instagram.com/theedge.space/" label="Instagram" track="settings.instagram">
+                  <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke={T.acc} strokeWidth="2.2">
+                    <rect x="3" y="3" width="18" height="18" rx="5" />
+                    <circle cx="12" cy="12" r="4.2" />
+                    <circle cx="17.4" cy="6.6" r="1" fill={T.acc} stroke="none" />
+                  </svg>
+                </SocialLink>
+              </div>
+
               {/* Той самий контакт, що на /faq: щось не працює — пиши
                   в Telegram. */}
               <a
-                href="https://t.me/h1f3stt"
+                href="https://t.me/thedgesupport"
                 target="_blank"
                 rel="noreferrer"
                 className="group mb-2.5 flex items-center justify-center"
@@ -1878,7 +1932,7 @@ function TelegramButton({ label = 'Message us on Telegram' }) {
 
   return (
     <a
-      href="https://t.me/h1f3stt"
+      href="https://t.me/thedgesupport"
       target="_blank"
       rel="noreferrer"
       onMouseEnter={() => setHot(true)}

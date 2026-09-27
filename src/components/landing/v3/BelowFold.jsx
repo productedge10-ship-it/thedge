@@ -39,6 +39,89 @@ const FOOTER_COLS = [
   { title: 'ПРАВО', links: [['/terms', 'Публічна оферта'], ['/terms#billing', 'Оплата і повернення коштів'], ['/terms#contacts', 'Контакти']] },
 ];
 
+/* Де нас знайти. Іконки намальовані тут, а не взяті з lucide: у
+   першій версії бібліотеки логотипи брендів прибрали зовсім.
+
+   Кнопки з підписом, а не голі значки: дві іконки Telegram поруч
+   (канал і підтримка) без тексту неможливо розрізнити. */
+const TG_PATH = 'M21.9 4.3 18.7 19.4c-.2 1.1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-5 9.1-8.2c.4-.4-.1-.6-.6-.2L6.2 13l-4.8-1.5c-1-.3-1.1-1 .2-1.5L20.5 2.9c.9-.3 1.7.2 1.4 1.4Z';
+
+const SOCIAL = [
+  {
+    href: 'https://t.me/theedgejournal',
+    label: 'Telegram-канал',
+    track: 'footer.telegram',
+    icon: <path d={TG_PATH} fill="currentColor" />,
+  },
+  {
+    href: 'https://www.instagram.com/theedge.space/',
+    label: 'Instagram',
+    track: 'footer.instagram',
+    icon: (
+      <g fill="none" stroke="currentColor" strokeWidth="1.9">
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4.2" />
+        <circle cx="17.4" cy="6.6" r="0.9" fill="currentColor" stroke="none" />
+      </g>
+    ),
+  },
+  {
+    href: 'https://t.me/thedgesupport',
+    label: 'Підтримка',
+    track: 'footer.support',
+    icon: (
+      <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 14v-2a8 8 0 0 1 16 0v2" />
+        <path d="M4 14a2 2 0 0 1 2-2h1v6H6a2 2 0 0 1-2-2v-2ZM20 14a2 2 0 0 0-2-2h-1v6h1a2 2 0 0 0 2-2v-2Z" />
+        <path d="M17 18c0 1.7-1.8 3-5 3" />
+      </g>
+    ),
+  },
+];
+
+function Social() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
+      {SOCIAL.map((s) => (
+        <a
+          key={s.href}
+          href={s.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-track={s.track}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            width: 'fit-content',
+            padding: '7px 12px 7px 10px',
+            borderRadius: 10,
+            border: '1px solid rgba(255,255,255,.08)',
+            background: 'rgba(255,255,255,.02)',
+            fontFamily: F.sans,
+            fontSize: 13,
+            color: '#a6a6b8',
+            transition: 'color .16s, border-color .16s, background .16s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#fff';
+            e.currentTarget.style.borderColor = 'rgba(139,123,255,.45)';
+            e.currentTarget.style.background = 'rgba(139,123,255,.08)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#a6a6b8';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,.08)';
+            e.currentTarget.style.background = 'rgba(255,255,255,.02)';
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">{s.icon}</svg>
+          {s.label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 function Footer() {
   return (
     <footer style={{ borderTop: '1px solid rgba(255,255,255,.06)', background: '#0a0a0e' }}>
@@ -55,6 +138,7 @@ function Footer() {
               </div>
             </div>
           </div>
+          <Social />
         </div>
 
         {FOOTER_COLS.map((col) => (

@@ -683,7 +683,7 @@ export default function FAQ() {
                   </div>
                 </div>
                 <motion.a
-                  href="https://t.me/h1f3stt"
+                  href="https://t.me/thedgesupport"
                   target="_blank"
                   rel="noreferrer"
                   whileHover={{ y: -2 }}
