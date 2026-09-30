@@ -145,6 +145,9 @@ const router = createBrowserRouter([
      сторінку, яка продає, а не на форму входу. Залогінених він сам
      перекидає в застосунок. */
   { path: '/', element: <Landing /> },
+  /* Англійська вітрина: своя адреса, щоб пошуковик бачив одну мову
+     на одній адресі (hreflang — у scripts/seo-routes.mjs). */
+  { path: '/en', element: <Landing lang="en" /> },
   { path: '/auth', element: page(Auth) },
   /* ---- Пісочниця ----
      Ті самі сторінки й ті самі модалки, що в застосунку: підмінений

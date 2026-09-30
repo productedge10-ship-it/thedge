@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Sparkles } from 'lucide-react';
 import { C, F, A, Cat, useInView, reducedMotion, SHELL, SoonTag } from './base';
+import { useLang, useTx } from './lang';
 
 /* ==================================================================
    Коуч.
@@ -13,7 +14,11 @@ import { C, F, A, Cat, useInView, reducedMotion, SHELL, SoonTag } from './base';
    який коштує. Одна сцена показала б лише один талант коуча.
 ================================================================== */
 
-const SCENES = [
+/* Сцени обох мов. Мова міняється лише переходом між / і /en, а
+   Landing перемонтовує сторінку за ключем мови, тож анімація не
+   змішає рядки двох мов посеред друку. */
+const SCENES_ALL = {
+  uk: [
   {
     label: 'ТІЛТ ПІСЛЯ СТОПУ',
     sym: 'XAUUSD', r: '−2.1R', time: '14:32', tag: 'без сетапу', pos: false,
@@ -41,11 +46,44 @@ const SCENES = [
     m2: 'Найдешевша зміна: закривати термінал о 15:00. За місяць це +8.4R без жодної нової стратегії',
     btn: 'Додати межу часу',
   },
-];
+  ],
+  en: [
+    {
+      label: 'TILT AFTER A STOP',
+      sym: 'XAUUSD', r: '−2.1R', time: '14:32', tag: 'no setup', pos: false,
+      ask: 'Took another emotional trade and gave back the whole morning',
+      meta: [['session', 'London'], ['size', '2× usual'], ['held', '4 min']],
+      m1: 'This is your fourth gold trade after a loss this week. All four are red, −6.2R together. Looks like you’re trying to win it back',
+      m2: 'Rule for tomorrow: after two losses in a row — stop until the next session',
+      btn: 'Add rule to checklist',
+    },
+    {
+      label: 'THE SETUP THAT PAYS',
+      sym: 'GER40', r: '+3.1R', time: '10:15', tag: 'swing + FVG', pos: true,
+      ask: 'So does this setup actually work or am I just lucky?',
+      meta: [['session', 'Frankfurt'], ['size', 'as planned'], ['held', '1 h 20 min']],
+      m1: 'Swing + FVG made +11.4R over 14 trades. That’s 78% of your profit this month — and the most stable setup in the sample',
+      m2: 'Keep it as the core of your system. Pause the other setups until each has at least 20 trades',
+      btn: 'Make it my main setup',
+    },
+    {
+      label: 'THE HOURS THAT COST',
+      sym: 'EURUSD', r: '−1.0R', time: '16:48', tag: 'off plan', pos: false,
+      ask: 'Was that a normal week? Feels like it wasn’t',
+      meta: [['session', 'New York'], ['size', 'as planned'], ['held', '11 min']],
+      m1: 'Discipline 68% — your worst week this month. Eight of twenty-two trades were off plan, all eight between 15:00 and 17:00',
+      m2: 'The cheapest fix: close the terminal at 15:00. Over a month that’s +8.4R without a single new strategy',
+      btn: 'Add a time limit',
+    },
+  ],
+};
 
 
 
 export default function Coach() {
+  const lang = useLang();
+  const tx = useTx();
+  const SCENES = SCENES_ALL[lang === 'en' ? 'en' : 'uk'];
   const [ref, inView] = useInView(0.15);
   const reduced = reducedMotion();
 
@@ -118,7 +156,7 @@ export default function Coach() {
         });
       }, 900);
     }, 1500);
-  }, [clearAll, type, later]);
+  }, [clearAll, type, later, SCENES]);
 
   useEffect(() => {
     const on = inView && !reduced;
@@ -151,7 +189,7 @@ export default function Coach() {
     <section id="coach" ref={ref} style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>ТВІЙ КОУЧ</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('ТВІЙ КОУЧ', 'YOUR COACH')}</span>
         {/* Позначка стоїть у надзаголовку, а не в тексті нижче: рішення
             «читати цей розділ як обіцянку чи як опис» людина приймає
             до того, як почала читати. */}
@@ -159,10 +197,13 @@ export default function Coach() {
       </div>
 
       <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 12px', color: '#fff' }}>
-        Кіт прочитав кожну твою угоду
+        {tx('Кіт прочитав кожну твою угоду', 'The cat has read every one of your trades')}
       </h2>
       <p style={{ fontFamily: F.sans, fontSize: 16.5, lineHeight: 1.5, color: '#8a8a9c', margin: '0 0 18px', maxWidth: 660 }}>
-        Фірмовий котик аналізує твої угоди, знаходить систематичні помилки й показує закономірності, яких ти сам можеш не помічати. Дашборд показує цифри — кіт пояснює, що за ними стоїть
+        {tx(
+          'Фірмовий котик аналізує твої угоди, знаходить систематичні помилки й показує закономірності, яких ти сам можеш не помічати. Дашборд показує цифри — кіт пояснює, що за ними стоїть',
+          'Our signature cat analyses your trades, finds systematic mistakes and shows patterns you might not notice yourself. The dashboard shows the numbers — the cat explains what’s behind them',
+        )}
       </p>
 
       {/* Чесний рядок про стан. Без нього весь розділ вище описує те,
@@ -171,7 +212,8 @@ export default function Coach() {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, margin: '0 0 32px', padding: '13px 16px', borderRadius: 14, background: A(0.07), border: `1px solid ${A(0.22)}`, maxWidth: 660 }}>
         <Sparkles size={15} strokeWidth={2.2} color={C.accSoft} style={{ flexShrink: 0, marginTop: 2 }} />
         <span style={{ fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.55, color: '#9a9ab0' }}>
-          Коуч у розробці. Хто оформить Pro до запуску — отримає <b style={{ color: '#fff' }}>два тижні нейромережі в подарунок</b>
+          {tx('Коуч у розробці. Хто оформить Pro до запуску — отримає', 'The coach is in development. Get Pro before launch and receive')}{' '}
+          <b style={{ color: '#fff' }}>{tx('два тижні нейромережі в подарунок', 'two weeks of the AI coach as a gift')}</b>
         </span>
       </div>
 
@@ -240,7 +282,7 @@ export default function Coach() {
           <span aria-hidden style={{ position: 'absolute', top: -70, left: -50, width: 280, height: 280, background: 'radial-gradient(circle,rgba(74,59,245,.13),transparent 70%)', filter: 'blur(60px)' }} />
 
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-            <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.4px', color: C.text4 }}>РОЗБІР УГОДИ · {sc.label}</span>
+            <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.4px', color: C.text4 }}>{tx('РОЗБІР УГОДИ', 'TRADE REVIEW')} · {sc.label}</span>
             <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.2px', color: C.dim }}>{scene + 1} / {SCENES.length}</span>
           </div>
 
@@ -325,13 +367,13 @@ export default function Coach() {
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.4); e.currentTarget.style.color = '#fff'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.12)'; e.currentTarget.style.color = '#b8b8c8'; }}
               >
-                Не зараз
+                {tx('Не зараз', 'Not now')}
               </button>
 
               {ruleAdded && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(47,191,143,.1)', border: '1px solid rgba(47,191,143,.3)', borderRadius: 11, padding: '10px 14px', animation: reduced ? 'none' : 'lnFadeUp .3s ease-out' }}>
                   <Check size={13} strokeWidth={2.8} color={C.ok} />
-                  <span style={{ fontFamily: F.sans, fontSize: 12.5, fontWeight: 700, color: C.ok, whiteSpace: 'nowrap' }}>Правило додано</span>
+                  <span style={{ fontFamily: F.sans, fontSize: 12.5, fontWeight: 700, color: C.ok, whiteSpace: 'nowrap' }}>{tx('Правило додано', 'Rule added')}</span>
                 </span>
               )}
             </div>

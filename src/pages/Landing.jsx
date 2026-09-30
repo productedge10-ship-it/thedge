@@ -1,10 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Globe, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useEdgeFonts } from '../lib/theme';
 import { C, F, A, Cat, KEYFRAMES } from '../components/landing/v3/base';
 import Hero, { Ticker } from '../components/landing/v3/Hero';
+import { LangCtx, useLang, useTx, blogPath } from '../components/landing/v3/lang';
 
 /* Дев'ять секцій нижче першого екрана плюс підвал — окремим шматком.
    Подробиці, чому саме так, — у самому BelowFold.jsx. */
@@ -23,13 +24,27 @@ const BelowFold = lazy(() => import('../components/landing/v3/BelowFold'));
    що ще не дійшла до кнопки.
 ================================================================== */
 
-const NAV = [
-  ['#product', 'Продукт'],
-  ['#coach', 'Коуч'],
-  ['#pricing', 'Ціни'],
-  ['/uk/blog', 'Блог'],
-  ['#faq', 'Питання'],
+const navFor = (lang) => (lang === 'en'
+  ? [['#product', 'Product'], ['#coach', 'Coach'], ['#pricing', 'Pricing'], [blogPath('en'), 'Blog'], ['#faq', 'FAQ']]
+  : [['#product', 'Продукт'], ['#coach', 'Коуч'], ['#pricing', 'Ціни'], [blogPath('uk'), 'Блог'], ['#faq', 'Питання']]);
+
+/* Мови сайту. Російської немає свідомо (з вересня 2026). Перемикач —
+   це перехід між адресами / і /en, а не зміна стану: у кожної мови
+   своя адреса, і саме її бачить пошуковик. */
+const LANGS = [
+  { id: 'uk', code: 'UA', href: '/' },
+  { id: 'en', code: 'EN', href: '/en' },
 ];
+const LANG_KEY = 'edge_lang';
+
+function useSwitchLang() {
+  const navigate = useNavigate();
+  return (id) => {
+    try { localStorage.setItem(LANG_KEY, id); } catch { /* приватний режим */ }
+    const target = LANGS.find((l) => l.id === id);
+    if (target) navigate(target.href + window.location.hash);
+  };
+}
 
 /* FOOTER_COLS і сам Footer лишились у BelowFold.jsx, куди їх переніс
    розділ бандла: підвал — найнижча частина сторінки, і вантажити
@@ -44,9 +59,14 @@ const NAV = [
 const HEADER_BP = 880;
 
 function Header() {
+  const pageLang = useLang();
+  const tx = useTx();
+  const switchLang = useSwitchLang();
+  const NAV = navFor(pageLang);
+  const lang = pageLang === 'en' ? 'EN' : 'UA';
+  const setLang = (code) => switchLang(code === 'EN' ? 'en' : 'uk');
   const [shrunk, setShrunk] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [lang, setLang] = useState('UA');
   const [langOpen, setLangOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -117,7 +137,7 @@ function Header() {
 
             {langOpen && (
               <div style={{ position: 'absolute', top: 44, right: 0, background: '#101016', border: '1px solid rgba(255,255,255,.09)', borderRadius: 14, padding: 6, minWidth: 78, boxShadow: '0 24px 60px rgba(0,0,0,.6)', display: 'flex', flexDirection: 'column', gap: 2, zIndex: 5 }}>
-                {['UA', 'EN', 'RU'].map((code) => (
+                {LANGS.map(({ code }) => (
                   <button
                     key={code}
                     type="button"
@@ -133,7 +153,7 @@ function Header() {
             )}
           </div>
 
-          <a href="/auth" style={{ fontFamily: F.sans, fontSize: 14.5, fontWeight: 600, color: '#c9c9d8', whiteSpace: 'nowrap' }}>Вхід</a>
+          <a href="/auth" style={{ fontFamily: F.sans, fontSize: 14.5, fontWeight: 600, color: '#c9c9d8', whiteSpace: 'nowrap' }}>{tx('Вхід', 'Log in')}</a>
 
           <a
             href="/auth"
@@ -141,7 +161,7 @@ function Header() {
             onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 14px 36px rgba(74,59,245,.5)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 10px 28px rgba(74,59,245,.34)'; }}
           >
-            Почати безкоштовно
+            {tx('Почати безкоштовно', 'Start free')}
           </a>
         </div>
 
@@ -149,7 +169,7 @@ function Header() {
           type="button"
           className="ln-h-burger"
           onClick={() => setMobileOpen((v) => !v)}
-          aria-label={mobileOpen ? 'Закрити меню' : 'Відкрити меню'}
+          aria-label={mobileOpen ? tx('Закрити меню', 'Close menu') : tx('Відкрити меню', 'Open menu')}
           style={{ alignItems: 'center', justifyContent: 'center', width: 38, height: 38, flexShrink: 0, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.09)', borderRadius: 10, color: '#e9e9f2', cursor: 'pointer' }}
         >
           {mobileOpen ? <X size={18} strokeWidth={2.2} /> : <Menu size={18} strokeWidth={2.2} />}
@@ -178,7 +198,7 @@ function Header() {
           ))}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
-            {['UA', 'EN', 'RU'].map((code) => (
+            {LANGS.map(({ code }) => (
               <button
                 key={code}
                 type="button"
@@ -201,7 +221,7 @@ function Header() {
             onClick={() => setMobileOpen(false)}
             style={{ textAlign: 'center', marginTop: 14, fontFamily: F.sans, fontSize: 14.5, fontWeight: 600, color: '#c9c9d8', padding: '12px 0' }}
           >
-            Вхід
+            {tx('Вхід', 'Log in')}
           </a>
 
           <a
@@ -209,7 +229,7 @@ function Header() {
             onClick={() => setMobileOpen(false)}
             style={{ textAlign: 'center', marginTop: 6, background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, color: '#fff', fontFamily: F.sans, fontSize: 15, fontWeight: 700, padding: '15px 0', borderRadius: 13, boxShadow: '0 10px 28px rgba(74,59,245,.34)' }}
           >
-            Почати безкоштовно
+            {tx('Почати безкоштовно', 'Start free')}
           </a>
         </div>
       )}
@@ -236,17 +256,59 @@ function Header() {
 
    `/?home` лишає вітрину відкритою й для залогіненого — щоб
    подивитись, як вона виглядає після деплою, не виходячи з акаунта. */
-export default function Landing() {
+export default function Landing({ lang = 'uk' }) {
   const { user } = useAuth();
   const stay = typeof window !== 'undefined'
     && new URLSearchParams(window.location.search).has('home');
 
   if (user && !stay) return <Navigate to="/app" replace />;
-  return <LandingPage />;
+
+  const redirect = lang === 'uk' ? preferredEnglish() : false;
+  if (redirect) return <Navigate to={`/en${window.location.search}${window.location.hash}`} replace />;
+
+  /* key — щоб перехід / ↔ /en перемонтував сторінку: анімації й
+     друкований текст коуча не домальовуються старою мовою. */
+  return (
+    <LangCtx.Provider value={lang}>
+      <LandingPage key={lang} />
+    </LangCtx.Provider>
+  );
+}
+
+/* Чи вести людину з / на /en.
+
+   Лише тих, хто прийшов уперше (вибору ще не робив) і чий браузер
+   не український. Російськомовний браузер лишаємо на українській:
+   здебільшого це наші ж люди, а російської версії немає.
+
+   Роботів не чіпаємо взагалі: кожна адреса має віддавати пошуковику
+   свою мову, інакше Google вирішить, що / — це дубль /en, і
+   викине українську головну з індексу. Людей, які вже обрали мову
+   перемикачем, теж не переводимо — вибір лежить у localStorage. */
+const BOT_RE = /bot|crawl|spider|slurp|google|bing|yandex|duckduck|baidu|lighthouse|headless|preview|facebookexternalhit|telegram|whatsapp/i;
+
+function preferredEnglish() {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (navigator.webdriver || BOT_RE.test(navigator.userAgent || '')) return false;
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved) return saved === 'en';
+    const langs = (navigator.languages?.length ? navigator.languages : [navigator.language || ''])
+      .map((l) => String(l).slice(0, 2).toLowerCase());
+    return !langs.some((l) => l === 'uk' || l === 'ru');
+  } catch {
+    return false;
+  }
 }
 
 function LandingPage() {
   useEdgeFonts();
+  const lang = useLang();
+
+  /* Мова документа — для читалок, перекладача браузера й пошуковика.
+     Сервер уже віддав правильну в <html lang>, це на випадок переходу
+     між мовами без перезавантаження. */
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
 
   /* Прапорець «перший кадр уже намальовано».
 

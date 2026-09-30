@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check } from 'lucide-react';
 import { C, F, A, Cat } from './base';
+import { useLang, pick, useTx } from './lang';
 
 /* ==================================================================
    Перехід «лендінг → пісочниця».
@@ -20,13 +21,14 @@ import { C, F, A, Cat } from './base';
    чекати.
 ================================================================== */
 
-const LINES = [
-  'Створюю демо-журнал',
-  'Наливаю десять угод',
-  'Підключаю кота-коуча',
-];
+const LINES = {
+  uk: ['Створюю демо-журнал', 'Наливаю десять угод', 'Підключаю кота-коуча'],
+  en: ['Creating a demo journal', 'Pouring in ten trades', 'Waking up the cat coach'],
+};
 
 export default function DemoTransition({ origin, onDone }) {
+  const lang = useLang();
+  const tx = useTx();
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
@@ -81,11 +83,11 @@ export default function DemoTransition({ origin, onDone }) {
         </span>
 
         <div style={{ position: 'relative', fontFamily: F.display, fontSize: 20, fontWeight: 700, letterSpacing: '-.5px', color: '#fff' }}>
-          Готую пісочницю
+          {tx('Готую пісочницю', 'Preparing the sandbox')}
         </div>
 
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 9, minWidth: 230 }}>
-          {LINES.map((line, i) => {
+          {pick(lang, LINES).map((line, i) => {
             const done = phase >= i + 2;
             return (
               <div

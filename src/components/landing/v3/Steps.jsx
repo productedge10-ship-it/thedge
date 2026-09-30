@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { C, F, A, SHELL } from './base';
+import { useLang, pick, useTx } from './lang';
 
 /* ==================================================================
    Три кроки.
@@ -15,13 +16,22 @@ import { C, F, A, SHELL } from './base';
    ширину або як висоту залежно від брейкпоінту.
 ================================================================== */
 
-const STEPS = [
-  { n: '1', title: 'Імпорт', sub: 'Підключаєш MetaTrader 5 — закриті позиції лягають у журнал самі', at: 0.06 },
-  { n: '2', title: 'Запис', sub: 'Дописуєш половину, якої не експортує брокер: план, стан, порушене правило', at: 0.45 },
-  { n: '3', title: 'Знайди перевагу', sub: 'Аналітика ранжує сесії, сетапи й настрої за тим, скільки вони платять', at: 0.82 },
-];
+const STEPS = {
+  uk: [
+    { n: '1', title: 'Імпорт', sub: 'Підключаєш MetaTrader 5 — закриті позиції лягають у журнал самі', at: 0.06 },
+    { n: '2', title: 'Запис', sub: 'Дописуєш половину, якої не експортує брокер: план, стан, порушене правило', at: 0.45 },
+    { n: '3', title: 'Знайди перевагу', sub: 'Аналітика ранжує сесії, сетапи й настрої за тим, скільки вони платять', at: 0.82 },
+  ],
+  en: [
+    { n: '1', title: 'Import', sub: 'Connect MetaTrader 5 — closed positions land in the journal by themselves', at: 0.06 },
+    { n: '2', title: 'Log', sub: 'Add the half no broker exports: the plan, your state, the rule you broke', at: 0.45 },
+    { n: '3', title: 'Find your edge', sub: 'Analytics ranks sessions, setups and moods by how much they pay you', at: 0.82 },
+  ],
+};
 
 export default function Steps() {
+  const lang = useLang();
+  const tx = useTx();
   const ref = useRef(null);
   const [p, setP] = useState(0);
 
@@ -76,7 +86,7 @@ export default function Steps() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 30 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>ТРИ КРОКИ</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('ТРИ КРОКИ', 'THREE STEPS')}</span>
       </div>
 
       <div className="ln-steps-outer">
@@ -85,7 +95,7 @@ export default function Steps() {
         </div>
 
         <div className="ln-steps-grid">
-          {STEPS.map((s) => {
+          {pick(lang, STEPS).map((s) => {
             const reached = p >= s.at;
             return (
               <div key={s.n} className="ln-steps-item">

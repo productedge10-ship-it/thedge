@@ -21,7 +21,6 @@
 export const SPEECH_LANGS = [
   { id: 'uk-UA', short: 'UA', name: 'Українська' },
   { id: 'en-US', short: 'EN', name: 'English' },
-  { id: 'ru-RU', short: 'RU', name: 'Русский' },
 ];
 
 const Recognition = typeof window !== 'undefined'

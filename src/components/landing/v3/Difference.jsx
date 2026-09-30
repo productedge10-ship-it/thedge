@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronsLeftRight } from 'lucide-react';
 import { C, F, A, lerp, useInView, reducedMotion, SHELL } from './base';
+import { useTx } from './lang';
 
 /* ==================================================================
    Різниця — машина дисципліни.
@@ -31,6 +32,7 @@ const mixRG = (t) => {
 };
 
 export default function Difference() {
+  const tx = useTx();
   const [wrapRef, inView] = useInView(0.15);
   const boxRef = useRef(null);
   const reduced = reducedMotion();
@@ -123,10 +125,10 @@ export default function Difference() {
   const curveArea = `M0,${pts[0].y.toFixed(1)} ${pts.map((p) => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')} L300,70 L0,70 Z`;
 
   const tag = t < 0.45
-    ? { txt: 'БЕЗ ЖУРНАЛУ', bg: 'rgba(255,123,123,.1)', bc: 'rgba(255,123,123,.3)', fg: C.bad }
+    ? { txt: tx('БЕЗ ЖУРНАЛУ', 'NO JOURNAL'), bg: 'rgba(255,123,123,.1)', bc: 'rgba(255,123,123,.3)', fg: C.bad }
     : t < 0.8
-      ? { txt: '15 ДНІВ ЗАПИСІВ', bg: 'rgba(245,163,59,.1)', bc: 'rgba(245,163,59,.3)', fg: C.warn }
-      : { txt: 'ЧЕРЕЗ 30 ДНІВ ЗАПИСІВ', bg: 'rgba(47,191,143,.1)', bc: 'rgba(47,191,143,.32)', fg: C.ok };
+      ? { txt: tx('15 ДНІВ ЗАПИСІВ', '15 DAYS OF LOGGING'), bg: 'rgba(245,163,59,.1)', bc: 'rgba(245,163,59,.3)', fg: C.warn }
+      : { txt: tx('ЧЕРЕЗ 30 ДНІВ ЗАПИСІВ', 'AFTER 30 DAYS OF LOGGING'), bg: 'rgba(47,191,143,.1)', bc: 'rgba(47,191,143,.32)', fg: C.ok };
 
   const net = lerp(-4.2, 11.6, t);
   const metric = (value, label, color = C.text) => (
@@ -140,20 +142,20 @@ export default function Difference() {
     <section ref={wrapRef} style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>РІЗНИЦЯ</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('РІЗНИЦЯ', 'THE DIFFERENCE')}</span>
       </div>
 
       <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 28px', color: '#fff' }}>
-        Ти програєш не ринку{' '}
+        {tx('Ти програєш не ринку', 'You’re not losing to the market')}{' '}
         <br />
-        Ти програєш тим самим трьом звичкам
+        {tx('Ти програєш тим самим трьом звичкам', 'You’re losing to the same three habits')}
       </h2>
 
       <div
         ref={boxRef}
         tabIndex={0}
         role="slider"
-        aria-label="Дисципліна"
+        aria-label={tx('Дисципліна', 'Discipline')}
         aria-valuenow={Math.round(disc)}
         aria-valuemin={0}
         aria-valuemax={100}
@@ -201,7 +203,7 @@ export default function Difference() {
                 <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(34px,9vw,52px)', letterSpacing: '-2.6px', lineHeight: 1, color: '#fff' }}>
                   {Math.round(disc)}%
                 </div>
-                <div style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 700, letterSpacing: '1.8px', color: C.text4 }}>ДИСЦИПЛІНА</div>
+                <div style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 700, letterSpacing: '1.8px', color: C.text4 }}>{tx('ДИСЦИПЛІНА', 'DISCIPLINE')}</div>
               </div>
             </div>
 
@@ -239,27 +241,31 @@ export default function Difference() {
             </svg>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 14, marginTop: 18, paddingTop: 18, borderTop: '1px solid rgba(255,255,255,.06)' }}>
-              {metric(`${net >= 0 ? '+' : '−'}${Math.abs(net).toFixed(1)}R`, 'за місяць', net >= 0 ? C.ok : C.bad)}
-              {metric(String(Math.round(lerp(63, 28, t))), 'угод')}
-              {metric(`${Math.round(lerp(38, 54, t))}%`, 'вінрейт')}
-              {metric(String(Math.round(lerp(19, 2, t))), 'угод на тілті', t < 0.5 ? C.bad : C.ok)}
+              {metric(`${net >= 0 ? '+' : '−'}${Math.abs(net).toFixed(1)}R`, tx('за місяць', 'per month'), net >= 0 ? C.ok : C.bad)}
+              {metric(String(Math.round(lerp(63, 28, t))), tx('угод', 'trades'))}
+              {metric(`${Math.round(lerp(38, 54, t))}%`, tx('вінрейт', 'win rate'))}
+              {metric(String(Math.round(lerp(19, 2, t))), tx('угод на тілті', 'trades on tilt'), t < 0.5 ? C.bad : C.ok)}
             </div>
           </div>
         </div>
 
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 9, marginTop: 22, fontFamily: F.mono, fontSize: 11, letterSpacing: '1.2px', color: C.dim }}>
           <ChevronsLeftRight size={13} strokeWidth={2.2} />
-          {auto ? 'ТЯГНИ, ЩОБ ПРОКРУТИТИ МІСЯЦЬ ВРУЧНУ' : 'РУЧНИЙ РЕЖИМ · АВТО ПОВЕРНЕТЬСЯ ЗА 5 С'}
+          {auto
+            ? tx('ТЯГНИ, ЩОБ ПРОКРУТИТИ МІСЯЦЬ ВРУЧНУ', 'DRAG TO SCRUB THROUGH THE MONTH')
+            : tx('РУЧНИЙ РЕЖИМ · АВТО ПОВЕРНЕТЬСЯ ЗА 5 С', 'MANUAL MODE · AUTO RESUMES IN 5 S')}
         </div>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap', marginTop: 18 }}>
         <div style={{ fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.55, color: C.text5, maxWidth: 600 }}>
-          Приклад рахунку — цифри, які журнал зазвичай показує, коли в ньому вже 40+ угод.
-          Твої будуть іншими, у цьому й суть
+          {tx(
+            'Приклад рахунку — цифри, які журнал зазвичай показує, коли в ньому вже 40+ угод. Твої будуть іншими, у цьому й суть',
+            'Sample account — the kind of numbers the journal shows once it holds 40+ trades. Yours will be different, and that’s the point',
+          )}
         </div>
         <div style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 700, color: C.accSoft }}>
-          Не 63 угоди, а 28. Менше угод — не менше грошей
+          {tx('Не 63 угоди, а 28. Менше угод — не менше грошей', 'Not 63 trades, but 28. Fewer trades, not less money')}
         </div>
       </div>
     </section>

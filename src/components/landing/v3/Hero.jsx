@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, RotateCcw } from 'lucide-react';
 import { C, F, A, Cat, Glow, useInView, reducedMotion, SHELL } from './base';
 import DemoTransition from './DemoTransition';
+import { useLang, useTx, pick } from './lang';
 
 /* ==================================================================
    Герой — живий журнал, а не картинка.
@@ -16,16 +17,16 @@ import DemoTransition from './DemoTransition';
 ================================================================== */
 
 const POOL = [
-  { sym: 'XAUUSD', setup: 'Свінг + FVG', mood: 'Спокій', r: 2.4, bad: false },
-  { sym: 'GER40', setup: 'Judas swing', mood: 'Спокій', r: 1.8, bad: false },
-  { sym: 'EURUSD', setup: 'Без сетапу · повз план', mood: 'Нудьга', r: -1, bad: true },
-  { sym: 'XAUUSD', setup: 'Сплеск на новині · повз план', mood: 'FOMO', r: -1, bad: true },
-  { sym: 'GER40', setup: 'Свінг + FVG', mood: 'Спокій', r: 3.1, bad: false },
-  { sym: 'NAS100', setup: 'Ретест OB', mood: 'Фокус', r: 1.6, bad: false },
-  { sym: 'BTCUSD', setup: 'Азійський діапазон', mood: 'Спокій', r: 2.2, bad: false },
-  { sym: 'EURUSD', setup: 'Подвоїв обсяг · повз план', mood: 'Тілт', r: -1.4, bad: true },
-  { sym: 'US100', setup: 'Свіп лоу + FVG', mood: 'Спокій', r: 1.9, bad: false },
-  { sym: 'XAUUSD', setup: 'Відіграв стоп · повз план', mood: 'Тілт', r: -1.2, bad: true },
+  { sym: 'XAUUSD', setup: 'Свінг + FVG', setupEn: 'Swing + FVG', mood: 'Спокій', r: 2.4, bad: false },
+  { sym: 'GER40', setup: 'Judas swing', setupEn: 'Judas swing', mood: 'Спокій', r: 1.8, bad: false },
+  { sym: 'EURUSD', setup: 'Без сетапу · повз план', setupEn: 'No setup · off plan', mood: 'Нудьга', r: -1, bad: true },
+  { sym: 'XAUUSD', setup: 'Сплеск на новині · повз план', setupEn: 'News spike · off plan', mood: 'FOMO', r: -1, bad: true },
+  { sym: 'GER40', setup: 'Свінг + FVG', setupEn: 'Swing + FVG', mood: 'Спокій', r: 3.1, bad: false },
+  { sym: 'NAS100', setup: 'Ретест OB', setupEn: 'OB retest', mood: 'Фокус', r: 1.6, bad: false },
+  { sym: 'BTCUSD', setup: 'Азійський діапазон', setupEn: 'Asian range', mood: 'Спокій', r: 2.2, bad: false },
+  { sym: 'EURUSD', setup: 'Подвоїв обсяг · повз план', setupEn: 'Doubled size · off plan', mood: 'Тілт', r: -1.4, bad: true },
+  { sym: 'US100', setup: 'Свіп лоу + FVG', setupEn: 'Low sweep + FVG', mood: 'Спокій', r: 1.9, bad: false },
+  { sym: 'XAUUSD', setup: 'Відіграв стоп · повз план', setupEn: 'Revenge after stop · off plan', mood: 'Тілт', r: -1.2, bad: true },
 ];
 
 const statsOf = (rows) => {
@@ -39,7 +40,13 @@ const statsOf = (rows) => {
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
+/* Настрій показуємо мовою сторінки, а в логіці лишається українське
+   значення — з ним порівнює підсвітка «FOMO / Тілт» нижче. */
+const MOOD_EN = { 'Спокій': 'Calm', 'Нудьга': 'Boredom', FOMO: 'FOMO', 'Фокус': 'Focus', 'Тілт': 'Tilt' };
+
 export default function Hero() {
+  const tx = useTx();
+  const lang = useLang();
   const [ref, inView] = useInView(0.15);
   const reduced = reducedMotion();
   const navigate = useNavigate();
@@ -156,7 +163,7 @@ export default function Hero() {
               color: C.accSoft, marginBottom: 28,
             }}
           >
-            Робочий простір · Аналітика · AI-коуч
+            {tx('Робочий простір · Аналітика · AI-коуч', 'Workspace · Analytics · AI coach')}
           </div>
 
           <h1
@@ -169,7 +176,7 @@ export default function Hero() {
               letterSpacing: '-1.9px', margin: '0 0 24px', color: '#fff', textWrap: 'balance',
             }}
           >
-            Не шукай ідеальну стратегію{' '}
+            {tx('Не шукай ідеальну стратегію', 'Stop hunting for the perfect strategy')}{' '}
             <br />
             <span
               style={{
@@ -177,7 +184,7 @@ export default function Hero() {
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}
             >
-              Зрозумій свою
+              {tx('Зрозумій свою', 'Understand yours')}
             </span>{' '}
             {/* Описовий рядок у самому <h1>: несе ключі (журнал, угод,
                 MetaTrader, аналітика), яких немає в поетичному заголовку.
@@ -191,12 +198,12 @@ export default function Hero() {
                 letterSpacing: '-0.2px', color: C.text3, textWrap: 'pretty',
               }}
             >
-              Торговий журнал трейдера з автоімпортом угод з MetaTrader 5
+              {tx('Торговий журнал трейдера з автоімпортом угод з MetaTrader 5', 'Trading journal with automatic MetaTrader 5 trade import')}
             </span>
           </h1>
 
           <p style={{ fontFamily: F.sans, fontSize: 'clamp(16.5px,1.05vw,21px)', lineHeight: 1.5, color: C.text3, margin: '0 0 34px', maxWidth: 560 }}>
-            Журнал, який рахує за тебе і каже, де саме ти втрачаєш гроші
+            {tx('Журнал, який рахує за тебе і каже, де саме ти втрачаєш гроші', 'A journal that does the math for you and shows exactly where you lose money')}
           </p>
 
           <div style={{ display: 'flex', gap: 13, flexWrap: 'wrap', marginBottom: 20 }}>
@@ -212,7 +219,7 @@ export default function Hero() {
               onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 20px 54px rgba(74,59,245,.56)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 16px 44px rgba(74,59,245,.4)'; e.currentTarget.style.transform = 'none'; }}
             >
-              Почати безкоштовно
+              {tx('Почати безкоштовно', 'Start free')}
               <ArrowRight size={16} strokeWidth={2.4} />
             </a>
 
@@ -235,7 +242,7 @@ export default function Hero() {
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.5); e.currentTarget.style.background = A(0.07); }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.line; e.currentTarget.style.background = 'transparent'; }}
             >
-              Спробувати демо
+              {tx('Спробувати демо', 'Try the demo')}
             </a>
           </div>
 
@@ -253,7 +260,7 @@ export default function Hero() {
               кошти, і це властивість самого терміналу, а не наша
               обіцянка. Розгорнуто — там же, у FAQ. */}
           <div style={{ fontFamily: F.mono, fontSize: 13, lineHeight: 1.6, color: C.text4 }}>
-            Без картки · MT5 лише на читання · Кожна таблиця замкнена на твій акаунт
+            {tx('Без картки · MT5 лише на читання · Кожна таблиця замкнена на твій акаунт', 'No card · MT5 read-only · Every table locked to your account')}
           </div>
         </div>
 
@@ -273,7 +280,7 @@ export default function Hero() {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 18px', borderBottom: `1px solid ${C.lineSoft}` }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: F.mono, fontSize: 11.5, fontWeight: 600, letterSpacing: '1.3px', color: C.text4 }}>
-                ЖУРНАЛ · {onCount} З {rows.length} УГОД
+                {tx('ЖУРНАЛ', 'JOURNAL')} · {onCount} {tx('З', 'OF')} {rows.length} {tx('УГОД', 'TRADES')}
               </span>
 
               <button
@@ -284,7 +291,7 @@ export default function Hero() {
                 onMouseLeave={(e) => { e.currentTarget.style.color = C.text4; e.currentTarget.style.background = 'transparent'; }}
               >
                 <RotateCcw size={12} strokeWidth={2.2} />
-                Скинути
+                {tx('Скинути', 'Reset')}
               </button>
             </div>
 
@@ -318,12 +325,12 @@ export default function Hero() {
                     </span>
 
                     <span style={{ fontFamily: F.sans, fontSize: 13, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: r.bad ? '#ff9b9b' : C.text2, textDecoration: strike }}>
-                      {r.setup}
+                      {lang === 'en' ? r.setupEn : r.setup}
                     </span>
 
                     {r.fresh && (
                       <span className="ln-hero-fresh" style={{ fontFamily: F.sans, fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: C.accSoft, background: A(0.14), border: `1px solid ${A(0.32)}`, borderRadius: 6, padding: '3px 7px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        ЩОЙНО З MT5
+                        {tx('ЩОЙНО З MT5', 'JUST IN FROM MT5')}
                       </span>
                     )}
 
@@ -335,7 +342,7 @@ export default function Hero() {
                         color: r.mood === 'FOMO' || r.mood === 'Тілт' ? C.warn : r.bad ? '#8a8a9c' : C.ok,
                       }}
                     >
-                      {r.mood}
+                      {lang === 'en' ? (MOOD_EN[r.mood] || r.mood) : r.mood}
                     </span>
 
                     <span style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 700, width: 46, textAlign: 'right', flexShrink: 0, color: r.r >= 0 ? C.ok : C.bad, textDecoration: strike }}>
@@ -348,9 +355,9 @@ export default function Hero() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: 'rgba(255,255,255,.06)' }}>
               {[
-                ['ЧИСТИЙ R', (disp.netR >= 0 ? '+' : '−') + Math.abs(disp.netR).toFixed(1) + 'R', disp.netR >= 0 ? C.ok : C.bad],
-                ['ВІНРЕЙТ', `${Math.round(disp.wr)}%`, C.ok],
-                ['ПРОФІТ-ФАКТОР', disp.inf ? '∞' : disp.pf.toFixed(2), C.text],
+                [tx('ЧИСТИЙ R', 'NET R'), (disp.netR >= 0 ? '+' : '−') + Math.abs(disp.netR).toFixed(1) + 'R', disp.netR >= 0 ? C.ok : C.bad],
+                [tx('ВІНРЕЙТ', 'WIN RATE'), `${Math.round(disp.wr)}%`, C.ok],
+                [tx('ПРОФІТ-ФАКТОР', 'PROFIT FACTOR'), disp.inf ? '∞' : disp.pf.toFixed(2), C.text],
               ].map(([label, value, color]) => (
                 <div key={label} style={{ background: C.panel2, padding: '16px 18px' }}>
                   <div style={{ fontFamily: F.sans, fontSize: 10.5, fontWeight: 700, letterSpacing: '1.3px', color: C.text4, marginBottom: 8 }}>
@@ -401,15 +408,17 @@ export default function Hero() {
                     картинка тут читалась як іконка, а не як співрозмовник. */}
                 <Cat size={38} />
                 <div style={{ fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.5, color: '#cfcfdd' }}>
-                  Угоди повз план коштували тобі {catCost}R. Решта твоєї торгівлі — плюс
+                  {tx(`Угоди повз план коштували тобі ${catCost}R. Решта твоєї торгівлі — плюс`, `Off-plan trades cost you ${catCost}R. The rest of your trading is green`)}
                 </div>
               </div>
             )}
           </div>
 
           <div style={{ fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.5, color: C.text5, marginTop: 14, paddingLeft: 2 }}>
-            Це живий приклад, а не скріншот: угоди приїжджають із MetaTrader 5 самі.
-            Вимкни ті, що взяті повз план, і подивись, яким був би рахунок
+            {tx(
+              'Це живий приклад, а не скріншот: угоди приїжджають із MetaTrader 5 самі. Вимкни ті, що взяті повз план, і подивись, яким був би рахунок',
+              'This is a live example, not a screenshot: trades arrive from MetaTrader 5 on their own. Switch off the off-plan ones and see what the account would have been',
+            )}
           </div>
         </div>
       </div>
@@ -439,34 +448,56 @@ export default function Hero() {
    Стрічка малюється двічі, щоб цикл не мав шва. Другий прогін
    позначений aria-hidden: для читалки й для пошуковика це той самий
    текст двічі, і дубль тут ні до чого. */
-const TICKER = [
-  'Щоденник трейдера',
-  'Журнал угод',
-  'Trading journal',
-  'Автоімпорт з MetaTrader 5',
-  'Імпорт історії угод MT5',
-  'Статистика торгівлі',
-  'Аналітика угод',
-  'R-multiple · профіт-фактор · просадка',
-  'AI-коуч для трейдера',
-  'Психологія трейдингу',
-  'Тілт і овертрейдинг',
-  'Чекліст перед сесією',
-  'Тижневий розбір угод',
-  'Бектест стратегії',
-  'Журнал для пропфірми',
-  'Форекс · Крипта · Індекси',
-  'CSV-експорт',
-  'Українська · English · Русский',
-];
+const TICKER = {
+  uk: [
+    'Щоденник трейдера',
+    'Журнал угод',
+    'Trading journal',
+    'Автоімпорт з MetaTrader 5',
+    'Імпорт історії угод MT5',
+    'Статистика торгівлі',
+    'Аналітика угод',
+    'R-multiple · профіт-фактор · просадка',
+    'AI-коуч для трейдера',
+    'Психологія трейдингу',
+    'Тілт і овертрейдинг',
+    'Чекліст перед сесією',
+    'Тижневий розбір угод',
+    'Бектест стратегії',
+    'Журнал для пропфірми',
+    'Форекс · Крипта · Індекси',
+    'CSV-експорт',
+    'Українська · English',
+  ],
+  en: [
+    'Trading journal',
+    'Trade log',
+    'Automatic MetaTrader 5 import',
+    'MT5 trade history import',
+    'Trading statistics',
+    'Trade analytics',
+    'R-multiple · profit factor · drawdown',
+    'AI trading coach',
+    'Trading psychology',
+    'Tilt and overtrading',
+    'Pre-session checklist',
+    'Weekly trade review',
+    'Strategy backtesting',
+    'Prop firm journal',
+    'Forex · Crypto · Indices',
+    'CSV export',
+    'English · Українська',
+  ],
+};
 
 export function Ticker() {
+  const lang = useLang();
   return (
     <section style={{ height: 80, borderTop: `1px solid ${C.lineSoft}`, borderBottom: `1px solid ${C.lineSoft}`, overflow: 'hidden', display: 'flex', alignItems: 'center', background: '#0a0a0e' }}>
       <div style={{ display: 'flex', width: 'max-content', animation: 'lnMarquee 62s linear infinite' }}>
         {[0, 1].map((run) => (
           <div key={run} aria-hidden={run === 1} style={{ display: 'flex', alignItems: 'center', gap: 38, paddingRight: 38 }}>
-            {TICKER.map((label) => (
+            {pick(lang, TICKER).map((label) => (
               <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 38, fontFamily: F.mono, fontSize: 13, letterSpacing: '1.4px', color: C.dim, whiteSpace: 'nowrap' }}>
                 {label}
               </span>

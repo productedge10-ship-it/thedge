@@ -76,9 +76,77 @@ routes['/'] = {
       { href: '/uk/blog', text: 'Блог: психологія, ризик і статистика трейдера' },
       ...postsFor('uk').slice(0, 5).map((p) => ({ href: `/uk/blog/${p.slug}`, text: p.title })),
       { href: '/terms', text: 'Умови, ціни й повернення коштів' },
+      { href: '/en', text: 'English version' },
     ],
   },
 };
+
+/* Англійська головна. Окрема адреса, а не та сама / з іншим текстом:
+   Google показує в кожній країні ту версію, що на неї вказує hreflang,
+   а для цього в кожної мови має бути своя адреса. x-default — куди
+   вести тих, чия мова не українська й не англійська: на англійську. */
+const HOME_ALTERNATES = [
+  { lang: 'uk', href: `${ORIGIN}/` },
+  { lang: 'en', href: `${ORIGIN}/en` },
+  { lang: 'x-default', href: `${ORIGIN}/en` },
+];
+routes['/'].alternates = HOME_ALTERNATES;
+
+routes['/en'] = {
+  title: 'Trading Journal with MetaTrader 5 Auto-Import — THE EDGE',
+  description: 'Free trading journal for forex, crypto and prop firm traders. Automatic MetaTrader 5 trade import, R-multiple stats, win rate, session analytics and mistake tracking. Pro from $12/mo, 14-day free trial.',
+  canonical: `${ORIGIN}/en`,
+  lang: 'en',
+  locale: 'en_US',
+  imageAlt: 'THE EDGE — trading journal for traders',
+  alternates: HOME_ALTERNATES,
+  replaceLd: true,
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${ORIGIN}/#organization`,
+        name: 'THE EDGE',
+        alternateName: 'The Edge trading journal',
+        url: `${ORIGIN}/`,
+        logo: `${ORIGIN}/edge-logo.png`,
+        sameAs: ['https://www.instagram.com/theedge.space/', 'https://t.me/theedgejournal'],
+      },
+      {
+        '@type': 'SoftwareApplication',
+        name: 'THE EDGE',
+        alternateName: 'The Edge trading journal',
+        applicationCategory: 'FinanceApplication',
+        operatingSystem: 'Web',
+        inLanguage: 'en',
+        url: `${ORIGIN}/en`,
+        description: 'Trading journal with automatic MetaTrader 5 trade import, analytics by session, asset and setup, prop firm account tracking and an AI coach (in development).',
+        offers: [
+          { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'USD' },
+          { '@type': 'Offer', name: 'Pro monthly', price: '15', priceCurrency: 'USD' },
+          { '@type': 'Offer', name: 'Pro yearly', price: '144', priceCurrency: 'USD' },
+        ],
+        publisher: { '@id': `${ORIGIN}/#organization` },
+      },
+    ],
+  },
+  body: {
+    h1: 'Trading journal with automatic MetaTrader 5 trade import',
+    text: [
+      'THE EDGE is a trading journal that does the math for you: R-multiple, win rate, profit factor, drawdown, and results by session (Asia, London, New York), asset and setup.',
+      'MetaTrader 5 auto-import: trades arrive in the journal on their own — with stops, targets, candles around the entry and time in the market. Works with prop firms such as FTMO, The5ers, Alpha Capital, Blue Guardian, FundingPips, CryptoFundTrader and any standard MT5 account. The connection uses the read-only investor password.',
+      'A mistakes log shows which habits drain the account; the backtester runs a strategy over history with the same metrics. Coming soon: an AI cat coach that reviews your trades and finds systematic mistakes.',
+      'Free plan — forever. Pro — $15 a month or $144 a year, with the first 14 days free.',
+    ].join(' '),
+    links: [
+      { href: '/en/blog', text: 'Blog: trading psychology, risk and journal statistics' },
+      ...postsFor('en').slice(0, 5).map((p) => ({ href: `/en/blog/${p.slug}`, text: p.title })),
+      { href: '/', text: 'Українська версія' },
+    ],
+  },
+};
+addUrl('/en', '1.0', 'weekly', today);
 
 routes['/terms'] = {
   title: 'Умови користування — The Edge',

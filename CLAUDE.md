@@ -27,11 +27,11 @@ React 19 + Vite 8 (rolldown), Tailwind 3 + інлайнові стилі на т
 
 `src/pages/Landing.jsx` + `src/components/landing/v3/*` (Hero, Steps, Difference, AutoImport, Product, Coach, Closing).
 `v3/base.jsx` — кольори `C.*` (`bg #08080c`, `panel #0e0e14`, `acc #8b7bff`), `KEYFRAMES`, `Eyebrow/H2/Sub/Section/Cat/Glow`.
-`src/lib/i18n.js` — три словники (en/uk/ru) для лендінга.
+Мови лендінга: `/` — українська, `/en` — англійська (маршрут у `App.jsx`, `<Landing lang>`). `v3/lang.js` — контекст мови, `useTx()` → `tx('укр', 'eng')`, `pick(lang, {uk, en})` для списків-констант. Перемикач UA/EN у хедері веде між адресами й пише вибір у localStorage `edge_lang`; перший візит з неукраїнського браузера (не бот) `Landing` переводить на `/en`. Теги й hreflang (`uk`, `en`, `x-default` → `/en`) — у `scripts/seo-routes.mjs`, `server.mjs` вміє `locale`, `imageAlt`, `replaceLd`. **Російської на сайті немає** (з вересня 2026): старі `/ru/*` → 301 на `/uk/*` у `server.mjs`. Новий текст на лендінгу — одразу парою `tx(uk, en)`.
 
 ## Блог (публічний, без входу)
 
-Адреси: `/:lang/blog`, `/:lang/blog/category/:cat`, `/:lang/blog/tag/:tag`, `/:lang/blog/:slug`; `/blog` → редирект за мовою браузера. Мови: `uk | ru | en`.
+Адреси: `/:lang/blog`, `/:lang/blog/category/:cat`, `/:lang/blog/tag/:tag`, `/:lang/blog/:slug`; `/blog` → редирект за мовою браузера. Мови: `uk | en`.
 
 | Файл | Що там |
 | --- | --- |

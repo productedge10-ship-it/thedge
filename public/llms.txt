@@ -1,29 +1,28 @@
-# THE EDGE
+# THE EDGE — trading journal
 
-> Журнал угод для трейдера: тягне угоди з MetaTrader 5, сам рахує статистику й показує, які звички зливають депозит. Українською.
+> THE EDGE (theedgecat.com) is a web trading journal for forex, crypto, indices and prop firm traders. It imports trades automatically from MetaTrader 5, calculates the statistics itself and shows which habits cost the trader money. Available in English and Ukrainian.
 
-THE EDGE — це не сигнали й не навчання торгівлі. Це облік: трейдер записує план і угоди, а застосунок рахує результат і показує повторювані помилки. Інтерфейс українською, дані живуть у профілі користувача.
+THE EDGE is not a signal service and not a trading course. It is record-keeping: the trader writes the plan and the reasons behind trades, and the app calculates results and surfaces repeated mistakes.
 
-## Сторінки
+## Key facts
 
-- [Головна](https://theedgecat.com/): що всередині продукту, автоімпорт з MetaTrader 5, AI-коуч, тарифи, часті питання.
-- [Блог українською](https://theedgecat.com/uk/blog): статті про ведення журналу, дисципліну та роботу з власною статистикою.
-- [Блог російською](https://theedgecat.com/ru/blog): ті самі матеріали російською.
-- [Блог англійською](https://theedgecat.com/en/blog): ті самі матеріали англійською.
-- [Умови користування](https://theedgecat.com/terms): правила сервісу.
+- Automatic trade import from MetaTrader 5 via the read-only investor password (it cannot trade or withdraw funds). Works with standard MT5 brokers and prop firms such as FTMO, The5ers, Alpha Capital, Blue Guardian, FundingPips and CryptoFundTrader.
+- Statistics: R-multiple, win rate, profit factor, expectancy, drawdown; breakdowns by session (Asia, London, New York), asset, setup, weekday and emotional state.
+- Daily plan with a pre-session state check, trade journal, weekly reviews, mistakes log, backtesting, the "20-trade method" discipline exercise, prop account tracking with payouts.
+- AI coach that reviews the trader's own trades — in development, not yet released.
+- Pricing: Free plan forever. Pro — $15/month or $144/year, 14-day free trial.
+- Data is locked to the user's account at the database level; nothing is public unless the user creates a share link. CSV export is always available.
 
-## Розділи застосунку
+## Pages
 
-Доступні після входу, тому для сканування закриті:
+- [Home (English)](https://theedgecat.com/en): product overview, MT5 auto-import, AI coach, pricing, FAQ.
+- [Home (Ukrainian)](https://theedgecat.com/): the same in Ukrainian.
+- [Blog (English)](https://theedgecat.com/en/blog): trading psychology, risk management and journal statistics.
+- [Blog (Ukrainian)](https://theedgecat.com/uk/blog)
+- [Terms of service (Ukrainian)](https://theedgecat.com/terms)
 
-- План дня — розмітка угоди до входу в ринок.
-- Журнал угод — записи з імпортом із MetaTrader 5.
-- Аналітика — статистика по сесіях, активах і часу.
-- Журнал помилок — облік повторюваних промахів.
-- Бектест і метод 20 угод — перевірка системи на історії.
+## Notes
 
-## Примітки
-
-- Застосунок не дає інвестиційних порад і не обіцяє прибутковості.
-- Технічні та службові шляхи (`/app`, `/auth`, `/demo`, `/shared/`) закриті в robots.txt і індексації не потребують.
-- Контакт: edge95944@gmail.com
+- The app gives no investment advice and does not promise profitability.
+- Technical paths (`/app`, `/auth`, `/demo`, `/shared/`) are closed in robots.txt and do not need indexing.
+- Contact: edge95944@gmail.com · Telegram: https://t.me/theedgejournal · Instagram: https://www.instagram.com/theedge.space/

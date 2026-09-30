@@ -189,11 +189,11 @@ export default function OnboardingModal() {
                 <div className="min-w-0">
                   <EdgeWordmark size={13} />
                   <div className="mt-1 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                    {stage === 'ask' && 'Расскажи о себе — и советы станут про тебя'}
-                    {stage === 'portrait' && 'Вот что я о тебе понял'}
-                    {stage === 'pick' && 'Соберём меню под тебя'}
-                    {stage === 'mt5' && 'Осталось привезти сюда твои сделки'}
-                    {stage === 'offer' && 'Последнее — и отпускаю'}
+                    {stage === 'ask' && 'Розкажи про себе — і поради стануть про тебе'}
+                    {stage === 'portrait' && 'Ось що я про тебе зрозумів'}
+                    {stage === 'pick' && 'Зберемо меню під тебе'}
+                    {stage === 'mt5' && 'Лишилось привезти сюди твої угоди'}
+                    {stage === 'offer' && 'Останнє — і відпускаю'}
                   </div>
                 </div>
 
@@ -203,7 +203,7 @@ export default function OnboardingModal() {
                   style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text3 }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
-                  title="Отвечу позже"
+                  title="Відповім пізніше"
                 >
                   <X size={16} strokeWidth={2.4} />
                 </button>
@@ -292,8 +292,8 @@ function Question({ q, index, onAnswer, onBack, onLater, canBack }) {
       </AnimatePresence>
 
       <div className="flex gap-3">
-        <Answer label="Да" tone={T.ok} rgb={T.okRgb} onClick={() => onAnswer(true)} />
-        <Answer label="Нет" tone={T.text2} rgb="180,180,189" onClick={() => onAnswer(false)} />
+        <Answer label="Так" tone={T.ok} rgb={T.okRgb} onClick={() => onAnswer(true)} />
+        <Answer label="Ні" tone={T.text2} rgb="180,180,189" onClick={() => onAnswer(false)} />
       </div>
 
       <div className="mt-5 flex items-center gap-4">
@@ -316,7 +316,7 @@ function Question({ q, index, onAnswer, onBack, onLater, canBack }) {
           onMouseEnter={(e) => { e.currentTarget.style.color = T.text2; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
         >
-          <Clock size={14} strokeWidth={2.4} /> Отвечу позже
+          <Clock size={14} strokeWidth={2.4} /> Відповім пізніше
         </button>
       </div>
     </div>
@@ -401,7 +401,7 @@ function Portrait({ p, onNext, onRestart }) {
             className="text-[11.5px] font-bold uppercase tracking-[0.16em]"
             style={{ fontFamily: T.sans, color: T.acc }}
           >
-            С чего начать
+            З чого почати
           </span>
         </div>
 
@@ -454,7 +454,7 @@ function Portrait({ p, onNext, onRestart }) {
             boxShadow: `0 16px 40px -16px rgba(${T.accRgb},0.9)`,
           }}
         >
-          <Check size={16} strokeWidth={3} /> Дальше
+          <Check size={16} strokeWidth={3} /> Далі
         </button>
 
         <button
@@ -464,7 +464,7 @@ function Portrait({ p, onNext, onRestart }) {
           onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
         >
-          <RotateCcw size={14} strokeWidth={2.4} /> Пройти заново
+          <RotateCcw size={14} strokeWidth={2.4} /> Пройти знову
         </button>
       </div>
     </div>
@@ -483,18 +483,18 @@ function Portrait({ p, onNext, onRestart }) {
    вводити будь-що, тому пояснення лежить прямо тут, а не в довідці.
 */
 
-/* ---------- с чего начать ----------
+/* ---------- з чого почати ----------
 
-   Из фидбека: «эффект перегруженности присутствует», и там же —
-   «за часик мне стало более-менее понятно, я для себя уже видел бы
-   элементы, с которыми работал бы в первую очередь».
+   З фідбеку (цитата, мовою автора): «эффект перегруженности
+   присутствует», і там же — за годину людині стало більш-менш
+   зрозуміло, з якими елементами вона працювала б насамперед.
 
-   Человек сам отбирает свой минимум — просто делает это через час
-   блужданий. Здесь мы даём сделать это сразу.
+   Людина сама відбирає свій мінімум — просто робить це після години
+   блукань. Тут ми даємо зробити це одразу.
 
-   Ничего не удаляется: скрытые разделы остаются на своих адресах и
-   возвращаются одной кнопкой в настройках. Поэтому шаг безопасный —
-   ошибиться тут нечем. */
+   Нічого не видаляється: приховані розділи лишаються на своїх адресах
+   і повертаються однією кнопкою в налаштуваннях. Тому крок безпечний —
+   помилитись тут нема чим. */
 const STARTER = ['/plan', '/journal', '/analytics'];
 
 function PickStep({ onDone }) {
@@ -520,9 +520,9 @@ function PickStep({ onDone }) {
       className="px-6 pb-6 sm:px-8 sm:pb-8"
     >
       <p className="mb-5 text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
-        Разделов здесь много — это нормально, но сразу все не нужны.
-        Отметь то, с чего начнёшь. Остальное спрячется из меню и
-        вернётся в один клик из настроек.
+        Розділів тут багато — це нормально, але одразу всі не потрібні.
+        Познач те, з чого почнеш. Решта сховається з меню й
+        повернеться в один клік із налаштувань.
       </p>
 
       <div className="mb-6 flex max-h-[320px] flex-col gap-4 overflow-y-auto custom-scrollbar pr-1">
@@ -571,7 +571,7 @@ function PickStep({ onDone }) {
           className="h-12 flex-1 rounded-xl text-[14px] font-bold transition-transform active:scale-[0.99]"
           style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
         >
-          Начать с этого ({picked.size})
+          Почати з цього ({picked.size})
         </button>
         <button
           onClick={() => apply(true)}
@@ -580,19 +580,19 @@ function PickStep({ onDone }) {
           onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
           onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
         >
-          Показать всё
+          Показати все
         </button>
       </div>
     </motion.div>
   );
 }
 
-/* ---------- предложение тура ----------
+/* ---------- пропозиція туру ----------
 
-   Отдельным экраном, а не строчкой в предыдущем: вопрос, приклеенный
-   к чужому шагу, читается как продолжение того шага и мимо него
-   проскакивают. Здесь у человека ровно два варианта и оба честные —
-   «нет» ничего не блокирует, тур всегда лежит в FAQ. */
+   Окремим екраном, а не рядком у попередньому: питання, приклеєне
+   до чужого кроку, читається як продовження того кроку, і його
+   проскакують. Тут у людини рівно два варіанти, і обидва чесні —
+   «ні» нічого не блокує, тур завжди лежить у FAQ. */
 function OfferStep({ onYes, onNo }) {
   return (
     <motion.div
@@ -615,12 +615,12 @@ function OfferStep({ onYes, onNo }) {
             className="mb-2 text-[19px] font-bold leading-[1.25]"
             style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
           >
-            Показать, что где лежит?
+            Показати, що де лежить?
           </h3>
           <p className="text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
-            Пролечу с тобой по разделам и расскажу, зачем каждый нужен —
-            это минута. Откажешься — ничего страшного: тур всегда можно
-            запустить из FAQ, он никуда не денется.
+            Пролечу з тобою по розділах і розповім, навіщо кожен потрібен —
+            це хвилина. Відмовишся — нічого страшного: тур завжди можна
+            запустити з FAQ, він нікуди не дінеться.
           </p>
         </div>
       </div>
@@ -631,7 +631,7 @@ function OfferStep({ onYes, onNo }) {
           className="h-12 flex-1 rounded-xl text-[14px] font-bold transition-transform active:scale-[0.99]"
           style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
         >
-          Давай, показывай
+          Давай, показуй
         </button>
         <button
           onClick={onNo}
@@ -640,7 +640,7 @@ function OfferStep({ onYes, onNo }) {
           onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
           onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
         >
-          Разберусь сам
+          Розберусь сам
         </button>
       </div>
     </motion.div>
@@ -685,10 +685,10 @@ function Mt5Step({ onDone }) {
             className="text-[19px] font-bold leading-tight"
             style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
           >
-            Пусть сделки приедут сами
+            Хай угоди приїдуть самі
           </h3>
           <p className="mt-1 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            MetaTrader 5 отдаст историю — тебе останется человеческая половина
+            MetaTrader 5 віддасть історію — тобі лишиться людська половина
           </p>
         </div>
       </div>
@@ -697,14 +697,14 @@ function Mt5Step({ onDone }) {
         <input
           value={server}
           onChange={(e) => setServer(e.target.value)}
-          placeholder="Сервер — напр. FTMO-Server или ICMarkets-Live12"
+          placeholder="Сервер — напр. FTMO-Server або ICMarkets-Live12"
           className="h-12 w-full rounded-xl px-4 text-[14px] outline-none"
           style={field}
         />
         <input
           value={login}
           onChange={(e) => setLogin(e.target.value)}
-          placeholder="Логин (номер счёта)"
+          placeholder="Логін (номер рахунку)"
           inputMode="numeric"
           className="h-12 w-full rounded-xl px-4 text-[14px] outline-none"
           style={field}
@@ -715,7 +715,7 @@ function Mt5Step({ onDone }) {
             value={pass}
             onChange={(e) => setPass(e.target.value)}
             type="password"
-            placeholder="Пароль инвестора"
+            placeholder="Пароль інвестора"
             className="h-12 w-full rounded-xl pl-4 pr-12 text-[14px] outline-none"
             style={field}
           />
@@ -726,7 +726,7 @@ function Mt5Step({ onDone }) {
               background: help ? `rgba(${T.accRgb},0.14)` : 'transparent',
               color: help ? T.acc : T.text4,
             }}
-            title="Где взять пароль инвестора"
+            title="Де взяти пароль інвестора"
           >
             <HelpCircle size={16} strokeWidth={2.4} />
           </button>
@@ -750,21 +750,21 @@ function Mt5Step({ onDone }) {
                 className="mb-2 text-[11.5px] font-bold uppercase tracking-[0.16em]"
                 style={{ fontFamily: T.sans, color: T.acc }}
               >
-                Где взять пароль инвестора
+                Де взяти пароль інвестора
               </div>
               <ol
                 className="flex list-decimal flex-col gap-1.5 pl-4 text-[13px]"
                 style={{ fontFamily: T.sans, color: T.text2, lineHeight: 1.55 }}
               >
-                <li>Зайди в кабинет пропа или брокера, где лежит твой счёт.</li>
-                <li>Найди карточку счёта — там обычно есть вкладка «Credentials» или «Данные для входа».</li>
-                <li>Скопируй оттуда имя сервера, номер счёта и именно <b style={{ color: T.text }}>Investor password</b>.</li>
-                <li>В самом терминале его тоже можно задать: Сервис → Настройки → Сервер → Изменить пароль → Investor.</li>
+                <li>Зайди в кабінет пропа або брокера, де лежить твій рахунок.</li>
+                <li>Знайди картку рахунку — там зазвичай є вкладка «Credentials» або «Дані для входу».</li>
+                <li>Скопіюй звідти імʼя сервера, номер рахунку й саме <b style={{ color: T.text }}>Investor password</b>.</li>
+                <li>У самому терміналі його теж можна задати: Сервіс → Налаштування → Сервер → Змінити пароль → Investor.</li>
               </ol>
               <p className="mt-3 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.55 }}>
-                Пароль инвестора позволяет только смотреть историю. Торговать
-                или выводить деньги с ним невозможно — поэтому его и просим
-                вместо основного.
+                Пароль інвестора дозволяє лише дивитись історію. Торгувати
+                чи виводити гроші з ним неможливо — тому саме його й просимо
+                замість основного.
               </p>
             </div>
           </motion.div>
@@ -785,7 +785,7 @@ function Mt5Step({ onDone }) {
             cursor: ready ? 'pointer' : 'default',
           }}
         >
-          <Download size={16} strokeWidth={2.8} /> Подключить
+          <Download size={16} strokeWidth={2.8} /> Підключити
         </button>
 
         <button
@@ -795,7 +795,7 @@ function Mt5Step({ onDone }) {
           onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
         >
-          Пропустить
+          Пропустити
         </button>
       </div>
     </div>

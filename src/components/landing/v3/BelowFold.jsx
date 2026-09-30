@@ -6,6 +6,7 @@ import Product from './Product';
 import Coach from './Coach';
 import { Rhythm, NotDoing, Pricing, FinalFaq } from './Closing';
 import { OWNER } from '../../../lib/terms';
+import { useLang, useTx, pick } from './lang';
 
 /* ==================================================================
    Усе, що нижче першого екрана.
@@ -29,7 +30,8 @@ import { OWNER } from '../../../lib/terms';
    упритул під героєм, а потім поїхав вниз, коли приїде решта.
 ================================================================== */
 
-const FOOTER_COLS = [
+const FOOTER_COLS = {
+  uk: [
   { title: 'ПРОДУКТ', links: [['#product', 'Що всередині'], ['#autoimport', 'Автоімпорт'], ['#coach', 'AI-коуч']] },
   { title: 'ТАРИФИ', links: [['#pricing', 'Ціни'], ['#pricing', 'Free'], ['#pricing', 'Pro']] },
   { title: 'ДОВІДКА', links: [['#faq', 'Питання'], ['/uk/blog', 'Блог'], ['#autoimport', 'Твої дані'], ['#faq', 'Підключення MT5']] },
@@ -37,7 +39,15 @@ const FOOTER_COLS = [
      тоді, коли вже щось сталося, — і знаходити їх мають там, де
      шукають решту посилань, а не в підвалі підвалу. */
   { title: 'ПРАВО', links: [['/terms', 'Публічна оферта'], ['/terms#billing', 'Оплата і повернення коштів'], ['/terms#contacts', 'Контакти']] },
-];
+  ],
+  /* Умови поки лише українською — підпис чесно каже про це. */
+  en: [
+    { title: 'PRODUCT', links: [['#product', 'What’s inside'], ['#autoimport', 'Auto-import'], ['#coach', 'AI coach']] },
+    { title: 'PLANS', links: [['#pricing', 'Pricing'], ['#pricing', 'Free'], ['#pricing', 'Pro']] },
+    { title: 'HELP', links: [['#faq', 'FAQ'], ['/en/blog', 'Blog'], ['#autoimport', 'Your data'], ['#faq', 'Connecting MT5']] },
+    { title: 'LEGAL', links: [['/terms', 'Terms of service (UA)'], ['/terms#billing', 'Payments and refunds (UA)'], ['/terms#contacts', 'Contacts']] },
+  ],
+};
 
 /* Де нас знайти. Іконки намальовані тут, а не взяті з lucide: у
    першій версії бібліотеки логотипи брендів прибрали зовсім.
@@ -50,12 +60,14 @@ const SOCIAL = [
   {
     href: 'https://t.me/theedgejournal',
     label: 'Telegram-канал',
+    labelEn: 'Telegram channel',
     track: 'footer.telegram',
     icon: <path d={TG_PATH} fill="currentColor" />,
   },
   {
     href: 'https://www.instagram.com/theedge.space/',
     label: 'Instagram',
+    labelEn: 'Instagram',
     track: 'footer.instagram',
     icon: (
       <g fill="none" stroke="currentColor" strokeWidth="1.9">
@@ -68,6 +80,7 @@ const SOCIAL = [
   {
     href: 'https://t.me/thedgesupport',
     label: 'Підтримка',
+    labelEn: 'Support',
     track: 'footer.support',
     icon: (
       <g fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -80,6 +93,7 @@ const SOCIAL = [
 ];
 
 function Social() {
+  const lang = useLang();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
       {SOCIAL.map((s) => (
@@ -115,7 +129,7 @@ function Social() {
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">{s.icon}</svg>
-          {s.label}
+          {lang === 'en' ? s.labelEn : s.label}
         </a>
       ))}
     </div>
@@ -123,6 +137,8 @@ function Social() {
 }
 
 function Footer() {
+  const lang = useLang();
+  const tx = useTx();
   return (
     <footer style={{ borderTop: '1px solid rgba(255,255,255,.06)', background: '#0a0a0e' }}>
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '40px 32px', display: 'flex', gap: 44, flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -141,7 +157,7 @@ function Footer() {
           <Social />
         </div>
 
-        {FOOTER_COLS.map((col) => (
+        {pick(lang, FOOTER_COLS).map((col) => (
           <div key={col.title} style={{ flex: '0 1 150px' }}>
             <div style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 700, letterSpacing: '1.6px', color: C.dim, marginBottom: 14 }}>{col.title}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -172,7 +188,7 @@ function Footer() {
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 28px', fontFamily: F.sans, fontSize: 12, lineHeight: 1.7, color: '#5d5d70' }}>
         {[
           OWNER.name,
-          OWNER.code && `РНОКПП ${OWNER.code}`,
+          OWNER.code && `${tx('РНОКПП', 'Tax ID')} ${OWNER.code}`,
           OWNER.tax,
           OWNER.address,
           OWNER.iban && `IBAN ${OWNER.iban}`,

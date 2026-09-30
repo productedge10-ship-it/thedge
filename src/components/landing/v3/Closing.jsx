@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, Ban, Check, ChevronDown, Gift, TriangleAlert } from 'lucide-react';
 import { C, F, A, reducedMotion, SHELL, SoonTag, PriceRoll } from './base';
 import { useUahRate, toUah, fmtUah, TRIAL_DAYS } from '../../../lib/billing';
+import { useLang, useTx, pick } from './lang';
 
 /* ==================================================================
    Хвіст сторінки: ритм дня, чого ми не робимо, ціни, питання, футер.
@@ -10,7 +11,8 @@ import { useUahRate, toUah, fmtUah, TRIAL_DAYS } from '../../../lib/billing';
    із них не викладений стовпчиком однакових карток.
 ================================================================== */
 
-const RHYTHM = [
+const RHYTHM = {
+  uk: [
   {
     time: '09:40 · ПЕРЕД СЕСІЄЮ', label: 'План: рівні, напрямок, чого чекаю', dur: '2 хвилини',
     title: 'КАРТКА ПЛАНУ',
@@ -26,28 +28,48 @@ const RHYTHM = [
     title: 'РОЗБІР ДНЯ',
     rows: [['Дисципліна', '86%', C.ok], ['Порушень', '1', C.warn], ['Правило', 'додано', C.acc]],
   },
-];
+  ],
+  en: [
+    {
+      time: '09:40 · BEFORE THE SESSION', label: 'Plan: levels, bias, what I’m waiting for', dur: '2 minutes',
+      title: 'PLAN CARD',
+      rows: [['Bias', 'LONG', C.ok], ['Level', '2 412.80', C.text2], ['State', '5 / 5', C.acc]],
+    },
+    {
+      time: '15:30 · TRADE', label: 'Entry with a reason and a screenshot', dur: '20 seconds',
+      title: 'JOURNAL ROW',
+      rows: [['XAUUSD · swing + FVG', '+2.4R', C.ok], ['State', 'Calm', C.text2], ['Screenshot', 'yes', C.acc]],
+    },
+    {
+      time: '22:00 · EVENING', label: 'Review: what worked, what didn’t, one rule', dur: '5 minutes',
+      title: 'DAY REVIEW',
+      rows: [['Discipline', '86%', C.ok], ['Violations', '1', C.warn], ['Rule', 'added', C.acc]],
+    },
+  ],
+};
 
 export function Rhythm() {
+  const lang = useLang();
+  const tx = useTx();
   return (
     <section style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>РИТМ</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('РИТМ', 'RHYTHM')}</span>
       </div>
 
       <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(26px,2.3vw,44px)', letterSpacing: '-1.6px', lineHeight: 1.1, margin: '0 0 12px', color: '#fff' }}>
-        Три дотики за день
+        {tx('Три дотики за день', 'Three touches a day')}
       </h2>
       <p style={{ fontFamily: F.sans, fontSize: 16.5, lineHeight: 1.5, color: '#8a8a9c', margin: '0 0 30px', maxWidth: 680 }}>
-        Журнал не забирає час. Він забирає рішення, які ти й так приймаєш — і залишає їх на папері
+        {tx('Журнал не забирає час. Він забирає рішення, які ти й так приймаєш — і залишає їх на папері', 'The journal doesn’t take your time. It takes the decisions you already make — and keeps them on paper')}
       </p>
 
       <div style={{ position: 'relative' }}>
         <span style={{ position: 'absolute', top: 7, left: '10%', right: '10%', height: 1, background: 'rgba(255,255,255,.07)' }} />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(250px,100%),1fr))', gap: 24, position: 'relative' }}>
-          {RHYTHM.map((r) => (
+          {pick(lang, RHYTHM).map((r) => (
             <div key={r.time} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <div style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '1.2px', color: C.accSoft, marginTop: 18, marginBottom: 8 }}>{r.time}</div>
               <div style={{ fontFamily: F.sans, fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 14 }}>{r.label}</div>
@@ -71,7 +93,7 @@ export function Rhythm() {
       </div>
 
       <div style={{ textAlign: 'center', fontFamily: F.sans, fontSize: 14.5, fontWeight: 700, color: C.accSoft, marginTop: 26 }}>
-        Разом — менше десяти хвилин на день
+        {tx('Разом — менше десяти хвилин на день', 'Less than ten minutes a day in total')}
       </div>
     </section>
   );
@@ -79,9 +101,14 @@ export function Rhythm() {
 
 /* ---------- чого ми не робимо ---------- */
 
-const NOT_DOING = ['Не даємо сигналів', 'Не керуємо твоїми грошима', 'Не обіцяємо прибуток', 'Не продаємо твої дані'];
+const NOT_DOING = {
+  uk: ['Не даємо сигналів', 'Не керуємо твоїми грошима', 'Не обіцяємо прибуток', 'Не продаємо твої дані'],
+  en: ['We don’t give signals', 'We don’t manage your money', 'We don’t promise profit', 'We don’t sell your data'],
+};
 
 export function NotDoing() {
+  const lang = useLang();
+  const tx = useTx();
   return (
     <section style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ position: 'relative', background: 'linear-gradient(150deg,rgba(245,163,59,.11),rgba(245,163,59,.03) 55%,transparent)', border: '1px solid rgba(245,163,59,.3)', borderRadius: 24, padding: 'clamp(18px,4.5vw,30px)', overflow: 'hidden' }}>
@@ -92,19 +119,19 @@ export function NotDoing() {
           <div style={{ flex: '1 1 300px', minWidth: 'min(260px,100%)' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, background: 'rgba(245,163,59,.14)', border: '1px solid rgba(245,163,59,.4)', borderRadius: 999, padding: '7px 14px', marginBottom: 18 }}>
               <TriangleAlert size={14} strokeWidth={2.2} color={C.warn} />
-              <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.4px', color: C.warn }}>ЧИТАЙ ПЕРЕД РЕЄСТРАЦІЄЮ</span>
+              <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.4px', color: C.warn }}>{tx('ЧИТАЙ ПЕРЕД РЕЄСТРАЦІЄЮ', 'READ BEFORE SIGNING UP')}</span>
             </div>
 
             <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(26px,2.3vw,44px)', letterSpacing: '-1.6px', lineHeight: 1.1, margin: '0 0 12px', color: '#fff' }}>
-              Чого ми не робимо
+              {tx('Чого ми не робимо', 'What we don’t do')}
             </h2>
             <p style={{ fontFamily: F.sans, fontSize: 15, lineHeight: 1.6, color: '#c4a882', margin: 0, maxWidth: 380 }}>
-              Журнал не заробляє замість тебе. Він показує, де ти вже заробляєш, а де ні
+              {tx('Журнал не заробляє замість тебе. Він показує, де ти вже заробляєш, а де ні', 'The journal doesn’t make money for you. It shows where you already make it and where you don’t')}
             </p>
           </div>
 
           <div style={{ flex: '1 1 420px', minWidth: 'min(280px,100%)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(190px,100%),1fr))', gap: 11 }}>
-            {NOT_DOING.map((t) => (
+            {pick(lang, NOT_DOING).map((t) => (
               <div
                 key={t}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(245,163,59,.07)', border: '1px solid rgba(245,163,59,.26)', borderRadius: 14, padding: '15px 16px', transition: 'border-color .2s ease,background .2s ease' }}
@@ -124,30 +151,55 @@ export function NotDoing() {
 
 /* ---------- ціни ---------- */
 
-const FREE = ['План на день', 'Журнал без обмежень', 'Діагностика перед сесією', 'Задачі й чекліст', 'Документи торгової системи'];
+const FREE = {
+  uk: ['План на день', 'Журнал без обмежень', 'Діагностика перед сесією', 'Задачі й чекліст', 'Документи торгової системи'],
+  en: ['Daily plan', 'Unlimited journal', 'Pre-session check-in', 'Tasks and checklist', 'Trading system docs'],
+};
 /* `soon` — це не позначка «колись». Поки функції немає, вона не має
    виглядати частиною того, за що людина платить сьогодні: інакше
    перший же тиждень підписки закінчується питанням «а де AI». */
-const PRO = [
-  'Повна аналітика',
-  'Бектести',
-  'Автоімпорт MT5',
-  'Пропрахунки з виплатами',
-  'Картки статистики',
-  { text: 'AI-коуч на твоїх угодах', soon: true },
-];
-const COMPARE = [
-  ['Всі угоди в одному місці', true],
-  ['Рахує R і профіт-фактор', false],
-  ['Бачить, який сетап платить', false],
-  ['Ловить повтори помилок', false],
-  ['Пише правило з твого висновку', false],
-  ['Імпорт із MT5', false],
-];
+const PRO = {
+  uk: [
+    'Повна аналітика',
+    'Бектести',
+    'Автоімпорт MT5',
+    'Пропрахунки з виплатами',
+    'Картки статистики',
+    { text: 'AI-коуч на твоїх угодах', soon: true },
+  ],
+  en: [
+    'Full analytics',
+    'Backtests',
+    'MT5 auto-import',
+    'Prop accounts with payouts',
+    'Stats cards',
+    { text: 'AI coach on your trades', soon: true },
+  ],
+};
+const COMPARE = {
+  uk: [
+    ['Всі угоди в одному місці', true],
+    ['Рахує R і профіт-фактор', false],
+    ['Бачить, який сетап платить', false],
+    ['Ловить повтори помилок', false],
+    ['Пише правило з твого висновку', false],
+    ['Імпорт із MT5', false],
+  ],
+  en: [
+    ['All trades in one place', true],
+    ['Calculates R and profit factor', false],
+    ['Sees which setup pays', false],
+    ['Catches repeated mistakes', false],
+    ['Turns your takeaway into a rule', false],
+    ['Import from MT5', false],
+  ],
+};
 
 const COMPARE_GRID = 'minmax(0,2fr) minmax(0,1fr) minmax(0,1fr)';
 
 export function Pricing() {
+  const lang = useLang();
+  const tx = useTx();
   const [yearly, setYearly] = useState(false);
   const rate = useUahRate();
   const uahMonth = toUah(yearly ? 12 : 15, rate);
@@ -193,12 +245,12 @@ export function Pricing() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>ЦІНИ</span>
+            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('ЦІНИ', 'PRICING')}</span>
           </div>
           <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 10px', color: '#fff' }}>
-            Дешевше за одну погану угоду
+            {tx('Дешевше за одну погану угоду', 'Cheaper than one bad trade')}
           </h2>
-          <p style={{ fontFamily: F.sans, fontSize: 16.5, color: '#8a8a9c', margin: 0 }}>Почни безкоштовно і залиш журнал назавжди</p>
+          <p style={{ fontFamily: F.sans, fontSize: 16.5, color: '#8a8a9c', margin: 0 }}>{tx('Почни безкоштовно і залиш журнал назавжди', 'Start free and keep the journal forever')}</p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 13, flexWrap: 'wrap' }}>
@@ -212,8 +264,8 @@ export function Pricing() {
                 transition: reduced ? 'none' : 'transform .38s cubic-bezier(.34,1.3,.5,1)',
               }}
             />
-            <button type="button" onClick={() => setYearly(false)} style={tab(!yearly)}>Місяць</button>
-            <button type="button" onClick={() => setYearly(true)} style={tab(yearly)}>Рік</button>
+            <button type="button" onClick={() => setYearly(false)} style={tab(!yearly)}>{tx('Місяць', 'Monthly')}</button>
+            <button type="button" onClick={() => setYearly(true)} style={tab(yearly)}>{tx('Рік', 'Yearly')}</button>
           </div>
 
         </div>
@@ -224,17 +276,17 @@ export function Pricing() {
           <div style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2px', color: C.text4, marginBottom: 16 }}>FREE</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 10 }}>
             <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}>$0</span>
-            <span style={{ fontFamily: F.sans, fontSize: 15, color: '#7d7d90' }}>назавжди</span>
+            <span style={{ fontFamily: F.sans, fontSize: 15, color: '#7d7d90' }}>{tx('назавжди', 'forever')}</span>
           </div>
-          <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22 }}>Усе, щоб виробити звичку</div>
-          {feat(FREE, C.text4, '#b8b8c8')}
+          <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22 }}>{tx('Усе, щоб виробити звичку', 'Everything to build the habit')}</div>
+          {feat(pick(lang, FREE), C.text4, '#b8b8c8')}
           <a
             href="/auth"
             style={{ marginTop: 'auto', width: '100%', background: 'transparent', border: '1px solid rgba(255,255,255,.13)', color: C.text, fontFamily: F.sans, fontSize: 14.5, fontWeight: 700, padding: 14, borderRadius: 13, cursor: 'pointer', textAlign: 'center', transition: 'all .2s' }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.45); e.currentTarget.style.background = A(0.07); }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.13)'; e.currentTarget.style.background = 'transparent'; }}
           >
-            Почати безкоштовно
+            {tx('Почати безкоштовно', 'Start free')}
           </a>
         </div>
 
@@ -244,7 +296,7 @@ export function Pricing() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginBottom: 16 }}>
             <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2px', color: C.accSoft }}>PRO</span>
             <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.2px', color: '#fff', background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, borderRadius: 999, padding: '7px 14px', whiteSpace: 'nowrap' }}>
-              НАЙКОРИСНІШЕ
+              {tx('НАЙКОРИСНІШЕ', 'MOST VALUE')}
             </span>
           </div>
 
@@ -255,9 +307,11 @@ export function Pricing() {
               style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}
             />
             <span style={{ fontFamily: F.sans, fontSize: 15, color: '#7d7d90' }}>
-              / місяць
-              {/* Гривня за курсом НБУ на сьогодні — довідково, поруч із доларом. */}
-              {uahMonth ? <span style={{ color: '#5d5d70' }}> · ≈ {fmtUah(uahMonth)}</span> : null}
+              {tx('/ місяць', '/ month')}
+              {/* Гривня за курсом НБУ на сьогодні — довідково, поруч із
+                  доларом. На англійській сторінці гривня нікому не
+                  допомагає, тому там лише долар. */}
+              {uahMonth && lang !== 'en' ? <span style={{ color: '#5d5d70' }}> · ≈ {fmtUah(uahMonth)}</span> : null}
             </span>
           </div>
 
@@ -277,13 +331,17 @@ export function Pricing() {
                 animation: reduced ? 'none' : 'lnSubIn .42s cubic-bezier(.4,0,.2,1) .16s both',
               }}
             >
-              {yearly
-                ? `$144 на рік${uahYear ? ` (≈ ${fmtUah(uahYear)})` : ''} — на $36 дешевше`
-                : `${TRIAL_DAYS} днів безкоштовно · лише привʼязка картки, 1 ₴ одразу повертаємо`}
+              {lang === 'en'
+                ? (yearly
+                  ? '$144 a year — $36 cheaper'
+                  : `${TRIAL_DAYS} days free · card link only, the tiny verification charge is refunded instantly`)
+                : (yearly
+                  ? `$144 на рік${uahYear ? ` (≈ ${fmtUah(uahYear)})` : ''} — на $36 дешевше`
+                  : `${TRIAL_DAYS} днів безкоштовно · лише привʼязка картки, 1 ₴ одразу повертаємо`)}
             </span>
           </div>
 
-          {feat(PRO, C.acc, '#dcdce8')}
+          {feat(pick(lang, PRO), C.acc, '#dcdce8')}
 
           {/* Намір несемо в адресі, а не в localStorage.
 
@@ -298,7 +356,7 @@ export function Pricing() {
             onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 18px 46px rgba(74,59,245,.55)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 14px 36px rgba(74,59,245,.4)'; }}
           >
-            Почати безкоштовно
+            {tx('Почати безкоштовно', 'Start free')}
           </a>
 
           {/* Обіцянка раннім підписникам. Стоїть під кнопкою, а не над
@@ -308,7 +366,9 @@ export function Pricing() {
           <div style={{ marginTop: 14, display: 'flex', gap: 9, alignItems: 'flex-start', borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: 14 }}>
             <Gift size={15} strokeWidth={2.2} color={C.accSoft} style={{ flexShrink: 0, marginTop: 2 }} />
             <span style={{ fontFamily: F.sans, fontSize: 13, lineHeight: 1.5, color: '#9a9ab0' }}>
-              Оформив підписку до виходу AI-коуча — отримаєш <b style={{ color: '#fff' }}>два тижні нейромережі в подарунок</b> у день запуску
+              {tx('Оформив підписку до виходу AI-коуча — отримаєш', 'Subscribe before the AI coach launches and get')}{' '}
+              <b style={{ color: '#fff' }}>{tx('два тижні нейромережі в подарунок', 'two weeks of the AI coach as a gift')}</b>{' '}
+              {tx('у день запуску', 'on launch day')}
             </span>
           </div>
         </div>
@@ -316,12 +376,12 @@ export function Pricing() {
 
       <div style={{ marginTop: 26, border: '1px solid rgba(255,255,255,.07)', borderRadius: 18, overflow: 'hidden' }}>
         <div style={{ display: 'grid', gridTemplateColumns: COMPARE_GRID, gap: 12, padding: '15px 22px', background: '#0d0d13', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-          <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.2px', color: C.text4 }}>ЩО ВМІЄ</span>
-          <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.2px', color: C.text4, textAlign: 'center' }}>ЗВИЧАЙНИЙ ЖУРНАЛ</span>
+          <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.2px', color: C.text4 }}>{tx('ЩО ВМІЄ', 'WHAT IT DOES')}</span>
+          <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.2px', color: C.text4, textAlign: 'center' }}>{tx('ЗВИЧАЙНИЙ ЖУРНАЛ', 'A REGULAR JOURNAL')}</span>
           <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.2px', color: C.accSoft, textAlign: 'center' }}>EDGE JOURNAL</span>
         </div>
 
-        {COMPARE.map(([k, basic]) => (
+        {pick(lang, COMPARE).map(([k, basic]) => (
           <div key={k} style={{ display: 'grid', gridTemplateColumns: COMPARE_GRID, gap: 12, alignItems: 'center', padding: '14px 22px', borderBottom: '1px solid rgba(255,255,255,.035)', background: C.sunken }}>
             <span style={{ fontFamily: F.sans, fontSize: 14, color: '#b8b8c8' }}>{k}</span>
             <span style={{ display: 'flex', justifyContent: 'center' }}>
@@ -337,7 +397,7 @@ export function Pricing() {
       </div>
 
       <div style={{ fontFamily: F.sans, fontSize: 13.5, color: C.text5, marginTop: 18 }}>
-        Скасувати можна будь-коли. Дані твої — експорт у CSV в один клік
+        {tx('Скасувати можна будь-коли. Дані твої — експорт у CSV в один клік', 'Cancel anytime. Your data is yours — one-click CSV export')}
       </div>
     </section>
   );
@@ -345,16 +405,28 @@ export function Pricing() {
 
 /* ---------- фінал + питання ---------- */
 
-const FAQ = [
+const FAQ = {
+  uk: [
   { chip: 'БЕЗПЕКА', q: 'Логін інвестора — це безпечно?', a: 'Так. Логін інвестора дає лише читання: подивитись історію й баланс. Торгувати, виводити кошти чи змінювати налаштування з ним неможливо технічно, на рівні самого MetaTrader' },
   { chip: 'ЧАС', q: 'Скільки часу це забирає щодня?', a: 'Двадцять секунд на угоду, дві хвилини на план і п’ять на вечірній розбір. Цифри й результат приїжджають з MT5 самі — руками ти дописуєш тільки причину входу й стан' },
   { chip: 'КОУЧ', q: 'Чим коуч відрізняється від ChatGPT?', a: 'Він не радить абстрактно, а працює з твоєю вибіркою: дисципліна, час входів, серії після стопу, ціна кожної звички в R. Порада завжди привʼязана до конкретних угод, які можна відкрити й перевірити' },
   { chip: 'ПРОП', q: 'А якщо я торгую на пропфірмі?', a: 'Проп-рахунки ведуться окремо: ліміт денної просадки, загальна просадка, прогрес до виплати й історія самих виплат. Один журнал тримає особисті й проп-рахунки одночасно' },
   { chip: 'ДАНІ', q: 'Мої угоди йдуть на навчання моделей?', a: 'Ні. Дані замкнені на твій акаунт на рівні бази й не використовуються для тренування. Публічним стає лише те, на що ти сам створиш посилання' },
   { chip: 'ОПЛАТА', q: 'Що буде, якщо я перестану платити?', a: 'Журнал і вся історія лишаються на безкоштовному плані — вимикаються тільки можливості Pro. Експорт у CSV доступний завжди, в один клік' },
-];
+  ],
+  en: [
+    { chip: 'SECURITY', q: 'Is the investor login safe?', a: 'Yes. The investor login is read-only: it can see history and balance. Trading, withdrawing funds or changing settings with it is technically impossible — that’s how MetaTrader itself works' },
+    { chip: 'TIME', q: 'How much time does it take each day?', a: 'Twenty seconds per trade, two minutes for the plan and five for the evening review. Numbers and results arrive from MT5 on their own — you only add the reason for the entry and your state' },
+    { chip: 'COACH', q: 'How is the coach different from ChatGPT?', a: 'It doesn’t give abstract advice — it works with your sample: discipline, entry times, streaks after a stop, the R cost of each habit. Every tip is tied to specific trades you can open and check' },
+    { chip: 'PROP', q: 'What if I trade a prop firm account?', a: 'Prop accounts are tracked separately: daily drawdown limit, max drawdown, progress to payout and the payout history itself. One journal holds personal and prop accounts at the same time' },
+    { chip: 'DATA', q: 'Are my trades used to train models?', a: 'No. Your data is locked to your account at the database level and is not used for training. Only what you create a link for becomes public' },
+    { chip: 'BILLING', q: 'What happens if I stop paying?', a: 'The journal and all your history stay on the free plan — only Pro features switch off. CSV export is always available, in one click' },
+  ],
+};
 
 export function FinalFaq() {
+  const lang = useLang();
+  const tx = useTx();
   const [open, setOpen] = useState(0);
   const reduced = reducedMotion();
 
@@ -373,10 +445,10 @@ export function FinalFaq() {
 
           <div style={{ position: 'relative' }}>
             <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.07, margin: '0 0 16px', color: '#fff', textWrap: 'balance' }}>
-              Стратегія в тебе вже є. Бракує доказів, що вона працює
+              {tx('Стратегія в тебе вже є. Бракує доказів, що вона працює', 'You already have a strategy. What’s missing is proof that it works')}
             </h2>
             <p style={{ fontFamily: F.sans, fontSize: 16.5, lineHeight: 1.55, color: '#8a8a9c', margin: '0 0 28px', maxWidth: 420 }}>
-              Тридцять днів чесних записів — і ти побачиш, які рішення тебе годують, а які коштують
+              {tx('Тридцять днів чесних записів — і ти побачиш, які рішення тебе годують, а які коштують', 'Thirty days of honest logging and you’ll see which decisions feed you and which cost you')}
             </p>
 
             <a
@@ -385,18 +457,18 @@ export function FinalFaq() {
               onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 22px 60px rgba(74,59,245,.58)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 18px 50px rgba(74,59,245,.42)'; e.currentTarget.style.transform = 'none'; }}
             >
-              Почати безкоштовно
+              {tx('Почати безкоштовно', 'Start free')}
               <ArrowRight size={16} strokeWidth={2.4} />
             </a>
 
             <div style={{ fontFamily: F.sans, fontSize: 13, color: C.text5, marginTop: 16 }}>
-              Три хвилини на підключення. Картка не потрібна
+              {tx('Три хвилини на підключення. Картка не потрібна', 'Three minutes to connect. No card required')}
             </div>
           </div>
         </div>
 
         <div style={{ flex: '1 1 470px', minWidth: 'min(300px,100%)', display: 'flex', flexDirection: 'column', gap: 9 }}>
-          {FAQ.map((f, i) => {
+          {pick(lang, FAQ).map((f, i) => {
             const on = open === i;
             return (
               <div key={f.q} style={{ position: 'relative', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${on ? A(0.28) : 'rgba(255,255,255,.07)'}`, borderRadius: 16, overflow: 'hidden', transition: 'border-color .2s ease' }}>

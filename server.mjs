@@ -265,7 +265,7 @@ loadPageTemplates();
 /* Адреси, які існують у застосунку (див. src/App.jsx). Усе інше — 404.
    Приватні розділи існують, але в індекс їм не треба: там або форма
    входу, або чужі дані. Новий розділ у App.jsx — додай і сюди. */
-const PUBLIC_EXACT = new Set(['/', '/auth', '/terms', '/blog']);
+const PUBLIC_EXACT = new Set(['/', '/en', '/auth', '/terms', '/blog']);
 const PUBLIC_PREFIX = ['/demo', '/view/', '/shared/'];
 const APP_PREFIX = [
   '/app', '/notes', '/analyses', '/plan', '/accounts', '/journal', '/error',
@@ -312,12 +312,27 @@ function renderPage(rawPath) {
     html = setMeta(html, 'name', 'twitter:title', r.title);
     html = setMeta(html, 'name', 'twitter:description', r.description);
     if (r.published) html = setMeta(html, 'property', 'article:published_time', r.published);
+    if (r.locale) html = setMeta(html, 'property', 'og:locale', r.locale);
+    if (r.imageAlt) html = setMeta(html, 'property', 'og:image:alt', r.imageAlt);
+
+    /* Сторінка іншою мовою замінює опис застосунку з index.html
+       (українська розмітка schema.org), а не дописує другий поруч:
+       два описи одного продукту різними мовами на одній сторінці
+       плутають пошуковик. */
+    if (r.jsonLd && r.replaceLd) {
+      html = html.replace(
+        /<script type="application\/ld\+json">[\s\S]*?<\/script>/,
+        // Функцією, а не рядком: у тексті є «$15», і рядкова заміна
+        // прочитала б «$1» як посилання на групу.
+        () => `<script type="application/ld+json">${JSON.stringify(r.jsonLd).replace(/</g, '\\u003c')}</script>`,
+      );
+    }
 
     const extra = [
       ...(r.alternates || []).map((a) =>
         `<link rel="alternate" hreflang="${escAttr(a.lang)}" href="${escAttr(a.href)}" />`),
       // «<» екрануємо, щоб текст статті не міг закрити тег script.
-      r.jsonLd ? `<script type="application/ld+json">${JSON.stringify(r.jsonLd).replace(/</g, '\\u003c')}</script>` : '',
+      r.jsonLd && !r.replaceLd ? `<script type="application/ld+json">${JSON.stringify(r.jsonLd).replace(/</g, '\\u003c')}</script>` : '',
     ].filter(Boolean).join('\n    ');
     if (extra) html = html.replace('</head>', `    ${extra}\n  </head>`);
 
@@ -430,6 +445,17 @@ const server = http.createServer(async (req, res) => {
     const file = safeFile(pathname);
     if (file && pathname !== '/' && fs.existsSync(file) && fs.statSync(file).isFile()) {
       await sendFile(res, file, { immutable: pathname.startsWith('/assets/') });
+      return;
+    }
+
+    /* Російської версії більше немає (з вересня 2026). Старі адреси
+       /ru/blog/… могли лишитись у пошуку й закладках — ведемо їх
+       постійним редиректом на українську, щоб не губити ні людей, ні
+       вагу сторінок. */
+    if (pathname === '/ru' || pathname.startsWith('/ru/')) {
+      res.statusCode = 301;
+      res.setHeader('location', pathname.replace(/^\/ru(?=\/|$)/, '/uk').replace(/^\/uk$/, '/') + url.search);
+      res.end();
       return;
     }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Lock, MonitorSmartphone } from 'lucide-react';
 import { C, F, A, useInView, reducedMotion, SHELL } from './base';
+import { useLang, useTx, pick } from './lang';
 
 /* ==================================================================
    Автоімпорт MT5 + твої дані.
@@ -32,11 +33,29 @@ const MT5_ROWS = [
   { sym: 'NAS100', side: 'BUY', lot: '0.20', r: '−1.0R' },
 ];
 
-const TRUST = [
+/* Назви сетапів у логіці лишаються українськими, англійська — лише
+   для показу. */
+const SETUP_EN = {
+  'Свінг + FVG': 'Swing + FVG',
+  'Без сетапу': 'No setup',
+  'Сплеск на новині': 'News spike',
+  'Ретест OB': 'OB retest',
+  'Азійський діапазон': 'Asian range',
+  'Свіп лоу + FVG': 'Low sweep + FVG',
+};
+
+const TRUST = {
+  uk: [
   { title: 'Дані твої', sub: 'Кожна таблиця замкнена на твій акаунт на рівні бази, тому запит на чужі угоди не поверне нічого' },
   { title: 'Закрито, поки ти не вирішиш', sub: 'Публічного за замовчуванням немає. Розбір чи картка статистики відкриваються за посиланням лише коли ти сам його створиш' },
   { title: 'Без прив’язки', sub: 'Перестанеш платити — журнал лишиться. Історія на місці, вимикаються лише можливості Pro' },
-];
+  ],
+  en: [
+    { title: 'Your data is yours', sub: 'Every table is locked to your account at the database level, so a request for someone else’s trades returns nothing' },
+    { title: 'Private until you decide', sub: 'Nothing is public by default. A review or a stats card opens by link only when you create that link yourself' },
+    { title: 'No lock-in', sub: 'Stop paying and the journal stays. Your history remains; only Pro features switch off' },
+  ],
+};
 
 const SEED = [
   { sym: 'XAUUSD', setup: 'Свінг + FVG', r: '+2.4R' },
@@ -50,6 +69,8 @@ const SPAWN = 1500;    // пауза між угодами
 const STEP = 26;       // на скільки просувається лічильник за угоду
 
 export default function AutoImport() {
+  const lang = useLang();
+  const tx = useTx();
   const [ref, inView] = useInView(0.15);
   const reduced = reducedMotion();
 
@@ -141,19 +162,19 @@ export default function AutoImport() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>АВТОІМПОРТ</span>
+            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('АВТОІМПОРТ', 'AUTO-IMPORT')}</span>
           </div>
           <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 10px', color: '#fff' }}>
-            Угоди приїжджають самі
+            {tx('Угоди приїжджають самі', 'Trades arrive on their own')}
           </h2>
           <p style={{ fontFamily: F.sans, fontSize: 16.5, color: '#8a8a9c', margin: 0, maxWidth: 520 }}>
-            Підключаєш MetaTrader 5 — і історія тече в журнал без жодного CSV
+            {tx('Підключаєш MetaTrader 5 — і історія тече в журнал без жодного CSV', 'Connect MetaTrader 5 and your history flows into the journal — no CSV files')}
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(47,191,143,.07)', border: '1px solid rgba(47,191,143,.26)', borderRadius: 999, padding: '9px 16px' }}>
           <span style={{ fontFamily: F.mono, fontSize: 11.5, letterSpacing: '1.3px', color: C.ok, whiteSpace: 'nowrap' }}>
-            {done ? 'СИНХРОНІЗОВАНО' : 'СИНХРОНІЗАЦІЯ АКТИВНА'}
+            {done ? tx('СИНХРОНІЗОВАНО', 'SYNCED') : tx('СИНХРОНІЗАЦІЯ АКТИВНА', 'SYNC ACTIVE')}
           </span>
         </div>
       </div>
@@ -169,7 +190,7 @@ export default function AutoImport() {
               <MonitorSmartphone size={17} strokeWidth={1.8} color="#5aa9ff" />
               <div>
                 <div style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 700, color: '#fff' }}>MetaTrader 5</div>
-                <div style={{ fontFamily: F.mono, fontSize: 11, color: C.text5, marginTop: 2 }}>#71042318 · Демо</div>
+                <div style={{ fontFamily: F.mono, fontSize: 11, color: C.text5, marginTop: 2 }}>#71042318 · {tx('Демо', 'Demo')}</div>
               </div>
             </div>
 
@@ -187,7 +208,7 @@ export default function AutoImport() {
             </div>
 
             <div style={{ marginTop: 'auto', fontFamily: F.mono, fontSize: 10.5, letterSpacing: '1.1px', color: C.dim }}>
-              412 ЗАКРИТИХ ПОЗИЦІЙ
+              {tx('412 ЗАКРИТИХ ПОЗИЦІЙ', '412 CLOSED POSITIONS')}
             </div>
           </div>
 
@@ -224,7 +245,7 @@ export default function AutoImport() {
             </div>
 
             <div style={{ textAlign: 'center', fontFamily: F.mono, fontSize: 10.5, letterSpacing: '1.2px', color: C.dim, marginTop: 12 }}>
-              ЗАКРИТІ ПОЗИЦІЇ <span className="ln-stream-arrow-h">→</span><span className="ln-stream-arrow-v">↓</span> ЖУРНАЛ
+              {tx('ЗАКРИТІ ПОЗИЦІЇ', 'CLOSED POSITIONS')} <span className="ln-stream-arrow-h">→</span><span className="ln-stream-arrow-v">↓</span> {tx('ЖУРНАЛ', 'JOURNAL')}
             </div>
           </div>
 
@@ -248,7 +269,7 @@ export default function AutoImport() {
               <div>
                 <div style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Edge Journal</div>
                 <div style={{ fontFamily: F.sans, fontSize: 12, lineHeight: 1.45, color: '#7d7d90' }}>
-                  {done ? 'Уся історія на місці' : 'з 412 закритих позицій'}
+                  {done ? tx('Уся історія на місці', 'Full history in place') : tx('з 412 закритих позицій', 'of 412 closed positions')}
                 </div>
               </div>
             </div>
@@ -260,14 +281,14 @@ export default function AutoImport() {
                 <div key={`${j.sym}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 9, animation: reduced ? 'none' : 'lnRowIn .45s ease-out' }}>
                   <span style={{ width: 3, height: 18, borderRadius: 2, flexShrink: 0, background: j.r.startsWith('−') ? C.bad : C.ok }} />
                   <span style={{ fontFamily: F.mono, fontSize: 11.5, color: C.text, width: 54 }}>{j.sym}</span>
-                  <span style={{ fontFamily: F.sans, fontSize: 11.5, color: '#7d7d90', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{j.setup}</span>
+                  <span style={{ fontFamily: F.sans, fontSize: 11.5, color: '#7d7d90', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lang === 'en' ? (SETUP_EN[j.setup] || j.setup) : j.setup}</span>
                   <span style={{ fontFamily: F.mono, fontSize: 11.5, fontWeight: 700, color: j.r.startsWith('−') ? C.bad : C.ok }}>{j.r}</span>
                 </div>
               ))}
 
               {!landed.length && (
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F.sans, fontSize: 12, color: '#3f3f4e' }}>
-                  чекаю першу позицію…
+                  {tx('чекаю першу позицію…', 'waiting for the first position…')}
                 </div>
               )}
             </div>
@@ -276,7 +297,7 @@ export default function AutoImport() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'rgba(47,191,143,.09)', border: '1px solid rgba(47,191,143,.28)', borderRadius: 11, padding: '10px 12px', animation: reduced ? 'none' : 'lnFadeUp .35s ease-out' }}>
                 <Check size={13} strokeWidth={2.8} color={C.ok} style={{ flexShrink: 0 }} />
                 <span style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 700, color: C.ok }}>
-                  412 угод у журналі. Далі — автоматично
+                  {tx('412 угод у журналі. Далі — автоматично', '412 trades in the journal. From here on — automatic')}
                 </span>
               </div>
             )}
@@ -285,11 +306,14 @@ export default function AutoImport() {
       </div>
 
       <div style={{ fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.55, color: C.text5, marginTop: 16, maxWidth: 760 }}>
-        Ти пишеш лише людську половину: з якого плану вийшла угода, у якому стані ти був, яке правило порушив
+        {tx(
+          'Ти пишеш лише людську половину: з якого плану вийшла угода, у якому стані ти був, яке правило порушив',
+          'You only write the human half: which plan the trade came from, what state you were in, which rule you broke',
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(280px,100%),1fr))', gap: 12, marginTop: 24 }}>
-        {TRUST.map((t) => (
+        {pick(lang, TRUST).map((t) => (
           <div
             key={t.title}
             style={{ display: 'flex', gap: 13, alignItems: 'flex-start', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 16, padding: '17px 18px', transition: 'border-color .2s ease' }}
