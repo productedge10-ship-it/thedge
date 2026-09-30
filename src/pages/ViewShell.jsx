@@ -41,6 +41,16 @@ const RO_CSS = `
   }
 `;
 
+/* Підпис періоду для смуги згори: гість має одразу бачити, що перед
+   ним не весь журнал, а вибраний відрізок, — інакше «мало угод»
+   читалось би як «мало торгує». */
+const dm = (iso) => (iso ? iso.slice(0, 10).split('-').reverse().join('.') : '');
+function periodLabel(p) {
+  if (!p || (!p.from && !p.to)) return '';
+  if (p.from && p.to) return p.from === p.to ? dm(p.from) : `${dm(p.from)} – ${dm(p.to)}`;
+  return p.from ? `З ${dm(p.from)}` : `ДО ${dm(p.to)}`;
+}
+
 function Screen({ children }) {
   return (
     <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: C.bg, color: C.text, padding: 24 }}>
@@ -95,6 +105,7 @@ export default function ViewShell() {
   }
 
   const name = state.snap.owner?.name;
+  const period = periodLabel(state.snap.period);
 
   const btn = {
     display: 'flex', alignItems: 'center', gap: 8, borderRadius: 9, padding: '6px 12px',
@@ -128,6 +139,7 @@ export default function ViewShell() {
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {name ? `ЖУРНАЛ ${name.toUpperCase()}` : 'ЖУРНАЛ ТРЕЙДЕРА'}
             </span>
+            {period && <span style={{ flexShrink: 0 }}>· {period}</span>}
             <span className="demo-bar-desc">· ЛИШЕ ПЕРЕГЛЯД</span>
           </span>
         </div>

@@ -15,14 +15,15 @@
 ================================================================== */
 
 import { realSupabase } from './supabase';
-import { shareToken } from './sandbox';
+import { shareToken, isPeriodShare } from './sandbox';
+import { t as tx } from './lang';
 
 /* Підставний id власника. Справжній база не віддає — він гостю ні до
    чого, а сторінки фільтрують за user.id, тож їм потрібен хоч якийсь
    стабільний рядок. */
 export const SHARED_USER_ID = 'shared-owner-0000-0000-000000000000';
 
-export const READ_ONLY_MSG = 'Це журнал лише для перегляду';
+export const READ_ONLY_MSG = tx('Це журнал лише для перегляду', 'This journal is view-only');
 
 const READ_ONLY = { message: READ_ONLY_MSG, code: 'READ_ONLY' };
 
@@ -44,11 +45,15 @@ export function loadSnapshot() {
 
   snapshotToken = token;
   snapshotPromise = (async () => {
-    const { data, error } = await realSupabase.rpc('shared_journal', { p_token: token });
+    /* Посилання на період живе в іншій таблиці й читається іншою
+       функцією: угоди там уже відфільтровані базою за датами. */
+    const fn = isPeriodShare() ? 'shared_journal_period' : 'shared_journal';
+    const { data, error } = await realSupabase.rpc(fn, { p_token: token });
     if (error || !data) return null;
     const stamp = (rows) => (rows || []).map((r) => ({ ...r, user_id: SHARED_USER_ID }));
     return {
       owner: data.owner || {},
+      period: data.period || null,
       trades: stamp(data.trades),
       prop_accounts: stamp(data.prop_accounts),
       trading_plans: stamp(data.trading_plans),
@@ -179,7 +184,8 @@ class Query {
     if (this.table === 'trade_candles') {
       const ids = this.ids || [];
       if (!ids.length) return [];
-      const { data, error } = await realSupabase.rpc('shared_candles', {
+      const fn = isPeriodShare() ? 'shared_period_candles' : 'shared_candles';
+      const { data, error } = await realSupabase.rpc(fn, {
         p_token: shareToken(), p_ids: ids,
       });
       return error ? [] : (data || []);
@@ -226,7 +232,7 @@ class Query {
 
     if (this.one) {
       const row = out[0] ?? null;
-      if (!row && !this.maybe) return { data: null, error: { message: 'Рядок не знайдено', code: 'PGRST116' }, ...extra };
+      if (!row && !this.maybe) return { data: null, error: { message: tx('Рядок не знайдено', 'Row not found'), code: 'PGRST116' }, ...extra };
       return { data: row, error: null, ...extra };
     }
 

@@ -6,7 +6,7 @@ import TextareaAutosize from 'react-textarea-autosize';
 import {
   X, Pencil, Save, Trash2, Loader2, ImagePlus,
   Check, AlertTriangle, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Clock, BookOpen, Share2,
-  Eye, EyeOff,
+  Eye, EyeOff, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
@@ -19,8 +19,11 @@ import { CATS } from '../errors/utils';
 import ErrorComposerModal from '../errors/ErrorComposerModal';
 import ImageSlider from '../ui/ImageSlider';
 import TradeLevels from '../journal/TradeLevels';
+import DateField from '../ui/DateField';
 import { T } from '../../lib/theme';
 import { inSandbox, isSharedView, withSandbox } from '../../lib/sandbox';
+import useImageAttach, { filesFromPaste, imageFiles } from '../../hooks/useImageAttach';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Деталі угоди — термінальна фінтех-панель: JetBrains Mono для цифр,
@@ -521,6 +524,159 @@ function PlanPanel({ plan, pair, date, onOpen }) {
   );
 }
 
+/* Скріни й графік з терміналу — в одному вікні, слайдами.
+
+   Раніше скрін і схема MT5 стояли одне під одним, і картка
+   розросталась удвічі. Тепер це одна рамка: спершу скріни (їх
+   людина додала навмисно, вони важливіші), останнім слайдом —
+   графік із терміналу. Перемикаються вкладками над рамкою або
+   стрілками по боках.
+
+   У режимі редагування в тому ж рядку вкладок стоять «+ Скрін» і
+   «Прибрати» — окремої смуги з мініатюрами більше немає, вона лише
+   захаращувала картку. Ctrl+V і перетягування працюють по всій
+   рамці. */
+function TradeMedia({ trade, images, ownShots, hasLevels, editing, busy, onFiles, onLink, onRemove }) {
+  const fileRef = useRef(null);
+  const [hot, setHot] = useState(false);
+  const slides = useMemo(
+    () => [...images.map((src) => ({ kind: 'img', src })), ...(hasLevels ? [{ kind: 'levels' }] : [])],
+    [images, hasLevels],
+  );
+  const [idx, setIdx] = useState(0);
+
+  /* Щойно доданий скрін показуємо одразу — інакше людина вставила
+     картинку й дивиться на графік, не розуміючи, чи вона взагалі
+     додалась. */
+  const [seen, setSeen] = useState(images.length);
+  if (images.length !== seen) {
+    if (images.length > seen) setIdx(images.length - 1);
+    setSeen(images.length);
+  }
+
+  const cur = Math.min(idx, Math.max(slides.length - 1, 0));
+  const slide = slides[cur];
+  const go = (d) => setIdx((i) => (Math.min(i, slides.length - 1) + d + slides.length) % slides.length);
+
+  const isLink = (v) => /^https?:\/\//i.test(String(v || '').trim());
+  const onPaste = (e) => {
+    if (!editing) return;
+    const text = e.clipboardData.getData('text');
+    if (isLink(text)) { e.preventDefault(); onLink(text.trim()); return; }
+    const files = filesFromPaste(e);
+    if (files.length) { e.preventDefault(); onFiles(files); }
+  };
+  const onDrop = (e) => {
+    if (!editing) return;
+    e.preventDefault();
+    setHot(false);
+    const files = imageFiles(e.dataTransfer.files);
+    if (files.length) { onFiles(files); return; }
+    const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text');
+    if (isLink(url)) onLink(url.trim());
+  };
+
+  let n = 0;
+  const tabLabel = (s) => (s.kind === 'levels' ? tx('Графік MT5', 'MT5 chart') : `${tx('Скрін', 'Shot')} ${(n += 1)}`);
+
+  const chip = (on) => ({
+    height: 30, padding: '0 12px', borderRadius: 8, fontFamily: T.sans, fontSize: 12.5, fontWeight: 700,
+    background: on ? `rgba(${T.accRgb},0.14)` : 'transparent',
+    border: `1px solid ${on ? T.lineAcc : 'transparent'}`, color: on ? T.acc : T.text3,
+  });
+  const tool = {
+    height: 30, padding: '0 11px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
+    fontFamily: T.sans, fontSize: 12.5, fontWeight: 700, background: T.bg, border: `1px solid ${T.line}`, color: T.text2,
+  };
+  const arrow = (side) => ({
+    position: 'absolute', top: '50%', [side]: 10, transform: 'translateY(-50%)', zIndex: 5,
+    width: 34, height: 34, borderRadius: 999, display: 'grid', placeItems: 'center',
+    background: 'rgba(10,10,14,.72)', border: `1px solid ${T.line}`, color: T.text, backdropFilter: 'blur(6px)',
+  });
+
+  const showBar = slides.length > 1 || editing;
+
+  return (
+    <div
+      tabIndex={editing ? 0 : undefined}
+      onPaste={onPaste}
+      onDragOver={(e) => { if (editing) { e.preventDefault(); setHot(true); } }}
+      onDragLeave={() => setHot(false)}
+      onDrop={onDrop}
+      className="flex flex-col gap-2 outline-none"
+    >
+      {showBar && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {slides.length > 1 && slides.map((s, i) => (
+            <button key={s.kind === 'img' ? s.src : 'levels'} type="button" onClick={() => setIdx(i)} style={chip(i === cur)}>
+              {tabLabel(s)}
+            </button>
+          ))}
+          <div className="flex-1" />
+          {editing && slide?.kind === 'img' && ownShots.includes(slide.src) && (
+            <button type="button" onClick={() => onRemove(slide.src)} style={{ ...tool, color: T.bad }}>
+              <Trash2 size={13} strokeWidth={2.3} /> {tx('Прибрати', 'Remove')}
+            </button>
+          )}
+          {editing && (
+            <button type="button" onClick={() => fileRef.current?.click()} style={tool}>
+              {busy ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={14} strokeWidth={2} style={{ color: T.acc }} />}
+              {tx('Скрін', 'Screenshot')}
+            </button>
+          )}
+        </div>
+      )}
+
+      <div
+        className="relative overflow-hidden rounded-2xl"
+        style={{ outline: hot ? `2px dashed ${T.acc}` : 'none', outlineOffset: 2 }}
+      >
+        {!slide ? (
+          <div
+            className="flex min-h-[420px] flex-col items-center justify-center gap-2 rounded-2xl"
+            style={{ background: T.bg, border: `1px ${editing ? 'dashed' : 'solid'} ${editing ? T.lineAcc : T.line}` }}
+          >
+            {editing ? (
+              <>
+                <ImagePlus size={22} strokeWidth={1.6} style={{ color: T.text4 }} />
+                <span className="text-[14px]" style={{ color: T.text4, fontFamily: T.sans }}>
+                  {tx('Ctrl+V, перетягни файл або натисни «Скрін» угорі', 'Ctrl+V, drop a file or press “Screenshot” above')}
+                </span>
+              </>
+            ) : (
+              <span className="text-[14.5px]" style={{ fontFamily: MONO, color: T.text4 }}>NO SCREENSHOTS</span>
+            )}
+          </div>
+        ) : slide.kind === 'img' ? (
+          <ImageSlider key={slide.src} images={[slide.src]} containerClassName="min-h-[420px] rounded-2xl" />
+        ) : (
+          <TradeLevels trade={trade} className="min-h-[420px]" />
+        )}
+
+        {slides.length > 1 && (
+          <>
+            <button type="button" onClick={() => go(-1)} style={arrow('left')} aria-label={tx('Попередній', 'Previous')}>
+              <ChevronLeft size={17} strokeWidth={2.4} />
+            </button>
+            <button type="button" onClick={() => go(1)} style={arrow('right')} aria-label={tx('Наступний', 'Next')}>
+              <ChevronRight size={17} strokeWidth={2.4} />
+            </button>
+          </>
+        )}
+      </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={(e) => { onFiles(imageFiles(e.target.files)); e.target.value = ''; }}
+      />
+    </div>
+  );
+}
+
 export default function TradeDetailsModal({
   trade, accountsMap = {}, onClose, onDeleted, onUpdated,
   /* сумісність зі старим API */
@@ -693,13 +849,36 @@ export default function TradeDetailsModal({
     }
   }
 
-  const images = useMemo(() => {
-    if (Array.isArray(d?.mistake_images) && d.mistake_images.length) return d.mistake_images;
-    if (d?.mistake_image) return [d.mistake_image];
+  /* Скріни угоди й скріни помилки — разом, угода першою.
+
+     Раніше показувався лише один набір: якщо в угоди були скріни
+     помилки, власний скрін графіка не було видно зовсім. Для угод з
+     MT5 це стало помітно, щойно туди дозволили додавати скрін: людина
+     вставляла картинку, зберігала — і не бачила її. */
+  const tradeShots = useMemo(() => {
     if (Array.isArray(d?.trade_images) && d.trade_images.length) return d.trade_images;
-    if (d?.trade_image) return [d.trade_image];
-    return [];
-  }, [d]);
+    return d?.trade_image ? [d.trade_image] : [];
+  }, [d?.trade_images, d?.trade_image]);
+
+  const images = useMemo(() => {
+    const mistakes = Array.isArray(d?.mistake_images) && d.mistake_images.length
+      ? d.mistake_images
+      : d?.mistake_image ? [d.mistake_image] : [];
+    return [...new Set([...tradeShots, ...mistakes])];
+  }, [tradeShots, d?.mistake_images, d?.mistake_image]);
+
+  /* Скріни угоди в режимі редагування. Той самий хук, що у формі
+     «Add trade»: файл стискається й іде в сховище, у запис лягає
+     посилання. Функціональний setter — бо хук підмінює локальне
+     blob-прев'ю на справжню адресу, коли файл доїде. */
+  const attach = useImageAttach({ folder: `trade-${trade?.id || 'loose'}` });
+  const setShots = (updater) => setD((p) => {
+    const cur = Array.isArray(p?.trade_images) && p.trade_images.length
+      ? p.trade_images
+      : p?.trade_image ? [p.trade_image] : [];
+    const next = typeof updater === 'function' ? updater(cur) : updater;
+    return { ...p, trade_images: next.length ? next : null, trade_image: next[0] || null };
+  });
 
   /* Схему малюємо тільки коли є з чого: сам лише вхід без стопа й
      тейка — це одна лінія посеред порожнечі, гірша за чесне «немає
@@ -744,6 +923,10 @@ export default function TradeDetailsModal({
     : null;
 
   async function save() {
+    if (attach.busy) {
+      notify.error(tx('Скрін ще вантажиться', 'Screenshot is still uploading'), tx('Секунду — і можна зберігати.', 'One sec and you can save.'));
+      return;
+    }
     setSaving(true);
     try {
       /* d могло прийти зі списку, де рядки доповнені обчисленими
@@ -752,7 +935,14 @@ export default function TradeDetailsModal({
          schema cache. Відсікаємо все, що починається з «_». */
       const { id, ...rest } = d;
       const payload = Object.fromEntries(Object.entries(rest).filter(([k]) => !k.startsWith('_')));
-      const { error } = await supabase.from('trades').update(payload).eq('id', id);
+      let { error } = await supabase.from('trades').update(payload).eq('id', id);
+      /* date_edited зʼявляється з міграцією 2026-09-30. Якщо її ще не
+         запустили, не губимо решту правок через одну колонку: дата
+         збережеться, просто синхронізація MT5 зможе її перезаписати. */
+      if (error && /date_edited/.test(error.message || '')) {
+        const { date_edited: _skip, ...rest2 } = payload;
+        ({ error } = await supabase.from('trades').update(rest2).eq('id', id));
+      }
       if (error) throw error;
 
       /* Дзеркало в журналі помилок. Досі його тут не було зовсім:
@@ -813,15 +1003,6 @@ export default function TradeDetailsModal({
   }); // навмисно без масиву: хендлер має бачити свіжий d/editing
 
   if (!d) return null;
-
-  const handlePaste = (e, field) => {
-    const text = e.clipboardData.getData('text');
-    if (text?.startsWith('http')) {
-      e.preventDefault();
-      if (field === 'trade') set({ trade_image: text });
-      else set({ mistake_images: [...(d.mistake_images || []), text] });
-    }
-  };
 
   const res = RESULT_OPTS.find((r) => r.value.toLowerCase() === d.result?.trim().toLowerCase());
   const rr = parseFloat(d.rr);
@@ -917,9 +1098,29 @@ export default function TradeDetailsModal({
                   {(d.type || '—').toUpperCase()}{d.session ? ` · ${d.session}` : ''}
                 </span>
               </div>
-              <span className="text-[13.5px]" style={{ fontFamily: MONO, color: T.text4 }}>
-                {d.plan_date}{timeRange ? ` · ${timeRange}` : ''}
-              </span>
+              {editing ? (
+                /* Дату можна виправити, зокрема в угоді з MT5: термінал
+                   пише дату входу, а людина часто веде угоду за днем
+                   плану. Позначка date_edited каже базі не повертати
+                   стару дату наступною синхронізацією. */
+                <div className="flex items-center gap-2.5 pt-1">
+                  <div style={{ width: 170 }}>
+                    <DateField
+                      value={String(d.plan_date || '').slice(0, 10)}
+                      onChange={(v) => v && set({ plan_date: v, date_edited: true })}
+                      alwaysNumeric
+                      height={32}
+                      fontSize={13.5}
+                      z={1200}
+                    />
+                  </div>
+                  {timeRange ? <span className="text-[13.5px]" style={{ fontFamily: MONO, color: T.text4 }}>{timeRange}</span> : null}
+                </div>
+              ) : (
+                <span className="text-[13.5px]" style={{ fontFamily: MONO, color: T.text4 }}>
+                  {d.plan_date}{timeRange ? ` · ${timeRange}` : ''}
+                </span>
+              )}
             </div>
 
             <motion.button
@@ -935,6 +1136,11 @@ export default function TradeDetailsModal({
             </motion.button>
           </div>
 
+          {/* У журналі за посиланням кнопки власника (поділитись, TDA,
+              Edit) не показуємо зовсім. Раніше вони були, а натискання
+              закінчувалось «лише перегляд» — гість бачив кнопку, яка
+              ніколи не спрацює. */}
+          {!isSharedView() && (
           <div className="flex flex-wrap items-center gap-2">
             <motion.button
               onClick={share}
@@ -1053,6 +1259,7 @@ export default function TradeDetailsModal({
               </motion.button>
             )}
           </div>
+          )}
         </header>
 
         {/* ---------- СТРІЧКА ЦИФР ---------- */}
@@ -1207,32 +1414,17 @@ export default function TradeDetailsModal({
         <motion.div layout transition={SPRING_UI} className="flex flex-col lg:grid lg:grid-cols-[1.55fr_1fr]">
           {/* ЛІВА КОЛОНКА */}
           <motion.div layout transition={SPRING_UI} className="flex min-w-0 flex-col gap-3 p-5" style={{ borderRight: `1px solid ${T.line}` }}>
-            {images.length > 0 ? (
-              <>
-                <ImageSlider images={images} containerClassName="min-h-[420px] rounded-2xl" />
-                {hasLevels && <TradeLevels trade={d} />}
-              </>
-            ) : hasLevels ? (
-              /* Скріна в імпортованої угоди немає й не буде — вона
-                 приїхала з терміналу, а не з рук. Замість порожньої
-                 плашки показуємо те, що термінал таки знає: де стояв
-                 вхід, стоп і тейк, і де угода закрилась насправді. */
-              <TradeLevels trade={d} className="min-h-[420px]" />
-            ) : editing ? (
-              <div
-                onPaste={(e) => handlePaste(e, 'trade')}
-                tabIndex={0}
-                className="flex min-h-[420px] cursor-text flex-col items-center justify-center gap-2 rounded-2xl outline-none"
-                style={{ background: T.bg, border: `1px dashed ${T.lineAcc}` }}
-              >
-                <ImagePlus size={22} strokeWidth={1.6} style={{ color: T.text4 }} />
-                <span className="text-[14.5px]" style={{ color: T.text4, fontFamily: T.sans }}>Ctrl+V — paste a screenshot link</span>
-              </div>
-            ) : (
-              <div className="flex min-h-[420px] items-center justify-center rounded-2xl" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
-                <span className="text-[14.5px]" style={{ fontFamily: MONO, color: T.text4 }}>NO SCREENSHOTS</span>
-              </div>
-            )}
+            <TradeMedia
+              trade={d}
+              images={images}
+              ownShots={tradeShots}
+              hasLevels={hasLevels}
+              editing={editing}
+              busy={attach.busy}
+              onFiles={(files) => attach.addToList(files, setShots)}
+              onLink={(url) => setShots((p) => [...p, url])}
+              onRemove={(src) => setShots((p) => p.filter((x) => x !== src))}
+            />
 
             <div className="rounded-xl p-4" style={{ border: `1px solid ${T.line}`, background: T.bg }}>
               <Eyebrow>TRADE DESCRIPTION</Eyebrow>
@@ -1505,6 +1697,7 @@ export default function TradeDetailsModal({
 
             <div className="flex-1" />
 
+            {!isSharedView() && (
             <motion.button
               onClick={() => setConfirmDel(true)}
               whileTap={{ scale: 0.97 }}
@@ -1516,6 +1709,7 @@ export default function TradeDetailsModal({
             >
               <Trash2 size={13} strokeWidth={2.3} /> Delete trade
             </motion.button>
+            )}
           </motion.div>
         </motion.div>
       </motion.div>

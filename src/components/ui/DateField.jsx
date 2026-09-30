@@ -5,6 +5,9 @@ import { uk, enGB } from 'date-fns/locale';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Sun, History, CalendarRange, Check } from 'lucide-react';
 import { T } from '../../lib/theme';
 import Popover from './Popover';
+import { t as tx, isEn } from '../../lib/lang';
+
+const CUR_LANG = isEn ? 'en' : 'uk';
 
 /* ==================================================================
    Поле дати на всю ширину.
@@ -305,10 +308,14 @@ function QuickDateMenu({ value, onChange, close, lang, accent, accentRgb, accent
 }
 
 export default function DateField({
-  value, onChange, align = 'left', lang = 'uk', height = 44, alwaysNumeric = false, monthStyle,
+  value, onChange, align = 'left', lang = CUR_LANG, height = 44, alwaysNumeric = false, monthStyle,
   quickPicks = false,
   accent = T.acc, accentRgb = T.accRgb, accentBorder = T.lineAcc, hoverBorder = T.lineHi,
   fontSize = 14, fontWeight = 400,
+  /* Шар попапа. За замовчуванням 400 — під модалками з z 1000+
+     (картка угоди) календар ховався б за вікном, тож вони
+     передають свій. */
+  z,
 }) {
   const selected = value ? new Date(`${value}T12:00:00`) : undefined;
   const w = WORDS[lang] || WORDS.uk;
@@ -316,6 +323,7 @@ export default function DateField({
   return (
     <Popover
       align={align}
+      z={z}
       triggerClass="flex w-full"
       renderTrigger={({ open, toggle }) => (
         <button
@@ -421,17 +429,17 @@ const shiftDays = (n) => {
 /* Готові проміжки. Дев'ять із десяти разів шукають саме їх, і клікати
    заради цього по календарю двічі — зайва робота. */
 const PRESETS = [
-  { label: '7 днів', range: () => ({ from: shiftDays(6), to: dayKey(new Date()) }) },
-  { label: '30 днів', range: () => ({ from: shiftDays(29), to: dayKey(new Date()) }) },
+  { label: tx('7 днів', '7 days'), range: () => ({ from: shiftDays(6), to: dayKey(new Date()) }) },
+  { label: tx('30 днів', '30 days'), range: () => ({ from: shiftDays(29), to: dayKey(new Date()) }) },
   {
-    label: 'Цей місяць',
+    label: tx('Цей місяць', 'This month'),
     range: () => {
       const n = new Date();
       return { from: dayKey(new Date(n.getFullYear(), n.getMonth(), 1)), to: dayKey(n) };
     },
   },
   {
-    label: 'Минулий місяць',
+    label: tx('Минулий місяць', 'Last month'),
     range: () => {
       const n = new Date();
       return {
@@ -440,12 +448,12 @@ const PRESETS = [
       };
     },
   },
-  { label: 'Рік', range: () => ({ from: shiftDays(364), to: dayKey(new Date()) }) },
+  { label: tx('Рік', 'Year'), range: () => ({ from: shiftDays(364), to: dayKey(new Date()) }) },
 ];
 
 export function DateRangeField({
-  value, onChange, lang = 'uk', height = 42, align = 'left',
-  placeholder = 'Будь-яка дата', fontSize = 13.5,
+  value, onChange, lang = CUR_LANG, height = 42, align = 'left',
+  placeholder = tx('Будь-яка дата', 'Any date'), fontSize = 13.5, z,
 }) {
   const from = value?.from || '';
   const to = value?.to || '';
@@ -495,6 +503,7 @@ export function DateRangeField({
   return (
     <Popover
       align={align}
+      z={z}
       triggerClass="flex w-full"
       renderTrigger={({ open, toggle }) => (
         <button
@@ -568,7 +577,7 @@ export function DateRangeField({
                 onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
               >
-                Будь-яка дата
+                {tx('Будь-яка дата', 'Any date')}
               </button>
             </div>
           </div>
@@ -582,15 +591,15 @@ export function DateRangeField({
               style={{ background: T.sunken, border: `1px solid ${T.line}` }}
             >
               <span className="flex items-baseline gap-2">
-                <span style={{ fontFamily: T.sans, fontSize: 12, color: T.text3 }}>Від</span>
+                <span style={{ fontFamily: T.sans, fontSize: 12, color: T.text3 }}>{tx('Від', 'From')}</span>
                 <span style={{ fontFamily: T.mono, fontSize: 13.5, fontWeight: 600, color: from ? T.text : T.text4 }}>
                   {short(from, lang) || '—'}
                 </span>
               </span>
               <span className="flex items-baseline gap-2">
-                <span style={{ fontFamily: T.sans, fontSize: 12, color: T.text3 }}>До</span>
+                <span style={{ fontFamily: T.sans, fontSize: 12, color: T.text3 }}>{tx('До', 'To')}</span>
                 <span style={{ fontFamily: T.mono, fontSize: 13.5, fontWeight: 600, color: to ? T.text : T.text4 }}>
-                  {to ? short(to, lang) : picking ? 'обери день' : '—'}
+                  {to ? short(to, lang) : picking ? tx('обери день', 'pick a day') : '—'}
                 </span>
               </span>
             </div>
@@ -617,7 +626,7 @@ export function DateRangeField({
                 color: 'var(--edge-on-acc, #0A0A0C)',
               }}
             >
-              Готово
+              {tx('Готово', 'Done')}
             </button>
 
             <DaypickerTheme accent={T.acc} accentRgb={T.accRgb} accentBorder={T.lineAcc} />

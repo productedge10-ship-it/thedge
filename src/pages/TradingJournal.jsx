@@ -31,6 +31,8 @@ import TradeDetailsModal from "../components/modals/TradeDetailsModal";
 import StatCards, { StreakBar } from "../components/journal/StatCards";
 import { Magnetic } from "../components/ui/Hovers";
 import TradesTable from "../components/journal/TradesTable";
+import SharePeriodButton from "../components/journal/SharePeriod";
+import { inSandbox } from "../lib/sandbox";
 import AssetIcon from "../components/ui/AssetIcon";
 
 const PAGE_SIZES = [10, 20, 30, 40];
@@ -1150,6 +1152,12 @@ export default function TradingJournal() {
               onChange={setFilterPair}
             />
             <PeriodSelect value={period} onChange={setPeriod} />
+
+            {/* Поділитись журналом за період. Стартові дати — ті, що
+                зараз вибрані у фільтрі: найчастіше діляться саме тим,
+                на що щойно дивились. У перегляді за посиланням кнопки
+                немає — там ділитись нічим. */}
+            {!inSandbox() && <SharePeriodButton initial={{ from: dateFrom, to: dateTo }} />}
 
             {/* Кнопка «Pull from MT5» прибрана.
 

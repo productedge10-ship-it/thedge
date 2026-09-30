@@ -35,5 +35,11 @@ export const withSandbox = (to) => `${sandboxBase()}${to}`;
    тому маршрут на нього є, але пунктом меню він не стоїть. */
 export const VIEW_ROUTES = ['/journal', '/analytics', '/analyses'];
 
+/* Посилання на період (токен з «p», таблиця journal_period_shares)
+   показує лише журнал угод за вибрані дати. Аналітика й аналізи —
+   це вже про весь журнал, а людина ділилась конкретним відрізком. */
+export const isPeriodShare = () => (shareToken() || '').startsWith('p');
+export const viewRoutes = () => (isPeriodShare() ? ['/journal'] : VIEW_ROUTES);
+
 export const shareUrl = (token) =>
   `${typeof window !== 'undefined' ? window.location.origin : ''}/view/${token}/journal`;

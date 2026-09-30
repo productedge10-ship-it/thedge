@@ -69,3 +69,10 @@ React 19 + Vite 8 (rolldown), Tailwind 3 + інлайнові стилі на т
 4. Ніякого `dangerouslySetInnerHTML` у блозі — текст колись поїде з адмінки.
 5. У статтях немає вигаданих цифр соціального доказу; приклади підписані як приклади.
 6. **Лише свої дані.** Кожен список із бази — з явним `user_id` (`onlyMine()` з `src/lib/myId.js` або `.eq('user_id', …)`); RLS — підлога, а не фільтр. Поширені записи (угода, план, розбір, бектест, картка) читаються тільки через RPC `shared_*` за id (`src/lib/sharedRead.js`), не прямим select з `is_public`. Локальне сховище — через `useCloudState` (дзеркало з uid у ключі); пристрій чистить чужі дані при зміні акаунта (`src/lib/deviceScope.js`), вихід/зміна акаунта перезавантажує сторінку (`AuthContext`).
+
+## Перегляд журналу за посиланням
+
+- `/view/<токен>/*` — ті самі сторінки на даних власника без права змін (`lib/sharedDb.js`, `pages/ViewShell.jsx`).
+- Два види токенів: **весь журнал** (`journal_shares`, створюється в Settings → Share journal, RPC `shared_journal`) і **період** (`journal_period_shares`, токен починається з `p`, кнопка «Поділитись» у рядку фільтрів журналу → `components/journal/SharePeriod.jsx`, RPC `shared_journal_period` / `shared_period_candles`). Для періоду в меню лише журнал (`viewRoutes()` у `lib/sandbox.js`), угоди фільтрує база.
+- Міграція: `supabase/2026-09-30_period_share_trade_date.sql` (також `trades.date_edited` + тригер, щоб ручна дата угоди MT5 не перезаписувалась синхронізацією).
+- Картка угоди (`TradeDetailsModal`): у режимі редагування — дата (для будь-якої угоди) і смужка скрінів `ShotsEditor` (файл / Ctrl+V / перетягування / посилання TradingView), зокрема для угод з MT5.

@@ -22,9 +22,10 @@ import CatChat from './CatChat';
 import ThemeSweep from './ThemeSweep';
 import { openOnboarding } from '../../lib/onboarding';
 import { NAV, openSettings } from '../../lib/settings';
+import { t as tx } from '../../lib/lang';
 import { useSettings } from '../../context/SettingsContext';
 import appVersion from '../../version.json';
-import { inSandbox, isSharedView, withSandbox, VIEW_ROUTES } from '../../lib/sandbox';
+import { inSandbox, isSharedView, withSandbox, viewRoutes } from '../../lib/sandbox';
 
 /* ------------------------------------------------------------------ */
 /*  THE EDGE — theme tokens                                            */
@@ -828,7 +829,7 @@ function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick
             boxShadow: `inset 0 0 0 1px rgba(${ACCENT},0.24)`,
           }}
         >
-          скоро
+          {tx('скоро', 'soon')}
           <span
             aria-hidden
             className="edge-soon-anim pointer-events-none absolute inset-y-0 left-0 w-1/2"
@@ -840,7 +841,7 @@ function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick
         </span>
       )}
 
-      {collapsed && <RailTooltip>{soon ? `${label} · скоро` : label}</RailTooltip>}
+      {collapsed && <RailTooltip>{soon ? `${label} · ${tx('скоро', 'soon')}` : label}</RailTooltip>}
     </div>
   );
 
@@ -935,7 +936,7 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
             const items = g.items
               .filter((it) => !hiddenNav.includes(it.to))
               .filter((it) => !inDemo() || DEMO_ROUTES.includes(it.to))
-              .filter((it) => !isSharedView() || VIEW_ROUTES.includes(it.to));
+              .filter((it) => !isSharedView() || viewRoutes().includes(it.to));
             if (!items.length) return null;
 
             return (
@@ -968,7 +969,7 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
               це дії над акаунтом, якого в демо просто не існує. */}
           {!inSandbox() && (
             <>
-              <NavItem collapsed={collapsed} onClick={openOnboarding} icon={Sparkles} label="Про тебе" tour="about" soon />
+              <NavItem collapsed={collapsed} onClick={openOnboarding} icon={Sparkles} label={tx('Про тебе', 'About you')} tour="about" soon />
               <NavItem collapsed={collapsed} onClick={openSettings} icon={Settings} label="Settings" tour="settings" fx="nx-gear" />
             </>
           )}
