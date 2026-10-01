@@ -448,6 +448,21 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    /* Короткі рекламні посилання: /tt в описі ТікТоку виглядає чисто, а сервер
+       сам дописує UTM, і трекер бачить кампанію в адмінці. 302, бо кампанію
+       (utm_campaign) міняємо під кожен новий ролик. Раніше це лежало в
+       public/_redirects, але на Coolify його ніхто не читає: це файл Netlify. */
+    const AD_LINKS = {
+      '/tt': '/?utm_source=tiktok&utm_medium=video&utm_campaign=ad4',
+    };
+    if (AD_LINKS[pathname]) {
+      res.statusCode = 302;
+      res.setHeader('location', AD_LINKS[pathname]);
+      res.setHeader('cache-control', 'no-store');
+      res.end();
+      return;
+    }
+
     /* Російської версії більше немає (з вересня 2026). Старі адреси
        /ru/blog/… могли лишитись у пошуку й закладках — ведемо їх
        постійним редиректом на українську, щоб не губити ні людей, ні
@@ -463,6 +478,15 @@ const server = http.createServer(async (req, res) => {
        сервер про неї нічого не знає: /journal, /uk/blog/… і будь-що
        інше має віддати той самий index.html. */
     const page = renderPage(pathname);
+
+    /* Країна відвідувача — для вибору мови (src/lib/lang.js). Беремо
+       тільки з заголовка Cloudflare і тільки два латинські символи:
+       усе інше в <script> не пускаємо. Немає Cloudflare — немає й
+       рядка, і браузер вирішить за часовим поясом. */
+    const cc = String(req.headers['cf-ipcountry'] || '').toUpperCase();
+    if (/^[A-Z]{2}$/.test(cc)) {
+      page.html = page.html.replace('<head>', `<head><script>window.__EDGE_CC__="${cc}"</script>`);
+    }
     res.statusCode = page.status;
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.setHeader('cache-control', 'no-cache');
