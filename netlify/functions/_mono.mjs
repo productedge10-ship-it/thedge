@@ -218,6 +218,54 @@ export function discounted(price, percent) {
   return { ...price, amount: uah, minor: uah * 100 };
 }
 
+/* ---------- реферальна програма ----------
+
+   Дві речі, які змінюють суму оплати (SQL: 2026-10-01_referrals.sql):
+
+   1. Знижка запрошеного — лише на його ПЕРШУ справжню оплату. Зі
+      знижкою промокоду не складається: береться більша з двох, і
+      якщо перемогла реферальна, промокод не витрачається.
+   2. Кредит звичайного юзера — нараховані йому % з оплат друзів
+      знімаються з його власного списання. Завжди лишаємо хоча б
+      1 одиницю валюти: токен картки з нульовою сумою mono не
+      проведе, а «безкоштовний» місяць без оплати зламав би всю
+      логіку дат у applyInvoice.
+
+   Будь-яка помилка тут (SQL ще не запущено, база не відповіла) —
+   це просто «без реферальних умов», а не зірвана оплата. */
+export async function referralTerms(db, userId, price, promo) {
+  let refPct = 0;
+  try {
+    const { data, error } = await db.rpc('referral_discount_for', { p_user: userId });
+    if (!error) refPct = Number(data) || 0;
+  } catch { /* без знижки */ }
+
+  const useRef = refPct > 0 && refPct >= (promo?.percent || 0);
+  let p = discounted(price, useRef ? refPct : promo?.percent);
+
+  let credit = 0;
+  try {
+    const { data, error } = await db.rpc('referral_credit_balance', { p_user: userId, p_currency: p.currency });
+    const bal = error ? 0 : Number(data) || 0;
+    const room = p.amount - 1;
+    credit = Math.max(0, Math.min(bal, room));
+    credit = p.ccy === 840 ? Math.floor(credit * 100) / 100 : Math.floor(credit);
+    if (credit > 0) {
+      const amount = p.ccy === 840 ? Math.round((p.amount - credit) * 100) / 100 : p.amount - credit;
+      p = { ...p, amount, minor: Math.round(amount * 100) };
+    }
+  } catch { credit = 0; }
+
+  return { price: p, promo: useRef ? null : promo, refDiscount: useRef ? refPct : 0, creditUsed: credit };
+}
+
+/* Поля замовлення для реферальних умов. Лише ненульові: якщо SQL ще
+   не запущено, колонок немає, і зайве поле зірвало б insert. */
+export const referralFields = (t) => ({
+  ...(t.refDiscount ? { ref_discount: t.refDiscount } : {}),
+  ...(t.creditUsed ? { credit_used: t.creditUsed } : {}),
+});
+
 const CCY_CODE = { UAH: 980, USD: 840, EUR: 978 };
 
 /* ---------- підпис вебхука ----------
@@ -470,6 +518,22 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
       ...(order.kind === 'verify' && !sub?.trial_used_at ? { trial_used_at: now.toISOString() } : {}),
     }, { onConflict: 'user_id' }), 'subscriptions');
 
+    /* Перша справжня оплата запрошеного → % запрошувачу. Функція бази
+       сама перевіряє, що оплата перша, і ідемпотентна. Після запису
+       підписки, а не до: доступ людини важливіший за облік партнера,
+       і збій тут не має його зірвати. */
+    if (order.kind === 'charge' || order.kind === 'renew') {
+      try {
+        const { error: refErr } = await db.rpc('referral_on_paid', {
+          p_user: order.user_id, p_ref: order.reference,
+          p_amount: Number(order.amount), p_currency: order.currency,
+        });
+        if (refErr && refErr.code !== 'PGRST202') console.error('referral_on_paid', order.reference, refErr.message);
+      } catch (e) {
+        console.error('referral_on_paid', order.reference, e.message);
+      }
+    }
+
     /* Перевірочну гривню повертаємо одразу. Після запису доступу і без
        права зірвати його: не повернулась — видно в логах, повернемо
        руками в кабінеті, а людина тим часом уже має свій тріал. */
@@ -616,12 +680,13 @@ async function chargeOne(db, s) {
     return;
   }
 
-  const promo = await promoFor(db, s.user_id);
-  const price = discounted(await priceFor(planId), promo?.percent);
+  const terms = await referralTerms(db, s.user_id, await priceFor(planId), await promoFor(db, s.user_id));
+  const { price, promo } = terms;
   const { error: insErr } = await db.from('payment_orders').insert({
     user_id: s.user_id, reference, plan: planId, amount: price.amount,
     currency: price.currency, status: 'pending', provider: 'mono', kind: 'renew',
     ...(promo ? { promo_id: promo.id } : {}),
+    ...referralFields(terms),
   });
   if (insErr) throw new Error(`payment_orders: ${insErr.message}`);
 

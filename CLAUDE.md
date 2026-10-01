@@ -76,3 +76,11 @@ React 19 + Vite 8 (rolldown), Tailwind 3 + інлайнові стилі на т
 - Два види токенів: **весь журнал** (`journal_shares`, створюється в Settings → Share journal, RPC `shared_journal`) і **період** (`journal_period_shares`, токен починається з `p`, кнопка «Поділитись» у рядку фільтрів журналу → `components/journal/SharePeriod.jsx`, RPC `shared_journal_period` / `shared_period_candles`). Для періоду в меню лише журнал (`viewRoutes()` у `lib/sandbox.js`), угоди фільтрує база.
 - Міграція: `supabase/2026-09-30_period_share_trade_date.sql` (також `trades.date_edited` + тригер, щоб ручна дата угоди MT5 не перезаписувалась синхронізацією).
 - Картка угоди (`TradeDetailsModal`): у режимі редагування — дата (для будь-якої угоди) і смужка скрінів `ShotsEditor` (файл / Ctrl+V / перетягування / посилання TradingView), зокрема для угод з MT5.
+
+## Реферальна програма
+
+- SQL: `supabase/2026-10-01_referrals.sql` (таблиці `referral_codes`, `referrals`, `referral_payouts`; колонки `payment_orders.ref_discount/credit_used`). Усе через функції, таблиці з браузера закриті.
+- Звичайний юзер: код створюється при першому відкритті Settings → «Запроси друга» (`components/modals/ReferralTab.jsx`, `my_referral`). % з ПЕРШОЇ оплати запрошеного за шкалою від кількості тих, хто зараз платить: <5 → 5%, 5–9 → 15%, 10–19 → 25%, 20+ → 30% (`ref_tier_percent` у SQL = `REF_TIERS` у `lib/referral.js`). Нараховане — кредит на власну підписку.
+- Партнер: видає адмінка (сторінка «Партнери», `admin_ref_make_partner`) — свій % і знижка запрошеним на першу оплату; виплати вручну, облік у `referral_payouts`.
+- Посилання `/?ref=КОД`: `captureRef()` у `main.jsx` → localStorage `edge_ref` (30 днів) → після входу `claimPendingRef()` з `Layout` → `claim_referral` (лише нові акаунти до 30 днів без оплат).
+- Гроші: `referralTerms` / `referralFields` у `_mono.mjs` (знижка запрошеного vs промокод — більша; кредит, мінімум 1 одиниця), нарахування — `referral_on_paid` з `applyInvoice`. Крипта (NOWPayments) реферал поки не враховує.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { onlyMine } from './myId';
+import { t as tx, LOCALE } from './lang';
 
 /* ==================================================================
    Тарифи й підписка.
@@ -31,22 +32,22 @@ export const CURRENCY = 'USD';
 export const PLANS = {
   pro_monthly: {
     id: 'pro_monthly',
-    title: 'Pro · місяць',
+    title: tx('Pro · місяць', 'Pro · monthly'),
     amount: 15,
     currency: CURRENCY,
     period: 'monthly',
     perMonth: '$15',
-    label: '$15 / місяць',
+    label: tx('$15 / місяць', '$15 / month'),
   },
   pro_yearly: {
     id: 'pro_yearly',
-    title: 'Pro · рік',
+    title: tx('Pro · рік', 'Pro · yearly'),
     amount: 144,
     currency: CURRENCY,
     period: 'yearly',
     perMonth: '$12',
-    label: '$12 / місяць',
-    note: '$144 на рік — на $36 дешевше',
+    label: tx('$12 / місяць', '$12 / month'),
+    note: tx('$144 на рік — на $36 дешевше', '$144 per year — save $36'),
   },
 };
 
@@ -60,8 +61,8 @@ export const PLANS = {
    повертає: без суми mono не показує Apple Pay / Google Pay. */
 export const TRIAL_DAYS = 14;
 export const TRIAL_HOLD = 1;
-export const TRIAL_HOLD_LABEL = 'Безкоштовно';
-export const TRIAL_NOTE = 'Привʼязка картки: 1 ₴ на перевірку, одразу повертаємо';
+export const TRIAL_HOLD_LABEL = tx('Безкоштовно', 'Free');
+export const TRIAL_NOTE = tx('Привʼязка картки: 1 ₴ на перевірку, одразу повертаємо', 'Card link: a small verification charge, refunded instantly');
 
 /* ------------------------------------------------------------------
    Ціна в гривнях за курсом НБУ.
@@ -85,7 +86,7 @@ const loadRate = () => {
 
 export const toUah = (usd, rate) => (rate ? Math.round(Number(usd) * rate) : null);
 
-export const fmtUah = (n) => (n == null ? '' : `${new Intl.NumberFormat('uk-UA').format(n)} ₴`);
+export const fmtUah = (n) => (n == null ? '' : `${new Intl.NumberFormat(LOCALE).format(n)} ₴`);
 
 export function useUahRate() {
   const [rate, setRate] = useState(null);
@@ -106,7 +107,7 @@ export function useUahRate() {
    про те, скільки людина заплатила. */
 export const fmtMoney = (amount, currency = CURRENCY) => {
   const n = Number(amount) || 0;
-  if (String(currency).toUpperCase() === 'UAH') return `${n.toLocaleString('uk-UA')} ₴`;
+  if (String(currency).toUpperCase() === 'UAH') return `${n.toLocaleString(LOCALE)} ₴`;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
@@ -139,24 +140,24 @@ export const fmtMoney = (amount, currency = CURRENCY) => {
 ================================================================== */
 export const PRO_FEATURES = {
   mt5: {
-    title: 'Підключення MetaTrader',
-    hint: 'Угоди приїжджають із термінала самі — разом зі свічками, стопами й часом у ринку',
+    title: tx('Підключення MetaTrader', 'MetaTrader connection'),
+    hint: tx('Угоди приїжджають із термінала самі — разом зі свічками, стопами й часом у ринку', 'Trades flow in from the terminal on their own — with candles, stops and time in the market'),
   },
   telegram: {
-    title: 'Telegram-бот',
-    hint: 'Нова угода, підсумок дня, таймери з плану — у чат',
+    title: tx('Telegram-бот', 'Telegram bot'),
+    hint: tx('Нова угода, підсумок дня, таймери з плану — у чат', 'New trades, daily summary, plan timers — right in your chat'),
   },
   accounts: {
-    title: 'До 5 рахунків',
-    hint: 'Проп-челенджі, реал і демо окремо — з власною статистикою на кожному',
+    title: tx('До 5 рахунків', 'Up to 5 accounts'),
+    hint: tx('Проп-челенджі, реал і демо окремо — з власною статистикою на кожному', 'Prop challenges, live and demo kept apart — each with its own stats'),
   },
   backtest: {
-    title: 'Бектест',
-    hint: 'Прогін стратегії по історії з тими самими метриками, що й у журналі',
+    title: tx('Бектест', 'Backtest'),
+    hint: tx('Прогін стратегії по історії з тими самими метриками, що й у журналі', 'Run your strategy on historical data with the same metrics as your journal'),
   },
   ai: {
-    title: 'AI-коуч',
-    hint: 'Розбір твоїх угод: що повторюється, де втрачаєш і що робити завтра',
+    title: tx('AI-коуч', 'AI coach'),
+    hint: tx('Розбір твоїх угод: що повторюється, де втрачаєш і що робити завтра', 'A breakdown of your trades: what repeats, where you lose, and what to do tomorrow'),
   },
 };
 
@@ -223,7 +224,19 @@ export async function readSubscription() {
     onlyMine(supabase.from('subscriptions').select('trial_block').maybeSingle())
       .catch(() => ({ data: null })),
   ]);
-  const promo = promos?.[0] || null;
+
+  /* Знижка запрошеного за реферальним посиланням — лише на першу
+     оплату. Сервер бере більшу з двох (промокод чи реферал), тож і
+     тут показуємо більшу. Функції може ще не бути — тоді без неї. */
+  let refPct = 0;
+  try {
+    const { data, error } = await supabase.rpc('my_ref_discount');
+    if (!error) refPct = Number(data) || 0;
+  } catch { refPct = 0; }
+  const promoRow = promos?.[0] || null;
+  const promo = refPct > 0 && refPct >= (promoRow?.percent || 0)
+    ? { percent: refPct, charges_left: 1 }
+    : promoRow;
 
   /* Маску картки дістаємо з тіла останнього вдалого колбека.
 
@@ -288,13 +301,39 @@ export async function readSubscription() {
 /* Погасити промокод. Усі перевірки — у функції бази redeem_promo:
    активність, строк, ліміт, один раз на людину. Тут лише показуємо
    відповідь. */
+/* Реферальний код (8 символів) працює і як промокод: введений у тому
+   ж полі, він закріплює запрошувача й дає знижку на першу оплату.
+   Звичайні промокоди — 12 символів, тож переплутати їх не вийде. */
+const REF_ERRORS = {
+  no_code: tx('Такого коду немає', 'No such code'),
+  self: tx('Це твій власний код — поділись ним із другом', 'That’s your own code — share it with a friend'),
+  already: tx('Ти вже прийшов за іншим запрошенням', 'You’re already linked to another invite'),
+  already_paid: tx('Цей код діє лише до першої оплати', 'This code only works before your first payment'),
+  not_signed_in: tx('Треба увійти', 'Please sign in'),
+};
+
+async function redeemReferral(code) {
+  const { data, error } = await supabase.rpc('claim_referral', { p_code: code, p_manual: true });
+  if (error) {
+    if (error.code === 'PGRST202') throw new Error(tx('Такого промокоду немає', 'No such promo code'));
+    throw new Error(error.message);
+  }
+  if (!data?.ok) throw new Error(REF_ERRORS[data?.error] || tx('Код не застосувався', 'The code didn’t apply'));
+  /* Партнерський код може бути й без знижки — тоді просто «прийнято». */
+  return data.discount > 0
+    ? { kind: 'percent', percent: data.discount, months: 1 }
+    : { kind: 'referral' };
+}
+
 export async function redeemPromo(code) {
+  const clean = String(code || '').trim().toUpperCase();
+  if (/^[A-HJ-NP-Z2-9]{8}$/.test(clean)) return redeemReferral(clean);
   const { data, error } = await supabase.rpc('redeem_promo', { p_code: code });
   if (error) {
-    if (error.code === 'PGRST202') throw new Error('Промокоди ще не ввімкнені');
-    throw new Error(error.message || 'Не вдалось застосувати промокод');
+    if (error.code === 'PGRST202') throw new Error(tx('Промокоди ще не ввімкнені', 'Promo codes aren\'t enabled yet'));
+    throw new Error(error.message || tx('Не вдалось застосувати промокод', 'Couldn\'t apply the promo code'));
   }
-  if (!data?.ok) throw new Error(data?.error || 'Такого промокоду немає');
+  if (!data?.ok) throw new Error(data?.error || tx('Такого промокоду немає', 'No such promo code'));
   return data;
 }
 
@@ -305,7 +344,7 @@ export async function redeemPromo(code) {
    Браузер лише переходить за ним. Токен мерчанта сюди не потрапляє. */
 export async function startCheckout(planId, { trial = false } = {}) {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Треба увійти');
+  if (!session) throw new Error(tx('Треба увійти', 'Please sign in'));
 
   const r = await fetch('/api/mono-pay', {
     method: 'POST',
@@ -317,7 +356,7 @@ export async function startCheckout(planId, { trial = false } = {}) {
   });
 
   const out = await r.json().catch(() => ({}));
-  if (!r.ok || !out.url) throw new Error(out.error || 'Не вдалось створити рахунок');
+  if (!r.ok || !out.url) throw new Error(out.error || tx('Не вдалось створити рахунок', 'Couldn\'t create the invoice'));
 
   window.location.assign(out.url);
 }
@@ -326,7 +365,7 @@ export async function startCheckout(planId, { trial = false } = {}) {
    немає, бо гаманець не можна привʼязати для списання через 14 днів. */
 export async function startCryptoCheckout(planId) {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Треба увійти');
+  if (!session) throw new Error(tx('Треба увійти', 'Please sign in'));
 
   const r = await fetch('/api/np-pay', {
     method: 'POST',
@@ -334,7 +373,7 @@ export async function startCryptoCheckout(planId) {
     body: JSON.stringify({ plan: planId }),
   });
   const out = await r.json().catch(() => ({}));
-  if (!r.ok || !out.url) throw new Error(out.error || 'Не вдалось створити рахунок');
+  if (!r.ok || !out.url) throw new Error(out.error || tx('Не вдалось створити рахунок', 'Couldn\'t create the invoice'));
   window.location.assign(out.url);
 }
 
@@ -350,7 +389,7 @@ export async function startCryptoCheckout(planId) {
    за те, що людина пішла. */
 export async function cancelSubscription() {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Треба увійти');
+  if (!session) throw new Error(tx('Треба увійти', 'Please sign in'));
 
   /* Один маршрут для обох систем: сервер сам знає, чим оформлена
      підписка (mono чи старий WayForPay). */
@@ -360,6 +399,6 @@ export async function cancelSubscription() {
   });
 
   const out = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(out.error || 'Не вдалось скасувати');
+  if (!r.ok) throw new Error(out.error || tx('Не вдалось скасувати', 'Couldn\'t cancel'));
   return out;
 }

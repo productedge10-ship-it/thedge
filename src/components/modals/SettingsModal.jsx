@@ -8,10 +8,11 @@ import {
   User, Target, BookOpen, Palette, Sparkles, LayoutGrid,
   MailCheck, MailWarning, KeyRound, Loader2, Check, Send,
   Plug, HelpCircle, ArrowRight, ChevronDown, Unlink, Clock,
-  Share2, Copy, RefreshCw, Link2Off, ExternalLink,
+  Share2, Copy, RefreshCw, Link2Off, ExternalLink, Gift,
 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
+import { LANGS, LANG, setLang, t } from '../../lib/lang';
 import { notify } from '../../utils/notify';
 import { supabase, hadAuthTokenInUrl, endRecoveryFlow } from '../../lib/supabase';
 import { useSettings } from '../../context/SettingsContext';
@@ -25,6 +26,7 @@ import {
 import { THEMES } from '../../lib/themes';
 import ProGate from './ProGate';
 import SubscriptionTab from './SubscriptionTab';
+import ReferralTab from './ReferralTab';
 import useSubscription from '../../hooks/useSubscription';
 import { startCheckout } from '../../lib/billing';
 import { BROKERS, brokerById } from '../../lib/brokers';
@@ -69,11 +71,14 @@ const TABS = [
      бачить хтось, крім тебе. */
   { id: 'share', label: 'Share journal', icon: Share2, eyebrow: 'PUBLIC', hint: 'A read-only link to your journal, analytics and analyses' },
   { id: 'billing', label: 'Subscription', icon: Sparkles, eyebrow: 'PLAN', hint: 'What Pro unlocks and when the card is charged' },
+  /* Реферальне посилання — одразу під підпискою: нараховане йде саме
+     в її рахунок. */
+  { id: 'referral', label: t('Запроси друга', 'Invite a friend'), icon: Gift, eyebrow: 'INVITE', hint: t('Твоє посилання і 10% з першої оплати кожного друга', 'Your link and 10% of each friend’s first payment') },
   /* «Security» звідси прибрано до того часу, поки не буде готова сама
      двофакторка. Вкладка була, вміст до неї — ні, тож вона показувала
      порожню панель. Пункт меню, який нічого не відкриває, гірший за
      відсутній: людина думає, що зламалось саме в неї. */
-  { id: 'look', label: 'Theme', icon: Palette, eyebrow: 'APPEARANCE', hint: 'Light or dark — with a diagonal sweep' },
+  { id: 'look', label: 'Theme & language', icon: Palette, eyebrow: 'APPEARANCE', hint: 'Light or dark, English or Ukrainian' },
   { id: 'motion', label: 'Motion & glow', icon: Sparkles, eyebrow: 'APPEARANCE', hint: 'How much movement you can stand over six hours at a screen' },
   { id: 'menu', label: 'Sections', icon: LayoutGrid, eyebrow: 'NAVIGATION', hint: 'Hide what you don’t use — the data stays' },
 ];
@@ -345,7 +350,7 @@ export default function SettingsModal() {
                  кнопка оплати опинялась під згином, а на 1080p унизу
                  лишалась порожнеча. Тепер вікно бере 88% висоти вікна
                  з тією ж стелею — скрізь заповнене й ніде не зрізане. */
-            className="flex w-full max-w-[1180px] overflow-hidden sm:h-[88vh] sm:max-h-[860px] sm:min-h-[560px]"
+            className="flex w-full max-w-[1400px] overflow-hidden sm:h-[92vh] sm:max-h-[1000px] sm:min-h-[600px]"
             style={{
               background: T.surface,
               border: `1px solid ${T.line}`,
@@ -387,7 +392,10 @@ export default function SettingsModal() {
                 </div>
               </div>
 
-              <div className="flex flex-col" style={{ gap: 3 }}>
+              {/* Список гортається сам, якщо вікно нижче за всі пункти:
+                  інакше нижні вкладки й кнопки під ними налазили одне
+                  на одне на ноутбучних екранах. */}
+              <div className="flex min-h-0 flex-col overflow-y-auto" style={{ gap: 3, marginRight: -6, paddingRight: 6 }}>
                 {TABS.map((t) => {
                   const on = safeTab === t.id;
                   return (
@@ -451,7 +459,7 @@ export default function SettingsModal() {
                 })}
               </div>
 
-              <div className="flex-1" />
+              <div className="flex-1" style={{ minHeight: 16 }} />
 
               {/* Канал і Instagram — над підтримкою, дрібніше за неї.
                   Підтримка — дія («щось зламалось»), соцмережі — просто
@@ -631,7 +639,7 @@ export default function SettingsModal() {
               >
                 {/* ================= Профіль ================= */}
                 {safeTab === 'profile' && (
-                  <div className="flex flex-col" style={{ gap: 30, maxWidth: 760 }}>
+                  <div className="flex flex-col" style={{ gap: 30, maxWidth: '100%' }}>
                     <div>
                       <Label>What we should call you</Label>
                       <input
@@ -750,7 +758,7 @@ export default function SettingsModal() {
 
                 {/* ================= Ціль тижня ================= */}
                 {safeTab === 'goal' && (
-                  <div style={{ maxWidth: 900 }}>
+                  <div style={{ maxWidth: '100%' }}>
                     <Head
                       title="Goal for the week"
                       hint="What the “Week” tile on the Launchpad shows"
@@ -823,7 +831,7 @@ export default function SettingsModal() {
 
                 {/* ================= Журнал ================= */}
                 {safeTab === 'journal' && (
-                  <div style={{ maxWidth: 900 }}>
+                  <div style={{ maxWidth: '100%' }}>
                     <Head
                       title="Trade review"
                       hint="How many questions to ask yourself after every trade"
@@ -899,6 +907,7 @@ export default function SettingsModal() {
                 {safeTab === 'billing' && (sub.ready ? <SubscriptionTab sub={sub} onChanged={sub.refresh} /> : null)}
 
                 {safeTab === 'share' && <ShareTab />}
+                {safeTab === 'referral' && <ReferralTab />}
 
                 {safeTab === 'telegram' && (!sub.ready ? null : sub.isPro
                   ? <TelegramTab />
@@ -906,7 +915,7 @@ export default function SettingsModal() {
 
                 {/* ================= Тема ================= */}
                 {safeTab === 'look' && (
-                  <div style={{ maxWidth: 900 }}>
+                  <div style={{ maxWidth: '100%' }}>
                     <Head
                       title="Theme"
                       hint="Switches with a diagonal sweep — so it doesn’t hit your eyes"
@@ -948,12 +957,53 @@ export default function SettingsModal() {
                         );
                       })}
                     </div>
+
+                    {/* Мова. Перемикання перезавантажує сторінку: тексти
+                        застосунку рахуються один раз при завантаженні
+                        (див. lib/lang.js). */}
+                    <div style={{ marginTop: 34 }}>
+                      <Head
+                        title={t('Мова', 'Language')}
+                        hint={t('Інтерфейс, дати й числа. Сторінка перезавантажиться', 'Interface, dates and numbers. The page will reload')}
+                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2" style={{ marginTop: 20, gap: 12 }}>
+                        {LANGS.map((l) => {
+                          const on = LANG === l.id;
+                          return (
+                            <button
+                              key={l.id}
+                              onClick={() => !on && setLang(l.id)}
+                              className="flex items-center text-left"
+                              style={{ ...cardStyle(on), gap: 16 }}
+                              {...hoverLine(on)}
+                            >
+                              <span
+                                className="grid shrink-0 place-items-center"
+                                style={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: 12,
+                                  background: on ? `rgba(${T.accRgb},0.16)` : T.sunken,
+                                  color: on ? T.acc : T.text3,
+                                  fontFamily: T.mono,
+                                  fontSize: 12.5,
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {l.short}
+                              </span>
+                              <span className="block" style={cardTitle(on)}>{l.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {/* ================= Рух і світло ================= */}
                 {safeTab === 'motion' && (
-                  <div className="flex flex-col" style={{ maxWidth: 900, gap: 34 }}>
+                  <div className="flex flex-col" style={{ maxWidth: '100%', gap: 34 }}>
                     <div>
                       <Head
                         title="Animation"
@@ -1079,7 +1129,7 @@ export default function SettingsModal() {
 
                 {/* ================= Розділи ================= */}
                 {safeTab === 'menu' && (
-                  <div style={{ maxWidth: 940 }}>
+                  <div style={{ maxWidth: '100%' }}>
                     <Head
                       title="Sections in the menu"
                       hint={hiddenCount
@@ -1538,7 +1588,7 @@ function ShareTab() {
   };
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div style={{ maxWidth: '100%' }}>
       <Head
         title="Share your journal"
         hint="Anyone with the link sees your Trading Journal, Analytics and Analyses — exactly as you do, but without the right to change anything."
@@ -2671,14 +2721,14 @@ function TelegramTab() {
 
   if (!state) {
     return (
-      <div style={{ maxWidth: 900 }}>
+      <div style={{ maxWidth: '100%' }}>
         <Head title="Telegram" hint="Читаю стан підключення…" />
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div style={{ maxWidth: '100%' }}>
       <Head
         title="Telegram"
         hint="Таймери з плану, нові угоди з терміналу й підсумок дня — у твій чат"

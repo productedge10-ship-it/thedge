@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertTriangle, Bitcoin, Check, Eye, Loader2, Send, TerminalSquare, Ticket, X,
@@ -13,6 +13,7 @@ import {
 import SubscriptionScene from './SubscriptionScene';
 import { useAuth } from '../../context/AuthContext';
 import { openVerifyEmail } from '../../lib/emailGate';
+import { t as tx, LOCALE, isEn } from '../../lib/lang';
 
 /* ==================================================================
    Підписка.
@@ -38,7 +39,7 @@ import { openVerifyEmail } from '../../lib/emailGate';
 
 const fmtDate = (iso) => {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('uk-UA', {
+  return new Date(iso).toLocaleDateString(LOCALE, {
     day: 'numeric', month: 'long', year: 'numeric',
   });
 };
@@ -50,7 +51,8 @@ const daysLeft = (iso) => {
 };
 
 const plural = (n) => (
-  n % 10 === 1 && n % 100 !== 11 ? 'день'
+  isEn ? (n === 1 ? 'day' : 'days')
+  : n % 10 === 1 && n % 100 !== 11 ? 'день'
     : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'дні'
       : 'днів'
 );
@@ -284,7 +286,7 @@ function Price({ plan, discount }) {
       </AnimatePresence>
 
       <span className="text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-        / місяць{uah ? <span style={{ color: T.text4 }}> · ≈ {fmtUah(uah)}</span> : null}
+        {tx('/ місяць', '/ month')}{uah && !isEn ? <span style={{ color: T.text4 }}> · ≈ {fmtUah(uah)}</span> : null}
       </span>
 
       {pct > 0 && (
@@ -342,13 +344,6 @@ const FAKE = {
    про крипту в src/lib/terms.js). */
 const CRYPTO_ENABLED = false;
 
-const previewAllowed = () => {
-  try {
-    return import.meta.env.DEV || new URLSearchParams(window.location.search).has('preview');
-  } catch {
-    return false;
-  }
-};
 
 /* Промокод.
 
@@ -370,9 +365,11 @@ function PromoBox({ discount, onDone }) {
       const r = await redeemPromo(code);
       setMsg({
         ok: true,
-        text: r.kind === 'percent'
-          ? `Знижка ${r.percent}% застосується до ${r.months === 1 ? 'наступної оплати' : `наступних ${r.months} оплат`}`
-          : `Pro відкрито до ${fmtDate(r.valid_until)}`,
+        text: r.kind === 'referral'
+          ? tx('Код прийнято — дякуємо, що прийшов за запрошенням', 'Code accepted — thanks for coming via an invite')
+          : r.kind === 'percent'
+          ? tx(`Знижка ${r.percent}% застосується до ${r.months === 1 ? 'наступної оплати' : `наступних ${r.months} оплат`}`, `${r.percent}% off will apply to ${r.months === 1 ? 'your next payment' : `your next ${r.months} payments`}`)
+          : tx(`Pro відкрито до ${fmtDate(r.valid_until)}`, `Pro unlocked until ${fmtDate(r.valid_until)}`),
       });
       setCode('');
       await onDone?.();
@@ -392,7 +389,7 @@ function PromoBox({ discount, onDone }) {
         >
           <Ticket size={14} strokeWidth={2.2} style={{ color: T.ok }} />
           <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.ok }}>
-            Знижка {discount.percent}% ще на {discount.left === 1 ? '1 оплату' : `${discount.left} оплат${discount.left < 5 ? 'и' : ''}`}
+            {tx(`Знижка ${discount.percent}% ще на ${discount.left === 1 ? '1 оплату' : `${discount.left} оплат${discount.left < 5 ? 'и' : ''}`}`, `${discount.percent}% off for ${discount.left === 1 ? '1 more payment' : `${discount.left} more payments`}`)}
           </span>
         </div>
       )}
@@ -407,7 +404,7 @@ function PromoBox({ discount, onDone }) {
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
         >
           <Ticket size={13} strokeWidth={2.2} />
-          Є промокод?
+          {tx('Є промокод?', 'Have a promo code?')}
         </button>
       ) : (
         <form onSubmit={apply} className="flex gap-2">
@@ -436,7 +433,7 @@ function PromoBox({ discount, onDone }) {
             }}
           >
             {busy && <Loader2 size={13} strokeWidth={3} className="animate-spin" />}
-            Застосувати
+            {tx('Застосувати', 'Apply')}
           </button>
         </form>
       )}
@@ -455,7 +452,9 @@ export default function SubscriptionTab({ sub, onChanged }) {
   const [err, setErr] = useState('');
   const [preview, setPreview] = useState(false);
 
-  const canPreview = useMemo(previewAllowed, []);
+  /* Перемикач «подивитись вигляд активної підписки» прибрано з
+     інтерфейсу: він лише плутав. FAKE-стан лишився для розробки. */
+  const canPreview = false;
   const view = preview ? FAKE : sub;
 
   /* Скасування питається двома кроками, і це не церемонія.
@@ -480,7 +479,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
       setConfirming(false);
       await onChanged?.();
     } catch (e) {
-      setErr(e.message || 'Не вдалось скасувати');
+      setErr(e.message || tx('Не вдалось скасувати', 'Couldn\'t cancel'));
     } finally {
       setCanceling(false);
     }
@@ -503,7 +502,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
     try {
       await startCheckout(period, { trial });
     } catch (e) {
-      setErr(e.message || 'Не вдалось відкрити оплату');
+      setErr(e.message || tx('Не вдалось відкрити оплату', 'Couldn\'t open checkout'));
       setBusy(false);
       /* Сервер міг щойно відмовити в тріалі — перечитуємо стан, щоб
          кнопка стала звичайною оплатою, а не пропонувала тріал знову. */
@@ -519,7 +518,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
     try {
       await startCryptoCheckout(planId);
     } catch (e) {
-      setErr(e.message || 'Не вдалось відкрити оплату');
+      setErr(e.message || tx('Не вдалось відкрити оплату', 'Couldn\'t open checkout'));
       setBusy(false);
     }
   };
@@ -554,7 +553,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
       style={{ fontFamily: T.mono, letterSpacing: '0.04em', color: preview ? T.acc : T.text3 }}
     >
       <Eye size={12} strokeWidth={2.2} />
-      {preview ? 'вийти з перегляду' : 'подивитись вигляд активної підписки'}
+      {preview ? tx('вийти з перегляду', 'exit preview') : tx('подивитись вигляд активної підписки', 'preview active subscription view')}
     </button>
   );
 
@@ -565,7 +564,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
     >
       <Eye size={13} strokeWidth={2.2} style={{ color: T.warn }} />
       <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.warn }}>
-        Режим перегляду — дані вигадані, кнопки вимкнені
+        {tx('Режим перегляду — дані вигадані, кнопки вимкнені', 'Preview mode — sample data, buttons disabled')}
       </span>
     </div>
   );
@@ -607,7 +606,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
                 {left != null ? left : '∞'}
               </span>
               <span className="text-[15px] font-medium" style={{ fontFamily: T.sans, color: T.text2 }}>
-                {left == null ? 'активна' : isCrypto ? `${plural(left)} оплачено` : isPromo ? `${plural(left)} у подарунок` : `${plural(left)} до списання`}
+                {left == null ? tx('активна', 'active') : isCrypto ? tx(`${plural(left)} оплачено`, `${plural(left)} paid`) : isPromo ? tx(`${plural(left)} у подарунок`, `${plural(left)} free`) : tx(`${plural(left)} до списання`, `${plural(left)} until charge`)}
               </span>
             </div>
 
@@ -618,12 +617,12 @@ export default function SubscriptionTab({ sub, onChanged }) {
                 підписку — вона йде в підтримку й лишає одну зірку. */}
             <div className="mt-4 text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.text3 }}>
               {isPromo
-                ? <>Pro за промокодом до <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(view.validUntil)}</span>. Картку не привʼязано — нічого не спишемо, доступ просто закінчиться</>
+                ? <>{tx('Pro за промокодом до', 'Pro via promo code until')} <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(view.validUntil)}</span>. {tx('Картку не привʼязано — нічого не спишемо, доступ просто закінчиться', 'No card linked — nothing will be charged, access simply ends')}</>
                 : isCrypto
-                ? <>Оплачено криптою до <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(view.validUntil)}</span>. Автосписань немає — нагадаємо за 3 дні</>
+                ? <>{tx('Оплачено криптою до', 'Paid with crypto until')} <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(view.validUntil)}</span>. {tx('Автосписань немає — нагадаємо за 3 дні', 'No auto-renewal — we\'ll remind you 3 days before')}</>
                 : trialing
-                ? <>Далі {subPlan.label.toLowerCase()} — перше списання <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(chargeAt)}</span></>
-                : <>Наступне списання <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(chargeAt)}</span></>}
+                ? <>{tx('Далі', 'Then')} {subPlan.label.toLowerCase()} — {tx('перше списання', 'first charge on')} <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(chargeAt)}</span></>
+                : <>{tx('Наступне списання', 'Next charge on')} <span style={{ color: T.text, fontWeight: 600 }}>{fmtDate(chargeAt)}</span></>}
             </div>
           </div>
         </Stage>
@@ -635,7 +634,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
           >
             <AlertTriangle size={15} strokeWidth={2.2} style={{ color: T.warn, marginTop: 1 }} />
             <span className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.warn }}>
-              Останнє списання не пройшло. Доступ працює до {fmtDate(view.validUntil)}, наступна спроба — через добу. Перевір, чи на картці є кошти.
+              {tx(`Останнє списання не пройшло. Доступ працює до ${fmtDate(view.validUntil)}, наступна спроба — через добу. Перевір, чи на картці є кошти.`, `The last charge didn't go through. Access works until ${fmtDate(view.validUntil)}, next attempt in 24 hours. Check that your card has funds.`)}
             </span>
           </div>
         )}
@@ -648,7 +647,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
             className="text-[10px] font-bold uppercase"
             style={{ fontFamily: T.mono, letterSpacing: '0.24em', color: T.text3 }}
           >
-            Відкрито
+            {tx('Відкрито', 'Unlocked')}
           </div>
           {Object.entries(PRO_FEATURES).map(([k, f]) => (
             <Feature key={k} k={k} title={f.title} hint={f.hint} tone={tone} />
@@ -673,13 +672,13 @@ export default function SubscriptionTab({ sub, onChanged }) {
               className="mb-3.5 text-[10px] font-bold uppercase"
               style={{ fontFamily: T.mono, letterSpacing: '0.2em', color: T.text4 }}
             >
-              Платежі
+              {tx('Платежі', 'Payments')}
             </div>
 
             {view.card && (
               <div className="mb-3 flex items-center justify-between gap-3">
                 <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                  Картка
+                  {tx('Картка', 'Card')}
                 </span>
                 <span className="text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text }}>
                   {view.cardType ? `${view.cardType} · ` : ''}{view.card}
@@ -728,11 +727,11 @@ export default function SubscriptionTab({ sub, onChanged }) {
                             : o.status === 'declined' ? `rgba(${T.badRgb},0.28)` : T.line}`,
                         }}
                       >
-                        {o.status === 'approved' && !o.amount ? 'картка'
-                          : o.status === 'approved' ? 'сплачено'
-                          : o.status === 'declined' ? 'відхилено'
-                            : o.status === 'refunded' ? 'повернено'
-                            : o.status === 'trial' ? 'тріал' : 'очікує'}
+                        {o.status === 'approved' && !o.amount ? tx('картка', 'card')
+                          : o.status === 'approved' ? tx('сплачено', 'paid')
+                          : o.status === 'declined' ? tx('відхилено', 'declined')
+                            : o.status === 'refunded' ? tx('повернено', 'refunded')
+                            : o.status === 'trial' ? tx('тріал', 'trial') : tx('очікує', 'pending')}
                       </span>
                     </span>
                   </div>
@@ -755,14 +754,13 @@ export default function SubscriptionTab({ sub, onChanged }) {
           /* Крипта — передоплата: скасовувати нічого, є лише «продовжити
              наперед». Новий період додається до вже оплаченої дати. */
           <div>
-            {cryptoBtn(`Продовжити криптою · $${subPlan.amount}`, view.planId || 'pro_monthly')}
+            {cryptoBtn(tx(`Продовжити криптою · $${subPlan.amount}`, `Extend with crypto · $${subPlan.amount}`), view.planId || 'pro_monthly')}
             {err && <p className="mt-2 text-center text-[12.5px]" style={{ fontFamily: T.sans, color: T.bad }}>{err}</p>}
           </div>
         ) : view.status === 'canceled' ? (
           <div className="rounded-xl px-3.5 py-3" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
             <span className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              Підписку скасовано. Доступ працює до {fmtDate(view.validUntil)} — далі розділи
-              MetaTrader і Telegram закриються, але журнал, аналітика й калькулятор лишаться.
+              {tx(`Підписку скасовано. Доступ працює до ${fmtDate(view.validUntil)} — далі розділи MetaTrader і Telegram закриються, але журнал, аналітика й калькулятор лишаться.`, `Subscription canceled. Access works until ${fmtDate(view.validUntil)} — after that MetaTrader and Telegram lock, but the journal, analytics and calculator stay.`)}
             </span>
           </div>
         ) : !confirming ? (
@@ -774,19 +772,18 @@ export default function SubscriptionTab({ sub, onChanged }) {
             onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
           >
-            Скасувати підписку
+            {tx('Скасувати підписку', 'Cancel subscription')}
           </button>
         ) : (
           <div className="rounded-xl p-4" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
             <div className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
-              Скасувати підписку?
+              {tx('Скасувати підписку?', 'Cancel subscription?')}
             </div>
 
             {/* Головне — першим рядком. Людина, яка боїться втратити
                 доступ прямо зараз, не дочитає до другого. */}
             <div className="mt-1.5 text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              Доступ працюватиме до {fmtDate(view.validUntil)} — гроші за цей період уже сплачені,
-              і забирати його ми не будемо. Далі списань не буде.
+              {tx(`Доступ працюватиме до ${fmtDate(view.validUntil)} — гроші за цей період уже сплачені, і забирати його ми не будемо. Далі списань не буде.`, `Access stays until ${fmtDate(view.validUntil)} — you've already paid for this period and we won't take it away. No further charges.`)}
             </div>
 
             <div className="mt-3.5 flex flex-wrap gap-2">
@@ -804,7 +801,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
                 }}
               >
                 {canceling ? <Loader2 size={13} strokeWidth={3} className="animate-spin" /> : <X size={13} strokeWidth={2.6} />}
-                Так, скасувати
+                {tx('Так, скасувати', 'Yes, cancel')}
               </button>
 
               <button
@@ -813,7 +810,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
                 className="flex h-9 items-center rounded-lg px-3.5 text-[13px] font-semibold transition-colors duration-200"
                 style={{ fontFamily: T.sans, background: 'transparent', border: `1px solid ${T.line}`, color: T.text2 }}
               >
-                Лишити
+                {tx('Лишити', 'Keep it')}
               </button>
             </div>
 
@@ -870,7 +867,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
                       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                     />
                   )}
-                  <span className="relative">{p.period === 'yearly' ? 'Рік' : 'Місяць'}</span>
+                  <span className="relative">{p.period === 'yearly' ? tx('Рік', 'Year') : tx('Місяць', 'Month')}</span>
                 </button>
               );
             })}
@@ -960,7 +957,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
               {/* Без тріалу це кнопка оплати — підпис за брендбуком
                   plata by mono: назва способу оплати, без логотипів
                   платіжних систем. */}
-              {trialAvailable ? `${TRIAL_DAYS} днів безкоштовно` : 'Онлайн-оплата карткою'}
+              {trialAvailable ? tx(`${TRIAL_DAYS} днів безкоштовно`, `${TRIAL_DAYS} days free`) : tx('Онлайн-оплата карткою', 'Pay online by card')}
             </span>
 
           </button>
@@ -977,10 +974,9 @@ export default function SubscriptionTab({ sub, onChanged }) {
             >
               <AlertTriangle size={15} strokeWidth={2.2} style={{ color: T.warn, marginTop: 1 }} />
               <span className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.warn }}>
-                Пробний період закрито: цей MT5-рахунок уже був привʼязаний до іншого акаунта.
-                Оформи повноцінну підписку — і рахунок підключиться. Якщо це помилка —{' '}
+                {tx('Пробний період закрито: цей MT5-рахунок уже був привʼязаний до іншого акаунта. Оформи повноцінну підписку — і рахунок підключиться. Якщо це помилка —', 'Free trial unavailable: this MT5 account was already linked to another account. Get a full subscription and the account will connect. If this is a mistake —')}{' '}
                 <a href="https://t.me/thedgesupport" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', color: T.text }}>
-                  напиши нам у Telegram
+                  {tx('напиши нам у Telegram', 'message us on Telegram')}
                 </a>.
               </span>
             </div>
@@ -993,27 +989,27 @@ export default function SubscriptionTab({ sub, onChanged }) {
             >
               <AlertTriangle size={15} strokeWidth={2.2} style={{ color: T.warn, marginTop: 1 }} />
               <span className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.warn }}>
-                З цією карткою пробний період уже використано. 1 ₴ повернули — підписку можна оформити звичайною оплатою.
+                {tx('З цією карткою пробний період уже використано. 1 ₴ повернули — підписку можна оформити звичайною оплатою.', 'The free trial was already used with this card. The verification charge was refunded — you can subscribe with a regular payment.')}
               </span>
             </div>
           )}
 
           <p className="mt-3 text-center text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text2 }}>
             {trialAvailable
-              ? `Для перевірки картки спишемо 1 ₴ і одразу повернемо. Перше списання за підписку${view.discount ? ` (зі знижкою ${view.discount.percent}%)` : ''} — через ${TRIAL_DAYS} днів, скасувати можна раніше.`
-              : 'Пробний період уже використано на цьому акаунті.'}
+              ? tx(`Для перевірки картки спишемо 1 ₴ і одразу повернемо. Перше списання за підписку${view.discount ? ` (зі знижкою ${view.discount.percent}%)` : ''} — через ${TRIAL_DAYS} днів, скасувати можна раніше.`, `We'll make a small verification charge on your card and refund it instantly. The first subscription charge${view.discount ? ` (with ${view.discount.percent}% off)` : ''} comes in ${TRIAL_DAYS} days — cancel anytime before.`)
+              : tx('Пробний період уже використано на цьому акаунті.', 'The free trial has already been used on this account.')}
           </p>
           {/* Брендбук mono дозволяє текстом уточнити способи оплати —
               це знімає питання «а якщо в мене не моно». */}
           <p className="mt-1 text-center text-[12px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            Картка будь-якого банку, Apple Pay або Google Pay
+            {tx('Картка будь-якого банку, Apple Pay або Google Pay', 'Any bank card, Apple Pay or Google Pay')}
           </p>
 
           {CRYPTO_ENABLED && (
             <>
-              {cryptoBtn(`Оплатити криптою · ${plan.period === 'yearly' ? `$${plan.amount} за рік` : `$${plan.amount} за місяць`}`)}
+              {cryptoBtn(tx(`Оплатити криптою · ${plan.period === 'yearly' ? `$${plan.amount} за рік` : `$${plan.amount} за місяць`}`, `Pay with crypto · ${plan.period === 'yearly' ? `$${plan.amount} per year` : `$${plan.amount} per month`}`))}
               <p className="mt-1.5 text-center text-[12px] leading-[17px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                USDT, BTC, ETH та інші. Оплата періоду наперед, без тріалу й без автосписань.
+                {tx('USDT, BTC, ETH та інші. Оплата періоду наперед, без тріалу й без автосписань.', 'USDT, BTC, ETH and more. Pay for the period upfront — no trial, no auto-renewal.')}
               </p>
             </>
           )}
@@ -1027,8 +1023,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
       </Stage>
 
       <p className="text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-        Журнал, аналітика й калькулятор лишаються безкоштовними назавжди, без обмежень
-        на кількість угод. Платне — те, що працює, поки ти спиш.
+        {tx('Журнал, аналітика й калькулятор лишаються безкоштовними назавжди, без обмежень на кількість угод. Платне — те, що працює, поки ти спиш.', 'The journal, analytics and calculator stay free forever, with no limit on trades. You pay for what works while you sleep.')}
       </p>
 
       {!preview && <PromoBox discount={view.discount} onDone={onChanged} />}

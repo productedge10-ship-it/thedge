@@ -26,6 +26,7 @@ import { t as tx } from '../../lib/lang';
 import { useSettings } from '../../context/SettingsContext';
 import appVersion from '../../version.json';
 import { inSandbox, isSharedView, withSandbox, viewRoutes } from '../../lib/sandbox';
+import { claimPendingRef } from '../../lib/referral';
 
 /* ------------------------------------------------------------------ */
 /*  THE EDGE — theme tokens                                            */
@@ -1006,6 +1007,13 @@ export default function Layout() {
     try { return localStorage.getItem('edge-sidebar-collapsed') === '1'; } catch { return false; }
   });
   const location = useLocation();
+
+  /* Прийшов за реферальним посиланням → після першого входу
+     закріплюємо запрошувача. У демо й перегляді за посиланням сесія
+     підставна — там нічого не робимо. */
+  useEffect(() => {
+    if (user?.id && !inSandbox()) claimPendingRef();
+  }, [user?.id]);
 
   const toggleCollapse = () => {
     setCollapsed((c) => {

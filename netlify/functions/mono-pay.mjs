@@ -9,7 +9,7 @@
 
 import {
   PLANS, TRIAL_DAYS, TRIAL_CHECK_UAH, json, site, admin, newReference, mono, priceFor,
-  promoFor, discounted, emailMark, isDisposable, markTakenByOther, claimMark,
+  promoFor, referralTerms, referralFields, emailMark, isDisposable, markTakenByOther, claimMark,
 } from './_mono.mjs';
 
 export default async (req) => {
@@ -81,7 +81,8 @@ export default async (req) => {
 
   /* Знижка — лише на справжню оплату. Перевірочна гривня тріалу
      знижки не зʼїдає: вона дістанеться першому списанню після тріалу. */
-  const promo = trial ? null : await promoFor(db, user.id);
+  let promo = trial ? null : await promoFor(db, user.id);
+  let terms = { refDiscount: 0, creditUsed: 0 };
 
   let price;
   try {
@@ -89,8 +90,14 @@ export default async (req) => {
        verification приймає лише номер картки, а Apple Pay / Google Pay
        mono показує тільки там, де є списання (підтверджено підтримкою
        mono). Гривню повертаємо одразу після успіху — див. applyInvoice. */
-    price = trial ? { amount: TRIAL_CHECK_UAH, minor: TRIAL_CHECK_UAH * 100, ccy: 980, currency: 'UAH' }
-      : discounted(await priceFor(planId), promo?.percent);
+    if (trial) {
+      price = { amount: TRIAL_CHECK_UAH, minor: TRIAL_CHECK_UAH * 100, ccy: 980, currency: 'UAH' };
+    } else {
+      /* Реферальна знижка й кредит — лише на справжню оплату, не на
+         перевірочну гривню (див. referralTerms у _mono.mjs). */
+      terms = await referralTerms(db, user.id, await priceFor(planId), promo);
+      ({ price, promo } = terms);
+    }
   } catch (e) {
     console.error('mono pay: курс —', e.message);
     return json({ error: 'Не вдалось порахувати суму, спробуй за хвилину' }, 502);
@@ -106,6 +113,7 @@ export default async (req) => {
     provider: 'mono',
     kind: trial ? 'verify' : 'charge',
     ...(promo ? { promo_id: promo.id } : {}),
+    ...referralFields(terms),
   });
   if (insErr) {
     console.error('mono pay: замовлення —', insErr.message);
