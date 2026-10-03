@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, TrendingUp, TrendingDown, Minus, Coffee, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { t as tx } from '../../lib/lang';
+import { T } from '../../lib/theme';
 
 const ACC = '139,123,255';
 const LINE = 'var(--edge-line, var(--edge-line))';
@@ -8,7 +10,9 @@ const LINE_HI = 'var(--edge-line-hi, var(--edge-line-hi))';
 const SUNKEN = 'var(--edge-sunken, #0D0D10)';
 const SURFACE = 'var(--edge-surface, #131316)';
 const SURFACE_HI = 'var(--edge-surface-hi, #18181C)';
-const SANS = "'Roboto', system-ui, -apple-system, sans-serif";
+/* Шрифт інтерфейсу через токен, а не 'Roboto' рядком: Roboto більше не вантажиться
+   в index.html, і без цього поле падало б у системний шрифт. */
+const SANS = T.sans;
 
 const OPTIONS = [
   { label: 'Bullish', rgb: '52,211,153',  color: 'var(--edge-ok)', icon: TrendingUp },
@@ -63,7 +67,7 @@ export default function NarrativeSelect({ value, onChange }) {
       >
         <span className="flex min-w-0 items-center gap-2.5">
           {selected && <Icon size={15} strokeWidth={2.5} className="shrink-0" />}
-          <span className="truncate">{selected ? selected.label : 'Вибрати bias...'}</span>
+          <span className="truncate">{selected ? selected.label : tx('Вибрати bias...', 'Pick a bias...')}</span>
         </span>
         <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }} className="flex shrink-0">
           <ChevronDown size={14} strokeWidth={2.2} style={{ color: selected ? selected.color : 'var(--edge-text4, var(--edge-text4))', opacity: selected ? 0.7 : 1 }} />

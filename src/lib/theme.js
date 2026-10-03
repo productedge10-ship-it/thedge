@@ -33,23 +33,30 @@ export const T = {
   surface:   'var(--edge-surface, #131316)',    // картка
   surfaceHi: 'var(--edge-surface-hi, #18181C)', // картка при hover / вкладена панель
   sunken:    'var(--edge-sunken, #0D0D10)',     // заглиблення (поле вводу, зона графіка)
+  surface3:  'var(--edge-surface-3, #222228)',  // поповер, меню, тултіп
 
   /* Бордери */
-  line:      'var(--edge-line, #232328)',
-  lineHi:    'var(--edge-line-hi, #33333A)',
+  line:      'var(--edge-line, #2E2E36)',
+  lineHi:    'var(--edge-line-hi, #45454F)',
+  lineInput: 'var(--edge-line-input, #66666F)',  // рамка поля вводу: 3:1 за WCAG 1.4.11
   lineAcc:   'var(--edge-line-acc, rgba(139,123,255,0.35))',
 
   /* Текст — контраст перевірено по WCAG на обох темах */
   text:      'var(--edge-text, #FAFAFA)',
   text2:     'var(--edge-text2, #B4B4BD)',
-  text3:     'var(--edge-text3, #7A7A85)',
-  text4:     'var(--edge-text4, #4A4A52)',
+  text3:     'var(--edge-text3, #8E8E99)',
+  text4:     'var(--edge-text4, #5A5A63)',     // декор; для тексту, який читають, — text3
+  disabled:  'var(--edge-disabled, #5A5A63)',
 
   /* Акцент */
   acc:       'var(--edge-acc, #8b7bff)',
   accRgb:    'var(--edge-acc-rgb, 139,123,255)',
   accSoft:   'var(--edge-acc-soft, rgba(139,123,255,0.10))',
   accLine:   'var(--edge-acc-line, rgba(139,123,255,0.25))',
+  accHover:  'var(--edge-acc-hover, #9D8FFF)',
+  accPress:  'var(--edge-acc-press, #7A69F0)',
+  accText:   'var(--edge-acc-text, #A498FF)',  // акцент як колір тексту
+  onAcc:     'var(--edge-on-acc, #0A0A0C)',     // текст на акцентній заливці
 
   /* Семантика */
   ok:        'var(--edge-ok, #34d399)',
@@ -62,7 +69,8 @@ export const T = {
   infoRgb:   'var(--edge-info-rgb, 96,165,250)',
 
   /* Типографіка.
-     Roboto — рідний шрифт застосунку (index.css), тримаємо його всюди.
+     Шрифт інтерфейсу — Golos Text (index.css, --edge-sans), заголовки —
+     Unbounded. Roboto більше не вантажиться.
      mono лишається ТІЛЬКИ для колонок з цифрами, де важливе
      вирівнювання розрядів. Дрібні лейбли моноширинним більше не робимо —
      від цього інтерфейс виглядав як згенерований дашборд. */

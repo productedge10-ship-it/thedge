@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { T } from '../../../lib/theme';
+import { PALETTES } from '../../../lib/themes';
 import { EdgeMonogram } from '../../core/Layout';
 
 /* ==================================================================
@@ -11,25 +12,47 @@ import { EdgeMonogram } from '../../core/Layout';
    іншою гарнітурою, читається як чужий сайт.
 ================================================================== */
 
+/* Кольори — з темної палітри застосунку, а не власні.
+
+   Досі тут жила окрема палітра: інший фон (#08080c), інші зелений і
+   червоний (#2fbf8f / #ff7b7b), свій глибокий фіолетовий. Людина йшла
+   з лендінга в застосунок і потрапляла ніби в інший продукт.
+
+   Беремо саме ГОТОВІ значення з DARK, а не var(--edge-*): лендінг
+   завжди темний, а змінні на :root перемикаються темою застосунку.
+   Через var() лендінг у людини зі світлою темою став би наполовину
+   світлим.
+
+   Сходинки text4 / text5 / dim зведені до text3. Вони були 4.1, 3.1 і
+   2.4:1 на фоні — нижче AA, а ними набрані справжні тексти (рядок під
+   кнопкою, підпис під журналом, стрічка). Ієрархію тепер тримають
+   розмір і вага, а не ще темніший сірий. Імена лишаються, щоб не
+   чіпати десятки місць, які на них посилаються. */
+const D = PALETTES.dark;
+
 export const C = {
-  bg: '#08080c',
-  panel: '#0e0e14',
-  panel2: '#0b0b10',
-  sunken: '#0a0a0f',
-  line: 'rgba(255,255,255,.08)',
-  lineSoft: 'rgba(255,255,255,.05)',
-  text: '#e9e9f2',
-  text2: '#c4c4d4',
-  text3: '#9e9eb0',
-  text4: '#6f6f82',
-  text5: '#5c5c6e',
-  dim: '#4e4e60',
-  acc: '#8b7bff',
-  accDeep: '#4A3BF5',
-  accSoft: '#a99cff',
-  ok: '#2fbf8f',
-  bad: '#ff7b7b',
-  warn: '#f5a33b',
+  bg: D['--edge-bg'],
+  panel: D['--edge-surface'],
+  panel2: D['--edge-sunken'],
+  sunken: D['--edge-sunken'],
+  line: D['--edge-line'],
+  lineSoft: D['--edge-hair'],
+  text: D['--edge-text'],
+  text2: D['--edge-text2'],
+  text3: D['--edge-text3'],
+  text4: D['--edge-text3'],
+  text5: D['--edge-text3'],
+  dim: D['--edge-text3'],
+  acc: D['--edge-acc'],
+  /* accDeep — колишній #4A3BF5 для градієнтів. Градієнтів більше не
+     буде, а там, де він лишився заливкою (галочка в журналі героя),
+     його замінює стан натиску акценту — той самий відтінок, що й на
+     кнопках застосунку. */
+  accDeep: D['--edge-acc-press'],
+  accSoft: D['--edge-acc-text'],
+  ok: D['--edge-ok'],
+  bad: D['--edge-bad'],
+  warn: D['--edge-warn'],
 };
 
 export const F = { display: T.display, sans: T.sans, mono: T.mono };

@@ -125,19 +125,25 @@
          в макеті немає взагалі, а 900 трапляється лише там, де текст
          набраний Space Grotesk, і той приходить окремим запитом.
          Змінний шрифт важить тим менше, чим вужча вісь.
+
+         Roboto звідси прибрано: інтерфейс набраний Golos Text, а
+         Roboto лишався третьою гарнітурою в запиті, яку майже ніхто не
+         використовував, але кожен відвідувач качав. Місця, де він
+         потрібен свідомо (експорт картинки, примірочна шрифтів),
+         підвантажують його самі.
     ================================================================= -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="preload"
       as="style"
-      href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400..800&family=Golos+Text:wght@400..800&family=Roboto:wght@400..700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400..800&family=Golos+Text:wght@400..800&display=swap"
       onload="this.onload=null;this.rel='stylesheet'"
     />
     <noscript>
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400..800&family=Golos+Text:wght@400..800&family=Roboto:wght@400..700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400..800&family=Golos+Text:wght@400..800&display=swap"
       />
     </noscript>
   </head>

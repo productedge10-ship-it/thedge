@@ -271,7 +271,7 @@ export default function Hero() {
           <div
             style={{
               position: 'relative',
-              background: 'linear-gradient(160deg,#0e0e14,#0b0b10)',
+              background: C.panel,
               border: `1px solid ${C.line}`, borderRadius: 22, overflow: 'hidden',
               boxShadow: '0 40px 100px rgba(0,0,0,.6)',
             }}

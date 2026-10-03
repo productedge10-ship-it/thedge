@@ -74,7 +74,7 @@ export function Rhythm() {
               <div style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '1.2px', color: C.accSoft, marginTop: 18, marginBottom: 8 }}>{r.time}</div>
               <div style={{ fontFamily: F.sans, fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 14 }}>{r.label}</div>
 
-              <div style={{ width: '100%', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 14, padding: 15, textAlign: 'left' }}>
+              <div style={{ width: '100%', background: C.panel, border: '1px solid rgba(255,255,255,.07)', borderRadius: 14, padding: 15, textAlign: 'left' }}>
                 <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: '1.1px', color: C.dim, marginBottom: 11 }}>{r.title}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {r.rows.map(([k, v, c]) => (
@@ -272,7 +272,7 @@ export function Pricing() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(320px,100%),1fr))', gap: 22 }}>
-        <div style={{ background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${C.line}`, borderRadius: 22, padding: 'clamp(20px,5vw,30px) clamp(18px,4.5vw,28px)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 22, padding: 'clamp(20px,5vw,30px) clamp(18px,4.5vw,28px)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2px', color: C.text4, marginBottom: 16 }}>FREE</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 10 }}>
             <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}>$0</span>
@@ -471,7 +471,7 @@ export function FinalFaq() {
           {pick(lang, FAQ).map((f, i) => {
             const on = open === i;
             return (
-              <div key={f.q} style={{ position: 'relative', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${on ? A(0.28) : 'rgba(255,255,255,.07)'}`, borderRadius: 16, overflow: 'hidden', transition: 'border-color .2s ease' }}>
+              <div key={f.q} style={{ position: 'relative', background: C.panel, border: `1px solid ${on ? A(0.28) : 'rgba(255,255,255,.07)'}`, borderRadius: 16, overflow: 'hidden', transition: 'border-color .2s ease' }}>
                 <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 2, background: `linear-gradient(180deg,${C.acc},${C.accDeep})`, transition: 'opacity .25s ease', opacity: on ? 1 : 0 }} />
 
                 <button

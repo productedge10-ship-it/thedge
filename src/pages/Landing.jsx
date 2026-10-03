@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { Globe, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useEdgeFonts } from '../lib/theme';
 import { C, F, A, Cat, KEYFRAMES } from '../components/landing/v3/base';
 import Hero, { Ticker } from '../components/landing/v3/Hero';
 import { LangCtx, useLang, useTx, blogPath } from '../components/landing/v3/lang';
+import { LANG_KEY, isBot, preferredLang } from '../lib/lang';
 
 /* Дев'ять секцій нижче першого екрана плюс підвал — окремим шматком.
    Подробиці, чому саме так, — у самому BelowFold.jsx. */
@@ -35,14 +36,15 @@ const LANGS = [
   { id: 'uk', code: 'UA', href: '/' },
   { id: 'en', code: 'EN', href: '/en' },
 ];
-const LANG_KEY = 'edge_lang';
 
+/* Повне завантаження, а не navigate(): мова решти застосунку
+   (lib/lang.js) визначається один раз на завантаження, і після
+   клієнтського переходу сторінка входу лишилась би старою мовою. */
 function useSwitchLang() {
-  const navigate = useNavigate();
   return (id) => {
     try { localStorage.setItem(LANG_KEY, id); } catch { /* приватний режим */ }
     const target = LANGS.find((l) => l.id === id);
-    if (target) navigate(target.href + window.location.hash);
+    if (target) window.location.assign(target.href + window.location.hash);
   };
 }
 
@@ -90,7 +92,7 @@ function Header() {
   }, [langOpen]);
 
   return (
-    <header style={{ position: 'sticky', top: 0, zIndex: 60, background: 'rgba(8,8,12,.78)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
+    <header style={{ position: 'sticky', top: 0, zIndex: 60, background: 'rgba(10,10,12,.78)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
       <style>{`
         .ln-h-desktop{display:flex}
         .ln-h-burger{display:none}
@@ -277,28 +279,13 @@ export default function Landing({ lang = 'uk' }) {
 
 /* Чи вести людину з / на /en.
 
-   Лише тих, хто прийшов уперше (вибору ще не робив) і чий браузер
-   не український. Російськомовний браузер лишаємо на українській:
-   здебільшого це наші ж люди, а російської версії немає.
-
-   Роботів не чіпаємо взагалі: кожна адреса має віддавати пошуковику
-   свою мову, інакше Google вирішить, що / — це дубль /en, і
-   викине українську головну з індексу. Людей, які вже обрали мову
-   перемикачем, теж не переводимо — вибір лежить у localStorage. */
-const BOT_RE = /bot|crawl|spider|slurp|google|bing|yandex|duckduck|baidu|lighthouse|headless|preview|facebookexternalhit|telegram|whatsapp/i;
-
+   Рішення бере lib/lang.js: явний вибір, країна за IP, часовий пояс,
+   мова браузера. Роботів не чіпаємо взагалі: кожна адреса має
+   віддавати пошуковику свою мову, інакше Google вирішить, що / — це
+   дубль /en, і викине українську головну з індексу. */
 function preferredEnglish() {
-  if (typeof window === 'undefined') return false;
-  try {
-    if (navigator.webdriver || BOT_RE.test(navigator.userAgent || '')) return false;
-    const saved = localStorage.getItem(LANG_KEY);
-    if (saved) return saved === 'en';
-    const langs = (navigator.languages?.length ? navigator.languages : [navigator.language || ''])
-      .map((l) => String(l).slice(0, 2).toLowerCase());
-    return !langs.some((l) => l === 'uk' || l === 'ru');
-  } catch {
-    return false;
-  }
+  if (typeof window === 'undefined' || isBot()) return false;
+  return preferredLang() === 'en';
 }
 
 function LandingPage() {
@@ -309,6 +296,13 @@ function LandingPage() {
      Сервер уже віддав правильну в <html lang>, це на випадок переходу
      між мовами без перезавантаження. */
   useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+
+  /* Хто прийшов на /en і ще нічого не обирав — той і в застосунку
+     після входу бачитиме англійську. Роботам нічого не пишемо. */
+  useEffect(() => {
+    if (isBot()) return;
+    try { if (!localStorage.getItem(LANG_KEY)) localStorage.setItem(LANG_KEY, lang); } catch { /* приватний режим */ }
+  }, [lang]);
 
   /* Прапорець «перший кадр уже намальовано».
 

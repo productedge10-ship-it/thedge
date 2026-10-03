@@ -164,7 +164,7 @@ export default function Difference() {
         onTouchMove={onTouch}
         onKeyDown={onKey}
         style={{
-          position: 'relative', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)',
+          position: 'relative', background: C.panel,
           border: `1px solid ${C.line}`, borderRadius: 24, padding: 'clamp(16px,4vw,30px)', overflow: 'hidden',
           cursor: 'ew-resize', outline: 'none', touchAction: 'pan-y',
         }}

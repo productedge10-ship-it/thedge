@@ -179,7 +179,7 @@ export default function AutoImport() {
         </div>
       </div>
 
-      <div style={{ position: 'relative', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${C.line}`, borderRadius: 24, padding: 'clamp(14px,4vw,26px)', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', background: C.panel, border: `1px solid ${C.line}`, borderRadius: 24, padding: 'clamp(14px,4vw,26px)', overflow: 'hidden' }}>
         <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${A(0.55)},transparent)` }} />
         <span aria-hidden style={{ position: 'absolute', top: -80, left: '34%', width: 400, height: 340, background: 'radial-gradient(circle,rgba(74,59,245,.15),transparent 70%)', filter: 'blur(70px)', pointerEvents: 'none' }} />
 
@@ -316,7 +316,7 @@ export default function AutoImport() {
         {pick(lang, TRUST).map((t) => (
           <div
             key={t.title}
-            style={{ display: 'flex', gap: 13, alignItems: 'flex-start', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 16, padding: '17px 18px', transition: 'border-color .2s ease' }}
+            style={{ display: 'flex', gap: 13, alignItems: 'flex-start', background: C.panel, border: '1px solid rgba(255,255,255,.07)', borderRadius: 16, padding: '17px 18px', transition: 'border-color .2s ease' }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(47,191,143,.32)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.07)'; }}
           >

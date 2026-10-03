@@ -277,7 +277,7 @@ export default function Coach() {
         </div>
 
         {/* ---------- розбір ---------- */}
-        <div style={{ flex: '1 1 520px', minWidth: 'min(320px,100%)', background: 'linear-gradient(160deg,#0e0e14,#0b0b10)', border: `1px solid ${C.line}`, borderRadius: 'clamp(16px,4vw,22px)', padding: 'clamp(15px,4vw,24px)', position: 'relative', overflow: 'hidden', minHeight: 430, display: 'flex', flexDirection: 'column', gap: 13 }}>
+        <div style={{ flex: '1 1 520px', minWidth: 'min(320px,100%)', background: C.panel, border: `1px solid ${C.line}`, borderRadius: 'clamp(16px,4vw,22px)', padding: 'clamp(15px,4vw,24px)', position: 'relative', overflow: 'hidden', minHeight: 430, display: 'flex', flexDirection: 'column', gap: 13 }}>
           <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${A(0.5)},transparent)` }} />
           <span aria-hidden style={{ position: 'absolute', top: -70, left: -50, width: 280, height: 280, background: 'radial-gradient(circle,rgba(74,59,245,.13),transparent 70%)', filter: 'blur(60px)' }} />
 
