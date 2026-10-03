@@ -181,6 +181,15 @@ export async function connectMt5({ broker = 'other', server, login, password }) 
       + 'Щоб підключити його, оформи повноцінну підписку. Якщо це помилка — напиши нам.',
     ), { code: 'trial_mt5_used' });
   }
+  /* Політика RLS mt5_accounts_require_pro пускає в таблицю лише Pro.
+     Сирий текст Postgres («new row violates row-level security…»)
+     людині нічого не каже — перекладаємо на людську мову. */
+  if (String(error?.message || '').includes('mt5_accounts_require_pro')) {
+    throw Object.assign(new Error(
+      'Автоімпорт з MT5 доступний у Pro. Схоже, підписка ще не активувалась — '
+      + 'онови сторінку, а якщо не допоможе, напиши нам.',
+    ), { code: 'pro_required' });
+  }
   if (error) throw error;
   return row.id;
 }

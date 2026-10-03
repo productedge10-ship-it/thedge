@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { onlyMine } from './myId';
 import { t as tx, LOCALE } from './lang';
+import { openVerifyEmail } from './emailGate';
 
 /* ==================================================================
    Тарифи й підписка.
@@ -356,9 +357,21 @@ export async function startCheckout(planId, { trial = false } = {}) {
   });
 
   const out = await r.json().catch(() => ({}));
-  if (!r.ok || !out.url) throw new Error(out.error || tx('Не вдалось створити рахунок', 'Couldn\'t create the invoice'));
+  if (!r.ok || !out.url) throw checkoutError(out);
 
   window.location.assign(out.url);
+}
+
+/* Помилка оплати з кодом від сервера. Окремо обробляємо непідтверджену
+   пошту: сервер відмовляє (email_unverified), і замість тихої відмови
+   одразу відкриваємо вікно підтвердження — інакше людина тисне кнопку
+   й не розуміє, чому нічого не відбувається. */
+function checkoutError(out) {
+  if (out?.code === 'email_unverified') openVerifyEmail();
+  return Object.assign(
+    new Error(out?.error || tx('Не вдалось створити рахунок', 'Couldn\'t create the invoice')),
+    { code: out?.code },
+  );
 }
 
 /* Оплата криптою (NOWPayments). Лише повний період наперед — тріалу
@@ -373,7 +386,7 @@ export async function startCryptoCheckout(planId) {
     body: JSON.stringify({ plan: planId }),
   });
   const out = await r.json().catch(() => ({}));
-  if (!r.ok || !out.url) throw new Error(out.error || tx('Не вдалось створити рахунок', 'Couldn\'t create the invoice'));
+  if (!r.ok || !out.url) throw checkoutError(out);
   window.location.assign(out.url);
 }
 

@@ -1,7 +1,12 @@
+import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { openVerifyEmail } from '../../lib/emailGate';
+import { notify } from '../../utils/notify';
 import { T } from '../trading/planTheme';
 import { PRO_FEATURES, TRIAL_DAYS } from '../../lib/billing';
 import GateScene from './GateScene';
+import { t as tx } from '../../lib/lang';
 import BacktestScene from './BacktestScene';
 
 /* ==================================================================
@@ -19,10 +24,31 @@ import BacktestScene from './BacktestScene';
 /* Кнопка старту пробного періоду. Окремо, бо тепер вона стоїть у двох
    розкладках: звичайній і повноекранній для бектесту. */
 function TrialButton({ onStart, className = '' }) {
+  const { emailVerified } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  /* Раніше onStart викликався «наосліп»: якщо сервер відмовляв (пошта
+     не підтверджена, тріал уже використано, mono не відповів), помилка
+     губилась у консолі, і кнопка просто нічого не робила. Тепер:
+     непідтверджена пошта — одразу вікно підтвердження, без походу на
+     сервер; будь-яка інша відмова — тост з поясненням від сервера. */
+  const start = async () => {
+    if (busy) return;
+    if (emailVerified === false) { openVerifyEmail(); return; }
+    setBusy(true);
+    try {
+      await onStart?.();
+    } catch (e) {
+      notify.error(tx('Не вдалось відкрити оплату', 'Couldn\'t open checkout'), e?.message || '');
+      setBusy(false);
+    }
+  };
+
   return (
     <button
       type="button"
-      onClick={onStart}
+      onClick={start}
+      disabled={busy}
       className={`sub-cta inline-flex h-[52px] items-center justify-center rounded-2xl px-8 text-[14.5px] font-bold ${className}`}
       style={{
         background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
@@ -49,7 +75,7 @@ function TrialButton({ onStart, className = '' }) {
       </span>
       <span className="sub-cta-label inline-flex items-center gap-2">
         <Sparkles size={15} strokeWidth={2.4} style={{ color: T.acc }} />
-        {TRIAL_DAYS} днів безкоштовно
+        {tx(`${TRIAL_DAYS} днів безкоштовно`, `${TRIAL_DAYS} days free`)}
       </span>
     </button>
   );
@@ -90,11 +116,11 @@ export default function ProGate({ feature, onStart }) {
               {f.title}
             </h3>
             <p className="mt-2 text-[14px] leading-[21px]" style={{ fontFamily: T.sans, color: 'rgba(237,236,247,0.62)' }}>
-              {f.hint}. Спробуй прямо тут — натисни Long або Short.
+              {f.hint}. {tx('Спробуй прямо тут — натисни Long або Short.', 'Try it right here — hit Long or Short.')}
             </p>
             <TrialButton onStart={onStart} className="mt-5 w-full" />
             <div className="mt-2.5 text-center text-[12px]" style={{ fontFamily: T.sans, color: 'rgba(237,236,247,0.45)' }}>
-              1 ₴ на перевірку картки, одразу повертаємо · скасувати будь-коли
+              {tx('1 ₴ на перевірку картки, одразу повертаємо · скасувати будь-коли', 'Small card verification charge, refunded instantly · cancel anytime')}
             </div>
           </div>
         </BacktestScene>
@@ -129,7 +155,7 @@ export default function ProGate({ feature, onStart }) {
       {/* Умови списання лишаються: саме цей рядок вирішує, чи буде
           потім повернення й чарджбек. */}
       <span className="mt-3 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-        1 ₴ на перевірку картки, одразу повертаємо · скасувати можна будь-коли
+        {tx('1 ₴ на перевірку картки, одразу повертаємо · скасувати можна будь-коли', 'Small card verification charge, refunded instantly · cancel anytime')}
       </span>
     </div>
   );

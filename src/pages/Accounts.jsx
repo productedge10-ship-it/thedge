@@ -16,6 +16,8 @@ import { supabase as sb } from '../lib/supabase';
 import AccountDetails from '../components/accounts/AccountDetails';
 import AssetIcon from '../components/ui/AssetIcon';
 import { Mt5Card } from '../components/modals/SettingsModal';
+import ProGate from '../components/modals/ProGate';
+import { startCheckout } from '../lib/billing';
 import useSubscription from '../hooks/useSubscription';
 import { FREE_LIMITS } from '../lib/billing';
 import { openSettings } from '../lib/settings';
@@ -835,7 +837,16 @@ return (
             )}
 
             {/* ─────────── Привʼязка терміналу ─────────── */}
-            {addMode === 'mt5' && !editingId && (
+            {/* Привʼязка терміналу — лише для Pro (у базі це охороняє політика
+                mt5_accounts_require_pro). Раніше ця вкладка відкривала форму всім,
+                і Free-юзер вводив логін з паролем, а потім ловив сиру помилку RLS.
+                Тепер так само, як у налаштуваннях: замок і кнопка пробного періоду. */}
+            {addMode === 'mt5' && !editingId && sub.ready && !sub.isPro && (
+              <div className="overflow-y-auto p-5 sm:p-6">
+                <ProGate feature="mt5" onStart={() => startCheckout('pro_monthly', { trial: true })} />
+              </div>
+            )}
+            {addMode === 'mt5' && !editingId && sub.ready && sub.isPro && (
               <div className="overflow-y-auto p-5 sm:p-6">
                 <Mt5Card
                   fancy
