@@ -14,6 +14,7 @@ import SubscriptionScene from './SubscriptionScene';
 import { useAuth } from '../../context/AuthContext';
 import { openVerifyEmail } from '../../lib/emailGate';
 import { t as tx, LOCALE, isEn } from '../../lib/lang';
+import Button from '../ui/Button';
 
 /* ==================================================================
    Підписка.
@@ -907,60 +908,23 @@ export default function SubscriptionTab({ sub, onChanged }) {
             ))}
           </div>
 
-          {/* Та сама родина, що «Add Trade» у журналі й «New plan» у
-              плані: темна плита, акцентна рамка, а під курсором напис
-              гасне й усередині малюється те, про що кнопка.
-
-              Тут це чотирнадцять днів, які заповнюються зліва
-              направо. Останній лишається порожнім, у пунктирі: саме
-              на ньому підписка стає платною. Найважливіше про цю
-              кнопку сказано не текстом, а тим, що людина бачить.
-
-              Подробиці — у `.sub-cta` в index.css. */}
-          <button
-            type="button"
-            disabled={busy || preview}
+          {/* Кнопка оплати — спільний Button, primary lg на всю ширину.
+              Раніше під написом на ховері наливались чотирнадцять днів
+              тріалу; але умови списання й так написані текстом нижче, а
+              сцену, яку видно тільки під курсором, на телефоні не бачить
+              ніхто. Без тріалу підпис — за брендбуком plata by mono:
+              назва способу оплати, без логотипів платіжних систем. */}
+          <Button
+            variant="primary"
+            size="lg"
+            block
+            loading={busy}
+            disabled={preview}
             onClick={() => go({ trial: trialAvailable })}
-            className="sub-cta group mt-6 inline-flex h-[54px] w-full items-center justify-center rounded-2xl px-6 text-[14.5px] font-bold"
-            style={{
-              background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
-              border: `1px solid ${T.lineAcc}`,
-              color: T.text,
-              fontFamily: T.sans,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
-              opacity: busy || preview ? 0.55 : 1,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.07)`;
-              e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.6)`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.05)`;
-              e.currentTarget.style.borderColor = T.lineAcc;
-            }}
+            className="mt-6"
           >
-            {/* Чотирнадцять стовпчиків: тринадцять безкоштовних і
-                один, на якому почнеться списання. */}
-            {trialAvailable && !busy && (
-              <span className="sub-cta-days" aria-hidden>
-                {Array.from({ length: TRIAL_DAYS }, (_, i) => (
-                  <span
-                    key={i}
-                    className={`sub-cta-day${i === TRIAL_DAYS - 1 ? ' is-charge' : ''}`}
-                  />
-                ))}
-              </span>
-            )}
-
-            <span className="sub-cta-label inline-flex items-center gap-2">
-              {busy && <Loader2 size={15} strokeWidth={3} className="animate-spin" style={{ color: T.acc }} />}
-              {/* Без тріалу це кнопка оплати — підпис за брендбуком
-                  plata by mono: назва способу оплати, без логотипів
-                  платіжних систем. */}
-              {trialAvailable ? tx(`${TRIAL_DAYS} днів безкоштовно`, `${TRIAL_DAYS} days free`) : tx('Онлайн-оплата карткою', 'Pay online by card')}
-            </span>
-
-          </button>
+            {trialAvailable ? tx(`${TRIAL_DAYS} днів безкоштовно`, `${TRIAL_DAYS} days free`) : tx('Онлайн-оплата карткою', 'Pay online by card')}
+          </Button>
 
           {/* Умови списання — не дрібний сірий шрифт.
 

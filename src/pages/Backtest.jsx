@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Search, X, Loader2, FlaskConical, Trash2, Layers, SlidersVertical,
+  Plus, Search, X, Loader2, FlaskConical, Trash2, Layers,
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
@@ -14,6 +14,7 @@ import { setBacktestPublic } from '../lib/backtestShare';
 import { notify } from '../utils/notify';
 import { ACT } from '../components/backtest/accent';
 import { t as tx } from '../lib/lang';
+import Button from '../components/ui/Button';
 import BacktestCard from '../components/backtest/BacktestCard';
 import NewBacktestModal from '../components/backtest/NewBacktestModal';
 
@@ -137,65 +138,15 @@ function Summary({ sessions }) {
   );
 }
 
-/* ==================================================================
-   «Новий бектест» — потік даних у 3D-перспективі.
-
-   За основою користувача: два ряди плашок пливуть назустріч одна
-   одній під нахилом, у масці, що гасить їх по краях кнопки, а «+»
-   на ховері перетворюється на повзунки — саме те, чим і є створення
-   бектесту, налаштування параметрів. Панель лишилась тією самою, що
-   в «Add Account» (це вже не тимчасова копія — просто той самий
-   стиль кнопки пасує обом), змінився лише вміст усередині.
-
-   Плашки — не декоративний текст, а ті самі поняття, що й у формі
-   створення нижче (пара, ризик, R, депозит): кнопка натякає на
-   форму, яку зараз відкриє. Емодзі свідомо нема — у проєкті іконки
-   лише SVG. Прозорість плашок і тінь під написом підібрані так, щоб
-   «Новий бектест» лишався читабельним поверх руху, а не змагався з
-   ним за увагу. */
+/* «Новий бектест» — спільний Button. Тут був потік плашок у
+   3D-перспективі з «+», що перетворювався на повзунки. Головна дія
+   сторінки має бути впізнаваною з першого погляду й однаковою з
+   рештою застосунку, а не кожна — своєю виставою. */
 function NewBacktestButton({ onClick }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="bt-stream inline-flex h-[54px] shrink-0 items-center justify-center gap-2.5 rounded-2xl px-6 text-[14.5px] font-bold"
-      style={{
-        background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
-        border: '1px solid rgba(139,123,255,0.5)',
-        color: '#fff',
-        fontFamily: T.sans,
-        boxShadow: 'none',
-      }}
-    >
-      <span className="bt-stream-bg" aria-hidden="true">
-        <span className="bt-stream-row bt-stream-row-a">
-          <span className="bt-pill">EURUSD</span>
-          <span className="bt-pill bt-pill-ok">+2.4R</span>
-          <span className="bt-pill">{tx('Ризик 1%', 'Risk 1%')}</span>
-          <span className="bt-pill bt-pill-ok">Win 62%</span>
-          <span className="bt-pill">EURUSD</span>
-          <span className="bt-pill bt-pill-ok">+2.4R</span>
-          <span className="bt-pill">{tx('Ризик 1%', 'Risk 1%')}</span>
-          <span className="bt-pill bt-pill-ok">Win 62%</span>
-        </span>
-        <span className="bt-stream-row bt-stream-row-b">
-          <span className="bt-pill bt-pill-ok">NET +18.5R</span>
-          <span className="bt-pill">SFP · ORB</span>
-          <span className="bt-pill">$1 000 / R</span>
-          <span className="bt-pill">XAUUSD</span>
-          <span className="bt-pill bt-pill-ok">NET +18.5R</span>
-          <span className="bt-pill">SFP · ORB</span>
-          <span className="bt-pill">$1 000 / R</span>
-          <span className="bt-pill">XAUUSD</span>
-        </span>
-      </span>
-
-      <span className="bt-stream-icon relative inline-flex h-4 w-4 shrink-0 items-center justify-center">
-        <Plus size={16} strokeWidth={2.6} className="bt-stream-plus" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
-        <SlidersVertical size={15} strokeWidth={2.3} className="bt-stream-sliders" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
-      </span>
-      <span className="bt-stream-label whitespace-nowrap">{tx('Новий бектест', 'New backtest')}</span>
-    </button>
+    <Button variant="primary" icon={Plus} onClick={onClick}>
+      {tx('Новий бектест', 'New backtest')}
+    </Button>
   );
 }
 

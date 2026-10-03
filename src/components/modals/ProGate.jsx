@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import Button from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { openVerifyEmail } from '../../lib/emailGate';
 import { notify } from '../../utils/notify';
@@ -44,40 +44,13 @@ function TrialButton({ onStart, className = '' }) {
     }
   };
 
+  /* Спільний Button: головна дія замка — суцільний акцент. Шкала днів,
+     що наливалась під написом на ховері, пішла: умови тріалу людина
+     читає в тексті поруч, а не ловить курсором. */
   return (
-    <button
-      type="button"
-      onClick={start}
-      disabled={busy}
-      className={`sub-cta inline-flex h-[52px] items-center justify-center rounded-2xl px-8 text-[14.5px] font-bold ${className}`}
-      style={{
-        background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
-        border: `1px solid ${T.lineAcc}`,
-        color: T.text,
-        fontFamily: T.sans,
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.07)`;
-        e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.6)`;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.05)`;
-        e.currentTarget.style.borderColor = T.lineAcc;
-      }}
-    >
-      {/* Та сама шкала днів, що й на вкладці Subscription: дві кнопки з
-          однаковим призначенням мають поводитись однаково. */}
-      <span className="sub-cta-days" aria-hidden>
-        {Array.from({ length: TRIAL_DAYS }, (_, i) => (
-          <span key={i} className={`sub-cta-day${i === TRIAL_DAYS - 1 ? ' is-charge' : ''}`} />
-        ))}
-      </span>
-      <span className="sub-cta-label inline-flex items-center gap-2">
-        <Sparkles size={15} strokeWidth={2.4} style={{ color: T.acc }} />
-        {tx(`${TRIAL_DAYS} днів безкоштовно`, `${TRIAL_DAYS} days free`)}
-      </span>
-    </button>
+    <Button variant="primary" size="lg" loading={busy} onClick={start} className={className}>
+      {tx(`${TRIAL_DAYS} днів безкоштовно`, `${TRIAL_DAYS} days free`)}
+    </Button>
   );
 }
 

@@ -13,6 +13,7 @@ import {
 
 import { T, EASE } from '../../lib/theme';
 import { LANGS, LANG, setLang, t } from '../../lib/lang';
+import Button from '../ui/Button';
 import { notify } from '../../utils/notify';
 import { supabase, hadAuthTokenInUrl, endRecoveryFlow } from '../../lib/supabase';
 import { useSettings } from '../../context/SettingsContext';
@@ -1598,10 +1599,10 @@ function ShareTab() {
         <div style={{ marginTop: 24 }}><Loader2 size={18} className="animate-spin" style={{ color: T.text3 }} /></div>
       ) : !token ? (
         <div style={{ marginTop: 22 }}>
-          <ShareBtn onClick={enable} disabled={busy}>
-            {busy ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} strokeWidth={2.4} />}
+          {/* lg — під висоту поля з посиланням (44), яке зʼявиться на цьому ж місці. */}
+          <Button variant="primary" size="lg" icon={Share2} loading={busy} onClick={enable}>
             {t('Створити й скопіювати посилання', 'Create link & copy')}
-          </ShareBtn>
+          </Button>
           <Note>{t('Логіни MT5, налаштування, нотатки й задачі не показуються ніколи — лише угоди, рахунки, плани й аналітика.', 'Your MT5 logins, settings, notes and tasks are never shown — only trades, accounts, plans and analytics.')}</Note>
         </div>
       ) : (
@@ -1617,7 +1618,7 @@ function ShareTab() {
                 fontSize: 13, color: T.text, background: T.sunken, border: `1px solid ${T.line}`, outline: 'none',
               }}
             />
-            <ShareBtn onClick={() => copy()} done={copied} style={{ flexShrink: 0, minWidth: 116 }}>
+            <Button variant="primary" size="lg" onClick={() => copy()} style={{ minWidth: 132 }}>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span
                   key={copied ? 'done' : 'copy'}
@@ -1631,7 +1632,7 @@ function ShareTab() {
                   {copied ? t('Скопійовано', 'Copied') : t('Копіювати', 'Copy')}
                 </motion.span>
               </AnimatePresence>
-            </ShareBtn>
+            </Button>
           </div>
 
           <div className="flex flex-wrap" style={{ marginTop: 14, gap: 10 }}>
@@ -1655,49 +1656,6 @@ function ShareTab() {
         </div>
       )}
     </div>
-  );
-}
-
-/* Головна кнопка вкладки «Share». Та сама мова, що в кнопки експорту
-   на аналітиці: заливка акцентом зверху вниз, тонкий світлий кант
-   згори (ореол під кнопкою прибрано разом з усіма кольоровими тінями).
-   Під курсором заливка яскравішає, кнопка лишається на місці. Після копіювання на мить
-   зеленіє — щоб «скопійовано» було видно краєм ока, без читання. */
-function ShareBtn({ children, onClick, disabled, done, style }) {
-  const [hot, setHot] = useState(false);
-  const base = done ? T.ok : T.acc;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => setHot(true)}
-      onMouseLeave={() => setHot(false)}
-      style={{
-        fontFamily: T.sans,
-        height: 44,
-        padding: '0 20px',
-        borderRadius: 12,
-        fontSize: 14,
-        fontWeight: 700,
-        letterSpacing: '.1px',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        color: 'var(--edge-on-acc, #fff)',
-        background: `linear-gradient(180deg, ${base}, color-mix(in srgb, ${base} 72%, #000))`,
-        border: '1px solid rgba(255,255,255,0.14)',
-        boxShadow: hot && !disabled ? `inset 0 1px 0 rgba(255,255,255,0.28)` : `inset 0 1px 0 rgba(255,255,255,0.22)`,
-        filter: hot && !disabled ? 'brightness(1.08)' : 'none',
-        opacity: disabled ? 0.7 : 1,
-        cursor: disabled ? 'default' : 'pointer',
-        transition: 'box-shadow .22s ease, filter .22s ease, background .3s ease',
-        ...style,
-      }}
-    >
-      {children}
-    </button>
   );
 }
 

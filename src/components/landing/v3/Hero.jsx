@@ -4,6 +4,7 @@ import { ArrowRight, Check, RotateCcw } from 'lucide-react';
 import { C, F, A, Cat, useInView, reducedMotion, SHELL } from './base';
 import DemoTransition from './DemoTransition';
 import { useLang, useTx, pick } from './lang';
+import Button from '../../ui/Button';
 
 /* ==================================================================
    Герой — живий журнал, а не картинка.
@@ -203,22 +204,18 @@ export default function Hero() {
           </p>
 
           <div style={{ display: 'flex', gap: 13, flexWrap: 'wrap', marginBottom: 20 }}>
-            <a
-              href="/auth"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff',
-                fontFamily: F.sans, fontSize: 15.5, fontWeight: 700, padding: '16px 28px',
-                borderRadius: 14, cursor: 'pointer', whiteSpace: 'nowrap',
-                transition: 'all .2s',
-              }}
-            >
+            {/* Спільна кнопка застосунку: суцільний акцент і темний напис
+                (6:1) замість градієнта з білим (3.3:1) і фіолетової
+                заграви. Головну дію видно за кольором — цього досить. */}
+            <Button as="a" href="/auth" variant="primary" size="lg" iconRight={ArrowRight}>
               {tx('Почати безкоштовно', 'Start free')}
-              <ArrowRight size={16} strokeWidth={2.4} />
-            </a>
+            </Button>
 
-            <a
+            <Button
+              as="a"
               href="/demo"
+              variant="secondary"
+              size="lg"
               onClick={(e) => {
                 /* Без Ctrl/⌘ переходимо самі: анімований перехід
                    пояснює, куди людина потрапляє. З модифікатором —
@@ -228,16 +225,9 @@ export default function Hero() {
                 const r = e.currentTarget.getBoundingClientRect();
                 setDemoFrom({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
               }}
-              style={{
-                background: 'transparent', border: `1px solid ${C.line}`, color: C.text,
-                fontFamily: F.sans, fontSize: 15.5, fontWeight: 600, padding: '16px 26px',
-                borderRadius: 14, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .2s',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = A(0.5); e.currentTarget.style.background = A(0.07); }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.line; e.currentTarget.style.background = 'transparent'; }}
             >
               {tx('Спробувати демо', 'Try the demo')}
-            </a>
+            </Button>
           </div>
 
           {/* Три заперечення, які виникають рівно тут, біля кнопки.

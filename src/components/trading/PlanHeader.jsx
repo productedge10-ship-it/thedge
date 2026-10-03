@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { CalendarDays, CalendarRange, Plus, Share2, ClipboardCheck, Briefcase, Send, Check, Loader2, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Layers, LayoutGrid } from 'lucide-react';
 import AssetIcon from '../ui/AssetIcon';
-import AsciiDecode from '../ui/AsciiDecode';
+import Button from '../ui/Button';
 import { T, SPRING, EASE } from './planTheme';
 import { usePlanBlocks, PHASE_LABEL } from '../../lib/planBlocks';
 import { weekRelLabel } from '../../lib/weekPlan';
@@ -14,33 +14,6 @@ import { pairLabel } from '../../lib/planAssets';
    голосно. Тепер одна первинна дія (New plan), решта — тихі іконки,
    підписи з'являються на hover.
 ================================================================== */
-
-/* Оболонка головної кнопки — спільна для обох варіантів анімації.
-
-   Була біла. Задум зрозумілий: поруч зелена «Add trade» і бурштиновий
-   «Quiz», і фіолетовий з ними бився. Але біле на темному це не
-   «нейтрально», а найгучніше, що можна поставити — у хедері вона
-   читалась як чужий предмет. Тепер темна плашка, а фіолетовим
-   світиться рамка, не заливка: із сусідами вона так не свариться. */
-const CTA_STYLE = {
-  fontFamily: T.sans,
-  color: T.text,
-  background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.sunken})`,
-  border: `1px solid ${T.lineAcc}`,
-  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
-};
-
-/* Ховер світлом, без зсуву: кнопка стоїть крайньою в тісному рядку,
-   і будь-який рух тягне сусідів за собою. */
-const ctaIn = (e) => {
-  e.currentTarget.style.boxShadow = 'none';
-  e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
-};
-
-const ctaOut = (e) => {
-  e.currentTarget.style.boxShadow = CTA_STYLE.boxShadow;
-  e.currentTarget.style.borderColor = T.lineAcc;
-};
 
 function IconBtn({ icon: Icon, label, onClick, tone }) {
   const color = tone || T.text2;
@@ -520,11 +493,6 @@ export default function PlanHeader({
 }) {
   const weekly = mode === 'weekly';
 
-  /* Ховер головної кнопки тримаємо станом, а не тільки в CSS:
-     розшифровка підпису — це JS, і йому потрібен сигнал. Решта
-     анімації лишається на :hover, щоб рух не залежав від
-     перерендерів. */
-  const [hot, setHot] = useState(false);
 
   return (
     <div className="mb-7 flex flex-col gap-6">
@@ -638,72 +606,19 @@ export default function PlanHeader({
           <IconBtn icon={Send} label={tx('Нагадування', 'Reminders')} onClick={onOpenTgAlert} tone={T.info} />
           <ShareBtn onShare={onShare} />
 
-          {/* Головна дія хедера. */}
-          <button
+          {/* Головна дія хедера — спільний Button. Тут був «термінал» на
+              ховері: ASCII-графік, промінь сканера й підпис, що
+              перебирався в N3W_PL4N. Кнопка стоїть у тісному ряду
+              з іншими діями, і вистава на ній тягла увагу з самого плану. */}
+          <Button
+            variant="primary"
+            icon={Plus}
             data-tour="plan-new"
             onClick={onNewPlan}
-            className="plan-cta group relative ml-1 inline-flex h-[38px] shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-xl px-4 text-[14px] font-bold active:scale-[0.98]"
-            style={CTA_STYLE}
-            onMouseEnter={(e) => { setHot(true); ctaIn(e); }}
-            onMouseLeave={(e) => { setHot(false); ctaOut(e); }}
-            onFocus={() => setHot(true)}
-            onBlur={() => setHot(false)}
+            className="ml-1"
           >
-            {/* Тло — маленький термінал.
-
-                ASCII тут не прикраса й не данина ретро: план — єдине
-                місце застосунку, де малюють те, чого ще не сталося, а
-                символьний графік виглядає саме як накидка, ескіз. І він
-                чесно дешевий: два рядки тексту й один clip-path проти
-                десятка SVG-анімацій, які тут стояли раніше.
-
-                `steps()` на друкуванні обовʼязковий. Плавний clip-path
-                виглядає як штора, що їде; ступінчастий — як символи, що
-                зʼявляються по одному. Різниця в одному слові, а жест
-                виходить зовсім інший. */}
-            <pre className="plan-ascii" aria-hidden="true">
-              <span className="plan-ascii-dots">· · · · · · · · · · · ·</span>
-              <span className="plan-ascii-spark">▁▂▁▃▂▄▃▅▆▅▇▆█▇█</span>
-            </pre>
-
-            {/* Промінь сканера доганяє друк і гасне за правим краєм —
-                він і ставить крапку в жесті. */}
-            <span className="plan-scan" aria-hidden="true" />
-
-            <span className="plan-cta-label relative flex items-center gap-2">
-              <span className="plan-cta-icon">
-                <Plus size={15} strokeWidth={3} className="plan-cta-plus" />
-                <span className="plan-cta-prompt" aria-hidden="true">›</span>
-              </span>
-              {/* Підпис не зникає, а перебирається символами й стає
-                  командою. Верхній регістр тут не косметика: рядок із
-                  курсором має читатись як щось, що ввели, а не як
-                  назва кнопки. */}
-              {/* Ширину тримає невидимий двійник, набраний у найширшому
-                  зі станів. Без нього кнопка дихала на кожному ховері:
-                  моноширинний верхній регістр із розрядкою помітно
-                  ширший за звичайний підпис, а кнопка стоїть крайньою
-                  в тісному рядку й тягла б за собою сусідів.
-
-                  Кінцевий текст лишається кодом, а не чистим «NEW
-                  PLAN»: рядок має виглядати як щось введене в
-                  термінал, і саме недочитаність робить його таким.
-                  Але читатись він мусить з першого погляду, тому
-                  підміни рівно три і всі очевидні. */}
-              <span className="plan-cta-text">
-                <span className="plan-cta-sizer" aria-hidden="true">
-                  {weekly ? 'N3W_W33K' : 'N3W_PL4N'}
-                </span>
-                <AsciiDecode
-                  text={weekly ? 'New week' : 'New plan'}
-                  alt={weekly ? 'N3W_W33K' : 'N3W_PL4N'}
-                  active={hot}
-                  className="plan-cta-live"
-                />
-              </span>
-              <span className="plan-caret" aria-hidden="true">▌</span>
-            </span>
-          </button>
+            {weekly ? tx('Новий тиждень', 'New week') : tx('Новий план', 'New plan')}
+          </Button>
         </div>
       </div>
 

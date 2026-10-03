@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Building2, Wallet, Trash2, X, Activity,
   Loader2, Pencil, Trophy, ArrowDownToLine, TrendingUp, TrendingDown, ArrowRight, Archive, Lock,
-  Plug,
+  Plug, Plus,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -14,13 +14,13 @@ import { T } from '../lib/theme';
 import { money, money2, accountSize } from '../lib/accountsStore';
 import { supabase as sb } from '../lib/supabase';
 import AccountDetails from '../components/accounts/AccountDetails';
-import AssetIcon from '../components/ui/AssetIcon';
 import { Mt5Card } from '../components/modals/SettingsModal';
 import ProGate from '../components/modals/ProGate';
 import { startCheckout } from '../lib/billing';
 import useSubscription from '../hooks/useSubscription';
 import { FREE_LIMITS } from '../lib/billing';
 import { openSettings } from '../lib/settings';
+import Button from '../components/ui/Button';
 import { t as tx } from '../lib/lang';
 
 const PREDEFINED_FIRMS = [
@@ -115,50 +115,6 @@ function AccCard({ children, hue = T.accRgb, onClick, hoverable = false, classNa
       )}
       {children}
     </motion.div>
-  );
-}
-
-/* ==================================================================
-   «Add Account» — гаманці віялом, монети вилітають з-під них.
-
-   За основою користувача: стос із трьох гаманців на наведенні
-   розходиться віялом, а з-під кожного випурхує своя монета — BTC,
-   золото, ETH, тими самими іконками, що скрізь у застосунку малює
-   AssetIcon (не нові SVG, символ той самий, яким актив і так
-   впізнають). Загальний вигляд кнопки — фон, рамка, тінь — лишився
-   недоторканим; сама анімація, паузи й криві — у index.css
-   (.acc-burst-glimmer / .acc-wallet-* / .acc-fly-*). */
-function AddAccountCta({ onClick }) {
-  return (
-    <button
-      type="button"
-      data-tour="acc-add"
-      onClick={onClick}
-      className="acc-burst inline-flex h-[48px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl px-4 text-[13.5px] font-bold sm:h-[54px] sm:ml-1 sm:px-6 sm:text-[14.5px] md:flex-none"
-      style={{
-        background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
-        border: '1px solid rgba(139,123,255,0.5)',
-        color: '#fff',
-        fontFamily: T.sans,
-        boxShadow: 'none',
-      }}
-    >
-      <span className="acc-wallet-stage relative h-4 w-4 shrink-0">
-        <span className="acc-fly-coin acc-fly-btc"><AssetIcon symbol="BTC" size={12} category="crypto" /></span>
-        <span className="acc-fly-coin acc-fly-gold"><AssetIcon symbol="XAU" size={12} /></span>
-        <span className="acc-fly-coin acc-fly-eth"><AssetIcon symbol="ETH" size={12} category="crypto" /></span>
-
-        {/* Задні гаманці — світліші, а не просто прозоріші: на темній
-            панелі однаковий колір трьох силуетів, що йдуть внахлест,
-            зливається в одну пляму. Освітлення дає їм читатись окремо
-            одне від одного, а не лише формою. */}
-        <Wallet size={16} strokeWidth={1.8} className="acc-wallet acc-wallet-3" style={{ color: 'color-mix(in srgb, var(--edge-acc, #8b7bff) 45%, white)' }} />
-        <Wallet size={16} strokeWidth={2} className="acc-wallet acc-wallet-2" style={{ color: 'color-mix(in srgb, var(--edge-acc, #8b7bff) 70%, white)' }} />
-        <Wallet size={16} strokeWidth={2.4} className="acc-wallet acc-wallet-1" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
-      </span>
-      <span className="acc-burst-label whitespace-nowrap">{tx('Додати рахунок', 'Add Account')}</span>
-      <span className="acc-burst-glimmer" aria-hidden="true" />
-    </button>
   );
 }
 
@@ -400,25 +356,6 @@ return (
         stroke-dasharray: 100 0;
       }
 
-      /* Кнопка «Archive» — та сама скляна панель, що інші преміальні
-         блоки: градієнтне тло, іконка в колі, м'який ховер. */
-      .acc-archive-btn {
-        transition: border-color .25s ease, background-color .25s ease, color .25s ease;
-      }
-      .acc-archive-btn:hover {
-        border-color: rgba(139,123,255,0.4) !important;
-        color: var(--edge-text2, var(--edge-text2)) !important;
-      }
-      .acc-archive-icon {
-        display: grid;
-        place-items: center;
-        width: 26px;
-        height: 26px;
-        border-radius: 9px;
-        background: rgba(139,123,255,0.1);
-        transition: background-color .25s ease;
-      }
-
       /* Ховер на плашках статистики — без обводки-рідини, але
          помітніший: тепла рамка, легка тінь у кольорі картки й
          іконка + число трохи виступають. */
@@ -497,35 +434,27 @@ return (
         </div>
 
         <div className="flex w-full shrink-0 items-center gap-2.5 md:w-auto">
-          <button
-            onClick={() => setShowArchive((v) => !v)}
-            className="acc-archive-btn inline-flex h-[48px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 text-[13px] font-bold sm:h-[54px] sm:gap-2.5 sm:pl-2.5 sm:pr-5 sm:text-[14px]"
-            style={{
-              background: showArchive
-                ? 'linear-gradient(145deg, rgba(139,123,255,0.16), rgba(139,123,255,0.05))'
-                : 'linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01))',
-              border: `1px solid ${showArchive ? 'rgba(139,123,255,0.45)' : 'var(--edge-line, var(--edge-line))'}`,
-              color: showArchive ? 'var(--edge-acc, var(--edge-acc))' : 'var(--edge-text3, var(--edge-text3))',
-              fontFamily: T.sans,
-            }}
-          >
-            <span className="acc-archive-icon">
-              <Archive size={13.5} strokeWidth={2.4} style={{ color: 'var(--edge-acc, var(--edge-acc))' }} />
-            </span>
+          {/* Обидві кнопки — спільний Button. Була темна «скляна» панель
+              з градієнтом і кнопка з гаманцями й монетами, що вилітають на
+              ховері; поруч вони мали різну висоту (54 і 48). Тепер одна
+              головна дія (додати) і одна другорядна (архів), однієї висоти. */}
+          <Button variant="secondary" icon={Archive} onClick={() => setShowArchive((v) => !v)} aria-pressed={showArchive}>
             {showArchive
               ? <><span className="sm:hidden">{tx('Назад', 'Back')}</span><span className="hidden sm:inline">{tx('До рахунків', 'Back to accounts')}</span></>
               : tx('Архів', 'Archive')}
             {!showArchive && closedAccounts.length > 0 && (
               <span
-                className="grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold"
-                style={{ background: 'rgba(139,123,255,0.18)', color: 'var(--edge-acc, var(--edge-acc))' }}
+                className="ml-1.5 inline-grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold tabular-nums"
+                style={{ background: T.surface3, color: T.text2 }}
               >
                 {closedAccounts.length}
               </span>
             )}
-          </button>
+          </Button>
 
-          <AddAccountCta onClick={openAddModal} />
+          <Button variant="primary" icon={Plus} onClick={openAddModal} data-tour="acc-add" className="min-w-0 flex-1 md:flex-none">
+            {tx('Додати рахунок', 'Add Account')}
+          </Button>
         </div>
       </motion.div>
 

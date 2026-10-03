@@ -10,10 +10,10 @@ import AssetSelect from '../components/trading/AssetSelect';
 import DateRangePicker from '../components/trading/DateRangePicker';
 import DelayedTooltip from '../components/ui/DelayedTooltip';
 import PlanTypeToggle from '../components/ui/PlanTypeToggle';
-import { Spotlight, Magnetic } from '../components/ui/Hovers';
+import { Spotlight } from '../components/ui/Hovers';
 import AnalysisCard, { biasResult } from '../components/analyses/AnalysisCard';
 import AnalysisRow from '../components/analyses/AnalysisRow';
-import RollingText from '../components/ui/RollingText';
+import Button from '../components/ui/Button';
 import WeeklyAnalysisCard from '../components/analyses/WeeklyAnalysisCard';
 import PremiumAnalysisHover from '../components/analyses/PremiumAnalysisHover';
 import { withSandbox } from '../lib/sandbox';
@@ -405,87 +405,13 @@ export default function Analyses() {
               </p>
             </div>
 
-            {/* Кнопка, яка пише сама себе.
-
-                Під курсором відбувається три речі одночасно, і жодна
-                з них не ховає текст — навпаки, текст тут головний:
-
-                1. Підпис ПЕРЕКОЧУЄТЬСЯ. Кожна літера — окреме віконце,
-                   у якому стара літера їде вгору, а знизу приїжджає
-                   нова: «Новий аналіз» → «Почати запис». Хвиля йде
-                   зліва направо, як набір на клавіатурі.
-                2. Під словом від руки прокреслюється лінія — той
-                   самий жест, яким підкреслюють у зошиті.
-
-                Ручка при цьому нахиляється, як у момент письма.
-                (Промінь світла по кнопці був тут третім — прибрали:
-                фіолетовий блиск наприкінці проходу читався як зайва
-                пляма між іконкою і текстом, а не як «блиск металу».) */}
-            <Magnetic
-              onClick={createNewPlan}
-              /* strength=0 — магніт вимкнено, лишається тільки стиск
-                 при натисканні. Те саме рішення, що й на кнопці
-                 журналу: головні дії застосунку мають однаково
-                 відгукуватись на палець, а тягнутись за курсором цій
-                 кнопці нема куди — вона стоїть у рядку з фільтрами. */
-              strength={0}
-              className="analysis-cta group relative inline-flex h-[46px] shrink-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-xl pl-4 pr-5 text-[14px] font-bold"
-              style={{
-                background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
-                border: `1px solid ${T.lineAcc}`,
-                color: T.text,
-                fontFamily: T.sans,
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.05)`;
-                e.currentTarget.style.borderColor = T.lineAcc;
-              }}
-            >
-              <span className="analysis-cta-row relative flex items-center gap-2">
-                <PenLine size={16} strokeWidth={2.6} className="analysis-cta-icon shrink-0" style={{ color: T.acc }} />
-
-                <RollingText
-                  from={planType === 'weekly' ? 'Новий тиждень' : 'Новий аналіз'}
-                  to={planType === 'weekly' ? 'Почати тиждень' : 'Почати запис'}
-                />
-              </span>
-
-              {/* Підкреслення від руки — під самим словом. */}
-              <svg
-                className="analysis-cta-ink"
-                viewBox="0 0 200 46"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  className="analysis-cta-stroke analysis-cta-stroke-1"
-                  pathLength="1"
-                  d="M38,33 C60,29 78,36 100,32 C122,28 142,35 166,30.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  vectorEffect="non-scaling-stroke"
-                />
-                <path
-                  className="analysis-cta-stroke analysis-cta-stroke-2"
-                  pathLength="1"
-                  d="M44,37.5 C64,34.5 82,39 104,36 C118,34 128,37 140,35.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeOpacity="0.4"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-            </Magnetic>
+            {/* Головна дія — спільний Button. Тут була «кнопка, що пише сама
+                себе»: літери перекочувались у нову фразу, під словом
+                малювалось підкреслення від руки. Кнопку тиснуть щодня, і
+                щоденна вистава на ній відволікає від самого плану. */}
+            <Button variant="primary" icon={PenLine} onClick={createNewPlan} className="edge-owner-only">
+              {planType === 'weekly' ? 'Новий тиждень' : 'Новий аналіз'}
+            </Button>
           </div>
 
           {/* зведення */}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import lottie from 'lottie-web';
+import Button from '../components/ui/Button';
 import {
   Search, X, Plus, ArrowDownUp, LayoutGrid, Rows3, Pencil, Link as LinkIcon, Pin,
   NotebookPen, Trash2, Image as ImageIcon, Loader2, AudioLines,
@@ -61,28 +61,6 @@ const fmtShort = (iso) => {
 
 
 
-/* Єдина яскрава кнопка в рядку. Тіні під нею більше немає зовсім:
-   на темному тлі акцент і так видно першим, а фіолетова заграва
-   під кнопкою — рівно той тип ефекту, який тестер назвав зайвим
-   («більш стриманий стиль більш підходить»). */
-const CtaBtn = ({ onClick, children }) => (
-  <button
-    onClick={onClick}
-    className="group inline-flex h-[42px] shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4.5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-    style={{
-      background: T.acc,
-      color: 'var(--edge-on-acc, #0A0A0C)',
-      fontFamily: T.sans,
-      paddingLeft: 18,
-      paddingRight: 18,
-      boxShadow: 'none',
-    }}
-  >
-    <Plus size={16} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
-    {children}
-  </button>
-);
-
 /* ================================================================== */
 
 /* Акцент у темі — CSS-змінна, а не hex. Тому альфу до неї не можна
@@ -130,154 +108,26 @@ function PanelBtn({ onClick, active, children }) {
   );
 }
 
+/* «Новий запис» — спільний Button. Була кнопка з градієнтом, бліком
+   згори й підстрибуванням на ховері, а напис на фіолетовому стояв
+   світлим (3.3:1). Обгортка лишається, щоб не чіпати місця виклику. */
 function GradientCta({ onClick, children }) {
-  const [hov, setHov] = useState(false);
-
   return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      className="relative flex h-11 shrink-0 items-center gap-[9px] overflow-hidden rounded-[13px] px-[21px]"
-      style={{
-        background: `linear-gradient(180deg, ${hov ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
-        boxShadow: hov ? `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)` : `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
-        transform: `translateY(${hov ? '-2px' : '0'})`,
-        transition: 'transform .34s cubic-bezier(.22,1.2,.36,1), box-shadow .28s, background .2s',
-      }}
-    >
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(var(--edge-hair-rgb),0.60),transparent)' }} />
-      <Plus size={15} strokeWidth={2.4} style={{ color: 'var(--edge-text)' }} />
-      <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: 'var(--edge-text)', letterSpacing: '-0.1px' }}>{children}</span>
-    </button>
+    <Button variant="primary" icon={Plus} onClick={onClick} className="edge-owner-only">
+      {children}
+    </Button>
   );
 }
 
-/* Справжні анімовані емодзі Google (Noto), а не растрова картинка чи
-   символ шрифту: думка й ліхтарик мають самі «грати», а не просто
-   з'явитись. Програвач ставиться один раз при монтуванні й лежить
-   на паузі (autoplay:false) — а `playing` ззовні лише каже, грати
-   зараз чи стояти на першому кадрі. Так одна й та сама морока з
-   lottie-web не дублюється у двох місцях кнопки. */
-function EmojiLottie({ src, size = 20, playing, loop = false, speed = 0.85 }) {
-  const hostRef = useRef(null);
-  const animRef = useRef(null);
-
-  useEffect(() => {
-    const anim = lottie.loadAnimation({
-      container: hostRef.current,
-      renderer: 'svg',
-      loop,
-      autoplay: false,
-      path: src,
-    });
-    anim.setSpeed(speed);
-    animRef.current = anim;
-    return () => anim.destroy();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, loop]);
-
-  useEffect(() => {
-    const anim = animRef.current;
-    if (!anim) return;
-    if (playing) anim.goToAndPlay(0, true);
-    else anim.goToAndStop(0, true);
-  }, [playing]);
-
-  return <div ref={hostRef} style={{ width: size, height: size, pointerEvents: 'none' }} />;
-}
-
-const EMOJI_THINKING = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f914/lottie.json';
-const EMOJI_BULB = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f4a1/lottie.json';
-
-/* «Нова папка» — та сама база, що в «Новий бектест»: темний градієнт,
-   лавандова рамка й світіння знизу.
-
-   Ховер — сцена в три кроки: «думка» крутиться, поки курсор на кнопці,
-   іскра-ідея летить дугою через кнопку (~0.58с по одному суцільному
-   offset-path, зі слідом із двох менших іскор, носом за напрямком
-   польоту — не вгору), і лише коли вона майже долетіла, розкривається
-   ліхтарик і засвічується (з коротким спалахом) уже після того, як
-   літачок розчинився.
-
-   Тайминг тримає JS (`setTimeout`), не CSS transition-delay: нам
-   однаково потрібен JS-стан, щоб керувати програванням двох lottie
-   (`hover` — «думка» в циклі; `lit` — ліхтарик один раз), тож простіше
-   тим самим станом підпалити й CSS-клас, ніж тримати дві незалежні
-   таймлінії (JS-таймер для lottie і CSS-затримки для іскри) й
-   сподіватись, що вони не розійдуться. */
+/* «Нова папка» — спільний Button. Тут була сцена на ховері: емодзі
+   «думка» (lottie), іскра летить дугою, засвічується ліхтарик. Разом
+   з нею пішов і lottie-web — бібліотека ~250 КБ, яку сторінка тягнула
+   заради двох анімованих емодзі на одній кнопці. */
 function NewFolderCta({ onClick, children }) {
-  const [hover, setHover] = useState(false);
-  const [lit, setLit] = useState(false);
-  const litTimer = useRef(null);
-
-  const enter = () => {
-    setHover(true);
-    clearTimeout(litTimer.current);
-    litTimer.current = setTimeout(() => setLit(true), 580);
-  };
-  const leave = () => {
-    clearTimeout(litTimer.current);
-    setHover(false);
-    setLit(false);
-  };
-
-  useEffect(() => () => clearTimeout(litTimer.current), []);
-
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={enter}
-      onMouseLeave={leave}
-      onFocus={enter}
-      onBlur={leave}
-      className={`folder-cta inline-flex h-11 shrink-0 items-center justify-center gap-2.5 rounded-2xl pl-6 pr-7 text-[14.5px] font-bold${hover ? ' is-hover' : ''}${lit ? ' is-lit' : ''}`}
-      style={{
-        background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
-        border: '1px solid rgba(139,123,255,0.5)',
-        color: '#fff',
-        fontFamily: T.sans,
-        boxShadow: 'none',
-      }}
-    >
-      <span className="folder-cta-arc" aria-hidden="true">
-        <svg viewBox="0 0 166 44" preserveAspectRatio="none">
-          <path d="M 34 23 Q 92 7, 148 20" />
-        </svg>
-      </span>
-
-      <span className="folder-cta-spark folder-cta-spark-1" aria-hidden="true" />
-      <span className="folder-cta-spark folder-cta-spark-2" aria-hidden="true" />
-
-      <svg
-        className="folder-cta-plane"
-        viewBox="0 0 24 24"
-        fill="rgba(251,191,36,0.35)"
-        stroke="#fde68a"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M22 2L11 13" />
-        <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-      </svg>
-
-      <span className="folder-cta-icon" aria-hidden="true">
-        <Plus size={16} strokeWidth={2.6} className="folder-cta-plus" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
-        <span className="folder-cta-emoji">
-          <EmojiLottie src={EMOJI_THINKING} size={20} playing={hover} loop speed={0.8} />
-        </span>
-      </span>
-
-      <span className="folder-cta-label whitespace-nowrap">{children}</span>
-
-      <span className="folder-cta-bulb-burst" aria-hidden="true" />
-      <span className="folder-cta-bulb" aria-hidden="true">
-        <EmojiLottie src={EMOJI_BULB} size={20} playing={lit} speed={0.9} />
-      </span>
-    </button>
+    <Button variant="primary" icon={Plus} onClick={onClick} className="edge-owner-only">
+      {children}
+    </Button>
   );
 }
 

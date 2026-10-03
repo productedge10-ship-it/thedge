@@ -4,6 +4,7 @@ import { Globe, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useEdgeFonts } from '../lib/theme';
 import { C, F, A, Cat, KEYFRAMES } from '../components/landing/v3/base';
+import { PALETTES } from '../lib/themes';
 import Hero, { Ticker } from '../components/landing/v3/Hero';
 import { LangCtx, useLang, useTx, blogPath } from '../components/landing/v3/lang';
 import { LANG_KEY, isBot, preferredLang } from '../lib/lang';
@@ -351,7 +352,11 @@ function LandingPage() {
   }, [belowReady]);
 
   return (
-    <div className="ln-root" style={{ background: C.bg, minHeight: '100vh', overflowX: 'hidden', color: C.text }}>
+    /* Темна палітра — змінними на самому корені лендінга. Лендінг завжди
+       темний, а спільні компоненти (Button) фарбуються через var(--edge-*),
+       які на :root перемикає тема застосунку. Без цього в людини зі
+       світлою темою кнопки на лендінгу ставали б світлими. */
+    <div className="ln-root" style={{ ...PALETTES.dark, background: C.bg, minHeight: '100vh', overflowX: 'hidden', color: C.text }}>
       <style>{`
         ${KEYFRAMES}
         html{scroll-behavior:smooth;scroll-padding-top:96px;}

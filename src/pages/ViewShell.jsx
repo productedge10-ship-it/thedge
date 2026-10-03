@@ -26,10 +26,11 @@ import { C, F, A } from '../components/landing/v3/base';
 const BAR_H = 46;
 
 const RO_CSS = `
-  .edge-view-ro .edge-add-btn,
-  .edge-view-ro .journal-cta,
-  .edge-view-ro .analysis-cta,
-  .edge-view-ro .receipt-cta { display: none !important; }
+  /* Кнопки дій власника позначені класом edge-owner-only. Раніше
+     правило перелічувало класи їхніх анімацій (.journal-cta тощо) —
+     разом з анімаціями зникли б і ці гачки, і гість побачив би кнопки,
+     які йому не належать. */
+  .edge-view-ro .edge-owner-only { display: none !important; }
   .demo-bar-label{ display: inline; }
   .demo-bar-desc{ display: inline; }
   .view-bar-short{ display: none; }

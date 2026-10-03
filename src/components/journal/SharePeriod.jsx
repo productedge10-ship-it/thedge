@@ -9,6 +9,7 @@ import { shareUrl } from '../../lib/sandbox';
 import { notify } from '../../utils/notify';
 import { T, SPRING } from '../../lib/theme';
 import { t } from '../../lib/lang';
+import Button from '../ui/Button';
 import { DateRangeField } from '../ui/DateField';
 
 /* ==================================================================
@@ -227,16 +228,11 @@ function SharePeriodModal({ initial, onClose }) {
             : !from && !to ? t('Порожні дати = усі угоди за весь час.', 'Empty dates = all trades of all time.') : periodText(from, to)}
         </div>
 
-        <button
-          type="button"
-          onClick={create}
-          disabled={busy || bad}
-          className="edge-add-btn"
-          style={{ width: '100%', height: 46, borderRadius: 12, fontSize: 14.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: bad ? 0.5 : 1 }}
-        >
-          {busy ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} strokeWidth={2.4} />}
+        {/* Спільний Button замість .edge-add-btn: вимкнений стан тепер
+            видно (сірий, курсор not-allowed), а не просто напівпрозорість. */}
+        <Button variant="primary" size="lg" block icon={Link2} loading={busy} disabled={bad} onClick={create} className="edge-owner-only">
           {t('Створити посилання й скопіювати', 'Create link & copy')}
-        </button>
+        </Button>
 
         <AnimatePresence>
           {fresh && (

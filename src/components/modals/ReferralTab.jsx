@@ -4,6 +4,7 @@ import { Copy, Check, Loader2, Send, Gift, Users, Wallet, Sparkles, Crown } from
 
 import { T, EASE } from '../../lib/theme';
 import { t } from '../../lib/lang';
+import Button from '../ui/Button';
 import { REF_USER_PERCENT, refLink, readMyReferral } from '../../lib/referral';
 import { PLANS, toUah, useUahRate } from '../../lib/billing';
 
@@ -205,10 +206,9 @@ export default function ReferralTab() {
         <code style={{ flex: '1 1 260px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 14.5, color: T.text }}>
           {link}
         </code>
-        <button type="button" onClick={copy} disabled={!d.code} className="edge-add-btn" style={{ height: 42, padding: '0 16px', borderRadius: 12, fontSize: 14, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          {copied ? <Check size={16} /> : <Copy size={16} />}
+        <Button variant="primary" icon={copied ? Check : Copy} disabled={!d.code} onClick={copy}>
           {copied ? t('Скопійовано', 'Copied') : t('Копіювати', 'Copy')}
-        </button>
+        </Button>
         <a href={tg} target="_blank" rel="noreferrer" className="rf-btn" style={{ height: 42, padding: '0 14px', borderRadius: 12, fontFamily: T.sans, fontSize: 14, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8, background: T.surface, border: `1px solid ${T.line}`, color: T.text2 }}>
           <Send size={15} /> Telegram
         </a>

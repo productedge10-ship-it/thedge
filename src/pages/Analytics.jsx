@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Sparkles, Loader2, BookOpen, Bot, CalendarDays, ChevronDown, ArrowRight } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, BrainCircuit, Wallet, History as HistoryIcon, FlaskConical, Loader2, BookOpen, Bot, CalendarDays, ChevronDown, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { T, EASE } from '../lib/theme';
 import { useAuth } from '../context/AuthContext';
 import { fetchTrades, fetchDayReviews, periodStart } from '../lib/analyticsStore';
 import { useStats, r1 } from '../components/analytics/data';
-import { METRICS } from '../lib/statCard';
 import { Delta } from '../components/analytics/ui';
 
 import Overview from '../components/analytics/Overview';
@@ -20,6 +19,7 @@ import { EMOTION_LABEL } from '../components/analytics/data';
 import ExportStats from '../components/analytics/ExportStats';
 import { withSandbox } from '../lib/sandbox';
 import { t as tx, LOCALE, isEn } from '../lib/lang';
+import Button from '../components/ui/Button';
 
 /* ==================================================================
    Аналітика.
@@ -195,14 +195,6 @@ export default function Analytics() {
   }, [reviews, period]);
 
   const s = useStats(scoped || [], scopedReviews);
-
-  /* Net R для фіналу анімації кнопки «Поділитись» — той самий get(s),
-     що й у картці експорту, тож цифра, яку показує кнопка, ніколи не
-     розійдеться зі справжнім експортом. */
-  const netMetric = useMemo(() => {
-    const m = METRICS.find((x) => x.id === 'net');
-    return m.get(s);
-  }, [s]);
 
   /* Скільки угод у кожному періоді — щоб вибір у випадашці був
      видимим ще до перемикання. */
@@ -407,49 +399,14 @@ export default function Analytics() {
                 <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5">
                   <PeriodDropdown value={period} onChange={setPeriod} counts={periodCounts} />
 
-                  {/* ─────────── «Export Terminal» (стисла версія) ───────────
-                      Та сама ідея — кнопка показує, що відбувається за
-                      кліком, — але вкладена в час, який людина реально
-                      тримає курсор на кнопці: до секунди. Темне ядро
-                      розкривається, встигає майнути одна фраза «пакую», і
-                      одразу штамп готового Net R зі стрілкою — тим самим
-                      жестом, що відкриє саму модалку. Один прохід на весь
-                      ховер, без циклу. */}
-                  <button
-                    onClick={() => setExportOpen(true)}
-                    className="receipt-cta group relative inline-flex h-[42px] shrink-0 items-center gap-2 overflow-hidden rounded-[13px] pl-4 pr-[18px]"
-                    style={{
-                      background: `linear-gradient(180deg, ${T.acc}, color-mix(in srgb, ${T.acc} 76%, #000))`,
-                      border: `1px solid ${hair(0.14)}`,
-                      color: 'var(--edge-on-acc, #fff)',
-                      fontFamily: T.sans,
-                      boxShadow: `inset 0 1px 0 ${hair(0.2)}`,
-                    }}
-                  >
-                    {/* дефолтний напис — тане, звільняючи місце ядру */}
-                    <span className="receipt-cta-default relative z-10 flex w-full items-center justify-center gap-2">
-                      <Sparkles size={15} strokeWidth={1.8} className="transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
-                      <span className="whitespace-nowrap text-[12.5px] font-bold" style={{ letterSpacing: '-0.012em' }}>{tx('Поділитись статистикою', 'Share stats')}</span>
-                    </span>
-
-                    {/* темне ядро — картка експорту, що розгортається з центру */}
-                    <span aria-hidden className="receipt-cta-core absolute inset-[2px] z-[5] rounded-[11px]">
-                      <span className="receipt-cta-step receipt-cta-step-1">
-                        <b>[EXPORT]</b> {tx('Пакую картку…', 'Packing card…')}
-                      </span>
-                      <span className="receipt-cta-final">
-                        <b className={`receipt-cta-final-badge tone-${netMetric.tone}`}>{netMetric.value}</b>
-                        <span className="receipt-cta-final-label">{tx('Картка готова', 'Card ready')}</span>
-                        <span className="receipt-cta-arrow-wrap">
-                          <span aria-hidden className="receipt-cta-arrow-ring" />
-                          <span className="receipt-cta-arrow"><ArrowRight size={13} strokeWidth={2.6} color="#0c0b10" /></span>
-                        </span>
-                      </span>
-                    </span>
-
-                    {/* світловий блік наприкінці */}
-                    <span aria-hidden className="receipt-cta-glimmer" />
-                  </button>
+                  {/* Другорядна дія — secondary, а не найяскравіша кнопка сторінки.
+                      Була акцентна з градієнтом, Sparkles і сценою «пакую картку»
+                      на ховері: вона перетягувала увагу з цифр, заради яких
+                      аналітику й відкривають. edge-owner-only — гачок для
+                      перегляду за посиланням: гостю кнопка не потрібна. */}
+                  <Button variant="secondary" icon={Share2} onClick={() => setExportOpen(true)} className="edge-owner-only">
+                    {tx('Поділитись статистикою', 'Share stats')}
+                  </Button>
                 </div>
               </div>
 

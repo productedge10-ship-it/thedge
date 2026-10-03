@@ -14,7 +14,6 @@ import {
 import {
   BookOpen, Plus, TrendingUp, TrendingDown, Minus, AlertTriangle, X,
   Filter, Calendar, ChevronDown, Check, Search, ShieldAlert, AlertOctagon, Zap, Hand,
-  CandlestickChart,
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
@@ -29,7 +28,8 @@ import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
 import TradeModal from "../components/modals/TradeModal";
 import TradeDetailsModal from "../components/modals/TradeDetailsModal";
 import StatCards, { StreakBar } from "../components/journal/StatCards";
-import { Magnetic } from "../components/ui/Hovers";
+import Button from "../components/ui/Button";
+import { t as tx } from "../lib/lang";
 import TradesTable from "../components/journal/TradesTable";
 import SharePeriodButton from "../components/journal/SharePeriod";
 import { inSandbox } from "../lib/sandbox";
@@ -1165,162 +1165,21 @@ export default function TradingJournal() {
                 і натякає, що без неї дані застаріють — тобто підриває
                 довіру до самої синхронізації. */}
 
-            {/* Головна дія сторінки.
-
-                Раніше вона була зелена, `#00C896` — колір, якого немає
-                більше ніде в застосунку. І це не дрібниця: зелений у
-                журналі вже зайнятий, ним позначені прибуткові угоди.
-                Виходило, що найпомітніший елемент екрана пофарбований
-                у колір результату, хоча жодного результату не означає.
-
-                Тепер акцент — той самий фіолетовий, що й у решти
-                головних дій. Заразом прибраний зсув угору на ховері:
-                правило проєкту каже «замість руху — світло», і тут
-                воно доречне вдвічі, бо кнопка стоїть у рядку з іншими
-                й тягла рядок за собою. */}
-            <Magnetic
+            {/* Головна дія сторінки — спільний Button, lg під висоту фільтрів
+                у цьому ж рядку (44). Раніше: темна панель з фіолетовою рамкою,
+                а на ховері кнопка перетворювалась на графік зі свічками.
+                Вигадка гарна, але це найчастіша дія в журналі, і сцена на
+                кожному наведенні — шум. edge-owner-only ховає кнопку в
+                перегляді за посиланням. */}
+            <Button
+              variant="primary"
+              size="lg"
+              icon={Plus}
               onClick={() => setIsTradeModalOpen(true)}
-              /* strength=0 — магніт вимкнено.
-
-                 Саме він і смикав кнопку: Magnetic тягне елемент до
-                 курсора, і перша ж подія руху миші прилітає не з краю,
-                 а звідти, де курсор опинився, — тому кнопка стрибала
-                 вниз ривком замість того, щоб плавно поїхати.
-
-                 Правило сторінки й так каже «замість руху — світло», і
-                 тут воно доречне вдвічі: кнопка стоїть у рядку з
-                 фільтрами й тягла б рядок за собою. Від Magnetic
-                 лишається стиск при натисканні. */
-              strength={0}
-              className="journal-cta group inline-flex h-[54px] w-full shrink-0 items-center justify-center rounded-2xl px-6 text-[14.5px] font-bold sm:ml-1 sm:w-auto"
-              /* Темна панель, а не суцільна заливка акцентом.
-
-                 Причина проста: під курсором кнопка перетворюється на
-                 графік, а свічки мають бути зеленими й червоними —
-                 своїми справжніми кольорами. На фіолетовому тлі
-                 зелений і червоний або гаснуть, або починають із ним
-                 сваритись. На темному вони читаються так само, як у
-                 самому журналі, і кнопка стає маленьким терміналом.
-
-                 Помітність від цього не впала: її тримають акцентна
-                 рамка, фіолетовий ореол під кнопкою й іконка. */
-              style={{
-                background: 'linear-gradient(180deg, var(--edge-surface-hi, #18181C), var(--edge-sunken, #0D0D10))',
-                border: `1px solid ${T.lineAcc}`,
-                color: T.text,
-                fontFamily: T.sans,
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
-              }}
-              /* Ховер — світлом, а не рухом: кнопка стоїть у рядку з
-                 фільтрами, і будь-який зсув тягнув рядок за собою.
-                 Ореол розростається й трохи яскравішає сама заливка —
-                 цього достатньо, щоб було ясно, що під курсором. */
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.05)`;
-                e.currentTarget.style.borderColor = T.lineAcc;
-              }}
+              className="edge-owner-only w-full sm:ml-1 sm:w-auto"
             >
-              {/* Кнопка стає графіком.
-
-                  Під курсором підпис іде вгору й гасне, а знизу
-                  виростають свічки — одна за одною, зліва направо, —
-                  і по їхніх вершинах прокреслюється лінія тренду.
-                  Кнопка показує рівно те, що по ній натискають.
-
-                  Свічки без заокруглень і з `shapeRendering
-                  ="crispEdges"` навмисно. Кнопка розтягує полотно по
-                  ширині, тож дробові координати неминучі — а на них
-                  заокруглений кут у два пікселі перетворюється на
-                  розмиту пляму замість кута. Прямий різкий край на
-                  такому розмірі і чіткіший, і чесніше схожий на
-                  свічку.
-
-                  `preserveAspectRatio="none"` — щоб графік ліг рівно
-                  по кнопці, а не лишив поля. Лінію від розтягування
-                  рятує `vectorEffect`, а `pathLength="1"` робить її
-                  довжину одиничною, щоб малювати її одним зсувом. */}
-              <svg
-                className="journal-cta-chart"
-                viewBox="0 0 220 54"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <defs>
-                  <linearGradient id="journalCtaFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--edge-ok, #34d399)" stopOpacity="0.22" />
-                    <stop offset="100%" stopColor="var(--edge-ok, #34d399)" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-
-                {/* Заливка під трендом — зʼявляється першою й дає
-                    відчуття, що кнопка наливається знизу. */}
-                <path
-                  className="journal-cta-area"
-                  d="M0,50 L44,42 L94,32 L146,20 L198,10 L220,6 L220,54 L0,54 Z"
-                  fill="url(#journalCtaFill)"
-                />
-
-                {/* Свічки. Кожна — своя група, щоб рости від власної
-                    основи, а не від краю кнопки. */}
-                <g shapeRendering="crispEdges">
-                  <g className="journal-cta-candle up">
-                    <rect x="14" y="34" width="2" height="18" />
-                    <rect x="8" y="38" width="14" height="10" />
-                  </g>
-                  <g className="journal-cta-candle up">
-                    <rect x="40" y="27" width="2" height="19" />
-                    <rect x="34" y="30" width="14" height="12" />
-                  </g>
-                  <g className="journal-cta-candle down">
-                    <rect x="66" y="30" width="2" height="19" />
-                    <rect x="60" y="33" width="14" height="11" />
-                  </g>
-                  <g className="journal-cta-candle up">
-                    <rect x="92" y="19" width="2" height="21" />
-                    <rect x="86" y="22" width="14" height="14" />
-                  </g>
-                  <g className="journal-cta-candle down">
-                    <rect x="118" y="23" width="2" height="20" />
-                    <rect x="112" y="26" width="14" height="12" />
-                  </g>
-                  <g className="journal-cta-candle up">
-                    <rect x="144" y="11" width="2" height="21" />
-                    <rect x="138" y="14" width="14" height="14" />
-                  </g>
-                  <g className="journal-cta-candle up">
-                    <rect x="170" y="6" width="2" height="22" />
-                    <rect x="164" y="9" width="14" height="15" />
-                  </g>
-                  <g className="journal-cta-candle up">
-                    <rect x="196" y="1" width="2" height="22" />
-                    <rect x="190" y="4" width="14" height="15" />
-                  </g>
-                </g>
-
-                <path
-                  className="journal-cta-line"
-                  pathLength="1"
-                  d="M3,43 L41,36 L67,39 L93,29 L119,32 L145,21 L171,17 L205,12"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeOpacity="0.5"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-
-              <span className="journal-cta-label relative flex items-center gap-2 whitespace-nowrap">
-                <CandlestickChart size={17} strokeWidth={2.6} className="shrink-0" style={{ color: T.acc }} />
-                Add Trade
-              </span>
-            </Magnetic>
+              {tx('Додати угоду', 'Add Trade')}
+            </Button>
           </div>
         </motion.div>
 
