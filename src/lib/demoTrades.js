@@ -34,6 +34,8 @@ function rng(seed) {
   };
 }
 
+import { t as tx } from './lang';
+
 const ASSETS = ['EURUSD', 'XAUUSD', 'GER40', 'NAS100', 'GBPUSD'];
 const SETUPS = ['Sweep + BOS', 'OB retest', 'FVG fill', 'Range fade'];
 const SESSIONS = ['Asia', 'London', 'New York'];
@@ -128,7 +130,7 @@ export function generateTrades(count = 80, seed = 7) {
       emotion: revenge ? 'tilt' : anxious ? 'anxious' : win ? 'confident' : 'calm',
       result: isBE ? 'BE' : win ? 'WIN' : 'LOSS',
       rr,
-      mistakes: mistake ? ['Порушення правила входу'] : [],
+      mistakes: mistake ? [tx('Порушення правила входу', 'Broke an entry rule')] : [],
       planFollowed: !offPlan && !mistake,
       rushed,
       risk: 1,

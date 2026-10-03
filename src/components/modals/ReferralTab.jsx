@@ -28,7 +28,7 @@ const HOVER_CSS = `
   .rf-card { transition: border-color .2s ease, box-shadow .25s ease, background-color .2s ease; }
   .rf-card:hover {
     border-color: rgba(var(--edge-acc-rgb, 139,123,255), .45) !important;
-    box-shadow: 0 16px 38px -20px rgba(var(--edge-acc-rgb, 139,123,255), .75), 0 0 0 3px rgba(var(--edge-acc-rgb, 139,123,255), .07);
+    box-shadow: none;
   }
   .rf-notch { transition: transform .2s ease, border-color .2s ease; }
   .rf-scale:hover .rf-notch { border-color: rgba(var(--edge-acc-rgb, 139,123,255), .35) !important; }
@@ -97,7 +97,7 @@ function MonthScale({ credit, monthPrice, cur }) {
                 style={{
                   position: 'absolute', inset: '0 auto 0 0',
                   background: `linear-gradient(90deg, rgba(${T.accRgb},.6), ${T.acc})`,
-                  boxShadow: f > 0 ? `0 0 14px rgba(${T.accRgb},.65)` : 'none',
+                  boxShadow: 'none',
                 }}
               />
             </div>

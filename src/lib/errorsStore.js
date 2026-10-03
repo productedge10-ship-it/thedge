@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { t as tx } from './lang';
 import { flagsFromReasons, reasonsFromFlags, catsFromReasons } from '../components/errors/utils';
 
 /* ==================================================================
@@ -151,7 +152,7 @@ export async function saveError(userId, entry) {
   /* Помилка з бектесту без міграції 2026-09-24_backtest_errors.sql:
      кажемо прямо, а не «щось пішло не так». */
   if (error && row.backtest_trade_id && (missingColumn(error, 'backtest_trade_id') || error.code === '23514')) {
-    throw new Error('База ще не готова до помилок з бектесту — виконай міграцію 2026-09-24_backtest_errors.sql.');
+    throw new Error(tx('База ще не готова до помилок з бектесту — виконай міграцію 2026-09-24_backtest_errors.sql.', "The database isn't ready for backtest mistakes yet — run the 2026-09-24_backtest_errors.sql migration."));
   }
 
   if (error) throw error;

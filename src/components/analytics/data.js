@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { STATES, REASONS, HARD } from '../../lib/dayReview';
+import { t as tx } from '../../lib/lang';
 
 export function mulberry32(seed) {
   return function () {
@@ -18,13 +19,13 @@ export const EMOTIONS = ['calm', 'confident', 'anxious', 'tilt'];
    t.emotion === 'fomo' — і такі угоди малювались підписом undefined.
    Стан реальний і окремий: тільт — це помста після втрати, FOMO —
    страх лишитись поза рухом. Лікуються вони по-різному. */
-export const EMOTION_LABEL = { calm: 'Спокій', confident: 'Впевненість', anxious: 'Тривога', fomo: 'FOMO', tilt: 'Тільт' };
+export const EMOTION_LABEL = { calm: tx('Спокій', 'Calm'), confident: tx('Впевненість', 'Confident'), anxious: tx('Тривога', 'Anxious'), fomo: 'FOMO', tilt: tx('Тільт', 'Tilt') };
 export const EMOTION_COLOR = { calm: '#34d399', confident: 'var(--edge-acc, #8b7bff)', anxious: '#fbbf24', fomo: '#fb923c', tilt: '#f87171' };
 export const MISTAKES = [
-  'Вхід до підтвердження', 'Наздогнав рух', 'Пересунув стоп',
-  'Завеликий обʼєм', 'Торгував поза сесією', 'Не зафіксував по плану',
+  tx('Вхід до підтвердження', 'Entered before confirmation'), tx('Наздогнав рух', 'Chased the move'), tx('Пересунув стоп', 'Moved the stop'),
+  tx('Завеликий обʼєм', 'Oversized position'), tx('Торгував поза сесією', 'Traded outside session'), tx('Не зафіксував по плану', "Didn't take profit per plan"),
 ];
-export const DOW = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+export const DOW = tx(['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'], ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
 
 function buildTrades() {
   const rnd = mulberry32(20260714);
@@ -276,8 +277,8 @@ function conflicts(t, reviews) {
       if (bad.length) {
         out.push({
           date: d.date,
-          said: 'Все зробив за планом',
-          real: `${bad.length} ${bad.length === 1 ? 'угода' : 'угод'} з порушенням у журналі`,
+          said: tx('Все зробив за планом', 'Followed the plan'),
+          real: tx(`${bad.length} ${bad.length === 1 ? 'угода' : 'угод'} з порушенням у журналі`, `${bad.length} ${bad.length === 1 ? 'trade' : 'trades'} with a violation in the journal`),
           tone: '#fbbf24',
         });
       }
@@ -286,8 +287,8 @@ function conflicts(t, reviews) {
     if (flow.includes('flat') && list.length) {
       out.push({
         date: d.date,
-        said: 'Не торгував — не було сетапу',
-        real: `${list.length} ${list.length === 1 ? 'угода' : 'угод'} того дня`,
+        said: tx('Не торгував — не було сетапу', "Didn't trade — no setup"),
+        real: tx(`${list.length} ${list.length === 1 ? 'угода' : 'угод'} того дня`, `${list.length} ${list.length === 1 ? 'trade' : 'trades'} that day`),
         tone: '#f87171',
       });
     }
@@ -297,8 +298,8 @@ function conflicts(t, reviews) {
       if (hot.length) {
         out.push({
           date: d.date,
-          said: 'Спокій',
-          real: `${hot.length} ${hot.length === 1 ? 'угода' : 'угод'} з відміткою «відіграш»`,
+          said: tx('Спокій', 'Calm'),
+          real: tx(`${hot.length} ${hot.length === 1 ? 'угода' : 'угод'} з відміткою «відіграш»`, `${hot.length} ${hot.length === 1 ? 'trade' : 'trades'} marked "revenge"`),
           tone: '#f87171',
         });
       }
@@ -307,8 +308,8 @@ function conflicts(t, reviews) {
     if (flow.includes('missed') && !list.length && state.includes('confident')) {
       out.push({
         date: d.date,
-        said: 'Впевненість',
-        real: 'сетап був, але жодного входу',
+        said: tx('Впевненість', 'Confident'),
+        real: tx('сетап був, але жодного входу', 'there was a setup, but no entry'),
         tone: '#8b7bff',
       });
     }
@@ -386,7 +387,7 @@ export function useStats(trades, reviews) {
         return c === depth;
       });
       return {
-        depth: depth === 0 ? 'Свіжа голова' : `Після ${depth} збитк${depth === 1 ? 'у' : 'ів'}`,
+        depth: depth === 0 ? tx('Свіжа голова', 'Fresh start') : tx(`Після ${depth} збитк${depth === 1 ? 'у' : 'ів'}`, `After ${depth} loss${depth === 1 ? '' : 'es'}`),
         avg: bucket.length ? +(sum(bucket.map((x) => x.rr)) / bucket.length).toFixed(2) : 0,
         n: bucket.length,
       };

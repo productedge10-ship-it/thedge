@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, AlertTriangle } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { getCat } from './utils';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Стрічка помилок, згрупована по місяцях.
@@ -43,8 +44,7 @@ const CARD_CSS = `
 .err-card:hover{
   background-image:linear-gradient(168deg, rgba(var(--ac),.09), var(--edge-sunken) 42%, var(--edge-sunken));
   border-color:rgba(var(--ac),.8);
-  box-shadow:0 28px 54px -26px rgba(var(--ac),.6),
-             inset 0 1px 0 rgba(var(--ac),.17),
+  box-shadow:inset 0 1px 0 rgba(var(--ac),.17),
              0 0 0 1px rgba(var(--ac),.28);
   transform:translateY(-4px);
 }
@@ -66,7 +66,6 @@ const CARD_CSS = `
 
 function Card({ entry, onOpen }) {
   const cats = entry.cats || [];
-  const color = T.acc;
 
   const d = new Date(`${entry.date || ''}T00:00:00`);
   const bad = Number.isNaN(d.getTime());
@@ -81,10 +80,7 @@ function Card({ entry, onOpen }) {
       onClick={() => onOpen(entry)}
       className="err-card relative flex min-h-[250px] cursor-pointer flex-col overflow-hidden rounded-[20px] px-5 pb-4 pt-[18px]"
     >
-      <span
-        className="err-glow pointer-events-none absolute rounded-full"
-        style={{ right: -70, top: -80, width: 260, height: 200, background: color, filter: 'blur(62px)' }}
-      />
+      {/* Розмиту кольорову пляму прибрано: світіння за блоком — прикмета шаблону, глибину дають поверхні. */}
 
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -119,7 +115,7 @@ function Card({ entry, onOpen }) {
                 color: 'var(--edge-info)',
               }}
             >
-              БЕКТЕСТ
+              {tx('БЕКТЕСТ', 'BACKTEST')}
             </span>
           )}
 
@@ -149,10 +145,10 @@ function Card({ entry, onOpen }) {
             className="h-[5px] w-[5px] rounded-full"
             style={{
               background: entry.resolved ? 'var(--edge-ok)' : 'var(--edge-acc)',
-              boxShadow: `0 0 8px 1px ${entry.resolved ? 'rgba(var(--edge-ok-rgb),0.80)' : `rgba(${T.accRgb},0.8)`}`,
+              boxShadow: 'none',
             }}
           />
-          <span className="whitespace-nowrap">{entry.resolved ? 'Розібрано' : 'Не розібрано'}</span>
+          <span className="whitespace-nowrap">{entry.resolved ? tx('Розібрано', 'Reviewed') : tx('Не розібрано', 'Not reviewed')}</span>
         </span>
       </div>
 
@@ -194,13 +190,13 @@ function Card({ entry, onOpen }) {
 
           {offPlan && (
             <span
-              title="Поза планом"
+              title={tx('Поза планом', 'Off plan')}
               className="flex items-center gap-1.5 rounded-full px-2.5 py-[5px]"
               style={{ background: 'rgba(var(--edge-warn-rgb),0.11)', border: '1px solid rgba(var(--edge-warn-rgb),0.27)' }}
             >
               <AlertTriangle size={11} strokeWidth={2.2} style={{ color: 'var(--edge-warn)' }} />
               <span className="whitespace-nowrap text-[11.5px] font-bold" style={{ fontFamily: T.sans, color: 'var(--edge-warn)' }}>
-                Поза планом
+                {tx('Поза планом', 'Off plan')}
               </span>
             </span>
           )}
@@ -238,7 +234,7 @@ export default function ErrorGrid({ groups, onOpenCard }) {
               className="whitespace-nowrap text-[12px] uppercase"
               style={{ fontFamily: T.mono, letterSpacing: '1.4px', color: 'var(--edge-text3)' }}
             >
-              {g.items.length} {g.items.length === 1 ? 'запис' : g.items.length % 10 >= 2 && g.items.length % 10 <= 4 && (g.items.length % 100 < 10 || g.items.length % 100 >= 20) ? 'записи' : 'записів'}
+              {g.items.length} {tx(g.items.length === 1 ? 'запис' : g.items.length % 10 >= 2 && g.items.length % 10 <= 4 && (g.items.length % 100 < 10 || g.items.length % 100 >= 20) ? 'записи' : 'записів', g.items.length === 1 ? 'entry' : 'entries')}
             </span>
             <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg,var(--edge-line),transparent)' }} />
           </div>

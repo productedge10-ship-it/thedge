@@ -7,6 +7,7 @@ import { C, F, A, Cat, KEYFRAMES } from '../components/landing/v3/base';
 import { PlanScreen, JournalScreen, ErrorsScreen, AnalyticsScreen } from '../components/demo/screens';
 import TourOverlay from '../components/demo/TourOverlay';
 import { STEPS } from '../components/demo/steps';
+import { t as tx } from '../lib/lang';
 
 /* ==================================================================
    Демо-режим.
@@ -23,10 +24,10 @@ import { STEPS } from '../components/demo/steps';
 ================================================================== */
 
 const NAV = [
-  { key: 'plan', title: 'План на день', icon: Crosshair },
-  { key: 'journal', title: 'Журнал угод', icon: Table2 },
-  { key: 'errors', title: 'Розбір помилок', icon: TriangleAlert },
-  { key: 'analytics', title: 'Аналітика', icon: LineChart },
+  { key: 'plan', title: tx('План на день', 'Daily plan'), icon: Crosshair },
+  { key: 'journal', title: tx('Журнал угод', 'Trade journal'), icon: Table2 },
+  { key: 'errors', title: tx('Розбір помилок', 'Mistake review'), icon: TriangleAlert },
+  { key: 'analytics', title: tx('Аналітика', 'Analytics'), icon: LineChart },
 ];
 
 function TradeModal({ trade, onClose }) {
@@ -66,15 +67,15 @@ function TradeModal({ trade, onClose }) {
           </div>
 
           <div style={{ display: 'grid', gap: 11 }}>
-            {field('ЩО ПРИЇХАЛО З MT5', `${trade.sym} · обсяг 0.42 · ${trade.time} · результат ${trade.r}`)}
-            {field('ЧОМУ ЗАЙШОВ', trade.viol === '—'
-              ? 'Ціна зняла ліквідність під лоу азійської сесії й закрилась над FVG — вхід за планом, який написаний зранку.'
-              : 'Побачив рух і зайшов навздогін. Плану на цю пару не було, сетап не мій.', 'trade-why')}
-            {field('СТАН І ПОРУШЕННЯ', `${trade.mood}${trade.viol === '—' ? ' · правил не порушено' : ` · ${trade.viol}`}`)}
+            {field(tx('ЩО ПРИЇХАЛО З MT5', 'IMPORTED FROM MT5'), tx(`${trade.sym} · обсяг 0.42 · ${trade.time} · результат ${trade.r}`, `${trade.sym} · volume 0.42 · ${trade.time} · result ${trade.r}`))}
+            {field(tx('ЧОМУ ЗАЙШОВ', 'WHY I ENTERED'), trade.viol === '—'
+              ? tx('Ціна зняла ліквідність під лоу азійської сесії й закрилась над FVG — вхід за планом, який написаний зранку.', 'Price swept liquidity below the Asian session low and closed above the FVG — an entry by the plan I wrote this morning.')
+              : tx('Побачив рух і зайшов навздогін. Плану на цю пару не було, сетап не мій.', 'Saw the move and chased it. No plan for this pair, not my setup.'), 'trade-why')}
+            {field(tx('СТАН І ПОРУШЕННЯ', 'STATE & VIOLATIONS'), `${trade.mood}${trade.viol === '—' ? tx(' · правил не порушено', ' · no rules broken') : ` · ${trade.viol}`}`)}
           </div>
 
           <div data-tour="trade-tags" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
-            {[trade.setup, trade.mood, trade.viol === '—' ? 'За планом' : 'Повз план'].map((t, i) => {
+            {[trade.setup, trade.mood, trade.viol === '—' ? tx('За планом', 'By the plan') : tx('Повз план', 'Off plan')].map((t, i) => {
               const c = i === 2 && trade.viol !== '—' ? C.bad : i === 1 ? C.warn : C.acc;
               return (
                 <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: F.sans, fontSize: 12.5, fontWeight: 600, color: `${c}ee`, background: `${c}1c`, border: `1px solid ${c}3d`, borderRadius: 999, padding: '7px 13px' }}>
@@ -106,7 +107,7 @@ export default function Demo() {
   useEffect(() => {
     if (!step) return;
     if (step.page && step.page !== page) setPage(step.page);
-    if (step.open === 'trade' && !trade) setTrade({ sym: 'EURUSD', setup: 'Без сетапу', mood: 'Нудьга', viol: 'Вхід без умов', r: '−1.0R', time: '13:40' });
+    if (step.open === 'trade' && !trade) setTrade({ sym: 'EURUSD', setup: tx('Без сетапу', 'No setup'), mood: tx('Нудьга', 'Boredom'), viol: tx('Вхід без умов', 'Entry without conditions'), r: '−1.0R', time: '13:40' });
     if (!step.open && trade) setTrade(null);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [stepIdx, hints]);
@@ -142,7 +143,7 @@ export default function Demo() {
             <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 14, letterSpacing: '2.2px', color: '#fff' }}>
               THE <span style={{ color: C.acc }}>EDGE</span>
             </div>
-            <div style={{ fontFamily: F.mono, fontSize: 9.5, letterSpacing: '1.4px', color: C.dim, marginTop: 3 }}>ДЕМО-РЕЖИМ</div>
+            <div style={{ fontFamily: F.mono, fontSize: 9.5, letterSpacing: '1.4px', color: C.dim, marginTop: 3 }}>{tx('ДЕМО-РЕЖИМ', 'DEMO MODE')}</div>
           </div>
         </div>
 
@@ -163,7 +164,7 @@ export default function Demo() {
               onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = A(0.06); }}
               onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
             >
-              <span style={{ position: 'absolute', left: 0, top: 10, bottom: 10, width: 3, borderRadius: 2, background: C.acc, boxShadow: `0 0 12px ${A(0.8)}`, opacity: on ? 1 : 0, transition: 'opacity .18s' }} />
+              <span style={{ position: 'absolute', left: 0, top: 10, bottom: 10, width: 3, borderRadius: 2, background: C.acc, boxShadow: 'none', opacity: on ? 1 : 0, transition: 'opacity .18s' }} />
               <Icon size={15} strokeWidth={1.9} style={{ flexShrink: 0, color: on ? C.accSoft : C.text5 }} />
               {n.title}
             </button>
@@ -171,7 +172,7 @@ export default function Demo() {
         })}
 
         <div style={{ marginTop: 'auto', fontFamily: F.sans, fontSize: 12, lineHeight: 1.5, color: C.text5, padding: '0 8px' }}>
-          Дані вигадані й живуть лише у цій вкладці.
+          {tx('Дані вигадані й живуть лише у цій вкладці.', 'The data is made up and lives only in this tab.')}
         </div>
       </aside>
 
@@ -186,7 +187,7 @@ export default function Demo() {
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.09)'; e.currentTarget.style.color = C.text2; }}
           >
             <ArrowLeft size={15} strokeWidth={2.2} />
-            Повернутись на сайт
+            {tx('Повернутись на сайт', 'Back to the site')}
           </a>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -202,14 +203,14 @@ export default function Demo() {
               }}
             >
               {hints ? <Lightbulb size={15} strokeWidth={2} /> : <LightbulbOff size={15} strokeWidth={2} />}
-              {hints ? 'Підказки увімкнені' : 'Увімкнути підказки'}
+              {hints ? tx('Підказки увімкнені', 'Hints on') : tx('Увімкнути підказки', 'Turn on hints')}
             </button>
 
             <a
               href="/auth"
-              style={{ fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: '#fff', background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, borderRadius: 11, padding: '10px 18px', whiteSpace: 'nowrap', boxShadow: '0 10px 26px rgba(74,59,245,.32)' }}
+              style={{ fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, color: '#fff', background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, borderRadius: 11, padding: '10px 18px', whiteSpace: 'nowrap' }}
             >
-              Почати безкоштовно
+              {tx('Почати безкоштовно', 'Start for free')}
             </a>
           </div>
         </header>

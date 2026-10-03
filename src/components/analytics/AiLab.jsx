@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { F, Cat, KEYFRAMES, reducedMotion } from '../landing/v3/base';
 import { EMOTION_LABEL, r1, signed } from './data';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Розділ AI — «Твій коуч».
@@ -57,23 +58,23 @@ const LockSvg = ({ stroke = '#5f5f75' }) => (
 const FEATURES = [
   {
     icon: 'chat',
-    title: 'Психолог журналу',
-    text: 'Бачить усі угоди разом з емоціями, помилками й часом утримання. Відповідає цифрами з твого журналу, а не порадами з інтернету.',
+    title: tx('Психолог журналу', 'Journal psychologist'),
+    text: tx('Бачить усі угоди разом з емоціями, помилками й часом утримання. Відповідає цифрами з твого журналу, а не порадами з інтернету.', 'Sees all your trades along with emotions, mistakes and hold time. Answers with numbers from your journal, not advice from the internet.'),
   },
   {
     icon: 'cal',
-    title: 'Розбір тижня',
-    text: 'Щопонеділка коротко: що змінилось проти минулого тижня, де зʼявився новий витік, що прибрати найпершим.',
+    title: tx('Розбір тижня', 'Weekly review'),
+    text: tx('Щопонеділка коротко: що змінилось проти минулого тижня, де зʼявився новий витік, що прибрати найпершим.', 'Every Monday, in short: what changed since last week, where a new leak appeared, and what to fix first.'),
   },
   {
     icon: 'target',
-    title: 'Рання ознака зриву',
-    text: 'Помічає, що поведінка змінилась, раніше ніж це стане видно на кривій. Розмір позиції, темп входів, час доби.',
+    title: tx('Рання ознака зриву', 'Early tilt warning'),
+    text: tx('Помічає, що поведінка змінилась, раніше ніж це стане видно на кривій. Розмір позиції, темп входів, час доби.', 'Notices your behavior changing before it shows on the curve: position size, entry pace, time of day.'),
   },
   {
     icon: 'spark',
-    title: 'Питання до угоди',
-    text: 'Відкрив угоду — спитав, чому вона пішла не так. Відповідь спирається на сусідні угоди, а не на загальні правила.',
+    title: tx('Питання до угоди', 'Ask about a trade'),
+    text: tx('Відкрив угоду — спитав, чому вона пішла не так. Відповідь спирається на сусідні угоди, а не на загальні правила.', 'Open a trade and ask why it went wrong. The answer draws on your nearby trades, not generic rules.'),
   },
 ];
 
@@ -115,24 +116,36 @@ function buildSample(s) {
 
   if (best && worst && best.emotion !== worst.emotion) {
     lines.push(
-      `Твоя перевага живе в одному режимі: у стані «${EMOTION_LABEL[best.emotion]}» середня угода ${signed(best.avg, 2)}R, у стані «${EMOTION_LABEL[worst.emotion]}» — ${signed(worst.avg, 2)}R. Це не ринок, це стан входу.`,
+      tx(
+        `Твоя перевага живе в одному режимі: у стані «${EMOTION_LABEL[best.emotion]}» середня угода ${signed(best.avg, 2)}R, у стані «${EMOTION_LABEL[worst.emotion]}» — ${signed(worst.avg, 2)}R. Це не ринок, це стан входу.`,
+        `Your edge lives in one mode: while "${EMOTION_LABEL[best.emotion]}" your average trade is ${signed(best.avg, 2)}R, while "${EMOTION_LABEL[worst.emotion]}" it's ${signed(worst.avg, 2)}R. It's not the market, it's your state at entry.`,
+      ),
     );
   }
   if (leak) {
     lines.push(
-      `Найдорожча звичка — «${leak.name}»: ${leak.count} разів, ${r1(leak.cost)}R збитку. Прибрати її дешевше, ніж шукати новий сетап.`,
+      tx(
+        `Найдорожча звичка — «${leak.name}»: ${leak.count} разів, ${r1(leak.cost)}R збитку. Прибрати її дешевше, ніж шукати новий сетап.`,
+        `Your most expensive habit is "${leak.name}": ${leak.count} ${leak.count === 1 ? 'time' : 'times'}, ${r1(leak.cost)}R lost. Cutting it is cheaper than hunting for a new setup.`,
+      ),
     );
   }
   if (Number.isFinite(s.avgAfterLoss) && Number.isFinite(s.avgAfterWin)) {
     lines.push(
-      `Після збитку середній результат ${signed(s.avgAfterLoss, 2)}R проти ${signed(s.avgAfterWin, 2)}R після плюса.`
+      tx(
+        `Після збитку середній результат ${signed(s.avgAfterLoss, 2)}R проти ${signed(s.avgAfterWin, 2)}R після плюса.`,
+        `After a loss your average result is ${signed(s.avgAfterLoss, 2)}R vs ${signed(s.avgAfterWin, 2)}R after a win.`,
+      )
       + (s.avgAfterLoss < s.avgAfterWin
-        ? ' Пауза на пів години після мінуса — найдешевший фікс у журналі.'
-        : ' Відновлюєшся після мінуса добре — це сильна сторона.'),
+        ? tx(' Пауза на пів години після мінуса — найдешевший фікс у журналі.', ' A half-hour pause after a loss is the cheapest fix in your journal.')
+        : tx(' Відновлюєшся після мінуса добре — це сильна сторона.', ' You recover well after a loss — that\'s a strength.')),
     );
   }
   if (bestSes) {
-    lines.push(`Найкраще платить ${bestSes.session}: ${signed(bestSes.net)}R за ${bestSes.trades} угод.`);
+    lines.push(tx(
+      `Найкраще платить ${bestSes.session}: ${signed(bestSes.net)}R за ${bestSes.trades} угод.`,
+      `${bestSes.session} pays best: ${signed(bestSes.net)}R over ${bestSes.trades} ${bestSes.trades === 1 ? 'trade' : 'trades'}.`,
+    ));
   }
 
   return lines.length ? lines : null;
@@ -254,7 +267,7 @@ function FeatureCard({ icon, title, text, i, reduced }) {
         border: `1px solid ${hover ? 'rgba(46,230,168,.3)' : 'rgba(255,255,255,.07)'}`,
         background: 'linear-gradient(165deg, rgba(20,21,31,.9), rgba(9,10,15,.9))',
         transform: hover ? 'translateY(-6px)' : 'none',
-        boxShadow: hover ? '0 34px 70px -34px rgba(46,230,168,.4)' : 'none',
+        boxShadow: 'none',
         transition: 'transform .35s cubic-bezier(.2,.8,.2,1), border-color .35s ease, box-shadow .35s ease',
         animation: reduced ? 'none' : `lnFadeUp .4s ease-out ${(0.05 * i).toFixed(2)}s both`,
       }}
@@ -310,10 +323,10 @@ export default function AiLab({ s }) {
   }, []);
 
   const stats = sample ? [
-    { k: 'РЕЗУЛЬТАТ', v: `${signed(s.net)}R`, c: s.net >= 0 ? '#2ee6a8' : '#ff5f6d' },
-    { k: 'ДИСЦИПЛІНА', v: String(s.adherence), suffix: '%', c: s.adherence >= 70 ? '#2ee6a8' : '#f0a63c' },
-    { k: 'ВІНРЕЙТ', v: String(s.wr), suffix: '%', c: '#fff' },
-    { k: 'ЦІНА ТІЛТУ', v: `${r1(s.tiltCost)}R`, c: '#ff5f6d' },
+    { k: tx('РЕЗУЛЬТАТ', 'RESULT'), v: `${signed(s.net)}R`, c: s.net >= 0 ? '#2ee6a8' : '#ff5f6d' },
+    { k: tx('ДИСЦИПЛІНА', 'DISCIPLINE'), v: String(s.adherence), suffix: '%', c: s.adherence >= 70 ? '#2ee6a8' : '#f0a63c' },
+    { k: tx('ВІНРЕЙТ', 'WIN RATE'), v: String(s.wr), suffix: '%', c: '#fff' },
+    { k: tx('ЦІНА ТІЛТУ', 'COST OF TILT'), v: `${r1(s.tiltCost)}R`, c: '#ff5f6d' },
   ] : [];
 
   return (
@@ -387,13 +400,13 @@ export default function AiLab({ s }) {
           whiteSpace: 'nowrap', lineHeight: 1,
           fontFamily: F.display, fontSize: 'clamp(140px,26vw,340px)', fontWeight: 800, letterSpacing: '-.05em',
           color: 'rgba(255,255,255,.022)',
-          textShadow: '0 0 90px rgba(139,123,255,.05)',
+          textShadow: 'none',
           filter: 'blur(0.8px)',
           transform: 'translate(-50%,0)',
           animation: reduced ? 'none' : 'coachWordFloat 15s ease-in-out infinite, coachWordGlow 11s ease-in-out infinite',
         }}
       >
-        КОУЧ
+        {tx('КОУЧ', 'COACH')}
       </div>
 
       {/* ---------- контент ----------
@@ -406,7 +419,7 @@ export default function AiLab({ s }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26, flexWrap: 'wrap' }}>
           <div style={{ width: 34, height: 1, background: 'linear-gradient(90deg, transparent, #6c5ce7)' }} />
           <span style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: '.28em', textTransform: 'uppercase', color: '#a99cf5' }}>
-            Твій коуч
+            {tx('Твій коуч', 'Your coach')}
           </span>
           <span
             style={{
@@ -416,7 +429,7 @@ export default function AiLab({ s }) {
               letterSpacing: '.2em', color: '#2ee6a8',
             }}
           >
-            СКОРО
+            {tx('СКОРО', 'SOON')}
             <span
               aria-hidden
               style={{
@@ -432,21 +445,22 @@ export default function AiLab({ s }) {
           style={{
             margin: '0 0 24px', fontFamily: F.display, fontSize: 'clamp(32px,4.6vw,62px)',
             lineHeight: 1.03, fontWeight: 800, letterSpacing: '-.035em', color: '#fff',
-            maxWidth: '16ch', textShadow: '0 0 60px rgba(108,92,231,.35)',
+            maxWidth: '16ch', textShadow: 'none',
           }}
         >
-          Кіт —{' '}
-          <span style={{ color: '#2ee6a8', textShadow: '0 0 70px rgba(46,230,168,.4)' }}>
-            твій особистий аналіз торгівлі.
+          {tx('Кіт —', 'The Cat —')}{' '}
+          <span style={{ color: '#2ee6a8', textShadow: 'none' }}>
+            {tx('твій особистий аналіз торгівлі.', 'your personal trading analyst.')}
           </span>
         </h2>
 
         {/* Текст погоджений із командою: спершу — що кіт робить, потім —
             чим він відрізняється від звичайних графіків дашборда. */}
         <p style={{ margin: '0 0 clamp(32px,8vw,64px)', maxWidth: 620, fontFamily: F.sans, fontSize: 17, lineHeight: 1.65, color: '#8a8aa0' }}>
-          Фірмовий котик аналізує твої угоди, знаходить систематичні помилки,
-          показує закономірності й те, що ти сам можеш не помічати. Дашборд
-          показує цифри — кіт пояснює, що за ними стоїть.
+          {tx(
+            'Фірмовий котик аналізує твої угоди, знаходить систематичні помилки, показує закономірності й те, що ти сам можеш не помічати. Дашборд показує цифри — кіт пояснює, що за ними стоїть.',
+            'Our signature cat analyzes your trades, finds systematic mistakes, and shows patterns you might miss yourself. The dashboard shows the numbers — the cat explains what\'s behind them.',
+          )}
         </p>
 
         <div className="ln-ai-grid">
@@ -467,7 +481,7 @@ export default function AiLab({ s }) {
                 style={{
                   position: 'relative', width: 216, height: 216, borderRadius: 58, padding: 1,
                   background: 'linear-gradient(150deg, rgba(108,92,231,.6), rgba(255,255,255,.06) 60%, rgba(108,92,231,.28))',
-                  boxShadow: '0 40px 90px -30px rgba(108,92,231,.7)',
+                  boxShadow: 'none',
                   animation: reduced ? 'none' : 'coachFloat 9s ease-in-out infinite',
                 }}
               >
@@ -484,7 +498,7 @@ export default function AiLab({ s }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[['ЖУРНАЛ ПРОЧИТАНО', '0s'], ['ЦИФРИ РАХУЮТЬСЯ', '.8s']].map(([label, delay]) => (
+              {[[tx('ЖУРНАЛ ПРОЧИТАНО', 'JOURNAL READ'), '0s'], [tx('ЦИФРИ РАХУЮТЬСЯ', 'CRUNCHING NUMBERS'), '.8s']].map(([label, delay]) => (
                 <div
                   key={label}
                   style={{
@@ -514,7 +528,7 @@ export default function AiLab({ s }) {
                 <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3a3a4a' }} />
                   <span style={{ fontFamily: F.mono, fontSize: 11.5, letterSpacing: '.16em', color: '#6b6b80' }}>
-                    МОДЕЛЬ НАВЧАЄТЬСЯ
+                    {tx('МОДЕЛЬ НАВЧАЄТЬСЯ', 'MODEL IN TRAINING')}
                   </span>
                 </span>
                 <LockSvg stroke="#4a4a5c" />
@@ -538,10 +552,10 @@ export default function AiLab({ s }) {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
                 <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '.26em', color: '#5f5f75' }}>
-                  ТАК ЦЕ ВИГЛЯДАТИМЕ
+                  {tx('ТАК ЦЕ ВИГЛЯДАТИМЕ', 'HERE\'S HOW IT WILL LOOK')}
                 </span>
                 <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '.2em', color: '#5f5f75' }}>
-                  {n} УГОД
+                  {n} {tx('УГОД', n === 1 ? 'TRADE' : 'TRADES')}
                 </span>
               </div>
 
@@ -581,7 +595,7 @@ export default function AiLab({ s }) {
                         border: '1px solid rgba(46,230,168,.3)',
                         background: 'radial-gradient(120% 120% at 50% 0%, rgba(46,230,168,.18), rgba(10,11,16,1))',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 0 30px -8px rgba(46,230,168,.5)',
+                        boxShadow: 'none',
                       }}
                     >
                       <Cat size={24} />
@@ -599,20 +613,23 @@ export default function AiLab({ s }) {
                   >
                     <span style={{ flex: '0 0 auto', marginTop: 2 }}><LockSvg stroke="#5f5f75" /></span>
                     <p style={{ margin: 0, fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.6, color: '#6b6b80' }}>
-                      Текст вище зібрала формула з твого журналу. Модель писатиме
-                      інакше — і про те, що формулою не дістати: чому саме ці угоди
-                      йдуть разом і що з цим робити завтра.
+                      {tx(
+                        'Текст вище зібрала формула з твого журналу. Модель писатиме інакше — і про те, що формулою не дістати: чому саме ці угоди йдуть разом і що з цим робити завтра.',
+                        'The text above was put together by a formula from your journal. The model will write differently — about what a formula can\'t reach: why these particular trades go together and what to do about it tomorrow.',
+                      )}
                     </p>
                   </div>
                 </>
               ) : (
                 <div style={{ textAlign: 'center', padding: '44px 12px', maxWidth: 360, margin: '0 auto' }}>
                   <div style={{ fontFamily: F.display, fontSize: 19, fontWeight: 700, color: '#c4c4d4', marginBottom: 10 }}>
-                    Читати поки нема чого
+                    {tx('Читати поки нема чого', 'Nothing to read yet')}
                   </div>
                   <p style={{ margin: 0, fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.6, color: '#6f6f82' }}>
-                    Найкорисніше, що можна зробити до появи моделі, — вести журнал.
-                    Без даних вона вигадує, а з двадцятьма угодами вже має що сказати.
+                    {tx(
+                      'Найкорисніше, що можна зробити до появи моделі, — вести журнал. Без даних вона вигадує, а з двадцятьма угодами вже має що сказати.',
+                      'The most useful thing you can do before the model arrives is keep your journal. Without data it makes things up; with twenty trades it already has something to say.',
+                    )}
                   </p>
                 </div>
               )}
@@ -633,13 +650,14 @@ export default function AiLab({ s }) {
             fontSize: 13.5, lineHeight: 1.7, color: '#9c9cb2',
           }}
         >
-          Усе, що показують інші розділи аналітики, порахували формули по твоїх
-          угодах — нейромережі там немає жодної. Там, де написано «вердикт», це
-          арифметика, а не думка.
+          {tx(
+            'Усе, що показують інші розділи аналітики, порахували формули по твоїх угодах — нейромережі там немає жодної. Там, де написано «вердикт», це арифметика, а не думка.',
+            'Everything the other analytics sections show was calculated by formulas from your trades — there\'s no neural network there at all. Where it says "verdict", that\'s arithmetic, not opinion.',
+          )}
         </p>
 
         <div style={{ marginTop: 34, textAlign: 'center', fontFamily: F.mono, fontSize: 11, letterSpacing: '.24em', color: '#6b6b80' }}>
-          кіт · читає · рахує · ще мовчить
+          {tx('кіт · читає · рахує · ще мовчить', 'cat · reads · counts · still quiet')}
         </div>
       </div>
     </div>

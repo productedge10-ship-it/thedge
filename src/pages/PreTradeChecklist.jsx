@@ -15,6 +15,7 @@ import useCloudState from '../hooks/useCloudState';
 import {
   Counter, DrawnCheck, ProgressRing, Sweep,
 } from '../components/checklist/ChecklistBits';
+import { t as tx } from '../lib/lang';
 
 /* ==================================================================
    Чекліст перед входом.
@@ -83,7 +84,7 @@ function Item({
         />
         <button
           onClick={onSaveEdit}
-          title="Зберегти (Enter)"
+          title={tx('Зберегти (Enter)', 'Save (Enter)')}
           className="grid h-8 w-8 shrink-0 place-items-center rounded-md transition-transform duration-200 active:scale-95"
           style={{ background: `rgba(${T.accRgb},0.14)`, border: `1px solid ${T.lineAcc}`, color: T.acc }}
         >
@@ -91,7 +92,7 @@ function Item({
         </button>
         <button
           onClick={onCancelEdit}
-          title="Скасувати (Esc)"
+          title={tx('Скасувати (Esc)', 'Cancel (Esc)')}
           className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
           style={{ color: T.text3, border: `1px solid ${T.line}` }}
         >
@@ -211,7 +212,7 @@ function Item({
         <span className="relative z-10 flex shrink-0 items-center gap-0.5">
           <button
             onClick={(e) => { e.stopPropagation(); onStartEdit(item); }}
-            title="Редагувати"
+            title={tx('Редагувати', 'Edit')}
             className="grid h-8 w-8 place-items-center rounded-md transition-colors duration-200"
             style={{ color: T.text3 }}
             onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
@@ -221,7 +222,7 @@ function Item({
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-            title="Видалити"
+            title={tx('Видалити', 'Delete')}
             className="grid h-8 w-8 place-items-center rounded-md transition-colors duration-200"
             style={{ color: T.text3 }}
             onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; }}
@@ -423,8 +424,8 @@ export default function PreTradeChecklist() {
 
   const addGroup = () => {
     const id = newGroupId();
-    setGroups((s) => [...s, { id, label: 'Новий блок', hint: '' }]);
-    setTimeout(() => { setEditingGroup(id); setGroupDraft({ label: 'Новий блок', hint: '' }); }, 0);
+    setGroups((s) => [...s, { id, label: tx('Новий блок', 'New block'), hint: '' }]);
+    setTimeout(() => { setEditingGroup(id); setGroupDraft({ label: tx('Новий блок', 'New block'), hint: '' }); }, 0);
   };
 
   const deleteGroup = (id) => {
@@ -469,10 +470,10 @@ export default function PreTradeChecklist() {
      колись зʼявився білий бордер. Для напівпрозорого треба окремий
      rgb-токен і чесна rgba(). */
   const V = {
-    go:     { color: T.ok,    rgb: T.okRgb,        icon: ShieldCheck, title: 'Можна заходити',   text: 'Усі пункти закриті. Далі — тільки виконання.' },
-    almost: { color: T.info,  rgb: T.infoRgb,      icon: Zap,         title: 'Критичні закриті', text: `Лишилось ${verdict.total - verdict.done} необовʼязкових.` },
-    stop:   { color: T.bad,   rgb: T.badRgb,       icon: ShieldAlert, title: 'Ще рано',          text: `Не закрито критичних: ${verdict.criticalsLeft.length}. Саме через них і прилітає мінус.` },
-    empty:  { color: T.text3, rgb: '122,122,133',  icon: ShieldAlert, title: 'Чекліст порожній', text: 'Додай пункти, які ти справді перевіряєш.' },
+    go:     { color: T.ok,    rgb: T.okRgb,        icon: ShieldCheck, title: tx('Можна заходити', 'Good to go'),   text: tx('Усі пункти закриті. Далі — тільки виконання.', 'All items checked. Now it’s just execution.') },
+    almost: { color: T.info,  rgb: T.infoRgb,      icon: Zap,         title: tx('Критичні закриті', 'Criticals checked'), text: tx(`Лишилось ${verdict.total - verdict.done} необовʼязкових.`, `${verdict.total - verdict.done} optional left.`) },
+    stop:   { color: T.bad,   rgb: T.badRgb,       icon: ShieldAlert, title: tx('Ще рано', 'Not yet'),          text: tx(`Не закрито критичних: ${verdict.criticalsLeft.length}. Саме через них і прилітає мінус.`, `Unchecked criticals: ${verdict.criticalsLeft.length}. These are exactly what cause losses.`) },
+    empty:  { color: T.text3, rgb: '122,122,133',  icon: ShieldAlert, title: tx('Чекліст порожній', 'Checklist is empty'), text: tx('Додай пункти, які ти справді перевіряєш.', 'Add the items you actually check.') },
   }[verdict.state];
 
   const VIcon = V.icon;
@@ -498,49 +499,49 @@ export default function PreTradeChecklist() {
         >
           <div className="min-w-0">
             <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
-              Перед входом
+              {tx('Перед входом', 'Before entry')}
             </div>
             <h1
               className="text-[26px] font-bold leading-none sm:text-[32px]"
               style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
             >
-              {editMode ? 'Налаштування чекліста' : 'Чекліст'}
+              {editMode ? tx('Налаштування чекліста', 'Checklist settings') : tx('Чекліст', 'Checklist')}
             </h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {editMode ? (
               <>
-                <Btn icon={FolderPlus} onClick={addGroup}>Блок</Btn>
+                <Btn icon={FolderPlus} onClick={addGroup}>{tx('Блок', 'Block')}</Btn>
                 <Btn
                   icon={ShieldCheck}
                   onClick={() => setConfirm({
                     kind: 'restore',
-                    title: 'Взяти приклад чекліста?',
-                    text: 'Твої блоки й пункти будуть замінені на наш приклад.',
-                    cta: 'Замінити',
+                    title: tx('Взяти приклад чекліста?', 'Use the example checklist?'),
+                    text: tx('Твої блоки й пункти будуть замінені на наш приклад.', 'Your blocks and items will be replaced with our example.'),
+                    cta: tx('Замінити', 'Replace'),
                   })}
                 >
-                  Приклад
+                  {tx('Приклад', 'Example')}
                 </Btn>
                 <Btn
                   icon={Eraser}
                   disabled={!items.length}
                   onClick={() => setConfirm({
                     kind: 'clear',
-                    title: 'Очистити чекліст?',
-                    text: `Зникнуть усі ${items.length} пунктів. Блоки лишаться порожніми.`,
-                    cta: 'Очистити',
+                    title: tx('Очистити чекліст?', 'Clear checklist?'),
+                    text: tx(`Зникнуть усі ${items.length} пунктів. Блоки лишаться порожніми.`, `All ${items.length} items will be removed. Blocks will stay empty.`),
+                    cta: tx('Очистити', 'Clear'),
                   })}
                 >
-                  Очистити
+                  {tx('Очистити', 'Clear')}
                 </Btn>
-                <Btn icon={Check} tone="acc" onClick={leaveEdit}>Готово</Btn>
+                <Btn icon={Check} tone="acc" onClick={leaveEdit}>{tx('Готово', 'Done')}</Btn>
               </>
             ) : (
               <>
-                <Btn icon={RotateCcw} onClick={reset} disabled={!checked.length}>Скинути</Btn>
-                <Btn icon={SlidersHorizontal} onClick={() => setEditMode(true)}>Налаштувати</Btn>
+                <Btn icon={RotateCcw} onClick={reset} disabled={!checked.length}>{tx('Скинути', 'Reset')}</Btn>
+                <Btn icon={SlidersHorizontal} onClick={() => setEditMode(true)}>{tx('Налаштувати', 'Customize')}</Btn>
               </>
             )}
           </div>
@@ -565,15 +566,15 @@ export default function PreTradeChecklist() {
             <ShieldCheck size={30} strokeWidth={1.7} style={{ color: T.acc }} />
             <div>
               <div className="text-[18px] font-bold" style={{ fontFamily: T.display, color: T.text }}>
-                Чекліст поки порожній
+                {tx('Чекліст поки порожній', 'Your checklist is empty')}
               </div>
               <p className="mx-auto mt-1.5 max-w-[420px] text-[13.5px] leading-[1.55]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                Запиши пункти, які перевіряєш перед кожним входом. Або візьми наш приклад і переріж під себе.
+                {tx('Запиши пункти, які перевіряєш перед кожним входом. Або візьми наш приклад і переріж під себе.', 'Write down what you check before every entry. Or take our example and tailor it.')}
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">
-              <Btn icon={Plus} tone="acc" onClick={() => setEditMode(true)}>Створити свій</Btn>
-              <Btn icon={ShieldCheck} onClick={restoreDefaults}>Взяти приклад</Btn>
+              <Btn icon={Plus} tone="acc" onClick={() => setEditMode(true)}>{tx('Створити свій', 'Create your own')}</Btn>
+              <Btn icon={ShieldCheck} onClick={restoreDefaults}>{tx('Взяти приклад', 'Use example')}</Btn>
             </div>
           </motion.div>
         ) : (
@@ -639,8 +640,8 @@ export default function PreTradeChecklist() {
                 </div>
                 <div className="mt-1 text-right text-[12px] tabular-nums" style={{ fontFamily: T.sans, color: T.text3 }}>
                   {verdict.criticalsLeft.length
-                    ? <>критичних лишилось: <Counter value={verdict.criticalsLeft.length} /></>
-                    : 'критичні закриті'}
+                    ? <>{tx('критичних лишилось:', 'criticals left:')} <Counter value={verdict.criticalsLeft.length} /></>
+                    : tx('критичні закриті', 'criticals checked')}
                 </div>
               </div>
             </div>
@@ -738,7 +739,7 @@ export default function PreTradeChecklist() {
                             if (e.key === 'Enter') saveGroupEdit();
                             if (e.key === 'Escape') setEditingGroup(null);
                           }}
-                          placeholder="Назва"
+                          placeholder={tx('Назва', 'Name')}
                           className="h-8 min-w-0 flex-1 rounded-md px-2 text-[15px] font-bold outline-none"
                           style={{ fontFamily: T.display, color: T.text, background: T.sunken, border: `1px solid ${T.lineAcc}` }}
                         />
@@ -749,7 +750,7 @@ export default function PreTradeChecklist() {
                             if (e.key === 'Enter') saveGroupEdit();
                             if (e.key === 'Escape') setEditingGroup(null);
                           }}
-                          placeholder="Підпис"
+                          placeholder={tx('Підпис', 'Caption')}
                           className="h-8 min-w-0 flex-1 rounded-md px-2 text-[13px] outline-none"
                           style={{ fontFamily: T.sans, color: T.text2, background: T.sunken, border: `1px solid ${T.line}` }}
                         />
@@ -794,7 +795,7 @@ export default function PreTradeChecklist() {
                           <span className="flex shrink-0 items-center gap-0.5">
                             <button
                               onClick={() => startGroupEdit(g)}
-                              title="Перейменувати блок"
+                              title={tx('Перейменувати блок', 'Rename block')}
                               className="grid h-8 w-8 place-items-center rounded-md transition-colors duration-200"
                               style={{ color: T.text3 }}
                               onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
@@ -806,13 +807,13 @@ export default function PreTradeChecklist() {
                               onClick={() => setConfirm({
                                 kind: 'group',
                                 id: g.id,
-                                title: `Видалити блок «${g.label}»?`,
+                                title: tx(`Видалити блок «${g.label}»?`, `Delete block “${g.label}”?`),
                                 text: list.length
-                                  ? `Разом із ним зникнуть ${list.length} ${list.length === 1 ? 'пункт' : 'пунктів'}.`
-                                  : 'Блок порожній.',
-                                cta: 'Видалити',
+                                  ? tx(`Разом із ним зникнуть ${list.length} ${list.length === 1 ? 'пункт' : 'пунктів'}.`, `${list.length} ${list.length === 1 ? 'item' : 'items'} will be removed with it.`)
+                                  : tx('Блок порожній.', 'The block is empty.'),
+                                cta: tx('Видалити', 'Delete'),
                               })}
-                              title="Видалити блок"
+                              title={tx('Видалити блок', 'Delete block')}
                               className="grid h-8 w-8 place-items-center rounded-md transition-colors duration-200"
                               style={{ color: T.text3 }}
                               onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; }}
@@ -830,7 +831,7 @@ export default function PreTradeChecklist() {
                   <div className="flex flex-col gap-0.5 pl-[40px] pr-1 pt-1">
                     {list.length === 0 && adding !== g.id && (
                       <p className="px-1 py-2 text-[13.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                        Порожньо.
+                        {tx('Порожньо.', 'Empty.')}
                       </p>
                     )}
 
@@ -871,14 +872,14 @@ export default function PreTradeChecklist() {
                             if (e.key === 'Enter') addItem(g.id);
                             if (e.key === 'Escape') { setAdding(null); setNewText(''); setNewCritical(false); }
                           }}
-                          placeholder="Що саме ти перевіряєш?"
+                          placeholder={tx('Що саме ти перевіряєш?', 'What exactly do you check?')}
                           className="h-8 w-full bg-transparent px-1.5 text-[15px] outline-none"
                           style={{ fontFamily: T.sans, color: T.text }}
                         />
                         <div className="mt-1.5 flex items-center gap-1.5">
                           <button
                             onClick={() => setNewCritical((v) => !v)}
-                            title="Без цього пункту не заходити"
+                            title={tx('Без цього пункту не заходити', 'Don’t enter without this item')}
                             className="flex h-8 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2 text-[12.5px] font-semibold transition-colors duration-200"
                             style={{
                               fontFamily: T.sans,
@@ -888,12 +889,12 @@ export default function PreTradeChecklist() {
                             }}
                           >
                             <ShieldAlert size={13} strokeWidth={2.3} />
-                            критичний
+                            {tx('критичний', 'critical')}
                           </button>
                           <button
                             onClick={() => addItem(g.id)}
                             disabled={!newText.trim()}
-                            title="Додати (Enter)"
+                            title={tx('Додати (Enter)', 'Add (Enter)')}
                             className="grid h-8 w-8 shrink-0 place-items-center rounded-md transition-transform duration-200 active:scale-95"
                             style={{
                               background: newText.trim() ? `rgba(${T.accRgb},0.14)` : 'transparent',
@@ -906,7 +907,7 @@ export default function PreTradeChecklist() {
                           </button>
                           <button
                             onClick={() => { setAdding(null); setNewText(''); setNewCritical(false); }}
-                            title="Скасувати (Esc)"
+                            title={tx('Скасувати (Esc)', 'Cancel (Esc)')}
                             className="grid h-8 w-8 shrink-0 place-items-center rounded-md"
                             style={{ color: T.text3, border: `1px solid ${T.line}` }}
                           >
@@ -923,7 +924,7 @@ export default function PreTradeChecklist() {
                         onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
                       >
                         <Plus size={13} strokeWidth={2.6} />
-                        Пункт
+                        {tx('Пункт', 'Item')}
                       </button>
                     ))}
                   </div>
@@ -979,14 +980,14 @@ export default function PreTradeChecklist() {
                   onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
                   onMouseLeave={(e) => (e.currentTarget.style.color = T.text2)}
                 >
-                  Скасувати
+                  {tx('Скасувати', 'Cancel')}
                 </button>
                 <button
                   onClick={runConfirm}
                   className="h-11 flex-1 rounded-xl text-[14px] font-bold transition-transform duration-200 active:scale-[0.98]"
                   style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
-                  {confirm.cta || 'Видалити'}
+                  {confirm.cta || tx('Видалити', 'Delete')}
                 </button>
               </div>
             </motion.div>

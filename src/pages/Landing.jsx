@@ -159,9 +159,7 @@ function Header() {
 
           <a
             href="/auth"
-            style={{ background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, color: '#fff', fontFamily: F.sans, fontSize: 14, fontWeight: 700, padding: '10px 18px', borderRadius: 11, whiteSpace: 'nowrap', boxShadow: '0 10px 28px rgba(74,59,245,.34)', transition: 'box-shadow .2s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 14px 36px rgba(74,59,245,.5)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 10px 28px rgba(74,59,245,.34)'; }}
+            style={{ background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, color: '#fff', fontFamily: F.sans, fontSize: 14, fontWeight: 700, padding: '10px 18px', borderRadius: 11, whiteSpace: 'nowrap', transition: 'box-shadow .2s' }}
           >
             {tx('Почати безкоштовно', 'Start free')}
           </a>
@@ -229,7 +227,7 @@ function Header() {
           <a
             href="/auth"
             onClick={() => setMobileOpen(false)}
-            style={{ textAlign: 'center', marginTop: 6, background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, color: '#fff', fontFamily: F.sans, fontSize: 15, fontWeight: 700, padding: '15px 0', borderRadius: 13, boxShadow: '0 10px 28px rgba(74,59,245,.34)' }}
+            style={{ textAlign: 'center', marginTop: 6, background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, color: '#fff', fontFamily: F.sans, fontSize: 15, fontWeight: 700, padding: '15px 0', borderRadius: 13 }}
           >
             {tx('Почати безкоштовно', 'Start free')}
           </a>

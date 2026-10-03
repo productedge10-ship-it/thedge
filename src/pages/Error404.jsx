@@ -9,6 +9,7 @@ import { ArrowLeft, Home } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useMonoFont } from "../lib/theme";
+import { t as tx } from "../lib/lang";
 
 /**
  * 404 — інтерактивна сторінка "не знайдено".
@@ -228,11 +229,13 @@ export default function NotFound() {
             style={{ transform: "translateZ(30px)" }}
           >
             <p className="mb-2 font-mono text-[13px] uppercase tracking-[0.34em] text-[#C4B5FD]/70">
-              сторінку не знайдено
+              {tx("сторінку не знайдено", "page not found")}
             </p>
             <p className="max-w-md text-[15px] leading-relaxed text-white/55">
-              Ця сторінка кудись зникла. Але простір навколо — цілком реальний.
-              Поводи мишкою, потягни осколок, торкнись вузлів графа.
+              {tx(
+                "Ця сторінка кудись зникла. Але простір навколо — цілком реальний. Поводи мишкою, потягни осколок, торкнись вузлів графа.",
+                "This page has vanished. But the space around it is quite real. Move your mouse, drag a shard, touch the graph nodes.",
+              )}
             </p>
           </motion.div>
 
@@ -250,7 +253,7 @@ export default function NotFound() {
                 className="inline-flex items-center gap-2 rounded-2xl bg-[#00E0A4] px-6 py-3.5 text-[14.5px] font-semibold text-[#04241C] transition-colors hover:bg-[#22e9b4]"
               >
                 <Home size={18} strokeWidth={2.4} />
-                На головну
+                {tx("На головну", "Home")}
               </button>
             </Magnetic>
             <Magnetic reduced={reduced}>
@@ -259,7 +262,7 @@ export default function NotFound() {
                 className="inline-flex items-center gap-2 rounded-2xl border border-[#C4B5FD]/30 bg-[#8B7BFF]/10 px-6 py-3.5 text-[14.5px] font-medium text-white/90 transition-colors hover:border-[#C4B5FD]/60 hover:bg-[#8B7BFF]/20"
               >
                 <ArrowLeft size={18} strokeWidth={2.4} />
-                Назад
+                {tx("Назад", "Back")}
               </button>
             </Magnetic>
           </motion.div>
@@ -278,11 +281,11 @@ export default function NotFound() {
             transition={{ delay: 0.45, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
             className="mt-7 flex flex-wrap items-center justify-center gap-x-1 gap-y-2 font-mono text-[12.5px]"
             style={{ transform: "translateZ(40px)" }}
-            aria-label="Розділи"
+            aria-label={tx("Розділи", "Sections")}
           >
             {(user
-              ? [["/journal", "журнал"], ["/analytics", "аналітика"], ["/plan", "план"], ["/error", "помилки"], ["/uk/blog", "блог"]]
-              : [["/", "головна"], ["/uk/blog", "блог"], ["/auth", "увійти"], ["/terms", "умови"]]
+              ? [["/journal", tx("журнал", "journal")], ["/analytics", tx("аналітика", "analytics")], ["/plan", tx("план", "plan")], ["/error", tx("помилки", "mistakes")], [tx("/uk/blog", "/en/blog"), tx("блог", "blog")]]
+              : [["/", tx("головна", "home")], [tx("/uk/blog", "/en/blog"), tx("блог", "blog")], ["/auth", tx("увійти", "sign in")], ["/terms", tx("умови", "terms")]]
             ).map(([to, label], i) => (
               <span key={to} className="inline-flex items-center">
                 {i > 0 && <span className="px-1.5 text-white/20">·</span>}
@@ -303,7 +306,7 @@ export default function NotFound() {
 
       {/* підказка */}
       <div className="pointer-events-none absolute bottom-6 left-1/2 z-20 -translate-x-1/2 font-mono text-[11.5px] tracking-wide text-white/25">
-        рухай мишкою · кидай кульку · error 404
+        {tx("рухай мишкою · кидай кульку · error 404", "move your mouse · throw the ball · error 404")}
       </div>
     </div>
   );
@@ -511,7 +514,7 @@ function Shards({ depth, depthY, reduced }) {
               borderRadius: 14,
               background: `linear-gradient(135deg, ${it.c}22, ${it.c}05)`,
               border: `1px solid ${it.c}55`,
-              boxShadow: `0 20px 40px -12px ${it.c}40, inset 0 1px 0 rgba(255,255,255,0.15)`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.15)`,
               backdropFilter: "blur(2px)",
             }}
           />

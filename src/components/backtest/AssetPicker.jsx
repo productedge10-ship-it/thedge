@@ -5,6 +5,7 @@ import { T, EASE } from '../../lib/theme';
 import { COMMON_PAIRS } from '../../lib/backtestStats';
 import { ACT, act } from './accent';
 import AssetIcon from '../ui/AssetIcon';
+import { t as tx } from '../../lib/lang';
 import useCachedList from '../../hooks/useCachedList';
 import { supabase } from '../../lib/supabase';
 
@@ -24,7 +25,7 @@ export default function AssetPicker({
   value,
   onChange,
   height = 46,
-  placeholder = 'Обрати актив',
+  placeholder = tx('Обрати актив', 'Pick an asset'),
   /* Активи, які варто показати першими: інструмент самого бектесту
      і ті, що вже зустрічались у ньому. */
   priority = [],
@@ -138,7 +139,7 @@ export default function AssetPicker({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && canAdd) { e.preventDefault(); addAsset(); } }}
-                placeholder="Пошук або новий актив…"
+                placeholder={tx('Пошук або новий актив…', 'Search or add a new asset…')}
                 className="w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:text-[var(--edge-text3,var(--edge-text3))]"
                 style={{ fontFamily: T.sans, color: T.text }}
               />
@@ -171,7 +172,7 @@ export default function AssetPicker({
                     {custom && (
                       <button
                         onClick={(e) => removeAsset(e, p)}
-                        title="Прибрати зі списку"
+                        title={tx('Прибрати зі списку', 'Remove from list')}
                         className="hidden shrink-0 px-2 group-hover:block"
                         style={{ color: T.text4 }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; }}
@@ -186,7 +187,7 @@ export default function AssetPicker({
 
               {found.length === 0 && !canAdd && (
                 <p className="px-2.5 py-3 text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  Нічого не знайшлось.
+                  {tx('Нічого не знайшлось.', 'Nothing found.')}
                 </p>
               )}
             </div>
@@ -201,7 +202,7 @@ export default function AssetPicker({
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 {saving ? <Loader2 size={13} strokeWidth={3} className="animate-spin" /> : <Plus size={13} strokeWidth={3} />}
-                Додати «{search.trim().toUpperCase()}»
+                {tx(`Додати «${search.trim().toUpperCase()}»`, `Add “${search.trim().toUpperCase()}”`)}
               </button>
             )}
           </motion.div>

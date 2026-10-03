@@ -1,3 +1,4 @@
+import { t as tx } from '../lib/lang';
 export function mulberry32(seed) {
   return function () {
     seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
@@ -11,17 +12,17 @@ export const ASSETS = ['EURUSD', 'GBPUSD', 'GER40', 'XAUUSD', 'US100', 'USDJPY']
 export const ACCOUNTS = ['FTMO 100K', 'Finding Pips', 'MFF 50K'];
 export const SETUPS = ['Sweep + BOS', 'OB retest', 'FVG fill', 'Trendline break', 'Range fade', 'News spike'];
 export const EMOTIONS = ['calm', 'confident', 'anxious', 'tilt'];
-export const EMOTION_LABEL = { calm: 'Спокій', confident: 'Впевненість', anxious: 'Тривога', tilt: 'Тільт' };
+export const EMOTION_LABEL = { calm: tx('Спокій', 'Calm'), confident: tx('Впевненість', 'Confident'), anxious: tx('Тривога', 'Anxious'), tilt: tx('Тільт', 'Tilt') };
 export const EMOTION_COLOR = { calm: '#34d399', confident: '#4c8df6', anxious: '#d4a843', tilt: '#f0546c' };
 export const MISTAKES = [
-  'Вхід до підтвердження',
-  'Наздогнав рух',
-  'Пересунув стоп',
-  'Завеликий обʼєм',
-  'Торгував поза сесією',
-  'Не зафіксував по плану',
+  tx('Вхід до підтвердження', 'Entered before confirmation'),
+  tx('Наздогнав рух', 'Chased the move'),
+  tx('Пересунув стоп', 'Moved the stop'),
+  tx('Завеликий обʼєм', 'Oversized position'),
+  tx('Торгував поза сесією', 'Traded outside session'),
+  tx('Не зафіксував по плану', "Didn't take profit per plan"),
 ];
-export const DOW = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+export const DOW = tx(['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'], ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
 
 export function buildTrades() {
   const rnd = mulberry32(20260714);

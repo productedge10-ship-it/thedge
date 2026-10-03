@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, RefreshCw, Trash2, Check, X, TrendingUp, TrendingDown, Minus, Coffee } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import AssetIcon from '../ui/AssetIcon';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Картка аналізу.
@@ -49,7 +50,6 @@ export default function AnalysisCard({ plan, onClick, onDelete }) {
      й лежить. План без напряму підсвічуємо акцентом. */
   const rgb = planned?.rgb || T.accRgb;
   const hoverLine = `rgba(${rgb},0.45)`;
-  const hoverGlow = `rgba(${rgb},0.55)`;
   const echo = planned?.color || T.acc;
   const Icon = planned?.icon;
 
@@ -75,7 +75,7 @@ export default function AnalysisCard({ plan, onClick, onDelete }) {
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = hoverLine;
-        e.currentTarget.style.boxShadow = `0 18px 40px -26px rgba(0,0,0,0.95), 0 0 24px -10px ${hoverGlow}`;
+        e.currentTarget.style.boxShadow = `0 18px 40px -26px rgba(0,0,0,0.95)`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = T.line;
@@ -136,7 +136,7 @@ export default function AnalysisCard({ plan, onClick, onDelete }) {
             overflow: 'hidden',
           }}
         >
-          {text || 'Опис плану не заповнений'}
+          {text || tx('Опис плану не заповнений', 'No plan description yet')}
         </p>
       </div>
 
@@ -151,10 +151,10 @@ export default function AnalysisCard({ plan, onClick, onDelete }) {
               color: hit ? T.ok : T.bad,
               background: hit ? `rgba(${T.okRgb},0.10)` : `rgba(${T.badRgb},0.10)`,
             }}
-            title={hit ? 'Фактичний рух збігся з планом' : 'Ринок пішов інакше'}
+            title={hit ? tx('Фактичний рух збігся з планом', 'The actual move matched the plan') : tx('Ринок пішов інакше', 'The market went the other way')}
           >
             {hit ? <Check size={11} strokeWidth={3.4} /> : <X size={11} strokeWidth={3.4} />}
-            {hit ? 'справдився' : 'мимо'}
+            {hit ? tx('справдився', 'hit') : tx('мимо', 'miss')}
           </span>
         )}
 
@@ -162,19 +162,19 @@ export default function AnalysisCard({ plan, onClick, onDelete }) {
           <span
             className="flex items-center gap-1 text-[12.5px] font-semibold tabular-nums"
             style={{ fontFamily: T.mono, color: T.text3 }}
-            title={`${updates} оновлень протягом дня`}
+            title={tx(`${updates} оновлень протягом дня`, `${updates} ${updates === 1 ? 'update' : 'updates'} during the day`)}
           >
             <RefreshCw size={11} strokeWidth={2.4} />{updates}
           </span>
         )}
 
         {mistake && (
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: T.bad }} title="Помилка в аналізі" />
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: T.bad }} title={tx('Помилка в аналізі', 'Mistake in the analysis')} />
         )}
 
         {/* оцінка сесії крапками */}
         {rating > 0 && (
-          <span className="ml-auto flex items-center gap-[3px]" title={`Оцінка сесії ${rating}/5`}>
+          <span className="ml-auto flex items-center gap-[3px]" title={tx(`Оцінка сесії ${rating}/5`, `Session rating ${rating}/5`)}>
             {[1, 2, 3, 4, 5].map((n) => (
               <span
                 key={n}
@@ -188,7 +188,7 @@ export default function AnalysisCard({ plan, onClick, onDelete }) {
         <span className={`flex items-center ${rating > 0 ? '' : 'ml-auto'} gap-1`}>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(e, plan); }}
-            title="Видалити аналіз"
+            title={tx('Видалити аналіз', 'Delete analysis')}
             /* Кнопка видима ЗАВЖДИ, просто приглушена.
 
                Була `opacity-0` до наведення — тобто існувала тільки

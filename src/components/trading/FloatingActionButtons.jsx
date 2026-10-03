@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Briefcase, Cloud, CloudOff, Loader2, Check } from 'lucide-react';
 import { T, SPRING } from './planTheme';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Плаваюча панель: статус синхронізації + швидкий трейд.
@@ -16,11 +17,11 @@ export default function FloatingActionButtons({
     : lastSaved ? 'saved' : 'idle';
 
   const cfg = {
-    blocked: { c: T.warn, rgb: T.warnRgb, icon: CloudOff,  text: 'Вибери актив і bias' },
-    saving:  { c: T.acc,  rgb: T.accRgb,  icon: Loader2,   text: 'Зберігаю...' },
-    dirty:   { c: T.warn, rgb: T.warnRgb, icon: Cloud,     text: 'Є незбережені зміни' },
+    blocked: { c: T.warn, rgb: T.warnRgb, icon: CloudOff,  text: tx('Вибери актив і bias', 'Pick an asset and bias') },
+    saving:  { c: T.acc,  rgb: T.accRgb,  icon: Loader2,   text: tx('Зберігаю...', 'Saving...') },
+    dirty:   { c: T.warn, rgb: T.warnRgb, icon: Cloud,     text: tx('Є незбережені зміни', 'Unsaved changes') },
     saved:   { c: T.ok,   rgb: T.okRgb,   icon: Check,     text: `${lastAction} · ${lastSaved}` },
-    idle:    { c: T.text3, rgb: '122,122,133', icon: Cloud, text: 'Натисни щоб зберегти' },
+    idle:    { c: T.text3, rgb: '122,122,133', icon: Cloud, text: tx('Натисни щоб зберегти', 'Click to save') },
   }[state];
 
   const Icon = cfg.icon;
@@ -46,7 +47,7 @@ export default function FloatingActionButtons({
           }}
         >
           <Briefcase size={14} strokeWidth={2.4} />
-          Трейд
+          {tx('Трейд', 'Trade')}
         </motion.button>
       )}
 

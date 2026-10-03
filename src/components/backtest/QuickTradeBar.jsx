@@ -7,6 +7,7 @@ import { ACT, act, actGradient, actGradientHover, segFill, SEG_TONE } from './ac
 import AssetPicker from './AssetPicker';
 import { allSetups, customSetups, addCustomSetup } from '../../lib/backtestSetups';
 import DateField from '../ui/DateField';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Швидкий рядок.
@@ -156,7 +157,7 @@ export default function QuickTradeBar({
           <Zap size={15} strokeWidth={2.2} style={{ color: ACT.tint }} />
         </motion.span>
         <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ fontFamily: T.mono, color: ACT.tint }}>
-          Швидкий запис
+          {tx('Швидкий запис', 'Quick log')}
         </span>
       </div>
 
@@ -165,10 +166,10 @@ export default function QuickTradeBar({
           value={q.pair}
           onChange={(v) => set({ pair: v })}
           height={42}
-          placeholder="актив"
+          placeholder={tx('актив', 'asset')}
           className="w-[172px] shrink-0"
           priority={[sessionPair, ...usedPairs].filter(Boolean)}
-          noteOf={(p) => (p === sessionPair ? 'бектест' : null)}
+          noteOf={(p) => (p === sessionPair ? tx('бектест', 'backtest') : null)}
         />
 
         <Seg id="dir" options={['LONG', 'SHORT']} value={q.type} onChange={(v) => set({ type: v })} />
@@ -213,7 +214,7 @@ export default function QuickTradeBar({
               if (e.key === 'Enter') { setSetupOpen(false); submit(); }
               if (e.key === 'Escape') { e.stopPropagation(); setSetupOpen(false); }
             }}
-            placeholder="Сетап або нотатка"
+            placeholder={tx('Сетап або нотатка', 'Setup or note')}
             className="h-full w-full bg-transparent px-3.5 text-[14px] outline-none placeholder:text-[var(--edge-text3,var(--edge-text3))]"
             style={{ fontFamily: T.sans, color: T.text }}
           />
@@ -270,7 +271,7 @@ export default function QuickTradeBar({
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
                     <Plus size={13} strokeWidth={3} />
-                    Додати «{q.setup.trim()}»
+                    {tx(`Додати «${q.setup.trim()}»`, `Add “${q.setup.trim()}”`)}
                   </button>
                 )}
               </motion.div>
@@ -289,7 +290,7 @@ export default function QuickTradeBar({
               border: `1px solid ${more ? act(0.45) : T.line}`,
             }}
           >
-            {more ? 'Менше' : 'Деталі'}
+            {more ? tx('Менше', 'Less') : tx('Деталі', 'Details')}
             <ChevronDown size={14} strokeWidth={2.4} style={{ transform: more ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
           </button>
 
@@ -301,7 +302,7 @@ export default function QuickTradeBar({
               fontFamily: T.sans,
               color: '#ffffff',
               background: actGradient,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 28px -12px ${act(0.9)}`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25)`,
               opacity: saving ? 0.6 : 1,
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = actGradientHover; }}
@@ -310,7 +311,7 @@ export default function QuickTradeBar({
             {saving
               ? <Loader2 size={15} strokeWidth={3} className="animate-spin" />
               : <Check size={15} strokeWidth={3} />}
-            Записати
+            {tx('Записати', 'Save')}
           </button>
         </div>
       </div>
@@ -338,7 +339,7 @@ export default function QuickTradeBar({
         <div className="overflow-hidden">
             <div className="mt-3 flex flex-wrap items-center gap-3 pt-4" style={{ borderTop: `1px solid ${T.line}` }}>
               <div className="flex items-center gap-2.5">
-                <FieldLabel>Сесія</FieldLabel>
+                <FieldLabel>{tx('Сесія', 'Session')}</FieldLabel>
                 <Seg id="sess" options={SESSIONS} value={q.session} onChange={(v) => set({ session: v })} />
               </div>
 
@@ -370,7 +371,7 @@ export default function QuickTradeBar({
                 onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; e.currentTarget.style.borderColor = T.line; }}
               >
                 <SlidersHorizontal size={14} strokeWidth={2.2} />
-                Повна форма
+                {tx('Повна форма', 'Full form')}
               </button>
             </div>
         </div>

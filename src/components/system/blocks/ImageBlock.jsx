@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ImagePlus, Maximize2, X } from 'lucide-react';
 import { T, EASE } from '../../../lib/theme';
+import { t as tx } from '../../../lib/lang';
 import useImageAttach, { filesFromPaste } from '../../../hooks/useImageAttach';
 
 /* ==================================================================
@@ -71,7 +72,7 @@ export default function ImageBlock({ block, onChange, onFullscreen }) {
         }}
       >
         <ImagePlus size={20} strokeWidth={1.9} />
-        Встав скрін: Ctrl+V, перетягни файл або клікни
+        {tx('Встав скрін: Ctrl+V, перетягни файл або клікни', 'Paste a screenshot: Ctrl+V, drag a file or click')}
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => readFile(e.target.files?.[0])} />
       </div>
     );
@@ -98,7 +99,7 @@ export default function ImageBlock({ block, onChange, onFullscreen }) {
         <span className="absolute right-2 top-2 flex gap-1.5 opacity-0 transition-opacity duration-200 group-hover/img:opacity-100">
           <button
             onClick={() => onFullscreen(block.src)}
-            title="На весь екран"
+            title={tx('На весь екран', 'Full screen')}
             className="grid h-8 w-8 place-items-center rounded-lg"
             style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${T.line}`, color: T.text2, backdropFilter: 'blur(8px)' }}
           >
@@ -106,7 +107,7 @@ export default function ImageBlock({ block, onChange, onFullscreen }) {
           </button>
           <button
             onClick={() => onChange({ src: '' })}
-            title="Прибрати"
+            title={tx('Прибрати', 'Remove')}
             className="grid h-8 w-8 place-items-center rounded-lg"
             style={{ background: 'rgba(10,10,12,0.82)', border: `1px solid ${T.line}`, color: T.text2, backdropFilter: 'blur(8px)' }}
             onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
@@ -119,7 +120,7 @@ export default function ImageBlock({ block, onChange, onFullscreen }) {
         {/* ручка розміру */}
         <span
           onMouseDown={startResize}
-          title="Тягни, щоб змінити розмір"
+          title={tx('Тягни, щоб змінити розмір', 'Drag to resize')}
           className="absolute -right-1 top-1/2 h-14 w-2 -translate-y-1/2 cursor-col-resize rounded-full transition-opacity duration-200"
           style={{
             background: resizing ? T.acc : T.lineHi,
@@ -144,7 +145,7 @@ export default function ImageBlock({ block, onChange, onFullscreen }) {
       <input
         value={block.caption || ''}
         onChange={(e) => onChange({ caption: e.target.value })}
-        placeholder="Підпис до скріна…"
+        placeholder={tx('Підпис до скріна…', 'Screenshot caption…')}
         className="mt-2 w-full bg-transparent text-[13px] outline-none"
         style={{ fontFamily: T.sans, color: T.text3 }}
       />

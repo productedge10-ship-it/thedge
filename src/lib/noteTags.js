@@ -11,6 +11,8 @@
    тільки дефолт і чиста робота з айді тегів, без сховища.
 ================================================================== */
 
+import { isEn } from './lang';
+
 export const SEP = '/';
 
 /* Палітра приглушена навмисне: теги мають розрізнятись, але не
@@ -36,6 +38,21 @@ export const DEFAULT_TREE = [
   { name: 'Життя',        color: CAT_COLORS[7], children: ['Сон', 'Спорт', 'Настрій'] },
 ];
 
+/* Назви тегів — це айді, вони лежать у нотатках рядком. Тому дефолтне
+   дерево лишається українським, а англійською його тільки ПОКАЗУЄМО:
+   інакше після зміни мови теги старих нотаток стали б «сиротами».
+   Свої теги людина називає як хоче — їх не чіпаємо. */
+const TAG_EN = {
+  'Ліквідність': 'Liquidity', 'Структура': 'Structure',
+  'Психологія': 'Psychology', 'Тільт': 'Tilt', 'Страх': 'Fear', 'Жадібність': 'Greed', 'Терпіння': 'Patience',
+  'Дисципліна': 'Discipline', 'За планом': 'By the plan', 'Порушив правило': 'Broke a rule', 'Рутина': 'Routine',
+  'Ризик': 'Risk', 'Розмір позиції': 'Position size', 'Просадка': 'Drawdown', 'Менеджмент': 'Management',
+  'Новини': 'News', 'Актив': 'Asset', 'Життя': 'Life', 'Сон': 'Sleep', 'Спорт': 'Sport', 'Настрій': 'Mood',
+};
+
+/** Назва тегу чи категорії для показу (без зміни збереженого значення) */
+export const tagName = (name) => (isEn && TAG_EN[name]) || name;
+
 /* ---------- розбір айді ---------- */
 
 export const splitTag = (id) => {
@@ -46,13 +63,13 @@ export const splitTag = (id) => {
 /** Коротка назва для чипа: підтег показуємо без батька */
 export const tagLabel = (id) => {
   const [cat, sub] = splitTag(id);
-  return sub || cat;
+  return tagName(sub || cat);
 };
 
 /** Повна назва для тултипа / читалки */
 export const tagPath = (id) => {
   const [cat, sub] = splitTag(id);
-  return sub ? `${cat} · ${sub}` : cat;
+  return sub ? `${tagName(cat)} · ${tagName(sub)}` : tagName(cat);
 };
 
 export function tagColor(id, tree) {

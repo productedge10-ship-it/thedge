@@ -206,9 +206,11 @@ export default function VoiceCapture({ onInsert, onAttach, onClose, busy }) {
           className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full"
           style={{
             background: state === 'rec' ? 'linear-gradient(180deg,var(--edge-bad),var(--edge-bad))' : 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))',
+            /* Кільце під час запису лишається: воно росте з гучністю голосу і
+               показує, що мікрофон чує. Прибрано лише кольорові ореоли. */
             boxShadow: state === 'rec'
-              ? `0 0 0 ${6 + level * 14}px rgba(224,65,65,0.14), 0 12px 26px -12px rgba(var(--edge-bad-rgb),0.60)`
-              : `0 12px 26px -12px ${A(0.8)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
+              ? `0 0 0 ${6 + level * 14}px rgba(224,65,65,0.14)`
+              : `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
             transition: 'box-shadow .12s linear, background .2s',
             cursor: busy ? 'not-allowed' : 'pointer',
             opacity: busy ? 0.6 : 1,

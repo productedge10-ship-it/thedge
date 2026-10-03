@@ -155,7 +155,7 @@ function Brand({ tone = 'acc', badge }) {
               fontSize: 38,
               letterSpacing: '0.04em',
               color: `rgb(${rgb})`,
-              textShadow: `0 0 18px rgba(${rgb},0.3)`,
+              textShadow: 'none',
             }}
           >
             PRO
@@ -231,7 +231,7 @@ function Runway({ left, total, rgb }) {
       >
         <span
           className="absolute right-0 top-1/2 h-2 w-2 -translate-y-1/2 translate-x-1/2 rounded-full"
-          style={{ background: `rgb(${rgb})`, boxShadow: `0 0 10px 1px rgba(${rgb},0.7)` }}
+          style={{ background: `rgb(${rgb})`, boxShadow: 'none' }}
         />
       </motion.span>
     </div>
@@ -927,15 +927,15 @@ export default function SubscriptionTab({ sub, onChanged }) {
               border: `1px solid ${T.lineAcc}`,
               color: T.text,
               fontFamily: T.sans,
-              boxShadow: `0 10px 28px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
               opacity: busy || preview ? 0.55 : 1,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = `0 16px 40px -12px rgba(${T.accRgb},0.85), inset 0 1px 0 rgba(255,255,255,0.07)`;
+              e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.07)`;
               e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.6)`;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = `0 10px 28px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`;
+              e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.05)`;
               e.currentTarget.style.borderColor = T.lineAcc;
             }}
           >

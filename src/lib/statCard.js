@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { readShared } from './sharedRead';
 import { EDGE_LOGO } from './edgeLogo';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Картка статистики.
@@ -50,60 +51,60 @@ const fmtMoney = (v) => {
    Картка англійською свідомо: її показують у X і Discord, де
    українські підписи одразу звужують аудиторію до своїх. */
 export const METRICS = [
-  { id: 'net',        label: 'Net R',            hint: 'сумарний результат',
+  { id: 'net',        label: 'Net R',            hint: tx('сумарний результат', 'total result'),
     en: 'Net R',              enHint: 'total result',            def: true,
     get: (s) => ({ value: signR(s.net), tone: s.net >= 0 ? 'ok' : 'bad' }) },
   /* PnL у доларах. За замовчуванням вимкнений: не кожен хоче світити
      суми, а R показує те саме без розміру рахунку. */
-  { id: 'pnl',        label: 'PnL',              hint: 'результат у $',
+  { id: 'pnl',        label: 'PnL',              hint: tx('результат у $', 'result in $'),
     en: 'PnL',                enHint: 'net profit, $',           def: false,
     get: (s) => (s.pnlCount
       ? { value: fmtMoney(s.pnl), tone: s.pnl >= 0 ? 'ok' : 'bad' }
       : { value: '—', tone: 'plain' }) },
-  { id: 'wr',         label: 'Win rate',       hint: 'частка прибуткових',
+  { id: 'wr',         label: tx('Вінрейт', 'Win rate'), hint: tx('частка прибуткових', 'share of winners'),
     en: 'Win Rate',           enHint: 'winning trades',          def: true,
     get: (s) => ({ value: `${s.wr}%`, tone: s.wr >= 50 ? 'ok' : 'plain' }) },
-  { id: 'pf',         label: 'Profit factor',    hint: 'прибуток до збитку',
+  { id: 'pf',         label: tx('Профіт-фактор', 'Profit factor'), hint: tx('прибуток до збитку', 'gross win / gross loss'),
     en: 'Profit Factor',      enHint: 'gross win / gross loss',  def: true,
     get: (s) => ({ value: r2(s.pf).toFixed(2), tone: s.pf >= 1.5 ? 'ok' : s.pf >= 1 ? 'warn' : 'bad' }) },
-  { id: 'trades',     label: 'Угод',             hint: 'у вибірці',
+  { id: 'trades',     label: tx('Угод', 'Trades'), hint: tx('у вибірці', 'in sample'),
     en: 'Trades',             enHint: 'in sample',               def: true,
     get: (s) => ({ value: String(s.trades.length), tone: 'plain' }) },
 
-  { id: 'expectancy', label: 'Очікування',       hint: 'на одну угоду',
+  { id: 'expectancy', label: tx('Очікування', 'Expectancy'), hint: tx('на одну угоду', 'per trade'),
     en: 'Expectancy',         enHint: 'per trade',               def: false,
     get: (s) => ({ value: signR(s.expectancy), tone: s.expectancy >= 0 ? 'ok' : 'bad' }) },
-  { id: 'maxdd',      label: 'Макс. просадка',   hint: 'найглибше падіння',
+  { id: 'maxdd',      label: tx('Макс. просадка', 'Max drawdown'), hint: tx('найглибше падіння', 'deepest decline'),
     en: 'Max Drawdown',       enHint: 'deepest decline',         def: false,
     get: (s) => ({ value: `${r2(s.maxDD)}R`, tone: 'warn' }) },
-  { id: 'adherence',  label: 'За планом',        hint: 'угод без порушень',
+  { id: 'adherence',  label: tx('За планом', 'Plan adherence'), hint: tx('угод без порушень', 'trades by the book'),
     en: 'Plan Adherence',     enHint: 'trades by the book',      def: false,
     get: (s) => ({ value: `${s.adherence}%`, tone: s.adherence >= 70 ? 'ok' : 'warn' }) },
-  { id: 'avgwin',     label: 'Середній плюс',    hint: 'по виграшних',
+  { id: 'avgwin',     label: tx('Середній плюс', 'Average win'), hint: tx('по виграшних', 'across winners'),
     en: 'Average Win',        enHint: 'across winners',          def: false,
     get: (s) => ({ value: signR(s.avgWin), tone: 'ok' }) },
-  { id: 'avgloss',    label: 'Середній мінус',   hint: 'по програшних',
+  { id: 'avgloss',    label: tx('Середній мінус', 'Average loss'), hint: tx('по програшних', 'across losers'),
     en: 'Average Loss',       enHint: 'across losers',           def: false,
     get: (s) => ({ value: signR(s.avgLoss), tone: 'bad' }) },
-  { id: 'bestw',      label: 'Найдовша серія',   hint: 'плюсів поспіль',
+  { id: 'bestw',      label: tx('Найдовша серія', 'Best streak'), hint: tx('плюсів поспіль', 'wins in a row'),
     en: 'Best Streak',        enHint: 'wins in a row',           def: false,
     get: (s) => ({ value: String(s.bestW), tone: 'ok' }) },
-  { id: 'recovery',   label: 'Recovery factor',  hint: 'результат до просадки',
+  { id: 'recovery',   label: tx('Фактор відновлення', 'Recovery factor'), hint: tx('результат до просадки', 'net / max drawdown'),
     en: 'Recovery Factor',    enHint: 'net / max drawdown',      def: false,
     get: (s) => ({ value: r2(s.recovery).toFixed(2), tone: s.recovery >= 2 ? 'ok' : 'plain' }) },
-  { id: 'session',    label: 'Найкраща сесія',   hint: 'за сумою R',
+  { id: 'session',    label: tx('Найкраща сесія', 'Best session'), hint: tx('за сумою R', 'by total R'),
     en: 'Best Session',       enHint: 'by total R',              def: false,
     get: (s) => {
       const b = [...s.bySession].sort((a, c) => c.net - a.net)[0];
       return { value: b ? b.session : '—', sub: b ? signR(b.net) : '', tone: 'plain' };
     } },
-  { id: 'asset',      label: 'Найкращий актив',  hint: 'за сумою R',
+  { id: 'asset',      label: tx('Найкращий актив', 'Best asset'), hint: tx('за сумою R', 'by total R'),
     en: 'Best Instrument',    enHint: 'by total R',              def: false,
     get: (s) => {
       const b = [...s.byAsset].sort((a, c) => c.net - a.net)[0];
       return { value: b ? b.key : '—', sub: b ? signR(b.net) : '', tone: 'plain' };
     } },
-  { id: 'day',        label: 'Найкращий день',   hint: 'за середнім R',
+  { id: 'day',        label: tx('Найкращий день', 'Best day'), hint: tx('за середнім R', 'by average R'),
     en: 'Best Weekday',       enHint: 'by average R',            def: false,
     get: (s) => {
       const b = [...s.byDow].sort((a, c) => c.avg - a.avg)[0];

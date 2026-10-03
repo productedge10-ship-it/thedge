@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, Pause, RotateCcw, SkipForward, X, Check, Settings2, Timer,
   Volume2, VolumeX, Minus, Plus,
@@ -65,7 +65,6 @@ function Stepper({ label, value, onChange, min = 1, max = 120, suffix = 'хв' }
 export default function PomodoroScreen({
   task, settings, onSettings, doneToday, onClose, onSessionDone, onCompleteTask,
 }) {
-  const reduce = useReducedMotion();
   const [mode, setMode] = useState('focus');
   const [running, setRunning] = useState(false);
   const [left, setLeft] = useState(settings.focus * 60);
@@ -177,14 +176,7 @@ export default function PomodoroScreen({
       className="fixed inset-0 z-[300] flex flex-col overflow-y-auto"
       style={{ background: T.bg, paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {/* тихе дихання фону в такт роботі */}
-      <motion.div
-        aria-hidden
-        className="pointer-events-none fixed left-1/2 top-1/2 h-[min(720px,110vw)] w-[min(720px,110vw)] -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{ background: `radial-gradient(circle, ${M.color}22, transparent 62%)`, filter: 'blur(60px)' }}
-        animate={reduce || !running ? { opacity: 0.35, scale: 1 } : { opacity: [0.3, 0.5, 0.3], scale: [1, 1.05, 1] }}
-        transition={{ duration: 6, repeat: running ? Infinity : 0, ease: 'easeInOut' }}
-      />
+      {/* Розмиту кольорову пляму прибрано: світіння за блоком — прикмета шаблону, глибину дають поверхні. */}
 
       {/* шапка */}
       <div className="relative z-10 flex flex-wrap items-center gap-3 px-4 py-3 sm:px-8 sm:py-4">
@@ -332,7 +324,7 @@ export default function PomodoroScreen({
               initial={false}
               animate={{ strokeDashoffset: C * (1 - pct) }}
               transition={{ duration: 0.3, ease: 'linear' }}
-              style={{ filter: `drop-shadow(0 0 12px ${M.color}55)` }}
+              style={{ filter: 'none' }}
             />
           </svg>
 
@@ -425,7 +417,7 @@ export default function PomodoroScreen({
               background: M.color,
               color: 'var(--edge-on-acc, #0A0A0C)',
               fontFamily: T.sans,
-              boxShadow: `0 10px 30px -12px ${M.color}`,
+              boxShadow: 'none',
             }}
           >
             {running ? <Pause size={20} strokeWidth={2.8} /> : <Play size={20} strokeWidth={2.8} />}

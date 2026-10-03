@@ -13,6 +13,7 @@ import {
   METRICS, DEFAULT_METRICS, buildCard, renderCardSvg, svgToPng, download,
   saveCard,
 } from '../../lib/statCard';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Експорт статистики.
@@ -71,7 +72,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
       /* вісім — стеля сітки на картці; далі цифри стають дрібними
          й постер перестає читатись з першого погляду */
       if (s.length >= 8) {
-        notify.error('Максимум вісім', 'Постер має читатись за секунду, а не вивчатись.');
+        notify.error(tx('Максимум вісім', 'Eight at most'), tx('Постер має читатись за секунду, а не вивчатись.', 'A poster should read in a second, not need studying.'));
         return s;
       }
       return [...s, id];
@@ -87,9 +88,9 @@ export default function ExportStats({ open, onClose, stats, period }) {
       const url = `${window.location.origin}/shared/stats/${id}`;
       setLink(url);
       await navigator.clipboard.writeText(url);
-      notify.success('Лінк готовий', 'Цифри в ньому заморожені — вони більше не зміняться.');
+      notify.success(tx('Лінк готовий', 'Link ready'), tx('Цифри в ньому заморожені — вони більше не зміняться.', 'The numbers in it are frozen — they won\'t change anymore.'));
     } catch (e) {
-      notify.error('Не вдалось створити лінк', e.message);
+      notify.error(tx('Не вдалось створити лінк', 'Couldn\'t create the link'), e.message);
     } finally {
       setBusy(null);
     }
@@ -100,9 +101,9 @@ export default function ExportStats({ open, onClose, stats, period }) {
     try {
       const blob = await svgToPng(svg, 2);
       download(blob, `edge-stats-${new Date().toISOString().slice(0, 10)}.png`);
-      notify.success('Картинку збережено', '2400×1350 — вистачить для будь-якої соцмережі.');
+      notify.success(tx('Картинку збережено', 'Image saved'), tx('2400×1350 — вистачить для будь-якої соцмережі.', '2400×1350 — big enough for any social network.'));
     } catch {
-      notify.error('Не вдалось зробити картинку', 'Спробуй ще раз або збережи як PDF.');
+      notify.error(tx('Не вдалось зробити картинку', 'Couldn\'t create the image'), tx('Спробуй ще раз або збережи як PDF.', 'Try again or save as PDF.'));
     } finally {
       setBusy(null);
     }
@@ -112,7 +113,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
     /* Друк відкритої картки — найчесніший PDF без сторонніх бібліотек:
        браузер сам віддає вектор, тому цифри лишаються різкими. */
     const w = window.open('', '_blank');
-    if (!w) { notify.error('Вікно заблоковано', 'Дозволь спливаючі вікна для цього сайту.'); return; }
+    if (!w) { notify.error(tx('Вікно заблоковано', 'Window blocked'), tx('Дозволь спливаючі вікна для цього сайту.', 'Allow pop-ups for this site.')); return; }
 
     /* Назва картки — текст, який вводить людина, а тут вона потрапляє
        просто в розмітку. Без екранування рядок із «</title><img
@@ -172,14 +173,15 @@ export default function ExportStats({ open, onClose, stats, period }) {
               </span>
               <div className="min-w-0 pr-10">
                 <div className="text-[11.5px] font-bold uppercase tracking-[0.2em]" style={{ fontFamily: T.sans, color: T.acc }}>
-                  Експорт
+                  {tx('Експорт', 'Export')}
                 </div>
                 <h3 className="mt-0.5 text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}>
-                  Картка статистики
+                  {tx('Картка статистики', 'Stats card')}
                 </h3>
               </div>
               <button
                 onClick={onClose}
+                aria-label={tx('Закрити', 'Close')}
                 className="absolute right-5 top-4 grid h-9 w-9 place-items-center rounded-xl transition-colors duration-200"
                 style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
@@ -205,7 +207,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
                 </div>
 
                 <p className="mt-3 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  1600×900 — формат, під який заточені превʼю в X, Telegram і Discord.
+                  {tx('1600×900 — формат, під який заточені превʼю в X, Telegram і Discord.', '1600×900 — the format previews in X, Telegram and Discord are built for.')}
                 </p>
               </div>
 
@@ -219,7 +221,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
                     className="mb-1.5 block text-[12px] font-bold uppercase tracking-[0.12em]"
                     style={{ fontFamily: T.sans, color: T.text4 }}
                   >
-                    Заголовок · англійською
+                    {tx('Заголовок · англійською', 'Title')}
                   </label>
                   <input
                     value={title}
@@ -237,12 +239,12 @@ export default function ExportStats({ open, onClose, stats, period }) {
                     className="mb-1.5 block text-[12px] font-bold uppercase tracking-[0.12em]"
                     style={{ fontFamily: T.sans, color: T.text4 }}
                   >
-                    Підпис
+                    {tx('Підпис', 'Signature')}
                   </label>
                   <input
                     value={author}
                     onChange={(e) => setAuthor(e.target.value)}
-                    placeholder="нік або імʼя — необовʼязково"
+                    placeholder={tx('нік або імʼя — необовʼязково', 'nickname or name — optional')}
                     className="h-[42px] w-full rounded-xl px-3.5 text-[14px] outline-none transition-colors duration-200"
                     style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: T.sans }}
                     onFocus={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
@@ -256,7 +258,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
                       className="text-[12px] font-bold uppercase tracking-[0.12em]"
                       style={{ fontFamily: T.sans, color: T.text4 }}
                     >
-                      Показники
+                      {tx('Показники', 'Metrics')}
                     </span>
                     <span className="text-[12.5px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
                       {picked.length} / 8
@@ -323,7 +325,8 @@ export default function ExportStats({ open, onClose, stats, period }) {
                       {link}
                     </span>
                     <button
-                      onClick={() => { navigator.clipboard.writeText(link); notify.success('Скопійовано'); }}
+                      onClick={() => { navigator.clipboard.writeText(link); notify.success(tx('Скопійовано', 'Copied')); }}
+                      aria-label={tx('Скопіювати', 'Copy')}
                       className="grid h-7 w-7 shrink-0 place-items-center rounded-lg"
                       style={{ color: T.text3 }}
                     >
@@ -335,7 +338,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
 
               <div className="flex flex-wrap items-center gap-2.5">
                 <span className="mr-auto hidden text-[12.5px] sm:block" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  Посилання зберігає цифри такими, як зараз
+                  {tx('Посилання зберігає цифри такими, як зараз', 'A link keeps the numbers exactly as they are now')}
                 </span>
 
                 <button
@@ -360,7 +363,7 @@ export default function ExportStats({ open, onClose, stats, period }) {
                   {busy === 'png'
                     ? <Loader2 size={15} className="animate-spin" />
                     : <ImageDown size={15} strokeWidth={2.2} />}
-                  Картинка
+                  {tx('Картинка', 'Image')}
                 </button>
 
                 <button
@@ -369,14 +372,14 @@ export default function ExportStats({ open, onClose, stats, period }) {
                   className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[14px] font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 sm:flex-none"
                   style={{
                     background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans,
-                    boxShadow: `0 8px 22px -10px rgba(${T.accRgb},0.7)`,
+                    boxShadow: 'none',
                     opacity: busy === 'link' ? 0.6 : 1,
                   }}
                 >
                   {busy === 'link'
                     ? <Loader2 size={15} strokeWidth={3} className="animate-spin" />
                     : <Link2 size={15} strokeWidth={2.6} />}
-                  Посилання
+                  {tx('Посилання', 'Link')}
                 </button>
               </div>
             </div>

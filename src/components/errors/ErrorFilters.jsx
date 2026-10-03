@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Search, ChevronDown, ArrowDownUp, X } from 'lucide-react';
 import { T } from '../../lib/theme';
 import { CATS, getCat } from './utils';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Фільтри журналу.
@@ -19,9 +20,9 @@ import { CATS, getCat } from './utils';
 const A = (a) => `rgba(${T.accRgb}, ${a})`;
 
 const SORTS = [
-  { id: 'newest', label: 'Спочатку нові' },
-  { id: 'oldest', label: 'Спочатку старі' },
-  { id: 'open', label: 'Спочатку нерозібрані' },
+  { id: 'newest', label: tx('Спочатку нові', 'Newest first') },
+  { id: 'oldest', label: tx('Спочатку старі', 'Oldest first') },
+  { id: 'open', label: tx('Спочатку нерозібрані', 'Unreviewed first') },
 ];
 
 /* Випадашка живе поруч із кнопкою, а закривається кліком повз неї
@@ -111,7 +112,7 @@ export default function ErrorFilters({
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setFocus(true)}
           onBlur={() => setFocus(false)}
-          placeholder="Пошук за парою або описом"
+          placeholder={tx('Пошук за парою або описом', 'Search by pair or description')}
           className="w-full border-none bg-transparent text-[14px] font-medium outline-none"
           style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
         />
@@ -130,13 +131,13 @@ export default function ErrorFilters({
         >
           <span
             className="h-[7px] w-[7px] flex-none rounded-full"
-            style={{ background: catColor, boxShadow: `0 0 9px 1px ${catColor}aa` }}
+            style={{ background: catColor, boxShadow: 'none' }}
           />
           <span
             className="min-w-0 flex-1 whitespace-nowrap text-left text-[13.5px] font-semibold"
             style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
           >
-            {curCat ? curCat.label : 'Усі категорії'}
+            {curCat ? curCat.label : tx('Усі категорії', 'All categories')}
           </span>
           <ChevronDown
             size={14}
@@ -147,7 +148,7 @@ export default function ErrorFilters({
 
         {catOpen && (
           <Panel width={258}>
-            {[{ id: null, label: 'Усі категорії', color: T.acc, count: list.length }, ...CATS.map((c) => ({ ...c, count: counts[c.id] || 0 }))].map((c) => {
+            {[{ id: null, label: tx('Усі категорії', 'All categories'), color: T.acc, count: list.length }, ...CATS.map((c) => ({ ...c, count: counts[c.id] || 0 }))].map((c) => {
               const on = catFilter === c.id;
               const zero = !c.count && c.id;
               return (
@@ -159,7 +160,7 @@ export default function ErrorFilters({
                 >
                   <span
                     className="h-[7px] w-[7px] flex-none rounded-full"
-                    style={{ background: c.color, opacity: zero ? 0.35 : 1, boxShadow: on ? `0 0 9px 1px ${c.color}cc` : 'none' }}
+                    style={{ background: c.color, opacity: zero ? 0.35 : 1, boxShadow: 'none' }}
                   />
                   <span className="min-w-0 flex-1 truncate text-left">{c.label}</span>
                   <span className="flex-none text-[11px]" style={{ fontFamily: T.mono, color: zero ? 'var(--edge-text4)' : 'var(--edge-text3)' }}>
@@ -187,7 +188,7 @@ export default function ErrorFilters({
             className="min-w-0 flex-1 whitespace-nowrap text-left text-[13.5px] font-semibold"
             style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
           >
-            {assetFilter && assetFilter !== 'all' ? assetFilter : 'Усі активи'}
+            {assetFilter && assetFilter !== 'all' ? assetFilter : tx('Усі активи', 'All assets')}
           </span>
           <ChevronDown
             size={14}
@@ -198,7 +199,7 @@ export default function ErrorFilters({
 
         {assetOpen && (
           <Panel width={194}>
-            {[{ key: 'all', name: 'Усі активи', count: list.length },
+            {[{ key: 'all', name: tx('Усі активи', 'All assets'), count: list.length },
               ...Object.keys(assets).sort().map((k) => ({ key: k, name: k, count: assets[k] }))].map((a) => {
               const on = assetFilter === a.key;
               return (
@@ -242,7 +243,7 @@ export default function ErrorFilters({
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line-hi)'; e.currentTarget.style.color = 'var(--edge-text3)'; }}
         >
           <X size={12} strokeWidth={2.6} />
-          Скинути
+          {tx('Скинути', 'Reset')}
         </button>
       )}
     </div>

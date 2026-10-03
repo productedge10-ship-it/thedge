@@ -100,18 +100,18 @@ export default function SharedBacktest() {
               style={{
                 fontFamily: T.sans, color: '#fff',
                 background: actGradient,
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 10px 24px -12px ${act(0.9)}`,
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2)`,
                 transition: 'all .18s',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-1px)';
                 e.currentTarget.style.background = actGradientHover;
-                e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.27), 0 14px 30px -12px rgba(${ACT.rgb},0.95)`;
+                e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.27)`;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'none';
                 e.currentTarget.style.background = actGradient;
-                e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.2), 0 10px 24px -12px ${act(0.9)}`;
+                e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.2)`;
               }}
             >
               Мої бектести

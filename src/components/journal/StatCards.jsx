@@ -293,7 +293,7 @@ export function StreakBar({ streak }) {
         animate={win ? { rotate: [0, -10, 10, -6, 0], scale: [1, 1.18, 1] } : { y: [0, -4, 0] }}
         transition={{ duration: 1.7, repeat: Infinity, ease: 'easeInOut' }}
       >
-        <Icon size={30} strokeWidth={2} style={{ color: c, filter: `drop-shadow(0 0 10px rgba(${rgb},0.85))` }} />
+        <Icon size={30} strokeWidth={2} style={{ color: c, filter: 'none' }} />
       </motion.span>
 
       <div className="relative flex flex-wrap items-center gap-x-2.5 gap-y-1">

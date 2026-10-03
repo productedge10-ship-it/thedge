@@ -6,6 +6,7 @@ import Board, { ToolButton } from './overview/Board';
 import {
   PSYCH_MAIN_WIDGETS, PSYCH_MAIN_DEFAULT, PSYCH_SIDE_WIDGETS, PSYCH_SIDE_DEFAULT,
 } from './psych/widgets';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Психологія.
@@ -108,7 +109,7 @@ export default function Psychology({ s, rows = [], reviews = [] }) {
       <div className="mb-4 flex justify-end">
         <ToolButton
           icon={mainEdit ? Check : Cog}
-          title={mainEdit ? 'Готово' : 'Налаштувати дошку'}
+          title={mainEdit ? tx('Готово', 'Done') : tx('Налаштувати дошку', 'Customize board')}
           onClick={() => setMainEdit((v) => !v)}
           primary={mainEdit}
           iconOnly

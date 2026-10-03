@@ -4,7 +4,8 @@ import {
   Check, TrendingUp, TrendingDown, FileText, AlertTriangle, CheckCheck, Circle,
 } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
-import { rOf, fmtDate, fmtR, MISTAKE_TYPES } from '../../lib/reviewsData';
+import { t as tx } from '../../lib/lang';
+import { rOf, fmtDate, fmtR, MISTAKE_TYPES, planStatusLabel } from '../../lib/reviewsData';
 
 /* ==================================================================
    Матеріал для розбору: угоди, плани, помилки.
@@ -17,9 +18,9 @@ const resColor = (r) => ({ WIN: T.ok, LOSS: T.bad, BE: T.text3 }[r] || T.text3);
 const sevColor = (s) => ({ high: T.bad, mid: T.warn, low: T.text3 }[s] || T.text3);
 
 const TABS = [
-  { key: 'trades',   label: 'Угоди',   icon: TrendingUp },
-  { key: 'plans',    label: 'Плани',   icon: FileText },
-  { key: 'mistakes', label: 'Помилки', icon: AlertTriangle },
+  { key: 'trades',   label: tx('Угоди', 'Trades'),   icon: TrendingUp },
+  { key: 'plans',    label: tx('Плани', 'Plans'),   icon: FileText },
+  { key: 'mistakes', label: tx('Помилки', 'Mistakes'), icon: AlertTriangle },
 ];
 
 function Row({ selected, onToggle, accent, children }) {
@@ -96,7 +97,7 @@ export default function EvidencePicker({ trades, plans, mistakes, selected, onTo
           <p className="text-[13.5px] leading-snug" style={{ fontFamily: T.sans, color: T.text3 }}>{item.note}</p>
           {!item.followedPlan && (
             <span className="mt-1.5 inline-block text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: T.warn }}>
-              не за планом
+              {tx('не за планом', 'off plan')}
             </span>
           )}
         </Row>
@@ -121,7 +122,7 @@ export default function EvidencePicker({ trades, plans, mistakes, selected, onTo
                 background: done ? `rgba(${T.okRgb},0.10)` : `rgba(${T.warnRgb},0.10)`,
               }}
             >
-              {item.status}
+              {planStatusLabel(item.status)}
             </span>
             <span className="ml-auto text-[12.5px] tabular-nums" style={{ fontFamily: T.sans, color: T.text4 }}>
               {fmtDate(item.date)}
@@ -217,7 +218,7 @@ export default function EvidencePicker({ trades, plans, mistakes, selected, onTo
           onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
         >
           {allSelected ? <Circle size={13} strokeWidth={2.4} /> : <CheckCheck size={14} strokeWidth={2.4} />}
-          {allSelected ? 'зняти все' : 'вибрати все'}
+          {allSelected ? tx('зняти все', 'deselect all') : tx('вибрати все', 'select all')}
         </button>
       </div>
 
@@ -234,7 +235,7 @@ export default function EvidencePicker({ trades, plans, mistakes, selected, onTo
           >
             {list.length === 0 ? (
               <p className="px-2 py-10 text-center text-[14px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                За цей період нічого немає.
+                {tx('За цей період нічого немає.', 'Nothing for this period.')}
               </p>
             ) : (
               list.map(renderItem)

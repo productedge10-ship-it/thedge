@@ -3,6 +3,7 @@ import { ArrowRight, Trash2, Globe, Link2, Loader2 } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { computeStats, sparkFromTrades, fmtPF, fmtR } from '../../lib/backtestStats';
 import { ACT, act } from './accent';
+import { t as tx, LOCALE } from '../../lib/lang';
 
 /* ==================================================================
    Картка бектесту у списку.
@@ -138,10 +139,10 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
           <div className="flex min-w-0 items-center overflow-hidden" style={{ gap: 7 }}>
             <Chip>{session.pair}</Chip>
             {session.strategy_name && <Chip soft>{session.strategy_name}</Chip>}
-            {session.demo && <Chip soft>демо</Chip>}
+            {session.demo && <Chip soft>{tx('демо', 'demo')}</Chip>}
             {session.is_public && (
               <span
-                title="Відкритий за посиланням"
+                title={tx('Відкритий за посиланням', 'Shared by link')}
                 className="grid shrink-0 place-items-center"
                 style={{
                   width: 26, height: 26, borderRadius: 7,
@@ -154,7 +155,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
           </div>
 
           <span className="shrink-0" style={mono(11, { color: T.text2 })}>
-            {s.total} угод
+            {tx(`${s.total} угод`, `${s.total} ${s.total === 1 ? 'trade' : 'trades'}`)}
           </span>
         </div>
 
@@ -191,8 +192,8 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
 
         <div style={{ fontFamily: T.sans, marginTop: 9, fontSize: 12.5, color: T.text3 }}>
           {s.total
-            ? `${s.returnPct >= 0 ? '+' : ''}${s.returnPct.toFixed(1)}% · $${Math.round(s.balance).toLocaleString('uk-UA')}`
-            : 'ще немає угод'}
+            ? `${s.returnPct >= 0 ? '+' : ''}${s.returnPct.toFixed(1)}% · $${Math.round(s.balance).toLocaleString(LOCALE)}`
+            : tx('ще немає угод', 'no trades yet')}
         </div>
       </div>
 
@@ -208,7 +209,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
           tone={s.profitFactor >= 1.5 ? T.ok : s.profitFactor < 1 && s.total ? T.bad : undefined}
         />
         <Metric
-          label="Очік."
+          label={tx('Очік.', 'Exp.')}
           value={s.total ? fmtR(s.expectancy) : '—'}
           tone={s.expectancy > 0 ? T.ok : s.expectancy < 0 ? T.bad : undefined}
           last
@@ -224,7 +225,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
           <span style={{ color: s.maxDrawdownR > 0 ? T.bad : T.text3, fontWeight: 600 }}>
             {s.total ? `−${s.maxDrawdownR.toFixed(1)}R` : '—'}
           </span>
-          {' · серія '}
+          {tx(' · серія ', ' · streak ')}
           <span style={{ color: T.text, fontWeight: 600 }}>
             {s.bestWinStreak ? `${s.bestWinStreak}W` : '—'}
           </span>
@@ -248,7 +249,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
           {onDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(session); }}
-              title="Видалити бектест"
+              title={tx('Видалити бектест', 'Delete backtest')}
               className="grid h-[26px] w-0 place-items-center overflow-hidden rounded-lg opacity-0 transition-all duration-200 group-hover:mr-1.5 group-hover:w-[26px] group-hover:opacity-100 [@media(hover:none)]:mr-1.5 [@media(hover:none)]:w-8 [@media(hover:none)]:h-8 [@media(hover:none)]:opacity-100 max-lg:mr-1.5 max-lg:h-8 max-lg:w-8 max-lg:opacity-100"
               style={{ color: T.text3 }}
               onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
@@ -265,7 +266,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
           {onShare && !session.demo && (
             <button
               onClick={(e) => { e.stopPropagation(); onShare(session); }}
-              title={session.is_public ? 'Скопіювати лінк' : 'Відкрити доступ і скопіювати лінк'}
+              title={session.is_public ? tx('Скопіювати лінк', 'Copy link') : tx('Відкрити доступ і скопіювати лінк', 'Share and copy link')}
               disabled={sharing}
               className={`grid h-[26px] place-items-center overflow-hidden rounded-lg transition-all duration-200 ${
                 session.is_public

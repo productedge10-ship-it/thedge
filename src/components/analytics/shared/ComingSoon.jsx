@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { t as tx } from '../../../lib/lang';
 
 /* ==================================================================
    Заглушка «скоро».
@@ -48,7 +49,7 @@ const soft = (c, pct) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 
 export default function ComingSoon({
   tone = 'var(--edge-acc, #8b7bff)',
-  eyebrow = 'Скоро',
+  eyebrow = tx('Скоро', 'Coming soon'),
   title,
   text,
   compact = false,
@@ -200,7 +201,7 @@ export default function ComingSoon({
             color: tone,
           }}
         >
-          <i style={{ width: 5, height: 5, borderRadius: 99, background: tone, boxShadow: `0 0 8px ${soft(tone, 70)}`, display: 'block' }} />
+          <i style={{ width: 5, height: 5, borderRadius: 99, background: tone, boxShadow: 'none', display: 'block' }} />
           {eyebrow}
         </span>
 

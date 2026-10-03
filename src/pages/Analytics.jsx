@@ -134,7 +134,7 @@ function PeriodDropdown({ value, onChange, counts }) {
                   <span className="flex items-center gap-[11px] text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: on ? T.text : T.text2 }}>
                     <span
                       className="h-1 w-1 shrink-0 rounded-full"
-                      style={{ background: on ? T.acc : hair(0.16), boxShadow: on ? `0 0 8px rgba(${T.accRgb},0.8)` : 'none' }}
+                      style={{ background: on ? T.acc : hair(0.16), boxShadow: 'none' }}
                     />
                     {PERIOD_LABEL[p] || p}
                   </span>
@@ -423,7 +423,7 @@ export default function Analytics() {
                       border: `1px solid ${hair(0.14)}`,
                       color: 'var(--edge-on-acc, #fff)',
                       fontFamily: T.sans,
-                      boxShadow: `inset 0 1px 0 ${hair(0.2)}, 0 12px 28px -14px rgba(${T.accRgb},0.9)`,
+                      boxShadow: `inset 0 1px 0 ${hair(0.2)}`,
                     }}
                   >
                     {/* дефолтний напис — тане, звільняючи місце ядру */}

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { T, EASE } from '../../lib/theme';
 import { fmtR, SESSIONS } from '../../lib/backtestStats';
+import { t as tx, isEn } from '../../lib/lang';
 
 /* ==================================================================
    Три розбивки поруч: сесії, дні тижня, розподіл результатів.
@@ -10,6 +11,7 @@ import { fmtR, SESSIONS } from '../../lib/backtestStats';
 
 /* «1 угод» різало око в кожній панелі — рахуємо форму слова */
 const trades = (n) => {
+  if (isEn) return `${n} ${n === 1 ? 'trade' : 'trades'}`;
   const t = n % 100;
   const o = n % 10;
   if (t >= 11 && t <= 14) return `${n} угод`;
@@ -96,7 +98,7 @@ export default function BreakdownPanels({ stats }) {
     .sort((a, b) => b.count - a.count || b.netR - a.netR)
     .map((s) => ({
       k: s.name,
-      v: s.count ? fmtR(s.netR) : 'немає угод',
+      v: s.count ? fmtR(s.netR) : tx('немає угод', 'no trades'),
       pct: s.count ? (Math.abs(s.netR) / sMax) * 100 : 0,
       tone: s.count ? (s.netR >= 0 ? T.ok : T.bad) : null,
       strong: s.count > 0,
@@ -109,7 +111,7 @@ export default function BreakdownPanels({ stats }) {
     .sort((a, b) => b.count - a.count)
     .map((d) => ({
       k: d.name,
-      v: d.count ? fmtR(d.netR) : 'немає угод',
+      v: d.count ? fmtR(d.netR) : tx('немає угод', 'no trades'),
       pct: d.count ? (Math.abs(d.netR) / wMax) * 100 : 0,
       tone: d.count ? (d.netR >= 0 ? T.ok : T.bad) : null,
       strong: d.count > 0,
@@ -121,12 +123,12 @@ export default function BreakdownPanels({ stats }) {
     /* Зелений, а не акцент розділу: глибокий фіолетовий на цифрі
        «15 угод» майже не читався, та й виграшні всюди в застосунку
        зелені — окремий колір тут нічого не додавав. */
-    { k: 'Виграшні', n: stats.wins, tone: T.ok },
-    { k: 'Збиткові', n: stats.losses, tone: T.bad },
-    { k: 'У безубиток', n: stats.bes, tone: T.text3 },
+    { k: tx('Виграшні', 'Wins'), n: stats.wins, tone: T.ok },
+    { k: tx('Збиткові', 'Losses'), n: stats.losses, tone: T.bad },
+    { k: tx('У безубиток', 'Breakeven'), n: stats.bes, tone: T.text3 },
   ].map((d) => ({
     k: d.k,
-    v: d.n ? trades(d.n) : 'немає',
+    v: d.n ? trades(d.n) : tx('немає', 'none'),
     pct: (d.n / total) * 100,
     tone: d.n ? d.tone : null,
     strong: d.n > 0,
@@ -135,22 +137,22 @@ export default function BreakdownPanels({ stats }) {
   return (
     <div className="grid gap-[18px] sm:grid-cols-2 lg:grid-cols-3">
       <Panel
-        title="За сесіями"
-        sub={best ? `Найкраща — ${best.name}` : 'Ще немає даних'}
+        title={tx('За сесіями', 'By session')}
+        sub={best ? tx(`Найкраща — ${best.name}`, `Best — ${best.name}`) : tx('Ще немає даних', 'No data yet')}
         rows={sessionRows}
       />
       <Panel
-        title="За днями тижня"
-        sub={worst && worst.netR < 0 ? `Найгірший день — ${worst.name}` : 'Рівно по тижню'}
+        title={tx('За днями тижня', 'By weekday')}
+        sub={worst && worst.netR < 0 ? tx(`Найгірший день — ${worst.name}`, `Worst day — ${worst.name}`) : tx('Рівно по тижню', 'Even across the week')}
         rows={weekdayRows}
         delay={0.05}
       />
       <Panel
-        title="Розподіл R"
+        title={tx('Розподіл R', 'R distribution')}
         sub={
           stats.bestWinStreak
-            ? `Найкраща серія — ${stats.bestWinStreak} ${stats.bestWinStreak === 1 ? 'перемога' : 'перемог'} поспіль`
-            : 'Серій ще немає'
+            ? tx(`Найкраща серія — ${stats.bestWinStreak} ${stats.bestWinStreak === 1 ? 'перемога' : 'перемог'} поспіль`, `Best streak — ${stats.bestWinStreak} ${stats.bestWinStreak === 1 ? 'win' : 'wins'} in a row`)
+            : tx('Серій ще немає', 'No streaks yet')
         }
         rows={distRows}
         delay={0.1}

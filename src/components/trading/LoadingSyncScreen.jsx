@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Target } from 'lucide-react';
+import { t as tx } from '../../lib/lang';
 
 export default function LoadingSyncScreen() {
   return (
@@ -15,7 +16,7 @@ export default function LoadingSyncScreen() {
         </div>
       </motion.div>
       <h2 className="text-2xl font-black tracking-[0.2em] uppercase mb-3 text-[var(--edge-text)]">Syncing Plan</h2>
-      <p className="text-sm text-gray-500 font-medium animate-pulse">Завантаження даних з хмари...</p>
+      <p className="text-sm text-gray-500 font-medium animate-pulse">{tx('Завантаження даних з хмари...', 'Loading your data from the cloud...')}</p>
     </div>
   );
 }

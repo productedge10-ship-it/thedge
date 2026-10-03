@@ -108,7 +108,7 @@ export default function VoicePlayer({ src, sec, label, color = T.acc }) {
         className="grid h-10 w-10 shrink-0 place-items-center rounded-full"
         style={{
           background: `linear-gradient(180deg, ${color}, ${color}c4)`,
-          boxShadow: `0 10px 22px -12px ${color}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
+          boxShadow: `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
           transition: 'transform .16s',
         }}
         onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.04)')}

@@ -95,7 +95,7 @@ export default function LinkedTerminal({ acc, Card }) {
         <div className="flex items-center gap-2.5">
           <span
             className="h-[7px] w-[7px] shrink-0 rounded-full"
-            style={{ background: live ? T.ok : T.warn, boxShadow: `0 0 8px ${live ? T.ok : T.warn}` }}
+            style={{ background: live ? T.ok : T.warn, boxShadow: 'none' }}
           />
           <span className="min-w-0 flex-1 truncate text-[14px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
             {acc.account_title || acc.server}

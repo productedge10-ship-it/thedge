@@ -10,6 +10,7 @@ import { T, EASE, SPRING } from './planTheme';
 import { tvImage } from '../../lib/imageStore';
 import { detectTimeframe, loadForPixels } from '../../lib/tfDetect';
 import { useSettings } from '../../context/SettingsContext';
+import { t as tx } from '../../lib/lang';
 
 /* Визначає, чи світлий графік — щоб автоматично приглушити його.
 
@@ -151,7 +152,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
       if (res.success && res.isLight) {
         setDim(true);
         onSave(id, { tf, image: url, text: note.valueRef.current, isDimmed: true });
-        notify.success('Vision Guard', 'Світлий графік автоматично приглушено.');
+        notify.success('Vision Guard', tx('Світлий графік автоматично приглушено.', 'Light chart dimmed automatically.'));
       }
     });
 
@@ -169,7 +170,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
         .then((found) => {
           if (!found || tfRef.current) return;
           onSave(id, { tf: found, image: url, text: note.valueRef.current, isDimmed: dimRef.current });
-          notify.success('Таймфрейм', `Зі скріна прочитано ${found}. Якщо не те — поміняй вручну.`);
+          notify.success(tx('Таймфрейм', 'Timeframe'), tx(`Зі скріна прочитано ${found}. Якщо не те — поміняй вручну.`, `Read ${found} from the screenshot. If that’s wrong, change it manually.`));
         })
         .finally(() => setTfBusy(false));
     }
@@ -181,7 +182,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
     for (const item of e.clipboardData.items) {
       if (item.type.startsWith('image')) {
         e.preventDefault();
-        notify.error('Скріншоти вимкнено', 'Скопіюй посилання на зображення в TradingView (Alt+S).');
+        notify.error(tx('Скріншоти вимкнено', 'Screenshots disabled'), tx('Скопіюй посилання на зображення в TradingView (Alt+S).', 'Copy the image link in TradingView (Alt+S).'));
         return;
       }
     }
@@ -192,7 +193,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
     setDropHot(false);
     const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text');
     if (url && url.startsWith('http')) applyImage(url);
-    else notify.error('Не вийшло', 'Перетягни посилання на зображення, а не файл.');
+    else notify.error(tx('Не вийшло', 'Didn’t work'), tx('Перетягни посилання на зображення, а не файл.', 'Drag the image link, not a file.'));
   };
 
   const hasContent = !!image || !!text?.trim();
@@ -232,7 +233,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
               <span
                 className="h-1.5 w-1.5 shrink-0 rounded-full"
                 style={{ background: T.acc, animation: 'tfPulse 1.2s ease-in-out infinite' }}
-                title="Читаю таймфрейм зі скріна"
+                title={tx('Читаю таймфрейм зі скріна', 'Reading timeframe from screenshot')}
               />
             )}
           </div>
@@ -289,11 +290,11 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
                   className="text-[14px] font-semibold transition-colors duration-300"
                   style={{ color: dropHot ? T.acc : T.text3, fontFamily: T.sans }}
                 >
-                  {dropHot ? 'Відпусти посилання' : 'Встав лінк з TradingView'}
+                  {dropHot ? tx('Відпусти посилання', 'Drop the link') : tx('Встав лінк з TradingView', 'Paste a TradingView link')}
                 </span>
                 {!touch && (
                   <span className="text-[12px] font-medium" style={{ color: T.text4, fontFamily: T.sans }}>
-                    Ctrl+V або перетягни
+                    {tx('Ctrl+V або перетягни', 'Ctrl+V or drag')}
                   </span>
                 )}
               </div>
@@ -302,7 +303,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
                 <input
                   autoFocus
                   inputMode="url"
-                  placeholder="Натисни й утримуй → Вставити"
+                  placeholder={tx('Натисни й утримуй → Вставити', 'Press and hold → Paste')}
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => {
                     const v = e.target.value.trim();
@@ -318,7 +319,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
                   className="h-10 rounded-xl px-4 text-[13.5px] font-bold transition-transform active:scale-95"
                   style={{ background: `rgba(${T.accRgb},0.14)`, border: `1px solid ${T.lineAcc}`, color: T.text, fontFamily: T.sans }}
                 >
-                  Вставити посилання
+                  {tx('Вставити посилання', 'Paste link')}
                 </button>
               ))}
             </motion.div>
@@ -339,10 +340,10 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
                   <ImageOff size={26} strokeWidth={1.6} style={{ color: T.bad }} />
                   <div className="flex flex-col gap-1">
                     <span className="text-[14px] font-semibold" style={{ color: T.text2, fontFamily: T.sans }}>
-                      Картинка не відкрилась
+                      {tx('Картинка не відкрилась', 'Image failed to load')}
                     </span>
                     <span className="text-[12px] font-medium" style={{ color: T.text4, fontFamily: T.sans }}>
-                      Посилання не на зображення або знімок уже видалено
+                      {tx('Посилання не на зображення або знімок уже видалено', 'The link isn’t an image or the snapshot was deleted')}
                     </span>
                   </div>
                   {/* Кнопка тут, а не поверх картинки: поверх немає
@@ -355,13 +356,13 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
                     className="mt-1 h-9 rounded-lg px-4 text-[13px] font-bold transition-colors"
                     style={{ background: `rgba(${T.badRgb},0.12)`, border: `1px solid rgba(${T.badRgb},0.3)`, color: T.bad, fontFamily: T.sans }}
                   >
-                    Прибрати
+                    {tx('Прибрати', 'Remove')}
                   </button>
                 </div>
               ) : (
                 <motion.img
                   src={tvImage(image)}
-                  alt="Графік"
+                  alt={tx('Графік', 'Chart')}
                   onClick={() => setFull(true)}
                   onError={() => setImgBroken(true)}
                   draggable={false}
@@ -379,12 +380,12 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
               <div className={`absolute right-3 top-3 z-20 flex-col items-end gap-2 opacity-0 transition-opacity duration-200 group-hover/img:opacity-100 ${imgBroken ? 'hidden' : 'flex'}`}>
                 <OverlayBtn
                   icon={Maximize2}
-                  label="На весь екран"
+                  label={tx('На весь екран', 'Full screen')}
                   onClick={(e) => { e.stopPropagation(); setFull(true); }}
                 />
                 <OverlayBtn
                   icon={dim ? Moon : Sun}
-                  label={dim ? 'Повернути яскравість' : 'Приглушити'}
+                  label={dim ? tx('Повернути яскравість', 'Restore brightness') : tx('Приглушити', 'Dim')}
                   active={dim}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -395,7 +396,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
                 />
                 <OverlayBtn
                   icon={X}
-                  label="Прибрати графік"
+                  label={tx('Прибрати графік', 'Remove chart')}
                   danger
                   onClick={(e) => {
                     e.stopPropagation();
@@ -431,7 +432,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
             onPaste={handlePaste}
             onFocus={() => setNoteFocus(true)}
             onBlur={() => { setNoteFocus(false); note.flush(); }}
-            placeholder="Що бачиш на цьому ТФ?"
+            placeholder={tx('Що бачиш на цьому ТФ?', 'What do you see on this TF?')}
             minRows={2}
             spellCheck={false}
             className="w-full resize-none border-none bg-transparent px-4 py-3.5 outline-none"
@@ -464,7 +465,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
                 exit={{ scale: 0.96, opacity: 0, y: 12 }}
                 transition={SPRING}
                 src={tvImage(image)}
-                alt="Графік на весь екран"
+                alt={tx('Графік на весь екран', 'Full-screen chart')}
                 className="max-h-full max-w-full rounded-xl object-contain"
                 style={{
                   border: `1px solid ${T.lineHi}`,
@@ -475,7 +476,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
                 className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-lg px-3 py-1.5 text-[12px] font-semibold"
                 style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3, fontFamily: T.sans }}
               >
-                Esc або клік — закрити
+                {tx('Esc або клік — закрити', 'Esc or click to close')}
               </span>
             </motion.div>
           )}

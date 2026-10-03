@@ -66,7 +66,7 @@ const SCREEN_CSS = `
    й завжди видна вся одразу, без гортання. */
 .ln-product-nav{ flex: 0 0 232px; min-width: 180px; border-right: 1px solid rgba(255,255,255,.06); padding: 12px 10px; display: flex; flex-direction: column; gap: 3px; }
 .ln-product-navbtn{ position: relative; display: flex; align-items: center; gap: 11px; text-align: left; border: 0; border-radius: 11px; padding: 11px 12px 11px 14px; cursor: pointer; font-family: ${F.sans}; font-size: 14px; font-weight: 600; transition: background .2s ease, color .2s ease; width: 100%; }
-.ln-product-navbar{ position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: ${C.acc}; box-shadow: 0 0 12px ${A(0.8)}; transition: opacity .2s ease; }
+.ln-product-navbar{ position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: ${C.acc}; transition: opacity .2s ease; }
 .ln-product-screen{ flex: 1 1 420px; min-width: 300px; padding: 24px; min-height: 340px; }
 
 @media (max-width: 760px){
@@ -585,7 +585,7 @@ export default function Product() {
       <style>{SCREEN_CSS}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('ЩО ВСЕРЕДИНІ', 'WHAT’S INSIDE')}</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.text3 }}>{tx('ЩО ВСЕРЕДИНІ', 'WHAT’S INSIDE')}</span>
       </div>
 
       <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 30px', color: '#fff' }}>
@@ -595,7 +595,6 @@ export default function Product() {
       </h2>
 
       <div style={{ position: 'relative', background: C.panel, border: `1px solid ${C.line}`, borderRadius: 22, overflow: 'hidden', boxShadow: '0 30px 80px rgba(0,0,0,.5)' }}>
-        <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${A(0.5)},transparent)` }} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 16px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
           {[0, 1, 2].map((d) => <span key={d} style={{ width: 9, height: 9, borderRadius: 999, background: '#3a3a46', display: 'block' }} />)}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { uploadImage, uploadDataUrl, isDataUrl } from '../lib/imageStore';
+import { t as tx } from '../lib/lang';
 
 /* ==================================================================
    Прикріплення картинок.
@@ -34,7 +35,7 @@ import { uploadImage, uploadDataUrl, isDataUrl } from '../lib/imageStore';
 const readAsDataUrl = (file) => new Promise((resolve, reject) => {
   const r = new FileReader();
   r.onload = () => resolve(r.result);
-  r.onerror = () => reject(new Error('Не вдалось прочитати файл'));
+  r.onerror = () => reject(new Error(tx('Не вдалось прочитати файл', 'Couldn’t read the file')));
   r.readAsDataURL(file);
 });
 
@@ -80,7 +81,7 @@ export default function useImageAttach({ folder = 'loose', maxWidth, quality } =
   const put = useCallback(async (file) => {
     setUploading((n) => n + 1);
     try {
-      if (!user?.id) throw new Error('Немає користувача');
+      if (!user?.id) throw new Error(tx('Немає користувача', 'No user'));
       return await uploadImage(user.id, folder, file, profile);
     } catch (err) {
       /* Мовчки, бо для людини нічого не зламалось: картинка на місці,

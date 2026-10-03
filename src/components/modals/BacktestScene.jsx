@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pause, Play, TrendingUp, TrendingDown } from 'lucide-react';
 import { T } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Сцена на замкненому бектесті — на весь екран і з руками.
@@ -103,7 +104,7 @@ export default function BacktestScene({ children }) {
   const openTrade = useCallback((dir) => {
     const s = sim.current;
     if (s.trades.some((t) => !t.done)) {
-      setToast('Одна угода за раз — спершу дочекайся стопа чи тейка');
+      setToast(tx('Одна угода за раз — спершу дочекайся стопа чи тейка', 'One trade at a time — wait for the stop or take-profit first'));
       return;
     }
     const entry = s.cur.close;
@@ -342,7 +343,7 @@ export default function BacktestScene({ children }) {
       ctx.beginPath(); ctx.moveTo(24, eTop + eH); ctx.lineTo(wide ? W * 0.62 : W - 24, eTop + eH); ctx.stroke();
       ctx.fillStyle = COL.text;
       ctx.textAlign = 'left';
-      ctx.fillText('крива капіталу, R', 24, eTop - 8);
+      ctx.fillText(tx('крива капіталу, R', 'equity curve, R'), 24, eTop - 8);
 
       return { closed, eq };
     };
@@ -417,7 +418,7 @@ export default function BacktestScene({ children }) {
     <div className="flex flex-col gap-2.5">
       <div className="grid grid-cols-4 gap-2">
         {[
-          ['угод', stats.n || '—'],
+          [tx('угод', 'trades'), stats.n || '—'],
           ['win rate', stats.n ? `${stats.wr}%` : '—'],
           [wide ? 'profit f.' : 'pf', stats.n ? (stats.pf === Infinity ? '∞' : stats.pf.toFixed(2)) : '—'],
           ['net', stats.n ? `${stats.net > 0 ? '+' : ''}${stats.net.toFixed(1)}R` : '—'],
@@ -445,7 +446,7 @@ export default function BacktestScene({ children }) {
               color: col,
               background: `rgba(${rgb},0.12)`,
               border: `1px solid rgba(${rgb},0.35)`,
-              boxShadow: `0 10px 30px -14px rgba(${rgb},0.7)`,
+              boxShadow: 'none',
             }}
           >
             <Icon size={16} strokeWidth={2.4} />
@@ -459,10 +460,10 @@ export default function BacktestScene({ children }) {
       <div className="flex items-center justify-between gap-3 px-1 text-[11px]" style={{ fontFamily: T.mono, color: 'rgba(255,255,255,0.3)' }}>
         <span className="truncate">
           {stats.open
-            ? <>твоя угода: <b style={{ color: stats.open.live >= 0 ? COL.up : COL.down }}>{stats.open.live >= 0 ? '+' : ''}{stats.open.live.toFixed(2)}R</b></>
-            : wide ? 'стоп 1R · тейк 2R · пробіл — пауза' : 'стоп 1R · тейк 2R'}
+            ? <>{tx('твоя угода', 'your trade')}: <b style={{ color: stats.open.live >= 0 ? COL.up : COL.down }}>{stats.open.live >= 0 ? '+' : ''}{stats.open.live.toFixed(2)}R</b></>
+            : wide ? tx('стоп 1R · тейк 2R · пробіл — пауза', 'stop 1R · target 2R · space — pause') : tx('стоп 1R · тейк 2R', 'stop 1R · target 2R')}
         </span>
-        <span className="shrink-0">симуляція</span>
+        <span className="shrink-0">{tx('симуляція', 'simulation')}</span>
       </div>
     </div>
   );
@@ -501,7 +502,7 @@ export default function BacktestScene({ children }) {
             type="button"
             onClick={() => setPaused((p) => !p)}
             className="grid h-8 w-8 place-items-center rounded-lg transition-colors hover:bg-white/10"
-            aria-label={paused ? 'Продовжити' : 'Пауза'}
+            aria-label={paused ? tx('Продовжити', 'Resume') : tx('Пауза', 'Pause')}
             style={{ color: '#EDECF7' }}
           >
             {paused ? <Play size={14} strokeWidth={2.4} /> : <Pause size={14} strokeWidth={2.4} />}

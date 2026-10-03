@@ -29,6 +29,8 @@
       сповіщення вдруге, а вкладка, відкрита у двох вікнах, — вчетверо.
 ================================================================== */
 
+import { t as tx } from './lang';
+
 export const LEAD_MIN = 10;          // за скільки хвилин попереджаємо за замовчуванням
 
 /* Скільки саме — вирішує людина для кожної події окремо. Хвилини не
@@ -36,15 +38,15 @@ export const LEAD_MIN = 10;          // за скільки хвилин поп�
    щоб просто бути за екраном, 0 — коли цікавить сама цифра, а не
    підготовка до неї. */
 export const LEAD_OPTIONS = [
-  { min: 0, label: 'у момент виходу', short: 'вчасно' },
-  { min: 5, label: 'за 5 хвилин', short: '5 хв' },
-  { min: 10, label: 'за 10 хвилин', short: '10 хв' },
-  { min: 15, label: 'за 15 хвилин', short: '15 хв' },
-  { min: 30, label: 'за 30 хвилин', short: '30 хв' },
-  { min: 60, label: 'за годину', short: '1 год' },
+  { min: 0, label: tx('у момент виходу', 'at release time'), short: tx('вчасно', 'on time') },
+  { min: 5, label: tx('за 5 хвилин', '5 minutes before'), short: tx('5 хв', '5 min') },
+  { min: 10, label: tx('за 10 хвилин', '10 minutes before'), short: tx('10 хв', '10 min') },
+  { min: 15, label: tx('за 15 хвилин', '15 minutes before'), short: tx('15 хв', '15 min') },
+  { min: 30, label: tx('за 30 хвилин', '30 minutes before'), short: tx('30 хв', '30 min') },
+  { min: 60, label: tx('за годину', '1 hour before'), short: tx('1 год', '1 h') },
 ];
 
-export const leadLabel = (min) => LEAD_OPTIONS.find((o) => o.min === min)?.short || `${min} хв`;
+export const leadLabel = (min) => LEAD_OPTIONS.find((o) => o.min === min)?.short || tx(`${min} хв`, `${min} min`);
 
 /* Подія для показу всередині сторінки. Системне сповіщення бачить
    лише той, хто дав дозвіл, а нагадування має спрацювати в будь-якому
@@ -103,8 +105,8 @@ export async function askNotifyPermission() {
 function fire(ev, minutes) {
   const body = [
     ev.ccy,
-    minutes <= 0 ? 'вже зараз' : `через ${minutes} хв`,
-    ev.forecast ? `прогноз ${ev.forecast}` : null,
+    minutes <= 0 ? tx('вже зараз', 'now') : tx(`через ${minutes} хв`, `in ${minutes} min`),
+    ev.forecast ? tx(`прогноз ${ev.forecast}`, `forecast ${ev.forecast}`) : null,
   ].filter(Boolean).join(' · ');
 
   /* Спершу — картка в самій сторінці: вона працює завжди. */

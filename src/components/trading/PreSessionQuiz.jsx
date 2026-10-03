@@ -4,6 +4,7 @@ import { Activity, AlertTriangle, X, Check, Loader2, ShieldCheck } from 'lucide-
 
 import { T, EASE, SPRING } from './planTheme';
 import { DIAG_QUESTIONS, answeredCount, isComplete, riskFlags } from '../../lib/diagnostics';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Діагностика перед сесією.
@@ -31,7 +32,7 @@ function Question({ q, value, onAnswer, index }) {
       <span className="flex min-w-0 items-center gap-3">
         <motion.span
           className="h-2 w-2 shrink-0 rounded-full"
-          animate={{ background: dot, boxShadow: good || bad ? `0 0 12px ${dot}` : 'none' }}
+          animate={{ background: dot, boxShadow: 'none' }}
           transition={{ duration: 0.3 }}
         />
         <span className="text-[14px]" style={{ fontFamily: T.sans, color: T.text2 }}>
@@ -58,7 +59,7 @@ function Question({ q, value, onAnswer, index }) {
               onMouseEnter={(e) => { if (!on) { e.currentTarget.style.color = c; e.currentTarget.style.borderColor = `${c}40`; } }}
               onMouseLeave={(e) => { if (!on) { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; } }}
             >
-              {v ? 'Так' : 'Ні'}
+              {v ? tx('Так', 'Yes') : tx('Ні', 'No')}
             </button>
           );
         })}
@@ -162,7 +163,7 @@ export default function PreSessionQuiz({
                     initial={false}
                     animate={{ width: `${pct}%`, background: tone }}
                     transition={{ duration: 0.45, ease: EASE }}
-                    style={{ boxShadow: `0 0 12px ${tone}` }}
+                    style={{ boxShadow: 'none' }}
                   />
                 </span>
                 <motion.span
@@ -193,11 +194,10 @@ export default function PreSessionQuiz({
                       <AlertTriangle size={16} strokeWidth={2.3} className="mt-0.5 shrink-0" style={{ color: T.warn }} />
                       <div className="min-w-0">
                         <p className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.warn }}>
-                          {flags.length === 1 ? 'Один сигнал проти торгівлі' : `${flags.length} сигнали проти торгівлі`}
+                          {flags.length === 1 ? tx('Один сигнал проти торгівлі', 'One signal against trading') : tx(`${flags.length} сигнали проти торгівлі`, `${flags.length} signals against trading`)}
                         </p>
                         <p className="mt-1 text-[13px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.6 }}>
-                          {flags.map((f) => f.label.replace(/\?$/, '')).join(' · ')}. Зменш ризик удвічі
-                          або пропусти сесію — це дешевше за відігравання.
+                          {flags.map((f) => f.label.replace(/\?$/, '')).join(' · ')}. {tx('Зменш ризик удвічі або пропусти сесію — це дешевше за відігравання.', 'Halve your risk or skip the session — it’s cheaper than chasing losses.')}
                         </p>
                       </div>
                     </div>
@@ -210,7 +210,7 @@ export default function PreSessionQuiz({
                 <textarea
                   value={data.note || ''}
                   onChange={(e) => onNote(e.target.value)}
-                  placeholder="Що ще важливо памʼятати сьогодні? (опціонально)"
+                  placeholder={tx('Що ще важливо памʼятати сьогодні? (опціонально)', 'Anything else to remember today? (optional)')}
                   className="mt-4 min-h-[72px] w-full resize-y rounded-2xl p-4 text-[14px] outline-none transition-colors duration-200 placeholder:opacity-60"
                   style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans, lineHeight: 1.6 }}
                   onFocus={(e) => (e.currentTarget.style.borderColor = T.lineAcc)}
@@ -226,10 +226,10 @@ export default function PreSessionQuiz({
             >
               <span className="flex min-w-0 items-center gap-2 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
                 {saving
-                  ? <><Loader2 size={12} className="animate-spin" /> зберігаю…</>
+                  ? <><Loader2 size={12} className="animate-spin" /> {tx('зберігаю…', 'saving…')}</>
                   : done
-                    ? <><Check size={12} strokeWidth={3} style={{ color: T.ok }} /> збережено</>
-                    : `лишилось ${DIAG_QUESTIONS.length - count}`}
+                    ? <><Check size={12} strokeWidth={3} style={{ color: T.ok }} /> {tx('збережено', 'saved')}</>
+                    : tx(`лишилось ${DIAG_QUESTIONS.length - count}`, `${DIAG_QUESTIONS.length - count} left`)}
               </span>
 
               <button
@@ -241,11 +241,11 @@ export default function PreSessionQuiz({
                   border: `1px solid ${done ? 'transparent' : T.line}`,
                   color: done ? 'var(--edge-on-acc, #0A0A0C)' : T.text2,
                   fontFamily: T.sans,
-                  boxShadow: done ? `0 8px 22px -10px ${tone}` : 'none',
+                  boxShadow: 'none',
                 }}
               >
                 {done && <Check size={15} strokeWidth={3} />}
-                {done ? (flags.length ? 'Торгую обережно' : 'Почати сесію') : 'Закрити'}
+                {done ? (flags.length ? tx('Торгую обережно', 'Trade carefully') : tx('Почати сесію', 'Start session')) : tx('Закрити', 'Close')}
               </button>
             </div>
           </motion.div>

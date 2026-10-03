@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Maximize2, X, ImageOff, ZoomIn, Search, Trash2 } from 'lucide-react';
 import { T, EASE, SPRING } from '../../lib/theme';
 import { tvImage } from '../../lib/imageStore';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    ImageSlider з лупою.
@@ -139,7 +140,7 @@ export default function ImageSlider({ images = [], containerClassName = '', onDe
     return (
       <div className={`flex items-center justify-center gap-2 ${containerClassName}`} style={{ color: T.text4 }}>
         <ImageOff size={20} strokeWidth={1.6} />
-        <span className="text-[14px] font-bold" style={{ fontFamily: T.sans }}>No images</span>
+        <span className="text-[14px] font-bold" style={{ fontFamily: T.sans }}>{tx('Немає зображень', 'No images')}</span>
       </div>
     );
   }
@@ -223,11 +224,11 @@ export default function ImageSlider({ images = [], containerClassName = '', onDe
             active={lensOn}
             onClick={() => setLensOn((v) => !v)}
           />
-          <ToolBtn icon={Maximize2} label="Fullscreen" onClick={() => setFull(true)} />
+          <ToolBtn icon={Maximize2} label={tx('На весь екран', 'Fullscreen')} onClick={() => setFull(true)} />
           {onDelete && (
             <ToolBtn
               icon={Trash2}
-              label="Видалити цей кадр"
+              label={tx('Видалити цей кадр', 'Delete this frame')}
               danger
               onClick={() => onDelete(list[index], index)}
             />
@@ -266,7 +267,7 @@ export default function ImageSlider({ images = [], containerClassName = '', onDe
             style={{ background: 'rgba(10,10,12,0.7)', border: `1px solid ${T.line}` }}
           >
             <span className="text-[12px] font-bold" style={{ fontFamily: T.sans, color: T.text3 }}>
-              Hover to zoom
+              {tx('Наведи, щоб збільшити', 'Hover to zoom')}
             </span>
           </div>
         )}

@@ -189,7 +189,7 @@ export default function Coach() {
     <section id="coach" ref={ref} style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('ТВІЙ КОУЧ', 'YOUR COACH')}</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.text3 }}>{tx('ТВІЙ КОУЧ', 'YOUR COACH')}</span>
         {/* Позначка стоїть у надзаголовку, а не в тексті нижче: рішення
             «читати цей розділ як обіцянку чи як опис» людина приймає
             до того, як почала читати. */}
@@ -220,14 +220,6 @@ export default function Coach() {
       <div style={{ display: 'flex', gap: 36, flexWrap: 'wrap', alignItems: 'stretch' }}>
         {/* ---------- кіт ---------- */}
         <div style={{ flex: '0 1 260px', minWidth: 'min(200px,100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 22, position: 'relative' }}>
-          <span
-            aria-hidden
-            style={{
-              position: 'absolute', top: '10%', width: 270, height: 270, maxWidth: '90%', borderRadius: '50%',
-              background: `radial-gradient(circle,${A(0.24)},transparent 68%)`, filter: 'blur(50px)',
-              animation: reduced ? 'none' : 'lnBreathe 6s ease-in-out infinite',
-            }}
-          />
           {/* Великий портрет — той самий кіт, збільшений трансформом:
               він живий, тож масштабувати треба саме компонент, а не
               підставляти замість нього нерухомий файл. */}
@@ -260,7 +252,7 @@ export default function Coach() {
                     style={{
                       width: 6, height: 6, borderRadius: 999, flexShrink: 0,
                       background: on ? C.acc : 'rgba(255,255,255,.18)',
-                      boxShadow: on ? `0 0 10px 1px ${A(0.9)}` : 'none',
+                      boxShadow: 'none',
                       transition: 'all .2s',
                     }}
                   />
@@ -278,8 +270,6 @@ export default function Coach() {
 
         {/* ---------- розбір ---------- */}
         <div style={{ flex: '1 1 520px', minWidth: 'min(320px,100%)', background: C.panel, border: `1px solid ${C.line}`, borderRadius: 'clamp(16px,4vw,22px)', padding: 'clamp(15px,4vw,24px)', position: 'relative', overflow: 'hidden', minHeight: 430, display: 'flex', flexDirection: 'column', gap: 13 }}>
-          <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${A(0.5)},transparent)` }} />
-          <span aria-hidden style={{ position: 'absolute', top: -70, left: -50, width: 280, height: 280, background: 'radial-gradient(circle,rgba(74,59,245,.13),transparent 70%)', filter: 'blur(60px)' }} />
 
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
             <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '1.4px', color: C.text4 }}>{tx('РОЗБІР УГОДИ', 'TRADE REVIEW')} · {sc.label}</span>
@@ -292,10 +282,6 @@ export default function Coach() {
               конкретної угоди. */}
           {step >= 1 && (
             <div style={{ position: 'relative', borderRadius: 14, padding: '13px 15px 12px', animation: fade, background: cardBg, border: `1px solid ${cardBc}`, overflow: 'hidden' }}>
-              <span
-                aria-hidden
-                style={{ position: 'absolute', right: -30, top: -40, width: 140, height: 110, background: accent, filter: 'blur(42px)', opacity: 0.14, pointerEvents: 'none' }}
-              />
 
               {/* Раніше бирка тримала marginLeft:auto просто в тому ж
                   ряду: коли ряду не вистачало ширини, вона одна
@@ -306,7 +292,7 @@ export default function Coach() {
                   акуратним другим рядком, а не крапається окремо. */}
               <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', rowGap: 8, columnGap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ width: 3, height: 26, borderRadius: 2, display: 'block', flexShrink: 0, background: accent, boxShadow: `0 0 10px ${accent}` }} />
+                  <span style={{ width: 3, height: 26, borderRadius: 2, display: 'block', flexShrink: 0, background: accent, boxShadow: 'none' }} />
                   <span style={{ fontFamily: F.mono, fontSize: 13.5, fontWeight: 700, color: C.text, letterSpacing: '.4px' }}>{sc.sym}</span>
                   <span style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 700, color: accent }}>{sc.r}</span>
                   <span style={{ fontFamily: F.mono, fontSize: 12, color: C.text5 }}>{sc.time}</span>
@@ -354,9 +340,7 @@ export default function Coach() {
               <button
                 type="button"
                 onClick={() => { setRuleAdded(true); later(() => setRuleAdded(false), 2800); }}
-                style={{ background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff', fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, padding: '12px 20px', borderRadius: 12, cursor: 'pointer', boxShadow: '0 12px 30px rgba(74,59,245,.3)', whiteSpace: 'nowrap', transition: 'box-shadow .2s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 16px 40px rgba(74,59,245,.45)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 12px 30px rgba(74,59,245,.3)'; }}
+                style={{ background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff', fontFamily: F.sans, fontSize: 13.5, fontWeight: 700, padding: '12px 20px', borderRadius: 12, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'box-shadow .2s' }}
               >
                 {sc.btn}
               </button>

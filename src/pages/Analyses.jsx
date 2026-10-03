@@ -435,14 +435,14 @@ export default function Analyses() {
                 border: `1px solid ${T.lineAcc}`,
                 color: T.text,
                 fontFamily: T.sans,
-                boxShadow: `0 8px 22px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`,
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = `0 14px 34px -14px rgba(${T.accRgb},0.8), 0 0 0 3px rgba(${T.accRgb},0.14)`;
+                e.currentTarget.style.boxShadow = 'none';
                 e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = `0 8px 22px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`;
+                e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.05)`;
                 e.currentTarget.style.borderColor = T.lineAcc;
               }}
             >

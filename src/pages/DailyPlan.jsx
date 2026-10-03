@@ -44,6 +44,7 @@ import {
 } from '../lib/weekPlan';
 import PlanTypeModal from '../components/modals/PlanTypeModal';
 import { inSandbox, isSharedView, withSandbox } from '../lib/sandbox';
+import { t as tx, LOCALE } from '../lib/lang';
 
 const SECTION_IDS = SECTIONS.map((s) => s.id);
 
@@ -260,7 +261,7 @@ export default function DailyPlan() {
 
       if (error) {
         console.error('load weekly plan', error);
-        notify.error('Не вдалось відкрити тижневий план', error.message || 'Помилка бази.');
+        notify.error(tx('Не вдалось відкрити тижневий план', 'Couldn’t open the weekly plan'), error.message || tx('Помилка бази.', 'Database error.'));
         setIsWeekLoading(false);
         return;
       }
@@ -308,10 +309,10 @@ export default function DailyPlan() {
         if (id) weekPlanIdRef.current = id;
       }
       setWeekHasUnsaved(false);
-      setWeekLastSaved(new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }));
+      setWeekLastSaved(new Date().toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' }));
     } catch (err) {
       console.error('save weekly plan', err);
-      notify.error('Не вдалось зберегти тижневий план', err.message || 'Помилка бази.');
+      notify.error(tx('Не вдалось зберегти тижневий план', 'Couldn’t save the weekly plan'), err.message || tx('Помилка бази.', 'Database error.'));
     } finally {
       setIsWeekSaving(false);
     }
@@ -593,7 +594,7 @@ export default function DailyPlan() {
       }
     } catch (err) {
       console.error('loadPlanFromCloud', err);
-      notify.error('Не вдалось відкрити план', err.message || 'Помилка бази.');
+      notify.error(tx('Не вдалось відкрити план', 'Couldn’t open the plan'), err.message || tx('Помилка бази.', 'Database error.'));
       setPlanId(null);
       currentPlanIdRef.current = null;
     } finally {
@@ -652,7 +653,7 @@ export default function DailyPlan() {
       if (user?.id) {
         setDiagSaving(true);
         saveDiagnostics(user.id, diagDate, next)
-          .catch(() => notify.error('Діагностика', 'Не вдалось зберегти відповідь.'))
+          .catch(() => notify.error(tx('Діагностика', 'Diagnostics'), tx('Не вдалось зберегти відповідь.', 'Couldn’t save your answer.')))
           .finally(() => setDiagSaving(false));
       }
       return next;
@@ -695,7 +696,7 @@ export default function DailyPlan() {
         const { error } = await supabase.from('trading_plans').update(row).eq('id', id);
         if (error) throw error;
         if (!currentId) { setPlanId(id); currentPlanIdRef.current = id; }
-        status = 'Оновлено';
+        status = tx('Оновлено', 'Updated');
       } else {
         const { data: created, error } = await supabase.from('trading_plans')
           .insert([{ user_id: user.id, ...row }]).select('id');
@@ -706,12 +707,12 @@ export default function DailyPlan() {
           if (!id) throw error;
           const { error: upErr } = await supabase.from('trading_plans').update(row).eq('id', id);
           if (upErr) throw upErr;
-          status = 'Оновлено';
+          status = tx('Оновлено', 'Updated');
         } else if (error) {
           throw error;
         } else {
           id = created?.[0]?.id || null;
-          status = 'Створено';
+          status = tx('Створено', 'Created');
         }
 
         if (id) { setPlanId(id); currentPlanIdRef.current = id; }
@@ -733,7 +734,7 @@ export default function DailyPlan() {
       }
 
       if (id) localStorage.setItem('last_edited_plan_id', id);
-      setLastSaved(new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }));
+      setLastSaved(new Date().toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' }));
       setLastAction(status);
 
       if (changeSeqRef.current === seqAtStart) {
@@ -745,7 +746,7 @@ export default function DailyPlan() {
       }
     } catch (err) {
       console.error('performSave', err);
-      notify.error('План не збережено', err.message || 'Невідома помилка бази.');
+      notify.error(tx('План не збережено', 'Plan not saved'), err.message || tx('Невідома помилка бази.', 'Unknown database error.'));
     } finally {
       isSavingRef.current = false;
       setIsSaving(false);
@@ -798,7 +799,7 @@ export default function DailyPlan() {
      посилання в буфер. Повертає true, щоб кнопка показала «Скопійовано». */
   const handleShare = async () => {
     if (inSandbox()) {
-      notify.error(isSharedView() ? 'Лише перегляд' : 'Недоступно в демо', isSharedView() ? 'Це чужий журнал — поділитись планом може лише власник.' : 'Поділитись планом можна у своєму журналі після реєстрації.');
+      notify.error(isSharedView() ? tx('Лише перегляд', 'View only') : tx('Недоступно в демо', 'Not available in demo'), isSharedView() ? tx('Це чужий журнал — поділитись планом може лише власник.', 'This is someone else’s journal — only the owner can share the plan.') : tx('Поділитись планом можна у своєму журналі після реєстрації.', 'You can share plans from your own journal after signing up.'));
       return false;
     }
     const weekly = mode === 'weekly';
@@ -808,21 +809,21 @@ export default function DailyPlan() {
       id = weekly ? weekPlanIdRef.current : currentPlanIdRef.current;
     }
     if (!id) {
-      notify.error('Немає що показувати', weekly ? 'Спершу заповни хоч щось у тижневому плані.' : 'Спершу напиши хоч щось у плані.');
+      notify.error(tx('Немає що показувати', 'Nothing to show'), weekly ? tx('Спершу заповни хоч щось у тижневому плані.', 'Fill in something in the weekly plan first.') : tx('Спершу напиши хоч щось у плані.', 'Write something in the plan first.'));
       return false;
     }
 
     const { error } = await supabase.from('trading_plans')
       .update({ is_public: true }).eq('id', id).eq('user_id', user.id);
-    if (error) { notify.error('Не вдалось відкрити доступ', error.message); return false; }
+    if (error) { notify.error(tx('Не вдалось відкрити доступ', 'Couldn’t enable sharing'), error.message); return false; }
 
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/shared/plan/${id}`);
     } catch {
-      notify.error('Не вдалось скопіювати', `${window.location.origin}/shared/plan/${id}`);
+      notify.error(tx('Не вдалось скопіювати', 'Couldn’t copy'), `${window.location.origin}/shared/plan/${id}`);
       return false;
     }
-    notify.success('Лінк скопійовано', weekly ? 'Тижневий план відкрито для перегляду за посиланням.' : 'План відкрито для перегляду за посиланням.');
+    notify.success(tx('Лінк скопійовано', 'Link copied'), weekly ? tx('Тижневий план відкрито для перегляду за посиланням.', 'Anyone with the link can now view the weekly plan.') : tx('План відкрито для перегляду за посиланням.', 'Anyone with the link can now view the plan.'));
     return true;
   };
 
@@ -875,7 +876,7 @@ export default function DailyPlan() {
        плани» на актив, вибраний у перемикачі вгорі. */
     resetToBlankPlan();
     if (paramDate || paramPair) navigate(withSandbox('/plan'), { replace: true });
-    notify.success('Новий план', 'Можна починати.');
+    notify.success(tx('Новий план', 'New plan'), tx('Можна починати.', 'Let’s get started.'));
   };
 
   const handleAssetSelectModal = (asset) => {
@@ -1010,7 +1011,7 @@ export default function DailyPlan() {
               storageKey="tda"
               onHide={() => dailyBlocks.hide('tda')}
               group="plan"
-              title="Top-down аналіз"
+              title={tx('Top-down аналіз', 'Top-down analysis')}
               done={planData.tdaBlocks.filter((b) => b.image || b.text?.trim()).length >= 2}
             >
               <div className="p-5 sm:p-6">
@@ -1025,14 +1026,14 @@ export default function DailyPlan() {
               storageKey="strategy"
               onHide={() => dailyBlocks.hide('strategy')}
               group="plan"
-              title="Стратегія та точки входу"
+              title={tx('Стратегія та точки входу', 'Strategy & entries')}
               done={!!planData.planText?.trim()}
             >
               <WriteBlock
                 value={planData.planText}
                 onChange={(v) => setPlan((p) => ({ ...p, planText: v }))}
-                placeholder="Де заходиш? Де стоп? Що скасовує ідею?"
-                hint="Опиши логіку так, щоб завтра зрозумів себе"
+                placeholder={tx('Де заходиш? Де стоп? Що скасовує ідею?', 'Where do you enter? Where’s the stop? What invalidates the idea?')}
+                hint={tx('Опиши логіку так, щоб завтра зрозумів себе', 'Describe the logic so you’ll understand yourself tomorrow')}
                 minRows={8}
               />
             </Section>
@@ -1055,7 +1056,7 @@ export default function DailyPlan() {
             storageKey="updates"
             onHide={() => dailyBlocks.hide('updates')}
             group="live"
-            title="Апдейти по ходу сесії"
+            title={tx('Апдейти по ходу сесії', 'Live session updates')}
             done={progress.live >= 1 && planData.updates.length > 0}
           >
             <div className="p-5 sm:p-6">
@@ -1066,7 +1067,7 @@ export default function DailyPlan() {
                     ...p,
                     updates: [...p.updates, {
                       id: Date.now(),
-                      date: new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+                      date: new Date().toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' }),
                       tf: '', image: null, text: '',
                     }],
                   }))
@@ -1098,7 +1099,7 @@ export default function DailyPlan() {
               storageKey="diagnostics"
               onHide={() => dailyBlocks.hide('diagnostics')}
               group="review"
-              title="Діагностика"
+              title={tx('Діагностика', 'Diagnostics')}
               done={
                 !!planData.actualNarrative &&
                 asList(planData.dayFlow).length > 0 &&
@@ -1119,14 +1120,14 @@ export default function DailyPlan() {
               storageKey="conclusions"
               onHide={() => dailyBlocks.hide('conclusions')}
               group="review"
-              title="Ревю дня"
+              title={tx('Ревю дня', 'Day review')}
               done={!!planData.conclusionsText?.trim()}
             >
               <WriteBlock
                 value={planData.conclusionsText}
                 onChange={(v) => setPlan((p) => ({ ...p, conclusionsText: v }))}
-                placeholder="Дотримався плану? Що конкретно зробиш інакше завтра?"
-                hint="Один чіткий висновок вартий десяти розмитих"
+                placeholder={tx('Дотримався плану? Що конкретно зробиш інакше завтра?', 'Did you stick to the plan? What exactly will you do differently tomorrow?')}
+                hint={tx('Один чіткий висновок вартий десяти розмитих', 'One clear takeaway beats ten vague ones')}
                 minRows={8}
               />
 
@@ -1161,7 +1162,7 @@ export default function DailyPlan() {
           canSaveToCloud={!checkIsWeekPlanEmpty(weekData)}
           hasUnsavedChanges={weekHasUnsaved}
           lastSaved={weekLastSaved}
-          lastAction="Збережено"
+          lastAction={tx('Збережено', 'Saved')}
           backToTop={<BackToTop visible={scrolled} onClick={scrollToTop} />}
         />
       ) : (
@@ -1190,7 +1191,7 @@ export default function DailyPlan() {
         onAnswer={(k, v) => patchDiag({ [k]: v })}
         onNote={(v) => patchDiag({ note: v })}
         saving={diagSaving}
-        dateLabel={new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })}
+        dateLabel={new Date().toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })}
       />
 
       <AnimatePresence>{isExiting && <SavingOverlay />}</AnimatePresence>

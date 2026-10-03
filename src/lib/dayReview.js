@@ -24,6 +24,7 @@
 ================================================================== */
 
 import { T } from './theme';
+import { t as tx } from './lang';
 
 /* Що сталося з торгівлею.
 
@@ -36,21 +37,21 @@ import { T } from './theme';
    сетап і поруч пропустити другий. Несумісний лише з `flat` — там
    сказано, що сетапу не було взагалі. */
 export const FLOW = [
-  { id: 'plan',   label: 'Все зробив за планом',   hint: 'Торгував і робив те, що збирався', rgb: T.okRgb,      excludes: ['drift', 'flat'] },
-  { id: 'drift',  label: 'Торгував не за планом',  hint: 'Заходив там, де не збирався',      rgb: T.warnRgb,    excludes: ['plan', 'flat'] },
-  { id: 'flat',   label: 'Не торгував — не було сетапу', hint: 'Свого не бачив, і це правильно', rgb: T.accRgb, excludes: ['plan', 'drift', 'missed'] },
-  { id: 'missed', label: 'Був сетап, не торгував', hint: 'Бачив своє й не зайшов',           rgb: '251,146,60', excludes: ['flat'] },
+  { id: 'plan',   label: tx('Все зробив за планом', 'Followed the plan'),   hint: tx('Торгував і робив те, що збирався', 'Traded and did what I intended'), rgb: T.okRgb,      excludes: ['drift', 'flat'] },
+  { id: 'drift',  label: tx('Торгував не за планом', 'Traded off-plan'),  hint: tx('Заходив там, де не збирався', 'Entered where I didn’t intend to'),      rgb: T.warnRgb,    excludes: ['plan', 'flat'] },
+  { id: 'flat',   label: tx('Не торгував — не було сетапу', 'No trades — no setup'), hint: tx('Свого не бачив, і це правильно', 'Didn’t see my setup, and that’s right'), rgb: T.accRgb, excludes: ['plan', 'drift', 'missed'] },
+  { id: 'missed', label: tx('Був сетап, не торгував', 'Had a setup, didn’t trade'), hint: tx('Бачив своє й не зайшов', 'Saw my setup and didn’t enter'),           rgb: '251,146,60', excludes: ['flat'] },
 ];
 
 /* Стани. Спокій не живе поруч із тільтом чи FOMO — це протилежні
    полюси того самого. А от тривога з FOMO уживаються чудово: саме з
    цієї пари й виходить більшість поганих входів. */
 export const STATES = [
-  { id: 'calm',      label: 'Спокій',      rgb: T.okRgb,      excludes: ['tilt', 'fomo', 'anxious'] },
-  { id: 'confident', label: 'Впевненість', rgb: T.accRgb,     excludes: ['tilt'] },
-  { id: 'anxious',   label: 'Тривога',     rgb: T.warnRgb,    excludes: ['calm'] },
+  { id: 'calm',      label: tx('Спокій', 'Calm'),      rgb: T.okRgb,      excludes: ['tilt', 'fomo', 'anxious'] },
+  { id: 'confident', label: tx('Впевненість', 'Confidence'), rgb: T.accRgb,     excludes: ['tilt'] },
+  { id: 'anxious',   label: tx('Тривога', 'Anxiety'),     rgb: T.warnRgb,    excludes: ['calm'] },
   { id: 'fomo',      label: 'FOMO',        rgb: '251,146,60', excludes: ['calm'] },
-  { id: 'tilt',      label: 'Тільт',       rgb: T.badRgb,     excludes: ['calm', 'confident'] },
+  { id: 'tilt',      label: tx('Тільт', 'Tilt'),       rgb: T.badRgb,     excludes: ['calm', 'confident'] },
 ];
 
 /* ---------- чому ----------
@@ -66,34 +67,34 @@ export const STATES = [
    означало б вигадати за людину те, чого не було. */
 export const REASONS = [
   /* Відійшов від плану */
-  { id: 'revenge',  flow: 'drift',  label: 'Хотів відіграти мінус',        state: 'tilt' },
-  { id: 'chase',    flow: 'drift',  label: 'Боявся пропустити рух',        state: 'fomo' },
-  { id: 'bored',    flow: 'drift',  label: 'Набридло чекати',              state: 'fomo' },
-  { id: 'sure',     flow: 'drift',  label: 'Здалося, що цього разу точно', state: 'confident' },
-  { id: 'green',    flow: 'drift',  label: 'Хотів закрити день у плюс',    state: 'tilt' },
-  { id: 'norules',  flow: 'drift',  label: 'Не довіряв власним правилам',  state: 'anxious' },
+  { id: 'revenge',  flow: 'drift',  label: tx('Хотів відіграти мінус', 'Wanted to win back a loss'),        state: 'tilt' },
+  { id: 'chase',    flow: 'drift',  label: tx('Боявся пропустити рух', 'Afraid to miss the move'),        state: 'fomo' },
+  { id: 'bored',    flow: 'drift',  label: tx('Набридло чекати', 'Got tired of waiting'),              state: 'fomo' },
+  { id: 'sure',     flow: 'drift',  label: tx('Здалося, що цього разу точно', 'Felt sure this time'), state: 'confident' },
+  { id: 'green',    flow: 'drift',  label: tx('Хотів закрити день у плюс', 'Wanted to end the day green'),    state: 'tilt' },
+  { id: 'norules',  flow: 'drift',  label: tx('Не довіряв власним правилам', 'Didn’t trust my own rules'),  state: 'anxious' },
 
   /* Не зайшов */
-  { id: 'fear',     flow: 'missed', label: 'Страх ще одного мінусу',       state: 'anxious' },
-  { id: 'doubt',    flow: 'missed', label: 'Не повірив своєму аналізу',    state: 'anxious' },
-  { id: 'perfect',  flow: 'missed', label: 'Чекав ідеального підтвердження', state: 'anxious' },
-  { id: 'drawdown', flow: 'missed', label: 'Уже був у мінусі за день',     state: 'anxious' },
-  { id: 'size',     flow: 'missed', label: 'Лякав розмір позиції',         state: 'anxious' },
-  { id: 'away',     flow: 'missed', label: 'Не був за екраном',            state: null },
-  { id: 'late',     flow: 'missed', label: 'Побачив запізно',              state: null },
+  { id: 'fear',     flow: 'missed', label: tx('Страх ще одного мінусу', 'Fear of another loss'),       state: 'anxious' },
+  { id: 'doubt',    flow: 'missed', label: tx('Не повірив своєму аналізу', 'Didn’t trust my analysis'),    state: 'anxious' },
+  { id: 'perfect',  flow: 'missed', label: tx('Чекав ідеального підтвердження', 'Waited for perfect confirmation'), state: 'anxious' },
+  { id: 'drawdown', flow: 'missed', label: tx('Уже був у мінусі за день', 'Was already down for the day'),     state: 'anxious' },
+  { id: 'size',     flow: 'missed', label: tx('Лякав розмір позиції', 'Position size scared me'),         state: 'anxious' },
+  { id: 'away',     flow: 'missed', label: tx('Не був за екраном', 'Wasn’t at the screen'),            state: null },
+  { id: 'late',     flow: 'missed', label: tx('Побачив запізно', 'Spotted it too late'),              state: null },
 
   /* Витримав план. Питаємо навмисно: журнал, у якому пояснюються
      тільки провали, за місяць перетворюється на реєстр провалів. */
-  { id: 'ready',    flow: 'plan',   label: 'Підготувався заздалегідь',     state: 'calm' },
-  { id: 'accepted', flow: 'plan',   label: 'Прийняв ризик до входу',       state: 'calm' },
-  { id: 'nowatch',  flow: 'plan',   label: 'Не сидів над графіком',        state: 'calm' },
-  { id: 'trust',    flow: 'plan',   label: 'Довіряв своїй системі',        state: 'confident' },
+  { id: 'ready',    flow: 'plan',   label: tx('Підготувався заздалегідь', 'Prepared in advance'),     state: 'calm' },
+  { id: 'accepted', flow: 'plan',   label: tx('Прийняв ризик до входу', 'Accepted the risk before entry'),       state: 'calm' },
+  { id: 'nowatch',  flow: 'plan',   label: tx('Не сидів над графіком', 'Didn’t stare at the chart'),        state: 'calm' },
+  { id: 'trust',    flow: 'plan',   label: tx('Довіряв своїй системі', 'Trusted my system'),        state: 'confident' },
 ];
 
 export const REASON_TITLE = {
-  drift:  'Що штовхнуло відійти від плану',
-  missed: 'Чому не зайшов',
-  plan:   'Що допомогло втриматись',
+  drift:  tx('Що штовхнуло відійти від плану', 'What pushed you off-plan'),
+  missed: tx('Чому не зайшов', 'Why you didn’t enter'),
+  plan:   tx('Що допомогло втриматись', 'What helped you stay on track'),
 };
 
 export const reasonsFor = (flowId) => REASONS.filter((r) => r.flow === flowId);
@@ -109,14 +110,14 @@ export const ASKS_WHY = ['plan', 'drift', 'missed'];
    позицію» каже. Через місяць таких відміток видно вже не настрій, а
    конкретну навичку, якої бракує. */
 const HARD_RAW = [
-  { id: 'wait',  label: 'Дочекатись сетапу' },
-  { id: 'hold',  label: 'Тримати позицію' },
-  { id: 'skip',  label: 'Не зайти' },
-  { id: 'loss',  label: 'Прийняти мінус' },
-  { id: 'close', label: 'Зафіксувати в плюс' },
-  { id: 'size',  label: 'Не збільшити обʼєм' },
-  { id: 'stop',  label: 'Зупинитись вчасно' },
-  { id: 'none',  label: 'Нічого — день дався легко' },
+  { id: 'wait',  label: tx('Дочекатись сетапу', 'Waiting for the setup') },
+  { id: 'hold',  label: tx('Тримати позицію', 'Holding the position') },
+  { id: 'skip',  label: tx('Не зайти', 'Not entering') },
+  { id: 'loss',  label: tx('Прийняти мінус', 'Taking the loss') },
+  { id: 'close', label: tx('Зафіксувати в плюс', 'Taking profit') },
+  { id: 'size',  label: tx('Не збільшити обʼєм', 'Not sizing up') },
+  { id: 'stop',  label: tx('Зупинитись вчасно', 'Stopping in time') },
+  { id: 'none',  label: tx('Нічого — день дався легко', 'Nothing — the day was easy') },
 ];
 
 /* «Нічого» витісняє все, і все витісняє «нічого». Прописувати це

@@ -10,6 +10,7 @@ import {
 import { T } from '../../lib/theme';
 import { Panel } from './ui';
 import { simulate, verdict, fromTrades, PRESET } from '../../lib/monteCarlo';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Монте-Карло.
@@ -25,29 +26,29 @@ import { simulate, verdict, fromTrades, PRESET } from '../../lib/monteCarlo';
 
 const GROUPS = [
   {
-    title: 'Твоя система',
-    hint: 'з чого складається перевага',
+    title: tx('Твоя система', 'Your system'),
+    hint: tx('з чого складається перевага', 'what your edge is made of'),
     fields: [
-      { id: 'winRate', label: 'Вінрейт', unit: '%', min: 5, max: 90, step: 1 },
-      { id: 'rr', label: 'Середній RR', unit: '', min: 0.2, max: 6, step: 0.1 },
-      { id: 'riskPct', label: 'Ризик на угоду', unit: '%', min: 0.1, max: 10, step: 0.1 },
+      { id: 'winRate', label: tx('Вінрейт', 'Win rate'), unit: '%', min: 5, max: 90, step: 1 },
+      { id: 'rr', label: tx('Середній RR', 'Average RR'), unit: '', min: 0.2, max: 6, step: 0.1 },
+      { id: 'riskPct', label: tx('Ризик на угоду', 'Risk per trade'), unit: '%', min: 0.1, max: 10, step: 0.1 },
     ],
   },
   {
-    title: 'Межі рахунку',
-    hint: 'правила пропа або власні',
+    title: tx('Межі рахунку', 'Account limits'),
+    hint: tx('правила пропа або власні', 'prop firm rules or your own'),
     fields: [
-      { id: 'dailyPct', label: 'Денний ліміт', unit: '%', min: 0, max: 20, step: 0.5 },
-      { id: 'ddPct', label: 'Макс. просадка', unit: '%', min: 0, max: 40, step: 0.5 },
-      { id: 'targetPct', label: 'Ціль етапу', unit: '%', min: 0, max: 40, step: 0.5 },
+      { id: 'dailyPct', label: tx('Денний ліміт', 'Daily limit'), unit: '%', min: 0, max: 20, step: 0.5 },
+      { id: 'ddPct', label: tx('Макс. просадка', 'Max drawdown'), unit: '%', min: 0, max: 40, step: 0.5 },
+      { id: 'targetPct', label: tx('Ціль етапу', 'Phase target'), unit: '%', min: 0, max: 40, step: 0.5 },
     ],
   },
   {
-    title: 'Темп',
-    hint: 'як довго й як часто',
+    title: tx('Темп', 'Pace'),
+    hint: tx('як довго й як часто', 'how long and how often'),
     fields: [
-      { id: 'perDay', label: 'Угод на день', unit: '', min: 1, max: 20, step: 1 },
-      { id: 'horizon', label: 'Горизонт', unit: ' угод', min: 20, max: 400, step: 10 },
+      { id: 'perDay', label: tx('Угод на день', 'Trades per day'), unit: '', min: 1, max: 20, step: 1 },
+      { id: 'horizon', label: tx('Горизонт', 'Horizon'), unit: tx(' угод', ' trades'), min: 20, max: 400, step: 10 },
     ],
   },
 ];
@@ -106,10 +107,10 @@ function FanTip({ active, payload, label }) {
       className="rounded-lg px-3 py-2 text-[12px]"
       style={{ background: 'var(--edge-panel, #131316)', border: `1px solid ${T.line}`, fontFamily: T.sans }}
     >
-      <div style={{ color: T.text4 }}>угода {label}</div>
-      <div style={{ color: T.text }}>медіана <b style={{ fontFamily: T.mono }}>{d.p50}%</b></div>
-      <div style={{ color: T.text3 }}>половина сценаріїв <b style={{ fontFamily: T.mono }}>{d.p25}…{d.p75}%</b></div>
-      <div style={{ color: T.text4 }}>крайні <b style={{ fontFamily: T.mono }}>{d.p05}…{d.p95}%</b></div>
+      <div style={{ color: T.text4 }}>{tx('угода', 'trade')} {label}</div>
+      <div style={{ color: T.text }}>{tx('медіана', 'median')} <b style={{ fontFamily: T.mono }}>{d.p50}%</b></div>
+      <div style={{ color: T.text3 }}>{tx('половина сценаріїв', 'half of scenarios')} <b style={{ fontFamily: T.mono }}>{d.p25}…{d.p75}%</b></div>
+      <div style={{ color: T.text4 }}>{tx('крайні', 'extremes')} <b style={{ fontFamily: T.mono }}>{d.p05}…{d.p95}%</b></div>
     </div>
   );
 }
@@ -160,7 +161,7 @@ export default function Risk({ trades, carried }) {
     <div className="flex flex-col gap-4">
       {/* ---------- параметри ---------- */}
       <Panel
-        title={<><ShieldAlert size={13} /> Параметри</>}
+        title={<><ShieldAlert size={13} /> {tx('Параметри', 'Parameters')}</>}
         right={(
           <span className="flex items-center gap-3">
             {/* Журнал тут не обовʼязковий, а зручність: кнопка є
@@ -173,7 +174,7 @@ export default function Risk({ trades, carried }) {
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = 0.8)}
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = 1)}
               >
-                <Download size={11} strokeWidth={2.5} /> {carried ? 'взяти з кроку 1' : 'взяти з журналу'}
+                <Download size={11} strokeWidth={2.5} /> {carried ? tx('взяти з кроку 1', 'use step 1') : tx('взяти з журналу', 'use my journal')}
               </button>
             )}
             {changed && (
@@ -184,7 +185,7 @@ export default function Risk({ trades, carried }) {
                 onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
                 onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
               >
-                <RotateCcw size={11} strokeWidth={2.4} /> скинути
+                <RotateCcw size={11} strokeWidth={2.4} /> {tx('скинути', 'reset')}
               </button>
             )}
           </span>
@@ -228,13 +229,13 @@ export default function Risk({ trades, carried }) {
           }}
         >
           <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            Очікування на угоду:{' '}
+            {tx('Очікування на угоду:', 'Expectancy per trade:')}{' '}
             <b className="tabular-nums" style={{ fontFamily: T.mono, color: sim.edge > 0 ? T.ok : T.bad }}>
               {sim.edge > 0 ? '+' : ''}{sim.edge}R
             </b>
           </span>
           <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            Беззбитковий вінрейт для RR {cfg.rr}:{' '}
+            {tx('Беззбитковий вінрейт для RR', 'Breakeven win rate for RR')} {cfg.rr}:{' '}
             <b className="tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>{sim.breakEvenWR}%</b>
           </span>
         </div>
@@ -243,22 +244,22 @@ export default function Risk({ trades, carried }) {
       {/* ---------- три відповіді ---------- */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Odds
-          label="Дійду до цілі"
+          label={tx('Дійду до цілі', 'Hit the target')}
           value={sim.target}
           tone={sim.target >= 50 ? T.ok : T.text}
-          hint={sim.toTarget ? `зазвичай за ${sim.toTarget} угод` : 'ціль за горизонтом'}
+          hint={sim.toTarget ? tx(`зазвичай за ${sim.toTarget} угод`, `usually in ${sim.toTarget} ${sim.toTarget === 1 ? 'trade' : 'trades'}`) : tx('ціль за горизонтом', 'target beyond the horizon')}
         />
         <Odds
-          label="Зіллю рахунок"
+          label={tx('Зіллю рахунок', 'Blow the account')}
           value={sim.bust}
           tone={sim.bust >= 25 ? T.bad : T.text}
-          hint={`денний ліміт ${sim.daily}% · просадка ${sim.drawdown}%`}
+          hint={tx(`денний ліміт ${sim.daily}% · просадка ${sim.drawdown}%`, `daily limit ${sim.daily}% · drawdown ${sim.drawdown}%`)}
         />
         <Odds
-          label="Просто торгую далі"
+          label={tx('Просто торгую далі', 'Still trading')}
           value={sim.open}
           tone={T.text3}
-          hint={`${sim.horizon} угод · ${sim.perDay} на день`}
+          hint={tx(`${sim.horizon} угод · ${sim.perDay} на день`, `${sim.horizon} ${sim.horizon === 1 ? 'trade' : 'trades'} · ${sim.perDay} per day`)}
         />
       </div>
 
@@ -280,7 +281,7 @@ export default function Risk({ trades, carried }) {
       )}
 
       {/* ---------- віяло ---------- */}
-      <Panel title="Куди веде ця система" right={<>{sim.runs} сценаріїв · <b>смуга — половина з них</b></>}>
+      <Panel title={tx('Куди веде ця система', 'Where this system leads')} right={<>{sim.runs} {tx('сценаріїв', 'scenarios')} · <b>{tx('смуга — половина з них', 'band — half of them')}</b></>}>
         <div className="h-[340px] w-full">
           <ResponsiveContainer>
             <ComposedChart data={sim.band} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
@@ -294,11 +295,11 @@ export default function Risk({ trades, carried }) {
                   із віялом, а не в окремій цифрі. */}
               {cfg.targetPct > 0 && (
                 <ReferenceLine y={cfg.targetPct} stroke={T.ok} strokeDasharray="4 4"
-                  label={{ value: 'ціль', position: 'right', fill: T.ok, fontSize: 10 }} />
+                  label={{ value: tx('ціль', 'target'), position: 'right', fill: T.ok, fontSize: 10 }} />
               )}
               {cfg.ddPct > 0 && (
                 <ReferenceLine y={-cfg.ddPct} stroke={T.bad} strokeDasharray="4 4"
-                  label={{ value: 'просадка', position: 'right', fill: T.bad, fontSize: 10 }} />
+                  label={{ value: tx('просадка', 'drawdown'), position: 'right', fill: T.bad, fontSize: 10 }} />
               )}
               <ReferenceLine y={0} stroke="var(--edge-line-hi, var(--edge-line-hi))" />
 
@@ -316,15 +317,15 @@ export default function Risk({ trades, carried }) {
         </div>
 
         <p className="mt-2 text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.55 }}>
-          Лінія — медіанний сценарій. Темна смуга — половина всіх результатів, світла — девʼяносто відсотків.
-          На кінці горизонту типовий результат <b style={{ color: T.text2 }}>{last.p50}%</b>, а розкид
-          від <b style={{ color: T.text2 }}>{last.p05}%</b> до <b style={{ color: T.text2 }}>{last.p95}%</b>.
+          {tx('Лінія — медіанний сценарій. Темна смуга — половина всіх результатів, світла — девʼяносто відсотків.', 'The line is the median scenario. The dark band is half of all outcomes, the light one is ninety percent.')}
+          {' '}{tx('На кінці горизонту типовий результат', 'At the end of the horizon the typical result is')} <b style={{ color: T.text2 }}>{last.p50}%</b>{tx(', а розкид від', ', with a range from')}{' '}
+          <b style={{ color: T.text2 }}>{last.p05}%</b> {tx('до', 'to')} <b style={{ color: T.text2 }}>{last.p95}%</b>.
         </p>
       </Panel>
 
       {/* ---------- розподіл і норма ---------- */}
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-        <Panel title="Розподіл результатів" right="де опиняється рахунок наприкінці">
+        <Panel title={tx('Розподіл результатів', 'Outcome distribution')} right={tx('де опиняється рахунок наприкінці', 'where the account ends up')}>
           <div className="h-[220px] w-full">
             <ResponsiveContainer>
               <BarChart data={sim.hist} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
@@ -345,11 +346,11 @@ export default function Risk({ trades, carried }) {
         {/* Найважливіший текст на сторінці. Більшість зривів стається
             не тоді, коли система зламалась, а тоді, коли звичайну
             серію мінусів приймають за поломку. */}
-        <Panel title="Що тут нормально" accent={T.warn}>
+        <Panel title={tx('Що тут нормально', "What's normal here")} accent={T.warn}>
           <div className="flex flex-col gap-3">
             {[
-              { k: 'Серія мінусів', a: `${sim.streakTypical} поспіль`, b: `у важкому випадку ${sim.streakBad}` },
-              { k: 'Просадка', a: `${sim.ddTypical}%`, b: `у важкому випадку ${sim.ddBad}%` },
+              { k: tx('Серія мінусів', 'Losing streak'), a: tx(`${sim.streakTypical} поспіль`, `${sim.streakTypical} in a row`), b: tx(`у важкому випадку ${sim.streakBad}`, `worst case ${sim.streakBad}`) },
+              { k: tx('Просадка', 'Drawdown'), a: `${sim.ddTypical}%`, b: tx(`у важкому випадку ${sim.ddBad}%`, `worst case ${sim.ddBad}%`) },
             ].map((r) => (
               <div key={r.k} className="rounded-xl px-3.5 py-3" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
                 <div className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.13em]" style={{ fontFamily: T.sans, color: T.text4 }}>
@@ -365,20 +366,14 @@ export default function Risk({ trades, carried }) {
             ))}
 
             <p className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.6 }}>
-              Це не поломка системи, це її звичайна робота. Більшість рахунків зливають
-              не тоді, коли метод перестав працювати, а тоді, коли нормальну серію мінусів
-              сприймають як сигнал усе поміняти.
+              {tx('Це не поломка системи, це її звичайна робота. Більшість рахунків зливають не тоді, коли метод перестав працювати, а тоді, коли нормальну серію мінусів сприймають як сигнал усе поміняти.', "This isn't your system breaking — it's how it normally works. Most accounts aren't blown when the method stops working, but when a normal losing streak is taken as a signal to change everything.")}
             </p>
           </div>
         </Panel>
       </div>
 
       <p className="px-1 text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.6 }}>
-        Симуляція припускає, що вінрейт і RR лишаються сталими, а угоди незалежні одна від одної.
-        У житті це не зовсім так — після серії мінусів людина торгує інакше. Тому читай це
-        як межі можливого за твоїх припущень, а не як передбачення. Прогнозу заробітку тут немає
-        свідомо: просадка з тієї ж математики виходить кориснішою, бо готує до найгіршого
-        замість обіцяти найкраще.
+        {tx('Симуляція припускає, що вінрейт і RR лишаються сталими, а угоди незалежні одна від одної. У житті це не зовсім так — після серії мінусів людина торгує інакше. Тому читай це як межі можливого за твоїх припущень, а не як передбачення. Прогнозу заробітку тут немає свідомо: просадка з тієї ж математики виходить кориснішою, бо готує до найгіршого замість обіцяти найкраще.', "The simulation assumes your win rate and RR stay constant and trades are independent. In real life that's not quite true — people trade differently after a losing streak. So read this as the range of what's possible under your assumptions, not a prediction. There's no profit forecast here on purpose: drawdown from the same math is more useful, because it prepares you for the worst instead of promising the best.")}
       </p>
     </div>
   );

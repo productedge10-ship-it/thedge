@@ -13,6 +13,7 @@ import {
   RULES, DIMS, apply, statsOf, breakdown, confidence, valuesOf,
 } from '../../lib/whatIf';
 import { generateTrades, DEMO_SIZES } from '../../lib/demoTrades';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    «Що якби».
@@ -130,7 +131,7 @@ export default function WhatIf({ trades: real, onCarry }) {
     >
       <Dices size={14} strokeWidth={2.3} style={{ color: demo ? T.warn : T.text4 }} />
       <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: demo ? T.warn : T.text3 }}>
-        {demo ? `Демо-історія · ${demoSize} угод` : 'Тестові дані'}
+        {demo ? tx(`Демо-історія · ${demoSize} угод`, `Demo history · ${demoSize} trades`) : tx('Тестові дані', 'Test data')}
       </span>
 
       <div className="ml-auto flex flex-wrap items-center gap-1.5">
@@ -157,13 +158,13 @@ export default function WhatIf({ trades: real, onCarry }) {
           <>
             <button
               onClick={() => setSeed((v) => v + 1)}
-              title="Інша випадкова історія"
+              title={tx('Інша випадкова історія', 'Another random history')}
               className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors duration-150"
               style={{ fontFamily: T.sans, border: `1px solid ${T.line}`, color: T.text3 }}
               onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
               onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
             >
-              <Shuffle size={12} strokeWidth={2.4} /> ще раз
+              <Shuffle size={12} strokeWidth={2.4} /> {tx('ще раз', 'again')}
             </button>
             <button
               onClick={() => { setDemoSize(0); reset(); }}
@@ -172,7 +173,7 @@ export default function WhatIf({ trades: real, onCarry }) {
               onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
               onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
             >
-              до своїх
+              {tx('до своїх', 'back to mine')}
             </button>
           </>
         )}
@@ -180,8 +181,8 @@ export default function WhatIf({ trades: real, onCarry }) {
 
       <p className="w-full text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.5 }}>
         {demo
-          ? 'Це вигадана історія з навмисно закладеними звичками — подивись, як симулятор їх знаходить. У базу нічого не пишеться.'
-          : 'Згенерувати історію локально, щоб побачити роботу симулятора. Твій журнал не зміниться.'}
+          ? tx('Це вигадана історія з навмисно закладеними звичками — подивись, як симулятор їх знаходить. У базу нічого не пишеться.', "This is a made-up history with deliberately planted habits — see how the simulator finds them. Nothing is saved.")
+          : tx('Згенерувати історію локально, щоб побачити роботу симулятора. Твій журнал не зміниться.', "Generate a local history to see the simulator in action. Your journal won't change.")}
       </p>
     </div>
   );
@@ -190,14 +191,12 @@ export default function WhatIf({ trades: real, onCarry }) {
     return (
       <div className="flex flex-col gap-4">
         {demoBar}
-        <Panel title={<><FlaskConical size={13} /> Що якби</>}>
+        <Panel title={<><FlaskConical size={13} /> {tx('Що якби', 'What if')}</>}>
           <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
             <FlaskConical size={22} strokeWidth={1.6} style={{ color: T.text4 }} />
-            <div className="text-[14px] font-semibold" style={{ color: T.text3 }}>Замало угод</div>
+            <div className="text-[14px] font-semibold" style={{ color: T.text3 }}>{tx('Замало угод', 'Not enough trades')}</div>
             <div className="max-w-[380px] text-[12.5px]" style={{ color: T.text4, lineHeight: 1.6 }}>
-              Симулятор накладає правила на твою власну історію. Поки в ній кілька записів,
-              будь-яка «закономірність» тут буде випадковістю. Увімкни тестові дані вище,
-              щоб подивитись, як це працює.
+              {tx('Симулятор накладає правила на твою власну історію. Поки в ній кілька записів, будь-яка «закономірність» тут буде випадковістю. Увімкни тестові дані вище, щоб подивитись, як це працює.', 'The simulator applies rules to your own history. With only a few records, any "pattern" here is just chance. Turn on test data above to see how it works.')}
             </div>
           </div>
         </Panel>
@@ -210,7 +209,7 @@ export default function WhatIf({ trades: real, onCarry }) {
       {demoBar}
       {/* ---------- правила ---------- */}
       <Panel
-        title={<><FlaskConical size={13} /> Що якби я дотримувався правил</>}
+        title={<><FlaskConical size={13} /> {tx('Що якби я дотримувався правил', 'What if I followed the rules')}</>}
         right={touched ? (
           <button
             onClick={reset}
@@ -219,9 +218,9 @@ export default function WhatIf({ trades: real, onCarry }) {
             onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
             onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
           >
-            <RotateCcw size={11} strokeWidth={2.4} /> скинути
+            <RotateCcw size={11} strokeWidth={2.4} /> {tx('скинути', 'reset')}
           </button>
-        ) : 'обери правило — крива перерахується'}
+        ) : tx('обери правило — крива перерахується', 'pick a rule — the curve will update')}
       >
         <div className="flex flex-wrap gap-1.5">
           {RULES.map((r) => {
@@ -245,7 +244,7 @@ export default function WhatIf({ trades: real, onCarry }) {
               >
                 <span className="block text-[13px] font-semibold">{r.label}</span>
                 <span className="mt-0.5 block text-[11px] tabular-nums" style={{ color: T.text4, fontFamily: T.mono }}>
-                  {hit} {hit === 1 ? 'угода' : 'угод'}
+                  {hit} {hit === 1 ? tx('угода', 'trade') : tx('угод', 'trades')}
                 </span>
               </button>
             );
@@ -261,8 +260,8 @@ export default function WhatIf({ trades: real, onCarry }) {
             return (
               <div key={d.id}>
                 <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  Торгувати тільки · {d.label}
-                  {picked.length === 0 && <span style={{ opacity: 0.7 }}> — зараз усі</span>}
+                  {tx('Торгувати тільки', 'Trade only')} · {d.label}
+                  {picked.length === 0 && <span style={{ opacity: 0.7 }}>{tx(' — зараз усі', ' — all for now')}</span>}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {values.map((v) => {
@@ -300,17 +299,17 @@ export default function WhatIf({ trades: real, onCarry }) {
         >
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat
-              label="Це коштувало"
+              label={tx('Це коштувало', 'This cost')}
               value={diff === 0 ? '—' : fmtR(diff)}
-              sub={`${removed.length} угод відпало`}
+              sub={tx(`${removed.length} угод відпало`, `${removed.length} ${removed.length === 1 ? 'trade' : 'trades'} removed`)}
               tone={diff > 0 ? T.ok : diff < 0 ? T.bad : T.text3}
             />
-            <Stat label="Було" value={fmtR(base.net)} sub={`${base.trades} угод · WR ${base.wr}%`} />
-            <Stat label="Стало" value={fmtR(sim.net)} sub={`${sim.trades} угод · WR ${sim.wr}%`} tone={T.text} />
+            <Stat label={tx('Було', 'Before')} value={fmtR(base.net)} sub={tx(`${base.trades} угод · WR ${base.wr}%`, `${base.trades} ${base.trades === 1 ? 'trade' : 'trades'} · WR ${base.wr}%`)} />
+            <Stat label={tx('Стало', 'After')} value={fmtR(sim.net)} sub={tx(`${sim.trades} угод · WR ${sim.wr}%`, `${sim.trades} ${sim.trades === 1 ? 'trade' : 'trades'} · WR ${sim.wr}%`)} tone={T.text} />
             <Stat
-              label="Просадка"
+              label={tx('Просадка', 'Drawdown')}
               value={`${sim.maxDD.toFixed(1)}R`}
-              sub={`було ${base.maxDD.toFixed(1)}R`}
+              sub={tx(`було ${base.maxDD.toFixed(1)}R`, `was ${base.maxDD.toFixed(1)}R`)}
               tone={sim.maxDD < base.maxDD ? T.ok : sim.maxDD > base.maxDD ? T.bad : T.text3}
             />
           </div>
@@ -329,7 +328,7 @@ export default function WhatIf({ trades: real, onCarry }) {
             <button
               onClick={() => onCarry({
                 trades: kept,
-                label: `${sim.trades} угод · WR ${sim.wr}% · ${fmtR(sim.net)}`,
+                label: tx(`${sim.trades} угод · WR ${sim.wr}% · ${fmtR(sim.net)}`, `${sim.trades} ${sim.trades === 1 ? 'trade' : 'trades'} · WR ${sim.wr}% · ${fmtR(sim.net)}`),
               })}
               className="group flex items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left transition-colors duration-150"
               style={{
@@ -341,10 +340,10 @@ export default function WhatIf({ trades: real, onCarry }) {
             >
               <span className="min-w-0">
                 <span className="block text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
-                  Прогнати цю систему вперед
+                  {tx('Прогнати цю систему вперед', 'Run this system forward')}
                 </span>
                 <span className="mt-0.5 block text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.5 }}>
-                  Візьме вінрейт і RR того, що лишилось, і покаже 1200 можливих продовжень.
+                  {tx('Візьме вінрейт і RR того, що лишилось, і покаже 1200 можливих продовжень.', 'Takes the win rate and RR of what remains and shows 1,200 possible continuations.')}
                 </span>
               </span>
               <ArrowRight
@@ -377,8 +376,8 @@ export default function WhatIf({ trades: real, onCarry }) {
 
       {/* ---------- криві ---------- */}
       <Panel
-        title="Крива в R"
-        right={touched ? <>сіра — як було, кольорова — <b>без відфільтрованих</b></> : 'твоя фактична крива'}
+        title={tx('Крива в R', 'Curve in R')}
+        right={touched ? <>{tx('сіра — як було, кольорова — ', 'gray — before, colored — ')}<b>{tx('без відфільтрованих', 'without filtered trades')}</b></> : tx('твоя фактична крива', 'your actual curve')}
       >
         <div className="h-[300px] w-full">
           <ResponsiveContainer>
@@ -389,12 +388,12 @@ export default function WhatIf({ trades: real, onCarry }) {
               <RTooltip content={<Tip />} cursor={{ stroke: 'var(--edge-line-hi, var(--edge-line-hi))' }} />
               <ReferenceLine y={0} stroke="var(--edge-line-hi, var(--edge-line-hi))" />
               <Line
-                type="monotone" dataKey="було" stroke="var(--edge-text4, var(--edge-text4))"
+                type="monotone" dataKey="було" name={tx('було', 'before')} stroke="var(--edge-text4, var(--edge-text4))"
                 strokeWidth={1.6} dot={false} isAnimationActive={false}
               />
               {touched && (
                 <Line
-                  type="monotone" dataKey="стало" stroke={diff >= 0 ? '#34d399' : '#f87171'}
+                  type="monotone" dataKey="стало" name={tx('стало', 'after')} stroke={diff >= 0 ? '#34d399' : '#f87171'}
                   strokeWidth={2.2} dot={false} isAnimationActive
                   animationDuration={600} connectNulls
                 />
@@ -406,7 +405,7 @@ export default function WhatIf({ trades: real, onCarry }) {
 
       {/* ---------- розклад ---------- */}
       {parts.length > 0 && (
-        <Panel title="Куди пішли ці R" right="за кожним правилом окремо">
+        <Panel title={tx('Куди пішли ці R', 'Where these R went')} right={tx('за кожним правилом окремо', 'per rule, separately')}>
           <div className="flex flex-col gap-2">
             {parts.map((p) => (
               <div
@@ -419,7 +418,7 @@ export default function WhatIf({ trades: real, onCarry }) {
                     {p.tag}
                   </span>
                   <span className="text-[11.5px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
-                    {p.count} {p.count === 1 ? 'угода' : 'угод'}
+                    {p.count} {p.count === 1 ? tx('угода', 'trade') : tx('угод', 'trades')}
                   </span>
                 </span>
                 <span
@@ -433,8 +432,7 @@ export default function WhatIf({ trades: real, onCarry }) {
           </div>
 
           <p className="mt-3 text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.55 }}>
-            Сума часток може не збігатись із загальною різницею: одна угода буває
-            і в тільті, і поза планом одночасно — тоді вона рахується в обох рядках.
+            {tx('Сума часток може не збігатись із загальною різницею: одна угода буває і в тільті, і поза планом одночасно — тоді вона рахується в обох рядках.', "The parts may not add up to the total difference: one trade can be both in tilt and off plan — then it's counted in both rows.")}
           </p>
         </Panel>
       )}
@@ -442,9 +440,7 @@ export default function WhatIf({ trades: real, onCarry }) {
       {/* Дисклеймер знизу, але він тут не формальність: без нього
           вкладка обіцяє передбачення замість факту про минуле. */}
       <p className="px-1 text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.6 }}>
-        Це не прогноз заробітку. Прибрані угоди вже сталися, і ми лише рахуємо, скільки
-        вони забрали. Що ти зробив би замість них — не знає ніхто, тому «стало» варто
-        читати як ціну звички, а не як обіцянку.
+        {tx('Це не прогноз заробітку. Прибрані угоди вже сталися, і ми лише рахуємо, скільки вони забрали. Що ти зробив би замість них — не знає ніхто, тому «стало» варто читати як ціну звички, а не як обіцянку.', "This isn't a profit forecast. The removed trades already happened — we're only counting what they took. Nobody knows what you'd have done instead, so read \"after\" as the price of a habit, not a promise.")}
       </p>
     </div>
   );

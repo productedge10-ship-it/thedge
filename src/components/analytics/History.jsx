@@ -8,11 +8,16 @@ import {
 } from 'date-fns';
 import { EMOTION_COLOR, EMOTION_LABEL, signed } from './data';
 import { T } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 
 // ==========================================
 // ЛОКАЛІЗАЦІЯ ДАТ
 // ==========================================
-const UKR_MONTHS = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+const UKR_MONTHS = tx(
+  ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'],
+  ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+);
+const WD_SHORT = tx(['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'], ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']);
 
 function getUkrDayIndex(date) { return (date.getDay() + 6) % 7; } // Пн = 0, Нд = 6
 
@@ -80,7 +85,7 @@ function TabBtn({ active, children, onClick }) {
         padding: '7px 16px', border: 'none', borderRadius: 8, cursor: 'pointer',
         fontFamily: T.mono, fontSize: 10.5, letterSpacing: '.16em', transition: 'all .25s ease',
         ...(active
-          ? { background: 'linear-gradient(180deg, rgba(108,92,231,.9), rgba(88,72,210,.9))', color: '#fff', boxShadow: '0 6px 18px -8px rgba(108,92,231,.9)' }
+          ? { background: 'linear-gradient(180deg, rgba(108,92,231,.9), rgba(88,72,210,.9))', color: '#fff', boxShadow: 'none' }
           : { background: 'transparent', color: '#9a9ab0' }),
       }}
     >
@@ -121,7 +126,7 @@ function MiniMonth({ monthDate, tradesByDate, selectedDate, setSelectedDate, max
         {UKR_MONTHS[monthDate.getMonth()]}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 4, marginBottom: 6 }}>
-        {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'].map((w) => (
+        {WD_SHORT.map((w) => (
           <div key={w} style={{ fontFamily: T.mono, fontSize: 8, letterSpacing: '.1em', color: '#6f6f85', textAlign: 'center' }}>{w[0]}</div>
         ))}
       </div>
@@ -139,7 +144,7 @@ function MiniMonth({ monthDate, tradesByDate, selectedDate, setSelectedDate, max
             <button
               key={day.toString()}
               type="button"
-              title={has ? `${format(day, 'dd.MM')} — ${fmtR(val)}R · ${list.length} уг.` : format(day, 'dd.MM')}
+              title={has ? `${format(day, 'dd.MM')} — ${fmtR(val)}R · ${list.length} ${tx('уг.', list.length === 1 ? 'trade' : 'trades')}` : format(day, 'dd.MM')}
               onClick={() => setSelectedDate(selected ? null : day)}
               style={{
                 position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -211,7 +216,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
     const peak = Math.max(1, ...cum.map((v) => Math.abs(v)));
     const spark = cum.map((v) => ({ h: Math.max(4, Math.round((Math.abs(v) / peak) * 40)), neg: v < 0 }));
 
-    const NAMES = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'];
+    const NAMES = WD_SHORT;
     const sums = [0, 0, 0, 0, 0, 0, 0];
     active.forEach((a) => { sums[getUkrDayIndex(a.day)] += a.v; });
     const wdPeak = Math.max(1, ...sums.map((v) => Math.abs(v)));
@@ -231,7 +236,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
   const periodLabel = useMemo(() => {
     if (viewMode === 'month') return `${UKR_MONTHS[navDate.getMonth()]} ${navDate.getFullYear()}`;
     const qNum = Math.floor(navDate.getMonth() / 3) + 1;
-    return `${qNum}-й квартал ${navDate.getFullYear()}`;
+    return tx(`${qNum}-й квартал ${navDate.getFullYear()}`, `Q${qNum} ${navDate.getFullYear()}`);
   }, [viewMode, navDate]);
 
   return (
@@ -280,8 +285,8 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
             </button>
           )}
           <div style={{ display: 'flex', padding: 3, borderRadius: 11, border: '1px solid rgba(255,255,255,.08)', background: 'rgba(255,255,255,.02)' }}>
-            <TabBtn active={viewMode === 'month'} onClick={() => setViewMode('month')}>МІСЯЦЬ</TabBtn>
-            <TabBtn active={viewMode === 'quarter'} onClick={() => setViewMode('quarter')}>КВАРТАЛ</TabBtn>
+            <TabBtn active={viewMode === 'month'} onClick={() => setViewMode('month')}>{tx('МІСЯЦЬ', 'MONTH')}</TabBtn>
+            <TabBtn active={viewMode === 'quarter'} onClick={() => setViewMode('quarter')}>{tx('КВАРТАЛ', 'QUARTER')}</TabBtn>
           </div>
         </div>
       </div>
@@ -307,7 +312,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
           ) : (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 7, marginBottom: 9 }}>
-                {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'НД'].map((w) => (
+                {WD_SHORT.map((w) => (
                   <div key={w} style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: '.18em', color: '#8a8aa0', textAlign: 'center' }}>{w}</div>
                 ))}
               </div>
@@ -326,7 +331,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
                     <button
                       key={day.toString()}
                       type="button"
-                      title={has ? `${format(day, 'dd.MM')} — ${fmtR(val)}R · ${list.length} уг.` : format(day, 'dd.MM')}
+                      title={has ? `${format(day, 'dd.MM')} — ${fmtR(val)}R · ${list.length} ${tx('уг.', list.length === 1 ? 'trade' : 'trades')}` : format(day, 'dd.MM')}
                       onClick={() => setSelectedDate(selected ? null : day)}
                       style={{
                         position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -365,7 +370,7 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
             <span>−5R</span>
             <span style={{ flex: '1 1 60px', maxWidth: 120, height: 5, borderRadius: 3, background: 'linear-gradient(90deg,#ff5f6d,rgba(255,255,255,.1) 50%,#2ee6a8)' }} />
             <span>+5R</span>
-            <span style={{ marginLeft: 'auto' }}>{stats.count ? `${stats.count} АКТИВНИХ ДНІВ` : 'НЕМАЄ УГОД'}</span>
+            <span style={{ marginLeft: 'auto' }}>{stats.count ? tx(`${stats.count} АКТИВНИХ ДНІВ`, `${stats.count} ACTIVE ${stats.count === 1 ? 'DAY' : 'DAYS'}`) : tx('НЕМАЄ УГОД', 'NO TRADES')}</span>
           </div>
         </div>
 
@@ -379,12 +384,12 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
               background: `linear-gradient(150deg, rgba(${stats.tint},.1), rgba(255,255,255,.012) 60%)`,
             }}
           >
-            <div style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: '.22em', color: '#9a9ab0', marginBottom: 10 }}>РЕЗУЛЬТАТ ПЕРІОДУ</div>
+            <div style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: '.22em', color: '#9a9ab0', marginBottom: 10 }}>{tx('РЕЗУЛЬТАТ ПЕРІОДУ', 'PERIOD RESULT')}</div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-              <span style={{ fontFamily: T.mono, fontSize: 40, fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1, color: `rgb(${stats.tint})`, textShadow: `0 0 40px rgba(${stats.tint},.5)` }}>
+              <span style={{ fontFamily: T.mono, fontSize: 40, fontWeight: 700, letterSpacing: '-.04em', lineHeight: 1, color: `rgb(${stats.tint})`, textShadow: 'none' }}>
                 {stats.count ? `${fmtR(stats.total)}R` : '—'}
               </span>
-              {stats.count > 0 && <span style={{ fontFamily: T.mono, fontSize: 11, color: '#9a9ab0', paddingBottom: 5 }}>{stats.count} дн.</span>}
+              {stats.count > 0 && <span style={{ fontFamily: T.mono, fontSize: 11, color: '#9a9ab0', paddingBottom: 5 }}>{stats.count} {tx('дн.', stats.count === 1 ? 'day' : 'days')}</span>}
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 44, marginTop: 16 }}>
               {stats.spark.length ? stats.spark.map((b, i) => (
@@ -403,18 +408,18 @@ function DetailedActivityCalendar({ tradesByDate, selectedDate, setSelectedDate 
                 <span style={{ fontFamily: T.mono, fontSize: 10, color: '#8a8aa0' }}>—</span>
               )}
             </div>
-            <div style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: '.16em', color: '#8a8aa0', marginTop: 9 }}>НАКОПИЧЕНО ПО ДНЯХ</div>
+            <div style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: '.16em', color: '#8a8aa0', marginTop: 9 }}>{tx('НАКОПИЧЕНО ПО ДНЯХ', 'CUMULATIVE BY DAY')}</div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,.07)' }}>
-            <StatCell label="ВІНРЕЙТ" value={stats.count ? `${Math.round((stats.wins / stats.count) * 100)}%` : '—'} color="#fff" br bb />
-            <StatCell label="СЕРЕДНЯ" value={stats.count ? `${fmtR(stats.total / stats.count)}R` : '—'} color="#fff" bb />
-            <StatCell label="НАЙКРАЩИЙ" value={stats.bestD ? `${format(stats.bestD.day, 'd')} · ${fmtR(stats.bestD.v)}R` : '—'} color="#2ee6a8" small br />
-            <StatCell label="НАЙГІРШИЙ" value={stats.worstD ? `${format(stats.worstD.day, 'd')} · ${fmtR(stats.worstD.v)}R` : '—'} color="#ff7b86" small />
+            <StatCell label={tx('ВІНРЕЙТ', 'WIN RATE')} value={stats.count ? `${Math.round((stats.wins / stats.count) * 100)}%` : '—'} color="#fff" br bb />
+            <StatCell label={tx('СЕРЕДНЯ', 'AVERAGE')} value={stats.count ? `${fmtR(stats.total / stats.count)}R` : '—'} color="#fff" bb />
+            <StatCell label={tx('НАЙКРАЩИЙ', 'BEST')} value={stats.bestD ? `${format(stats.bestD.day, 'd')} · ${fmtR(stats.bestD.v)}R` : '—'} color="#2ee6a8" small br />
+            <StatCell label={tx('НАЙГІРШИЙ', 'WORST')} value={stats.worstD ? `${format(stats.worstD.day, 'd')} · ${fmtR(stats.worstD.v)}R` : '—'} color="#ff7b86" small />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            <div style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: '.18em', color: '#9a9ab0' }}>ПО ДНЯХ ТИЖНЯ</div>
+            <div style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: '.18em', color: '#9a9ab0' }}>{tx('ПО ДНЯХ ТИЖНЯ', 'BY WEEKDAY')}</div>
             {stats.byWeekday.map((w) => (
               <div key={w.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ flex: '0 0 24px', fontFamily: T.mono, fontSize: 10, color: '#8a8aa0' }}>{w.name}</span>
@@ -503,9 +508,9 @@ export default function History({ s }) {
   return (
     <div className="flex flex-col gap-6 w-full">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1.5 mb-2">
-        <h2 className="font-[family-name:var(--edge-display,'Unbounded')] text-[24px] font-semibold m-0 tracking-[-0.3px] text-[var(--edge-text)]">Історія угод</h2>
+        <h2 className="font-[family-name:var(--edge-display,'Unbounded')] text-[24px] font-semibold m-0 tracking-[-0.3px] text-[var(--edge-text)]">{tx('Історія угод', 'Trade history')}</h2>
         <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">
-          Всього {s.trades.length} записів
+          {tx(`Всього ${s.trades.length} записів`, `${s.trades.length} ${s.trades.length === 1 ? 'entry' : 'entries'} total`)}
         </span>
       </div>
 
@@ -519,7 +524,7 @@ export default function History({ s }) {
           <Search size={16} className="text-[var(--edge-text3)]" />
           <input 
             value={query} onChange={(e) => setQuery(e.target.value)} 
-            placeholder="Пошук по активу, сетапу, емоції..." 
+            placeholder={tx('Пошук по активу, сетапу, емоції...', 'Search by asset, setup, emotion...')} 
             className="bg-transparent border-none outline-none text-[var(--edge-text)] text-[13px] w-full placeholder:text-[var(--edge-text4)]" 
           />
         </div>
@@ -527,7 +532,7 @@ export default function History({ s }) {
         <div className="flex items-center justify-between w-full lg:w-auto gap-4">
           <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar flex-1 pb-1 lg:pb-0">
             <Filter size={14} className="text-[var(--edge-text3)] mr-2 shrink-0 hidden sm:block" />
-            {[{ k: 'all', l: 'Усі' }, { k: 'win', l: 'Плюс' }, { k: 'loss', l: 'Мінус' }, { k: 'mistake', l: 'З помилкою' }, { k: 'clean', l: 'Чисті' }].map(({ k, l }) => (
+            {[{ k: 'all', l: tx('Усі', 'All') }, { k: 'win', l: tx('Плюс', 'Wins') }, { k: 'loss', l: tx('Мінус', 'Losses') }, { k: 'mistake', l: tx('З помилкою', 'With mistakes') }, { k: 'clean', l: tx('Чисті', 'Clean') }].map(({ k, l }) => (
               <button 
                 key={k} onClick={() => setFilter(k)}
                 className={`shrink-0 text-[11.5px] px-3.5 py-2 rounded-[10px] font-bold transition-all duration-200 border 
@@ -579,7 +584,7 @@ export default function History({ s }) {
                         {/* СЕРЕДНЯ ЧАСТИНА: Сетап, Емоція, Помилки */}
                         <div className="flex-1 flex flex-wrap items-center gap-4 lg:gap-8 w-full xl:w-auto">
                           <div className="flex flex-col gap-1 min-w-[140px]">
-                            <span className="text-[9px] uppercase tracking-widest text-[var(--edge-text3)] font-black">Сетап / Акаунт</span>
+                            <span className="text-[9px] uppercase tracking-widest text-[var(--edge-text3)] font-black">{tx('Сетап / Акаунт', 'Setup / Account')}</span>
                             <span className="text-[12.5px] text-[var(--edge-text)] font-bold">{t.setup}</span>
                             <span className="text-[11px] text-[var(--edge-text3)]">{t.account}</span>
                           </div>
@@ -604,7 +609,7 @@ export default function History({ s }) {
                         {/* ПРАВА ЧАСТИНА: R */}
                         <div className="flex items-center justify-end w-full xl:w-auto mt-2 xl:mt-0 shrink-0">
                           <div className="flex flex-col items-end min-w-[80px]">
-                            <span className="text-[9px] uppercase tracking-widest text-[var(--edge-text3)] font-black mb-0.5">Результат</span>
+                            <span className="text-[9px] uppercase tracking-widest text-[var(--edge-text3)] font-black mb-0.5">{tx('Результат', 'Result')}</span>
                             <b 
                               className="text-[24px] font-black tracking-tighter leading-none transition-all duration-300"
                               style={{ color: isProfit ? '#34d399' : isLoss ? '#f87171' : 'var(--edge-text2, var(--edge-text2))', textShadow: isProfit ? '0 0 15px rgba(52,211,153,0.4)' : isLoss ? '0 0 15px rgba(248,113,113,0.4)' : 'none' }}
@@ -623,11 +628,11 @@ export default function History({ s }) {
           ) : (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-24 px-4 text-center border border-dashed border-[var(--edge-hair-strong)] rounded-[16px] bg-[var(--edge-surface-hi)]/30">
               <Layers size={32} className="text-[var(--edge-text4)] mb-3" />
-              <h3 className="text-[16px] text-[var(--edge-text)] font-bold mb-1">Немає угод</h3>
-              <p className="text-[12.5px] text-[var(--edge-text3)]">За вибраними фільтрами або датою нічого не знайдено.</p>
+              <h3 className="text-[16px] text-[var(--edge-text)] font-bold mb-1">{tx('Немає угод', 'No trades')}</h3>
+              <p className="text-[12.5px] text-[var(--edge-text3)]">{tx('За вибраними фільтрами або датою нічого не знайдено.', 'Nothing matches the selected filters or date.')}</p>
               {(query || filter !== 'all' || selectedDate) && (
                 <button onClick={() => { setQuery(''); setFilter('all'); setSelectedDate(null); }} className="mt-4 px-4 py-2 bg-[var(--edge-hair)] hover:bg-white/10 text-[var(--edge-text)] text-[12px] font-bold rounded-[8px] transition-colors">
-                  Скинути фільтри
+                  {tx('Скинути фільтри', 'Reset filters')}
                 </button>
               )}
             </motion.div>
@@ -640,7 +645,7 @@ export default function History({ s }) {
         <div className="flex items-center justify-center gap-2 mt-4 pb-8">
           <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-[10px] bg-[var(--edge-surface-hi)] border border-[var(--edge-hair)] text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)] transition-colors disabled:opacity-50 disabled:pointer-events-none"><ChevronLeft size={16} /></button>
           {paginationButtons.map(p => (
-            <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-[10px] text-[12px] font-bold transition-all duration-200 border ${currentPage === p ? 'bg-[var(--edge-acc)] text-[var(--edge-text)] border-[var(--edge-acc)] shadow-[0_0_15px_rgba(139,123,255,0.3)]' : 'bg-[var(--edge-surface-hi)] text-[var(--edge-text3)] border-[var(--edge-hair)] hover:border-white/20 hover:text-[var(--edge-text)]'}`}>{p}</button>
+            <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-[10px] text-[12px] font-bold transition-all duration-200 border ${currentPage === p ? 'bg-[var(--edge-acc)] text-[var(--edge-text)] border-[var(--edge-acc)]' : 'bg-[var(--edge-surface-hi)] text-[var(--edge-text3)] border-[var(--edge-hair)] hover:border-white/20 hover:text-[var(--edge-text)]'}`}>{p}</button>
           ))}
           <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-[10px] bg-[var(--edge-surface-hi)] border border-[var(--edge-hair)] text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)] transition-colors disabled:opacity-50 disabled:pointer-events-none"><ChevronRight size={16} /></button>
         </div>

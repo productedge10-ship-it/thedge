@@ -13,6 +13,7 @@ import {
 import { A, CSS_SPRING, F, LAYOUT, P, POP, en, hairline, lightLayer, mix, trackLight } from './theme';
 import { DEFAULT_LAYOUT, WIDGETS, optionsFor } from './widgets';
 import Preview from './Preview';
+import { t as tx } from '../../../lib/lang';
 
 /* Реєстр віджетів приходить ззовні.
 
@@ -52,14 +53,14 @@ const useRegistry = () => useContext(RegistryCtx);
 ================================================================== */
 
 export const PERIODS = [
-  ['inherit', 'Page'],
-  ['7', 'Week'],
-  ['30', '30 days'],
-  ['90', 'Quarter'],
-  ['all', 'All time'],
+  ['inherit', tx('Як сторінка', 'Page')],
+  ['7', tx('Тиждень', 'Week')],
+  ['30', tx('30 днів', '30 days')],
+  ['90', tx('Квартал', 'Quarter')],
+  ['all', tx('Весь час', 'All time')],
 ];
 
-const WIDTH_LABEL = { 1: '¼', 2: '½', 3: '¾', 4: 'Full' };
+const WIDTH_LABEL = { 1: '¼', 2: '½', 3: '¾', 4: tx('Уся', 'Full') };
 const REMOVE_MS = 220;
 
 /* ------------------------------------------------------------------
@@ -146,7 +147,7 @@ function Choice({ label, value, choices, tone, onPick, index }) {
                   transition={POP}
                   style={{
                     position: 'absolute', left: 0, right: 0, bottom: 0, height: 1.5,
-                    borderRadius: 2, background: tone, boxShadow: `0 0 8px ${mix(tone, 60)}`,
+                    borderRadius: 2, background: tone, boxShadow: 'none',
                   }}
                 />
               )}
@@ -170,7 +171,7 @@ function WidthPicker({ value, tone, onPick }) {
       style={{ display: 'flex', flexDirection: 'column', gap: 9 }}
     >
       <span style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <span style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 500, color: P.dim }}>Width</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 500, color: P.dim }}>{tx('Ширина', 'Width')}</span>
         <span style={{ fontFamily: F.mono, fontSize: 11, color: tone }}>{WIDTH_LABEL[value]}</span>
       </span>
 
@@ -181,7 +182,7 @@ function WidthPicker({ value, tone, onPick }) {
             <button
               key={n}
               type="button"
-              aria-label={`Width ${WIDTH_LABEL[n]}`}
+              aria-label={`${tx('Ширина', 'Width')} ${WIDTH_LABEL[n]}`}
               data-state={n === value ? 'active' : on ? 'filled' : 'idle'}
               onClick={() => onPick(n)}
               style={{
@@ -209,7 +210,7 @@ function HeightPicker({ value, tone, min = 1, onPick }) {
       style={{ display: 'flex', flexDirection: 'column', gap: 9 }}
     >
       <span style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <span style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 500, color: P.dim }}>Height</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11, fontWeight: 500, color: P.dim }}>{tx('Висота', 'Height')}</span>
         <span style={{ fontFamily: F.mono, fontSize: 11, color: tone }}>{HEIGHT_LABEL[value]}</span>
       </span>
 
@@ -224,7 +225,7 @@ function HeightPicker({ value, tone, min = 1, onPick }) {
             <button
               key={n}
               type="button"
-              aria-label={`Height ${HEIGHT_LABEL[n]}`}
+              aria-label={`${tx('Висота', 'Height')} ${HEIGHT_LABEL[n]}`}
               disabled={disabled}
               data-state={n === value ? 'active' : on ? 'filled' : 'idle'}
               onClick={() => !disabled && onPick(n)}
@@ -293,7 +294,7 @@ function SettingsPanel({ id, item, onChange, onClose, resizable = true }) {
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close"
+          aria-label={tx('Закрити', 'Close')}
           style={{ display: 'grid', placeItems: 'center', width: 20, height: 20, borderRadius: 6, border: 0, background: 'transparent', cursor: 'pointer', color: P.dim }}
           onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--edge-text)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = P.dim; }}
@@ -310,7 +311,7 @@ function SettingsPanel({ id, item, onChange, onClose, resizable = true }) {
       )}
 
       <Choice
-        label="Period" index={2} tone={tone}
+        label={tx('Період', 'Period')} index={2} tone={tone}
         value={item.p || 'inherit'}
         choices={PERIODS}
         onPick={(v) => set({ p: v })}
@@ -458,11 +459,11 @@ function CardShell({
               onPointerDown={(e) => e.stopPropagation()}
               style={{ display: 'flex', gap: 3, flexShrink: 0 }}
             >
-              <IconBtn title="Settings" active={openSettings} tone={tone} onClick={onToggleSettings}>
+              <IconBtn title={tx('Налаштування', 'Settings')} active={openSettings} tone={tone} onClick={onToggleSettings}>
                 <Cog size={13} />
               </IconBtn>
               {removable && (
-                <IconBtn title="Remove" danger onClick={onRemove}>
+                <IconBtn title={tx('Прибрати', 'Remove')} danger onClick={onRemove}>
                   <X size={13} />
                 </IconBtn>
               )}
@@ -711,18 +712,18 @@ function AddPanel({ hidden, onAdd, onClose, stats }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '0 18px', marginBottom: 14 }}>
           <span style={{ fontFamily: F.sans, fontSize: 13, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.2px' }}>
-            Бібліотека
+            {tx('Бібліотека', 'Library')}
           </span>
           <span style={{ fontFamily: F.sans, fontSize: 12, color: P.dim }}>
-            клікни, щоб додати в кінець, або перетягни на потрібне місце
+            {tx('клікни, щоб додати в кінець, або перетягни на потрібне місце', 'click to add at the end, or drag it where you want')}
           </span>
           <span style={{ height: 1, flex: 1, background: 'linear-gradient(90deg,var(--edge-line),transparent)' }} />
-          <IconBtn title="Згорнути" onClick={onClose}><X size={14} /></IconBtn>
+          <IconBtn title={tx('Згорнути', 'Collapse')} onClick={onClose}><X size={14} /></IconBtn>
         </div>
 
         {!hidden.length ? (
           <p style={{ margin: 0, padding: '0 18px', fontFamily: F.sans, fontSize: 13, color: P.text5 }}>
-            Усі віджети вже на дошці. Щоб звільнити місце, прибери зайві хрестиком.
+            {tx('Усі віджети вже на дошці. Щоб звільнити місце, прибери зайві хрестиком.', "All widgets are already on the board. To free up space, remove the ones you don't need with the cross.")}
           </p>
         ) : (
           <div
@@ -1234,7 +1235,7 @@ export default function Board({
                 style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}
               >
                 <ToolButton icon={Plus} onClick={() => setAdding((v) => !v)} active={adding}>
-                  Додати віджет
+                  {tx('Додати віджет', 'Add widget')}
                   {hidden.length > 0 && (
                     <span style={{ fontFamily: F.mono, fontSize: 11, color: P.accSoft, marginLeft: 2 }}>
                       {hidden.length}
@@ -1243,11 +1244,11 @@ export default function Board({
                 </ToolButton>
 
                 <ToolButton icon={RotateCcw} onClick={() => setLayout(defaults)}>
-                  Скинути
+                  {tx('Скинути', 'Reset')}
                 </ToolButton>
 
                 <span style={{ fontFamily: F.sans, fontSize: 12.5, color: P.dim }}>
-                  Тягни картку на потрібне місце
+                  {tx('Тягни картку на потрібне місце', 'Drag a card where you want it')}
                 </span>
               </motion.div>
             )}
@@ -1261,7 +1262,7 @@ export default function Board({
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 style={{ fontFamily: F.sans, fontSize: 12, color: P.dim }}
               >
-                зберігаю…
+                {tx('зберігаю…', 'saving…')}
               </motion.span>
             )}
           </AnimatePresence>
@@ -1276,7 +1277,7 @@ export default function Board({
           {showGear && (
             <ToolButton
               icon={edit ? Check : Cog}
-              title={edit ? 'Готово' : 'Налаштувати дошку'}
+              title={edit ? tx('Готово', 'Done') : tx('Налаштувати дошку', 'Customize board')}
               onClick={() => setEdit((v) => !v)}
               primary={edit}
               iconOnly
@@ -1377,13 +1378,13 @@ export default function Board({
           }}
         >
           <span style={{ fontFamily: F.display, fontSize: 19, fontWeight: 700, color: P.text2, marginBottom: 8 }}>
-            Дошка порожня
+            {tx('Дошка порожня', 'The board is empty')}
           </span>
           <p style={{ margin: '0 0 18px', fontFamily: F.sans, fontSize: 13.5, color: P.text5, maxWidth: 380 }}>
-            Прибрано все. Додай віджети назад або поверни початкову розкладку.
+            {tx('Прибрано все. Додай віджети назад або поверни початкову розкладку.', 'Everything is removed. Add widgets back or restore the default layout.')}
           </p>
           <ToolButton icon={RotateCcw} onClick={() => setLayout(defaults)} primary>
-            Повернути як було
+            {tx('Повернути як було', 'Restore default')}
           </ToolButton>
         </div>
       )}
@@ -1412,9 +1413,7 @@ export function ToolButton({ icon: Icon, children, onClick, active, primary, ico
           padding: iconOnly ? 0 : '0 20px', borderRadius: 13, border: 0, cursor: 'pointer',
           overflow: 'hidden', whiteSpace: 'nowrap',
           background: `linear-gradient(180deg, ${hover ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
-          boxShadow: hover
-            ? `0 18px 40px -14px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-text-rgb),0.3)`
-            : `0 12px 30px -14px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
+          boxShadow: hover ? `inset 0 1px 0 rgba(var(--edge-text-rgb),0.3)` : `inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
           transform: `translateY(${hover ? '-2px' : '0'})`,
           transition: CSS_SPRING,
         }}

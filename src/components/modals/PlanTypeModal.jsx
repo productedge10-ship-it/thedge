@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarDays, CalendarRange, X } from 'lucide-react';
 import { T, SPRING } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Вибір типу плану: денний чи тижневий.
@@ -18,16 +19,16 @@ const OPTIONS = [
     icon: CalendarDays,
     tone: T.acc,
     rgb: T.accRgb,
-    title: 'Денний план',
-    text: 'Один інструмент, розбір на сьогодні: top-down, вхід, звіт по сесії.',
+    title: tx('Денний план', 'Daily plan'),
+    text: tx('Один інструмент, розбір на сьогодні: top-down, вхід, звіт по сесії.', 'One instrument, today\'s breakdown: top-down, entry, session report.'),
   },
   {
     id: 'weekly',
     icon: CalendarRange,
     tone: T.info,
     rgb: T.infoRgb,
-    title: 'Тижневий план',
-    text: 'Кілька активів і теза на весь тиждень: свій top-down по кожному, звірка в кінці.',
+    title: tx('Тижневий план', 'Weekly plan'),
+    text: tx('Кілька активів і теза на весь тиждень: свій top-down по кожному, звірка в кінці.', 'Several assets and a thesis for the whole week: a top-down for each, review at the end.'),
   },
 ];
 
@@ -59,10 +60,10 @@ export default function PlanTypeModal({ isOpen, onClose, onChoose }) {
 
             <div className="p-7 sm:p-8">
               <h3 className="text-[20px] font-bold mb-1.5" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}>
-                Який план на сьогодні?
+                {tx('Який план на сьогодні?', 'What\'s the plan for today?')}
               </h3>
               <p className="text-[13px] mb-6 pr-6 leading-[1.5]" style={{ color: T.text3, fontFamily: T.sans }}>
-                На початку тижня зручно спершу глянути на весь тиждень. Якщо сьогодні окрема ідея — обери денний.
+                {tx('На початку тижня зручно спершу глянути на весь тиждень. Якщо сьогодні окрема ідея — обери денний.', 'Early in the week it helps to look at the whole week first. If today is a standalone idea, pick daily.')}
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

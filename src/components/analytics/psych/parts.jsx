@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, useMotionValue, useMotionTemplate, useTransform, useSpring, AnimatePresence } from 'framer-motion';
 import { EMOTION_COLOR, EMOTION_LABEL, signed, r1, r2, sum } from '../data';
+import { t as tx } from '../../../lib/lang';
 
 // ==========================================
 // АНІМАЦІЇ
@@ -56,10 +57,10 @@ export const TiltTooltip = ({ active, payload, label }) => {
     return (
       <div className="bg-[var(--edge-sunken)] border border-[#232328] p-3 rounded-[12px] shadow-xl max-w-[200px]">
         <p className="text-[11px] text-[#7A7A85] uppercase font-bold tracking-wider mb-2 border-b border-[var(--edge-hair)] pb-2">
-          {label === '0' ? 'Свіжа голова (Без збитків)' : `Серія: ${label} збитків поспіль`}
+          {label === '0' ? tx('Свіжа голова (Без збитків)', 'Fresh mind (no losses)') : tx(`Серія: ${label} збитків поспіль`, `Streak: ${label} ${label === '1' ? 'loss' : 'losses'} in a row`)}
         </p>
         <div className="text-[12.5px] leading-relaxed text-[#FAFAFA]">
-          Наступна угода після такої серії в середньому приносить: 
+          {tx('Наступна угода після такої серії в середньому приносить:', 'On average, the next trade after a streak like this makes:')}
           <b className={`block text-[16px] mt-1 ${data.avg > 0 ? 'text-[#34d399]' : 'text-[#f87171]'}`}>
             {signed(data.avg, 2)}R
           </b>
@@ -75,7 +76,7 @@ export const PlanTooltip = ({ active, payload, label }) => {
     return (
       <div className="bg-[var(--edge-sunken)] border border-[#232328] p-3 rounded-[12px] shadow-xl">
         <p className="text-[10px] text-[#7A7A85] uppercase font-bold tracking-wider mb-2 border-b border-[var(--edge-hair)] pb-2">
-          Угода №{label}
+          {tx('Угода №', 'Trade #')}{label}
         </p>
         <div className="flex flex-col gap-2">
           {payload.map((entry, i) => (
@@ -112,21 +113,21 @@ function buildNeuro(s) {
   const mistakeCost = Math.abs(sum(s.mistakeLedger.map((m) => m.cost)));
 
   const axes = [
-    { key: 'focus', label: 'Фокус', full: 'Холодний фокус', value: clamp100((calm.trades / total) * 100), color: 'var(--edge-acc, #8b7bff)', icon: Brain, desc: 'Частка входів у спокійному стані від усіх угод.', formula: `${calm.trades} спокійних входів із ${trades.length}`, hint: 'Норма — вище 60%. Це база, на якій стоїть уся статистика.' },
-    { key: 'impulse', label: 'Контроль', full: 'Контроль імпульсу', value: clamp100(100 - (impulsive / total) * 100), color: 'var(--edge-acc, #8b7bff)', icon: Zap, desc: 'Наскільки рідко ти входиш у тільті або на FOMO.', formula: `${impulsive} імпульсивних входів із ${trades.length}`, hint: 'Кожен імпульсивний вхід коштує тобі частини місячного профіту.' },
-    { key: 'recovery', label: 'Відновлення', full: 'Відновлення після збитку', value: clamp100(55 + s.avgAfterLoss * 45), color: '#34d399', icon: Activity, desc: 'Що відбувається з очікуванням одразу після мінуса.', formula: `Сер. R після збитку: ${signed(s.avgAfterLoss, 2)}R проти ${signed(s.avgAfterWin, 2)}R після плюса`, hint: 'Просідання тут = класичний ланцюг тільта. Лікується паузою.' },
-    { key: 'discipline', label: 'Дисципліна', full: 'Дотримання плану', value: clamp100(s.adherence), color: '#fbbf24', icon: ShieldCheck, desc: 'Скільки угод відкрито строго за твоїм чек-листом.', formula: `${s.followed.length} за планом · ${s.broken.length} з порушенням`, hint: 'Дисципліна — єдина метрика, яку ти контролюєш на 100%.' },
-    { key: 'risk', label: 'Ризик', full: 'Стабільність ризику', value: clamp100(100 - Math.max(0, maxRisk - 1) * 90), color: '#f87171', icon: Gauge, desc: 'Наскільки розмір позиції не залежить від настрою.', formula: `Пік середнього ризику: ${r2(maxRisk)}% на угоду`, hint: 'Плаваючий об’єм ламає математику навіть прибуткової системи.' }
+    { key: 'focus', label: tx('Фокус', 'Focus'), full: tx('Холодний фокус', 'Cold focus'), value: clamp100((calm.trades / total) * 100), color: 'var(--edge-acc, #8b7bff)', icon: Brain, desc: tx('Частка входів у спокійному стані від усіх угод.', 'Share of all your entries taken in a calm state.'), formula: tx(`${calm.trades} спокійних входів із ${trades.length}`, `${calm.trades} calm ${calm.trades === 1 ? 'entry' : 'entries'} out of ${trades.length}`), hint: tx('Норма — вище 60%. Це база, на якій стоїть уся статистика.', 'Healthy is above 60%. It\'s the foundation all your stats rest on.') },
+    { key: 'impulse', label: tx('Контроль', 'Control'), full: tx('Контроль імпульсу', 'Impulse control'), value: clamp100(100 - (impulsive / total) * 100), color: 'var(--edge-acc, #8b7bff)', icon: Zap, desc: tx('Наскільки рідко ти входиш у тільті або на FOMO.', 'How rarely you enter on tilt or FOMO.'), formula: tx(`${impulsive} імпульсивних входів із ${trades.length}`, `${impulsive} impulsive ${impulsive === 1 ? 'entry' : 'entries'} out of ${trades.length}`), hint: tx('Кожен імпульсивний вхід коштує тобі частини місячного профіту.', 'Every impulsive entry costs you part of your monthly profit.') },
+    { key: 'recovery', label: tx('Відновлення', 'Recovery'), full: tx('Відновлення після збитку', 'Recovery after a loss'), value: clamp100(55 + s.avgAfterLoss * 45), color: '#34d399', icon: Activity, desc: tx('Що відбувається з очікуванням одразу після мінуса.', 'What happens to your expectancy right after a loss.'), formula: tx(`Сер. R після збитку: ${signed(s.avgAfterLoss, 2)}R проти ${signed(s.avgAfterWin, 2)}R після плюса`, `Avg R after a loss: ${signed(s.avgAfterLoss, 2)}R vs ${signed(s.avgAfterWin, 2)}R after a win`), hint: tx('Просідання тут = класичний ланцюг тільта. Лікується паузою.', 'A dip here is the classic tilt chain. The cure is a pause.') },
+    { key: 'discipline', label: tx('Дисципліна', 'Discipline'), full: tx('Дотримання плану', 'Plan adherence'), value: clamp100(s.adherence), color: '#fbbf24', icon: ShieldCheck, desc: tx('Скільки угод відкрито строго за твоїм чек-листом.', 'How many trades were opened strictly by your checklist.'), formula: tx(`${s.followed.length} за планом · ${s.broken.length} з порушенням`, `${s.followed.length} by plan · ${s.broken.length} with a break`), hint: tx('Дисципліна — єдина метрика, яку ти контролюєш на 100%.', 'Discipline is the one metric you control 100%.') },
+    { key: 'risk', label: tx('Ризик', 'Risk'), full: tx('Стабільність ризику', 'Risk consistency'), value: clamp100(100 - Math.max(0, maxRisk - 1) * 90), color: '#f87171', icon: Gauge, desc: tx('Наскільки розмір позиції не залежить від настрою.', 'How independent your position size is from your mood.'), formula: tx(`Пік середнього ризику: ${r2(maxRisk)}% на угоду`, `Peak average risk: ${r2(maxRisk)}% per trade`), hint: tx('Плаваючий об’єм ламає математику навіть прибуткової системи.', 'Floating size breaks the math of even a profitable system.') }
   ];
 
   const weights = { focus: 0.2, impulse: 0.2, recovery: 0.2, discipline: 0.25, risk: 0.15 };
   const index = clamp100(sum(axes.map((a) => a.value * weights[a.key])));
 
   const tier =
-    index >= 80 ? { name: 'Снайпер', color: '#34d399', text: 'Психіка стабільна. Твій головний ризик зараз — не емоції, а нудьга.' }
-    : index >= 60 ? { name: 'Оператор', color: 'var(--edge-acc, #8b7bff)', text: 'База міцна, але є вузьке місце, яке з’їдає частину результату.' }
-    : index >= 40 ? { name: 'Нестабільний', color: '#fbbf24', text: 'Система працює, психіка — ні. Половина профіту губиться на емоціях.' }
-    : { name: 'Реактивний', color: '#f87171', text: 'Ринок керує тобою, а не навпаки. Спочатку режим, потім вхід.' };
+    index >= 80 ? { name: tx('Снайпер', 'Sniper'), color: '#34d399', text: tx('Психіка стабільна. Твій головний ризик зараз — не емоції, а нудьга.', 'Your mindset is stable. Your main risk right now isn\'t emotion — it\'s boredom.') }
+    : index >= 60 ? { name: tx('Оператор', 'Operator'), color: 'var(--edge-acc, #8b7bff)', text: tx('База міцна, але є вузьке місце, яке з’їдає частину результату.', 'Solid foundation, but there\'s a bottleneck eating part of your results.') }
+    : index >= 40 ? { name: tx('Нестабільний', 'Unstable'), color: '#fbbf24', text: tx('Система працює, психіка — ні. Половина профіту губиться на емоціях.', 'The system works, the mindset doesn\'t. Half your profit is lost to emotions.') }
+    : { name: tx('Реактивний', 'Reactive'), color: '#f87171', text: tx('Ринок керує тобою, а не навпаки. Спочатку режим, потім вхід.', 'The market runs you, not the other way around. State first, entry second.') };
 
   const weakest = [...axes].sort((a, b) => a.value - b.value)[0];
   const strongest = [...axes].sort((a, b) => b.value - a.value)[0];
@@ -255,7 +256,7 @@ function NeuroScanner({ neuro, active, setActive }) {
         </svg>
 
         <div className="absolute inset-0 flex flex-col items-center justify-end pb-1 pointer-events-none">
-          <span className="text-[9px] tracking-[0.24em] uppercase text-[#7A7A85] font-black">Нейро-індекс</span>
+          <span className="text-[9px] tracking-[0.24em] uppercase text-[#7A7A85] font-black">{tx('Нейро-індекс', 'Neuro index')}</span>
           <div className="flex items-baseline gap-1">
             <span className="font-[family-name:var(--edge-display,'Unbounded')] font-semibold text-[34px] leading-none tracking-[-0.5px] text-[var(--edge-text)]">{neuro.index}</span>
             <span className="text-[13px] text-[#7A7A85] font-bold">/100</span>
@@ -313,7 +314,7 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
           <div className="absolute inset-0 opacity-[0.18] pointer-events-none"
             style={{ background: `radial-gradient(700px circle at 12% 0%, ${neuro.tier.color}, transparent 62%)` }} />
 
-          <button onClick={onClose} className="absolute top-5 right-5 z-20 text-[#7A7A85] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]">
+          <button onClick={onClose} aria-label={tx('Закрити', 'Close')} className="absolute top-5 right-5 z-20 text-[#7A7A85] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]">
             <X size={18} />
           </button>
 
@@ -324,10 +325,10 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
             </div>
             <div className="min-w-0">
               <h3 className="text-[var(--edge-text)] text-[19px] leading-none font-semibold m-0 font-[family-name:var(--edge-display,'Unbounded')] tracking-[-0.3px]">
-                Нейропрофіль трейдера
+                {tx('Нейропрофіль трейдера', 'Trader neuro-profile')}
               </h3>
               <p className="text-[12.5px] text-[#7A7A85] mt-2 m-0">
-                Індекс <b className="text-[var(--edge-text)]">{neuro.index}/100</b> · тип <b style={{ color: neuro.tier.color }}>{neuro.tier.name}</b> · вибірка {neuro.total} угод
+                {tx('Індекс', 'Index')} <b className="text-[var(--edge-text)]">{neuro.index}/100</b> · {tx('тип', 'type')} <b style={{ color: neuro.tier.color }}>{neuro.tier.name}</b> · {tx(`вибірка ${neuro.total} угод`, `sample of ${neuro.total} ${neuro.total === 1 ? 'trade' : 'trades'}`)}
               </p>
             </div>
           </div>
@@ -337,12 +338,12 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
         <div className="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-8 py-6 flex flex-col gap-7">
 
           <p className="text-[13.5px] text-[#B4B4BD] leading-[1.65] m-0">
-            {neuro.tier.text} Найсильніша сторона — <b className="text-[var(--edge-text)]">{neuro.strongest.full.toLowerCase()}</b> ({neuro.strongest.value}/100).
-            Вузьке місце — <b style={{ color: neuro.weakest.color }}>{neuro.weakest.full.toLowerCase()}</b> ({neuro.weakest.value}/100), саме воно тягне індекс вниз.
+            {neuro.tier.text} {tx('Найсильніша сторона —', 'Your strongest side is')} <b className="text-[var(--edge-text)]">{neuro.strongest.full.toLowerCase()}</b> ({neuro.strongest.value}/100).
+            {' '}{tx('Вузьке місце —', 'Your bottleneck is')} <b style={{ color: neuro.weakest.color }}>{neuro.weakest.full.toLowerCase()}</b> ({neuro.weakest.value}/100){tx(', саме воно тягне індекс вниз.', ' — that\'s what pulls the index down.')}
           </p>
 
           <div>
-            <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] mb-3">Як рахується індекс</h4>
+            <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] mb-3">{tx('Як рахується індекс', 'How the index is calculated')}</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {neuro.axes.map((a) => {
                 const Icon = a.icon;
@@ -368,12 +369,12 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
           </div>
 
           <div>
-            <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] mb-3">Що збиває профіль</h4>
+            <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] mb-3">{tx('Що збиває профіль', 'What drags the profile down')}</h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {[
-                { t: 'Серія збитків', v: `${signed(s.avgAfterLoss, 2)}R`, d: 'середній результат наступного входу після мінуса', c: '#f87171' },
-                { t: 'Стан «Тільт»', v: `${signed(neuro.tilt.net)}R`, d: `${neuro.tilt.trades} угод, вінрейт ${neuro.tilt.wr}%`, c: '#fbbf24' },
-                { t: 'Помилки виконання', v: `${r1(-neuro.mistakeCost)}R`, d: `${s.mistakeLedger.length} типів порушень плану`, c: 'var(--edge-acc, #8b7bff)' }
+                { t: tx('Серія збитків', 'Losing streak'), v: `${signed(s.avgAfterLoss, 2)}R`, d: tx('середній результат наступного входу після мінуса', 'average result of the next entry after a loss'), c: '#f87171' },
+                { t: tx('Стан «Тільт»', 'Tilt state'), v: `${signed(neuro.tilt.net)}R`, d: tx(`${neuro.tilt.trades} угод, вінрейт ${neuro.tilt.wr}%`, `${neuro.tilt.trades} ${neuro.tilt.trades === 1 ? 'trade' : 'trades'}, ${neuro.tilt.wr}% win rate`), c: '#fbbf24' },
+                { t: tx('Помилки виконання', 'Execution mistakes'), v: `${r1(-neuro.mistakeCost)}R`, d: tx(`${s.mistakeLedger.length} типів порушень плану`, `${s.mistakeLedger.length} ${s.mistakeLedger.length === 1 ? 'type' : 'types'} of plan breaks`), c: 'var(--edge-acc, #8b7bff)' }
               ].map((x, i) => (
                 <div key={i} className="p-4 rounded-[16px] border bg-[var(--edge-hair)]" style={{ borderColor: `${x.c}22` }}>
                   <span className="text-[10.5px] uppercase tracking-[0.14em] font-black text-[#7A7A85]">{x.t}</span>
@@ -386,8 +387,8 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
 
           <div>
             <div className="flex items-baseline justify-between mb-3">
-              <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] m-0">Угоди, що сформували профіль</h4>
-              <span className="text-[11px] text-[#7A7A85]">натисни, щоб відкрити угоду</span>
+              <h4 className="text-[10.5px] text-[#7A7A85] font-black uppercase tracking-[0.16em] m-0">{tx('Угоди, що сформували профіль', 'Trades that shaped your profile')}</h4>
+              <span className="text-[11px] text-[#7A7A85]">{tx('натисни, щоб відкрити угоду', 'click to open a trade')}</span>
             </div>
             <div className="flex flex-col gap-2">
               {impactTrades.map((t, i) => (
@@ -403,7 +404,7 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
                       <span className="text-[11.5px] text-[#7A7A85] shrink-0">{t.date}</span>
                       <span className="text-[10.5px] px-2 py-0.5 rounded-full border shrink-0 hidden sm:inline"
                         style={{ color: EMOTION_COLOR[t.emotion] || 'var(--edge-text3, #7A7A85)', borderColor: `${EMOTION_COLOR[t.emotion] || 'var(--edge-text3, #7A7A85)'}33`, background: `${EMOTION_COLOR[t.emotion] || 'var(--edge-text3, #7A7A85)'}10` }}>
-                        {EMOTION_LABEL[t.emotion] || 'без мітки'}
+                        {EMOTION_LABEL[t.emotion] || tx('без мітки', 'no tag')}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -420,12 +421,12 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
           <div className="p-4 rounded-[16px] border border-[#8b7bff]/20 bg-[#8b7bff]/[0.07]">
             <div className="flex items-center gap-2.5 mb-2.5">
               <Sparkles size={16} className="text-[#8b7bff]" />
-              <b className="text-[13.5px] text-[var(--edge-text)]">Що зробити цього тижня</b>
+              <b className="text-[13.5px] text-[var(--edge-text)]">{tx('Що зробити цього тижня', 'What to do this week')}</b>
             </div>
             <ul className="flex flex-col gap-2 m-0 p-0 text-[13px] text-[#B4B4BD]">
-              <li className="flex gap-3 items-start"><span className="text-[#8b7bff] font-black">01</span><span className="leading-snug">Після двох мінусів поспіль — стоп на день. Саме там очікування падає до {signed(s.avgAfterLoss, 2)}R.</span></li>
-              <li className="flex gap-3 items-start"><span className="text-[#8b7bff] font-black">02</span><span className="leading-snug">Фіксуй ризик {r2(TARGET_RISK)}% у калькуляторі до входу, а не «на око» — пік зараз {r2(neuro.maxRisk)}%.</span></li>
-              <li className="flex gap-3 items-start"><span className="text-[#8b7bff] font-black">03</span><span className="leading-snug">Прибери одну помилку — «{s.mistakeLedger[0]?.name || '—'}». Це {r1(Math.abs(s.mistakeLedger[0]?.cost || 0))}R назад у депозит.</span></li>
+              <li className="flex gap-3 items-start"><span className="text-[#8b7bff] font-black">01</span><span className="leading-snug">{tx(`Після двох мінусів поспіль — стоп на день. Саме там очікування падає до ${signed(s.avgAfterLoss, 2)}R.`, `After two losses in a row, stop for the day. That's exactly where expectancy drops to ${signed(s.avgAfterLoss, 2)}R.`)}</span></li>
+              <li className="flex gap-3 items-start"><span className="text-[#8b7bff] font-black">02</span><span className="leading-snug">{tx(`Фіксуй ризик ${r2(TARGET_RISK)}% у калькуляторі до входу, а не «на око» — пік зараз ${r2(neuro.maxRisk)}%.`, `Set your ${r2(TARGET_RISK)}% risk in the calculator before entry, not by eye — your peak is ${r2(neuro.maxRisk)}% right now.`)}</span></li>
+              <li className="flex gap-3 items-start"><span className="text-[#8b7bff] font-black">03</span><span className="leading-snug">{tx(`Прибери одну помилку — «${s.mistakeLedger[0]?.name || '—'}». Це ${r1(Math.abs(s.mistakeLedger[0]?.cost || 0))}R назад у депозит.`, `Cut one mistake — "${s.mistakeLedger[0]?.name || '—'}". That's ${r1(Math.abs(s.mistakeLedger[0]?.cost || 0))}R back in your account.`)}</span></li>
             </ul>
           </div>
 
@@ -433,9 +434,9 @@ function NeuroModal({ neuro, s, impactTrades, onClose, onOpenTrade }) {
 
         {/* ФУТЕР */}
         <div className="shrink-0 px-6 md:px-8 py-4 border-t border-[var(--edge-hair)] bg-[var(--edge-hair)] flex items-center justify-between gap-4">
-          <span className="text-[11.5px] text-[#7A7A85]">Профіль перераховується після кожної нової угоди</span>
+          <span className="text-[11.5px] text-[#7A7A85]">{tx('Профіль перераховується після кожної нової угоди', 'The profile updates after every new trade')}</span>
           <button onClick={onClose} className="px-5 py-2 bg-[var(--edge-hair)] hover:bg-white/10 text-[var(--edge-text)] text-[13px] font-bold rounded-xl transition-colors border border-[var(--edge-hair-strong)]">
-            Закрити
+            {tx('Закрити', 'Close')}
           </button>
         </div>
 
@@ -474,7 +475,10 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
       date: t.date || '—',
       rr: typeof t.rr === 'number' ? t.rr : 0,
       emotion: t.emotion || 'calm',
-      note: t.note || `Заглушка: вхід у стані «${EMOTION_LABEL[t.emotion] || 'без мітки'}»${(t.mistakes || []).length ? `, порушення: ${t.mistakes.join(', ')}` : ', план дотримано'}. Тут буде твій коментар до угоди.`
+      note: t.note || tx(
+        `Заглушка: вхід у стані «${EMOTION_LABEL[t.emotion] || 'без мітки'}»${(t.mistakes || []).length ? `, порушення: ${t.mistakes.join(', ')}` : ', план дотримано'}. Тут буде твій коментар до угоди.`,
+        `Placeholder: entry while "${EMOTION_LABEL[t.emotion] || 'no tag'}"${(t.mistakes || []).length ? `, breaks: ${t.mistakes.join(', ')}` : ', plan followed'}. Your trade note will go here.`,
+      )
     }));
   }, [s]);
 
@@ -497,7 +501,7 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
               {activeAxis ? (
                 <><b className="text-[var(--edge-text)]">{activeAxis.full}:</b> {activeAxis.desc} {activeAxis.hint}</>
               ) : (
-                <>Модель зчитала <b className="text-[var(--edge-text)]">{neuro.total}</b> угод і зібрала твій психологічний зліпок. Тип — <b style={{ color: neuro.tier.color }}>{neuro.tier.name}</b>. {neuro.tier.text}</>
+                <>{tx('Модель зчитала', 'The model read')} <b className="text-[var(--edge-text)]">{neuro.total}</b> {tx('угод і зібрала твій психологічний зліпок. Тип —', `${neuro.total === 1 ? 'trade' : 'trades'} and built your psychological snapshot. Type:`)} <b style={{ color: neuro.tier.color }}>{neuro.tier.name}</b>. {neuro.tier.text}</>
               )}
             </p>
 
@@ -527,7 +531,7 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
                     <div className="flex-1 bg-[#232328] h-[5px] rounded-full overflow-hidden">
                       <motion.div
                         className="h-full rounded-full"
-                        style={{ background: a.color, boxShadow: on ? `0 0 10px ${a.color}80` : 'none' }}
+                        style={{ background: a.color, boxShadow: 'none' }}
                         initial={{ width: 0 }}
                         animate={{ width: `${a.value}%` }}
                         transition={{ duration: 1, ease: premiumEasing }}
@@ -544,10 +548,10 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
               style={{ gridTemplateColumns: `repeat(${w >= 3 ? 4 : 2}, minmax(0,1fr))` }}
             >
               {[
-                { l: 'Спокійних', v: `${Math.round((neuro.calm.trades / Math.max(1, neuro.total)) * 100)}%`, c: 'var(--edge-acc, #8b7bff)' },
-                { l: 'Чистих угод', v: `${neuro.cleanTrades}/${neuro.total}`, c: '#34d399' },
-                { l: 'Імпульсивних', v: `${neuro.impulsive}`, c: '#f87171' },
-                { l: 'Пік ризику', v: `${r2(neuro.maxRisk)}%`, c: '#fbbf24' }
+                { l: tx('Спокійних', 'Calm'), v: `${Math.round((neuro.calm.trades / Math.max(1, neuro.total)) * 100)}%`, c: 'var(--edge-acc, #8b7bff)' },
+                { l: tx('Чистих угод', 'Clean trades'), v: `${neuro.cleanTrades}/${neuro.total}`, c: '#34d399' },
+                { l: tx('Імпульсивних', 'Impulsive'), v: `${neuro.impulsive}`, c: '#f87171' },
+                { l: tx('Пік ризику', 'Peak risk'), v: `${r2(neuro.maxRisk)}%`, c: '#fbbf24' }
               ].map((x, i) => (
                 <div key={i} className="px-3 py-4 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[10px]">
                   <span className="block text-[9.5px] uppercase tracking-[0.12em] text-[#7A7A85] font-black">{x.l}</span>
@@ -562,7 +566,7 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
             <button
               type="button"
               disabled
-              title="Зʼявиться разом з AI-коучем"
+              title={tx('Зʼявиться разом з AI-коучем', 'Coming with the AI coach')}
               className="mt-1 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border py-3.5 text-[12.5px] font-bold"
               style={{
                 borderColor: 'var(--edge-line, #26262c)',
@@ -570,12 +574,12 @@ export function NeuroBody({ s, onOpenTrade, w = 4 }) {
                 color: 'var(--edge-text4, #4A4A52)',
               }}
             >
-              <Brain size={15} /> Повний нейро-звіт
+              <Brain size={15} /> {tx('Повний нейро-звіт', 'Full neuro report')}
               <span
                 className="ml-1 rounded-full px-2 py-0.5 text-[9.5px] font-black uppercase tracking-[0.16em]"
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--edge-line, #26262c)' }}
               >
-                Soon
+                {tx('Скоро', 'Soon')}
               </span>
             </button>
           </div>
@@ -636,7 +640,7 @@ export function derive(s) {
 }
 
 function compute(s) {
-  const worstMistake = s.mistakeLedger[0] || { name: 'Немає помилок', cost: 0 };
+  const worstMistake = s.mistakeLedger[0] || { name: tx('Немає помилок', 'No mistakes'), cost: 0 };
   const totalGross = Math.max(1, s.gross || 1);
   const maxRisk = Math.max(...s.emotionStats.map((e) => e.trades ? sum(e.list.map((t) => t.risk)) / e.trades : 0));
 
@@ -690,10 +694,10 @@ function compute(s) {
 
   const leaks = once(() => {
     const list = [
-      { name: 'Помилки виконання', cost: Math.abs(Math.min(0, ledgerTotal)), color: '#f87171', fix: `Найдорожча — «${worstMistake.name}»`, icon: XCircle },
-      { name: 'Імпульсивні стани', cost: Math.abs(Math.min(0, impulsiveNet)), color: '#fbbf24', fix: `${impulsiveTrades} входів у тільті / FOMO`, icon: Flame },
-      { name: 'Надлишковий ризик', cost: Math.abs(extraRiskR), color: 'var(--edge-acc, #8b7bff)', fix: `Пік ${r2(maxRisk)}% замість ${r2(TARGET_RISK)}%`, icon: Gauge },
-      { name: 'Вхід одразу після збитку', cost: Math.abs(Math.min(0, s.avgAfterLoss - s.avgAfterWin)) * Math.max(1, Math.round(totalTrades * 0.15)), color: 'var(--edge-acc, #8b7bff)', fix: `Очікування падає до ${signed(s.avgAfterLoss, 2)}R`, icon: TrendingDown }
+      { name: tx('Помилки виконання', 'Execution mistakes'), cost: Math.abs(Math.min(0, ledgerTotal)), color: '#f87171', fix: tx(`Найдорожча — «${worstMistake.name}»`, `Costliest: "${worstMistake.name}"`), icon: XCircle },
+      { name: tx('Імпульсивні стани', 'Impulsive states'), cost: Math.abs(Math.min(0, impulsiveNet)), color: '#fbbf24', fix: tx(`${impulsiveTrades} входів у тільті / FOMO`, `${impulsiveTrades} ${impulsiveTrades === 1 ? 'entry' : 'entries'} on tilt / FOMO`), icon: Flame },
+      { name: tx('Надлишковий ризик', 'Excess risk'), cost: Math.abs(extraRiskR), color: 'var(--edge-acc, #8b7bff)', fix: tx(`Пік ${r2(maxRisk)}% замість ${r2(TARGET_RISK)}%`, `Peak ${r2(maxRisk)}% instead of ${r2(TARGET_RISK)}%`), icon: Gauge },
+      { name: tx('Вхід одразу після збитку', 'Entering right after a loss'), cost: Math.abs(Math.min(0, s.avgAfterLoss - s.avgAfterWin)) * Math.max(1, Math.round(totalTrades * 0.15)), color: 'var(--edge-acc, #8b7bff)', fix: tx(`Очікування падає до ${signed(s.avgAfterLoss, 2)}R`, `Expectancy drops to ${signed(s.avgAfterLoss, 2)}R`), icon: TrendingDown }
     ].filter((l) => l.cost > 0.01);
     return list.sort((a, b) => b.cost - a.cost);
   }, [ledgerTotal, impulsiveNet, extraRiskR, s.avgAfterLoss, s.avgAfterWin, totalTrades, maxRisk, worstMistake.name, impulsiveTrades]);
@@ -707,12 +711,12 @@ function compute(s) {
     const riskCount = s.trades.filter((t) => (t.risk ?? 0) <= TARGET_RISK + 0.001).length;
 
     const base = [
-      { txt: 'Входжу лише в робочому стані', ok: calmCount, total: totalTrades, cost: Math.abs(Math.min(0, impulsiveNet)) },
-      { txt: `Ризик ≤ ${r2(TARGET_RISK)}% на угоду`, ok: riskCount, total: totalTrades, cost: Math.abs(extraRiskR) }
+      { txt: tx('Входжу лише в робочому стані', 'I only enter in a working state'), ok: calmCount, total: totalTrades, cost: Math.abs(Math.min(0, impulsiveNet)) },
+      { txt: tx(`Ризик ≤ ${r2(TARGET_RISK)}% на угоду`, `Risk ≤ ${r2(TARGET_RISK)}% per trade`), ok: riskCount, total: totalTrades, cost: Math.abs(extraRiskR) }
     ];
 
     const fromMistakes = s.mistakeLedger.slice(0, 4).map((m) => ({
-      txt: `Не допускаю: ${m.name}`,
+      txt: tx(`Не допускаю: ${m.name}`, `I avoid: ${m.name}`),
       ok: Math.max(0, totalTrades - (m.count || 0)),
       total: totalTrades,
       cost: Math.abs(m.cost)

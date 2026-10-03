@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { CATS } from './utils';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Зведення по журналу помилок.
@@ -21,7 +22,7 @@ import { CATS } from './utils';
 
 const A = (a) => `rgba(${T.accRgb}, ${a})`;
 
-const plural = (n) => `${n} ${n === 1 ? 'запис' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'записи' : 'записів'}`;
+const plural = (n) => `${n} ${tx(n === 1 ? 'запис' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'записи' : 'записів', n === 1 ? 'entry' : 'entries')}`;
 
 export default function ErrorStats({ entries }) {
   const list = Array.isArray(entries) ? entries : [];
@@ -40,7 +41,7 @@ export default function ErrorStats({ entries }) {
      мусить це казати замість користувача. */
   const diff = monthCount - prevCount;
   const trendGood = diff <= 0;
-  const trendLabel = diff === 0 ? 'без змін' : `${diff > 0 ? '+' : ''}${diff}`;
+  const trendLabel = diff === 0 ? tx('без змін', 'no change') : `${diff > 0 ? '+' : ''}${diff}`;
 
   const counts = {};
   list.forEach((e) => (e?.cats || []).forEach((id) => { counts[id] = (counts[id] || 0) + 1; }));
@@ -65,10 +66,7 @@ export default function ErrorStats({ entries }) {
         boxShadow: `0 24px 60px -34px var(--edge-panel-glow, rgba(0,0,0,0.5))`,
       }}
     >
-      <span
-        className="pointer-events-none absolute rounded-full"
-        style={{ left: -60, top: -90, width: 340, height: 230, background: T.acc, filter: 'blur(76px)', opacity: 0.13 }}
-      />
+      {/* Розмиту кольорову пляму прибрано: світіння за блоком — прикмета шаблону, глибину дають поверхні. */}
 
       <div className="relative flex flex-wrap items-stretch">
         {/* ─── всього записів ─── */}
@@ -77,7 +75,7 @@ export default function ErrorStats({ entries }) {
             className="text-[10.5px] font-bold uppercase"
             style={{ fontFamily: T.mono, letterSpacing: '2px', color: 'var(--edge-text3)' }}
           >
-            Всього записів
+            {tx('Всього записів', 'Total entries')}
           </div>
 
           <div className="mt-3 flex items-baseline gap-2.5">
@@ -107,7 +105,7 @@ export default function ErrorStats({ entries }) {
               {trendLabel}
             </span>
             <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
-              цього місяця
+              {tx('цього місяця', 'this month')}
             </span>
           </div>
         </div>
@@ -133,12 +131,12 @@ export default function ErrorStats({ entries }) {
               className="text-[10.5px] font-bold uppercase"
               style={{ fontFamily: T.mono, letterSpacing: '2px', color: 'var(--edge-text3)' }}
             >
-              Що повторюється
+              {tx('Що повторюється', 'What repeats')}
             </div>
             <div className="text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
               {repeated
-                ? `${repeated} ${repeated === 1 ? 'категорія повторюється' : 'категорії повторюються'}`
-                : 'поки без повторів'}
+                ? tx(`${repeated} ${repeated === 1 ? 'категорія повторюється' : 'категорії повторюються'}`, `${repeated} ${repeated === 1 ? 'category repeats' : 'categories repeat'}`)
+                : tx('поки без повторів', 'no repeats yet')}
             </div>
           </div>
 
@@ -162,7 +160,7 @@ export default function ErrorStats({ entries }) {
                       style={{
                         width: `${Math.max(6, b.pct)}%`,
                         background: `linear-gradient(90deg, ${b.color}5e, ${b.color})`,
-                        boxShadow: `0 0 12px ${b.color}66`,
+                        boxShadow: 'none',
                       }}
                     />
                   </div>
@@ -184,7 +182,7 @@ export default function ErrorStats({ entries }) {
             </div>
           ) : (
             <p className="mt-4 text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.6 }}>
-              Розклад зʼявиться, щойно накопичиться перша пара записів.
+              {tx('Розклад зʼявиться, щойно накопичиться перша пара записів.', 'The breakdown will appear once you have a couple of entries.')}
             </p>
           )}
         </div>

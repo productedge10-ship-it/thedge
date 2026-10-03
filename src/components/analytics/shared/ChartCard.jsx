@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Settings2, X } from 'lucide-react';
 import { CSS_SPRING, F, P, POP, en, hairline, lightLayer, trackLight } from '../overview/theme';
+import { t as tx } from '../../../lib/lang';
 
 /* ==================================================================
    Картка з графіком і власними налаштуваннями.
@@ -97,8 +98,8 @@ export default function ChartCard({
         {has && (
           <button
             type="button"
-            title="Налаштування панелі"
-            aria-label="Налаштування панелі"
+            title={tx('Налаштування панелі', 'Panel settings')}
+            aria-label={tx('Налаштування панелі', 'Panel settings')}
             onClick={() => setOpen((v) => !v)}
             style={{
               display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 8,
@@ -159,7 +160,7 @@ export default function ChartCard({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Close"
+                aria-label={tx('Закрити', 'Close')}
                 style={{ display: 'grid', placeItems: 'center', width: 20, height: 20, borderRadius: 6, border: 0, background: 'transparent', cursor: 'pointer', color: P.dim }}
               >
                 <X size={13} />
@@ -221,7 +222,7 @@ function Choice({ label, value, choices, tone, onPick, index }) {
                   transition={POP}
                   style={{
                     position: 'absolute', left: 0, right: 0, bottom: 0, height: 1.5,
-                    borderRadius: 2, background: tone, boxShadow: `0 0 8px ${tone}99`,
+                    borderRadius: 2, background: tone, boxShadow: 'none',
                   }}
                 />
               )}

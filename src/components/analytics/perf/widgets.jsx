@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { F, P } from '../overview/theme';
 import { EMOTION_COLOR, EMOTION_LABEL, EMOTIONS, r1, r2, signed, sum } from '../data';
+import { t as tx } from '../../../lib/lang';
 
 /* ==================================================================
    Бібліотека віджетів «Перформансу».
@@ -50,8 +51,8 @@ const grid = () => <CartesianGrid strokeDasharray="3 3" vertical={false} stroke=
 /* Висота графіка більше не константа й не налаштування: віджет
    розтягується під плитку, а плитці розмір задає людина. */
 const metricOption = (def = 'net') => ({
-  label: 'Показник',
-  choices: [['net', 'Сума R'], ['avg', 'Середня угода'], ['wr', 'Вінрейт']],
+  label: tx('Показник', 'Metric'),
+  choices: [['net', tx('Сума R', 'Total R')], ['avg', tx('Середня угода', 'Average trade')], ['wr', tx('Вінрейт', 'Win rate')]],
   def,
 });
 const fmtBy = (key) => (v) => (key === 'wr' ? `${v}%` : `${signed(v, key === 'avg' ? 2 : 1)}R`);
@@ -300,8 +301,8 @@ export const PERF_WIDGETS = {
   /* ---------- числа ---------- */
 
   expectancy: {
-    title: 'Очікування',
-    hint: 'Скільки в середньому приносить одна угода',
+    title: tx('Очікування', 'Expectancy'),
+    hint: tx('Скільки в середньому приносить одна угода', 'How much one trade makes on average'),
     icon: Target, group: 'Числа', tone: 'var(--edge-acc)', shape: 'number', defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s, id }) => {
@@ -310,8 +311,8 @@ export const PERF_WIDGETS = {
       return (
         <ClassicKpi
           id={id} color="var(--edge-acc)" value={`${signed(s.expectancy, 2)}R`}
-          subtext="на кожну угоду"
-          subStats={[{ label: 'Сер. утримання', val: avgHold === null ? '—' : `${avgHold} хв` }]}
+          subtext={tx('на кожну угоду', 'per trade')}
+          subStats={[{ label: tx('Сер. утримання', 'Avg hold'), val: avgHold === null ? '—' : tx(`${avgHold} хв`, `${avgHold} min`) }]}
           data={s.equity} dataKey="value"
         />
       );
@@ -319,44 +320,44 @@ export const PERF_WIDGETS = {
   },
 
   avgwin: {
-    title: 'Середній плюс',
-    hint: 'І скільки коштує середній мінус',
+    title: tx('Середній плюс', 'Average win'),
+    hint: tx('І скільки коштує середній мінус', 'And what an average loss costs'),
     icon: TrendingUp, group: 'Числа', tone: P.ok, shape: 'number', defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s, id }) => (
       <ClassicKpi
         id={id} color={P.ok} value={`${signed(s.avgWin, 2)}R`}
-        subStats={[{ label: 'Середній мінус', val: `${r2(s.avgLoss)}R` }]}
+        subStats={[{ label: tx('Середній мінус', 'Average loss'), val: `${r2(s.avgLoss)}R` }]}
         data={s.trades.slice(-20)} dataKey="rr"
       />
     ),
   },
 
   drawdown: {
-    title: 'Макс. просадка',
-    hint: 'Найглибше дно й наскільки швидко з нього виходиш',
+    title: tx('Макс. просадка', 'Max drawdown'),
+    hint: tx('Найглибше дно й наскільки швидко з нього виходиш', 'The deepest low and how fast you recover from it'),
     icon: ArrowDownRight, group: 'Числа', tone: P.bad, shape: 'dip', defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s, id }) => (
       <ClassicKpi
         id={id} color={P.bad} value={`${r1(s.maxDD)}R`}
-        subStats={[{ label: 'Фактор відновл.', val: `${r1(s.recovery)}×` }]}
+        subStats={[{ label: tx('Фактор відновл.', 'Recovery factor'), val: `${r1(s.recovery)}×` }]}
         data={s.equity} dataKey="dd"
       />
     ),
   },
 
   streak: {
-    title: 'Серія плюсів',
-    hint: 'Найдовша серія виграшів поспіль і що коштують помилки',
+    title: tx('Серія плюсів', 'Win streak'),
+    hint: tx('Найдовша серія виграшів поспіль і що коштують помилки', 'Your longest winning streak and what mistakes cost'),
     icon: ShieldCheck, group: 'Числа', tone: 'var(--edge-acc)', shape: 'gauge', defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s, id }) => (
       <ClassicKpi
         id={id} color="var(--edge-acc)" value={String(s.bestW)}
         subStats={[
-          { label: 'Серія мінусів', val: String(s.worstL) },
-          { label: 'Помилки', val: `${s.mistakeRate}%` },
+          { label: tx('Серія мінусів', 'Losing streak'), val: String(s.worstL) },
+          { label: tx('Помилки', 'Mistakes'), val: `${s.mistakeRate}%` },
         ]}
         data={s.byMonth} dataKey="wr"
       />
@@ -364,18 +365,18 @@ export const PERF_WIDGETS = {
   },
 
   discipline: {
-    title: 'Дисципліна',
-    hint: 'Частка угод за планом і ціна порушень',
+    title: tx('Дисципліна', 'Discipline'),
+    hint: tx('Частка угод за планом і ціна порушень', 'Share of trades by plan and the cost of breaking it'),
     icon: ShieldCheck, group: 'Числа', tone: P.ok, shape: 'gauge', defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s, w }) => (
       <Kpi
         w={w} color={s.adherence >= 70 ? P.ok : P.warn} value={`${s.adherence}%`}
         facts={[
-          ['угод з помилкою', `${s.mistakeRate}%`],
-          ['ціна тільта', `${r1(s.tiltCost)}R`],
-          ['серія плюсів', String(s.bestW)],
-          ['чистих поспіль', String(s.cleanStreak)],
+          [tx('угод з помилкою', 'trades with mistakes'), `${s.mistakeRate}%`],
+          [tx('ціна тільта', 'cost of tilt'), `${r1(s.tiltCost)}R`],
+          [tx('серія плюсів', 'win streak'), String(s.bestW)],
+          [tx('чистих поспіль', 'clean in a row'), String(s.cleanStreak)],
         ]}
       />
     ),
@@ -384,23 +385,23 @@ export const PERF_WIDGETS = {
   /* ---------- динаміка ---------- */
 
   rolling: {
-    title: 'Куди рухається перевага',
-    hint: 'Ковзне очікування за останні N угод',
+    title: tx('Куди рухається перевага', 'Where your edge is heading'),
+    hint: tx('Ковзне очікування за останні N угод', 'Rolling expectancy over the last N trades'),
     icon: Timer, group: 'Динаміка', tone: 'var(--edge-acc)', shape: 'curve', defaultW: 4, defaultH: 2,
     /* Вікно за замовчуванням — 10 угод: саме стільки треба, щоб
        крива взагалі мала перший рядок (rollingSeries повертає []
        коли угод менше за вікно). Додати картку, яка одразу скаже
        «замало угод», — той самий випадок, що й із сетапами. */
     ready: (s) => (s.trades || []).length >= 10,
-    lockedHint: 'Назбирай хоча б 10 угод — і крива стане доступною',
+    lockedHint: tx('Назбирай хоча б 10 угод — і крива стане доступною', 'Log at least 10 trades to unlock the curve'),
     options: {
-      tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
-      win: { label: 'Вікно', choices: [['5', '5'], ['10', '10'], ['20', '20'], ['30', '30']], def: '10' },
-      metric: { label: 'Показник', choices: [['exp', 'Очікування'], ['wr', 'Вінрейт']], def: 'exp' },
+      tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' },
+      win: { label: tx('Вікно', 'Window'), choices: [['5', '5'], ['10', '10'], ['20', '20'], ['30', '30']], def: '10' },
+      metric: { label: tx('Показник', 'Metric'), choices: [['exp', tx('Очікування', 'Expectancy')], ['wr', tx('Вінрейт', 'Win rate')]], def: 'exp' },
     },
     render: ({ s, o, id }) => {
       const rows = rollingSeries(s.trades, Number(o.win) || 10);
-      if (!rows.length) return <Empty>Замало угод для вікна — ще трохи журналу, і крива зʼявиться</Empty>;
+      if (!rows.length) return <Empty>{tx('Замало угод для вікна — ще трохи журналу, і крива зʼявиться', 'Not enough trades for the window — journal a bit more and the curve will appear')}</Empty>;
 
       return (
         <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
@@ -417,8 +418,8 @@ export const PERF_WIDGETS = {
               <YAxis {...AX} />
               {o.tip !== 'off' && <RTooltip
                 {...TIP}
-                labelFormatter={(v) => `угода ${v}`}
-                formatter={(v) => [o.metric === 'wr' ? `${v}%` : `${signed(v, 2)}R`, o.metric === 'wr' ? 'Вінрейт' : 'Очікування']}
+                labelFormatter={(v) => tx(`угода ${v}`, `trade ${v}`)}
+                formatter={(v) => [o.metric === 'wr' ? `${v}%` : `${signed(v, 2)}R`, o.metric === 'wr' ? tx('Вінрейт', 'Win rate') : tx('Очікування', 'Expectancy')]}
               />}
               {o.metric === 'exp' && <ReferenceLine y={0} stroke={P.lineHover} />}
               <Area
@@ -435,14 +436,14 @@ export const PERF_WIDGETS = {
   },
 
   outliers: {
-    title: 'Залежність від крайніх угод',
-    hint: 'Що лишиться, якщо прибрати найкращі або найгірші',
+    title: tx('Залежність від крайніх угод', 'Dependence on outlier trades'),
+    hint: tx('Що лишиться, якщо прибрати найкращі або найгірші', "What's left if you remove the best or worst trades"),
     icon: Crosshair, group: 'Динаміка', tone: 'var(--edge-warn)', shape: 'bars', defaultW: 2, defaultH: 2,
     ready: (s) => (s.trades || []).length > 5,
-    lockedHint: 'Назбирай хоча б 6 угод — і розклад стане доступним',
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
+    lockedHint: tx('Назбирай хоча б 6 угод — і розклад стане доступним', 'Log at least 6 trades to unlock this breakdown'),
+    options: { tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' } },
     render: ({ s, o }) => {
-      if (s.trades.length <= 5) return <Empty>Треба хоча б шість угод</Empty>;
+      if (s.trades.length <= 5) return <Empty>{tx('Треба хоча б шість угод', 'You need at least six trades')}</Empty>;
       const rows = outlierSeries(s.trades);
 
       return (
@@ -454,14 +455,14 @@ export const PERF_WIDGETS = {
               <YAxis {...AX} />
               {o.tip !== 'off' && <RTooltip
                 {...TIP}
-                labelFormatter={(v) => `прибрано ${v} угод`}
+                labelFormatter={(v) => tx(`прибрано ${v} угод`, `${v} ${Number(v) === 1 ? 'trade' : 'trades'} removed`)}
                 formatter={(v, n) => [`${signed(v)}R`, n]}
                 cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }}
               />}
               <ReferenceLine y={0} stroke={P.lineHover} />
               <ReferenceLine y={s.net} stroke="var(--edge-warn)" strokeDasharray="4 4" strokeOpacity={0.55} />
-              <Bar dataKey="noTop" name="без найкращих" fill={P.bad} fillOpacity={0.8} radius={[5, 5, 0, 0]} maxBarSize={32} />
-              <Bar dataKey="noWorst" name="без найгірших" fill={P.ok} fillOpacity={0.8} radius={[5, 5, 0, 0]} maxBarSize={32} />
+              <Bar dataKey="noTop" name={tx('без найкращих', 'without best')} fill={P.bad} fillOpacity={0.8} radius={[5, 5, 0, 0]} maxBarSize={32} />
+              <Bar dataKey="noWorst" name={tx('без найгірших', 'without worst')} fill={P.ok} fillOpacity={0.8} radius={[5, 5, 0, 0]} maxBarSize={32} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -470,13 +471,13 @@ export const PERF_WIDGETS = {
   },
 
   chain: {
-    title: 'Ланцюг збитків',
-    hint: 'Скільки приносить вхід після одного, двох і трьох мінусів',
+    title: tx('Ланцюг збитків', 'Loss chain'),
+    hint: tx('Скільки приносить вхід після одного, двох і трьох мінусів', 'What an entry makes after one, two, and three losses'),
     icon: Flame, group: 'Динаміка', tone: P.bad, shape: 'bars', defaultW: 2, defaultH: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
+    options: { tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' } },
     render: ({ s, o }) => {
       const rows = (s.chain || []).filter((c) => c.n > 0);
-      if (!rows.length) return <Empty>Ланцюгів збитків у журналі ще немає</Empty>;
+      if (!rows.length) return <Empty>{tx('Ланцюгів збитків у журналі ще немає', 'No loss chains in your journal yet')}</Empty>;
 
       return (
         <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
@@ -485,7 +486,7 @@ export const PERF_WIDGETS = {
               {grid()}
               <XAxis dataKey="depth" {...AX} tick={{ ...AX.tick, fontSize: 9.5 }} interval={0} />
               <YAxis {...AX} />
-              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${signed(v, 2)}R · ${p.payload.n} угод`, 'Середня']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [tx(`${signed(v, 2)}R · ${p.payload.n} угод`, `${signed(v, 2)}R · ${p.payload.n} ${p.payload.n === 1 ? 'trade' : 'trades'}`), tx('Середня', 'Average')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
               <ReferenceLine y={0} stroke={P.lineHover} />
               <Bar dataKey="avg" radius={[5, 5, 0, 0]} maxBarSize={44} isAnimationActive animationDuration={420}>
                 {rows.map((c) => <Cell key={c.depth} fill={c.avg >= 0 ? P.ok : P.bad} />)}
@@ -498,10 +499,10 @@ export const PERF_WIDGETS = {
   },
 
   underwater: {
-    title: 'Просадка (underwater)',
-    hint: 'Наскільки глибоко й надовго рахунок ішов під воду',
+    title: tx('Просадка (underwater)', 'Drawdown (underwater)'),
+    hint: tx('Наскільки глибоко й надовго рахунок ішов під воду', 'How deep and how long the account stayed underwater'),
     icon: ArrowDownRight, group: 'Динаміка', tone: P.bad, shape: 'dip', defaultW: 2, defaultH: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
+    options: { tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' } },
     render: ({ s, o, id }) => {
       if (s.equity.length < 2) {
         return (
@@ -509,7 +510,7 @@ export const PERF_WIDGETS = {
             <Building
               color={P.bad}
               w={130} h={46}
-              label={s.equity.length ? 'Просадка порахується, щойно набереться кілька угод' : 'Ще нема жодної угоди в цьому періоді'}
+              label={s.equity.length ? tx('Просадка порахується, щойно набереться кілька угод', 'Drawdown will be calculated once you have a few trades') : tx('Ще нема жодної угоди в цьому періоді', 'No trades in this period yet')}
             />
           </div>
         );
@@ -528,7 +529,7 @@ export const PERF_WIDGETS = {
               {grid()}
               <XAxis dataKey="date" {...AX} minTickGap={34} />
               <YAxis {...AX} />
-              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [`${r1(v)}R`, 'Просадка']} />}
+              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [`${r1(v)}R`, tx('Просадка', 'Drawdown')]} />}
               <Area
                 type="monotone" dataKey="dd" stroke={P.bad} strokeWidth={2} fill={`url(#pw-dd-${id})`}
                 activeDot={{ r: 4, fill: P.bad, stroke: 'var(--edge-sunken)', strokeWidth: 2 }}
@@ -544,13 +545,13 @@ export const PERF_WIDGETS = {
   /* ---------- розрізи ---------- */
 
   dow: {
-    title: 'Дні тижня',
-    hint: 'У які дні торгівля приносить найбільше',
+    title: tx('Дні тижня', 'Days of the week'),
+    hint: tx('У які дні торгівля приносить найбільше', 'Which days make you the most'),
     icon: CalendarDays, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'bars', defaultW: 2, defaultH: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, metric: metricOption('avg') },
+    options: { tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' }, metric: metricOption('avg') },
     render: ({ s, o }) => {
       const rows = s.byDow.filter((x) => x.trades);
-      if (!rows.length) return <Empty>Днів з угодами ще немає</Empty>;
+      if (!rows.length) return <Empty>{tx('Днів з угодами ще немає', 'No days with trades yet')}</Empty>;
       const fmt = fmtBy(o.metric);
       const best = [...rows].sort((a, b) => b[o.metric] - a[o.metric])[0];
 
@@ -558,7 +559,7 @@ export const PERF_WIDGETS = {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minHeight: 120 }}>
           {best && (
             <div style={{ fontFamily: F.sans, fontSize: 11, color: P.text5 }}>
-              Найкращий: <b style={{ color: P.ok, fontWeight: 700 }}>{best.day}</b>
+              {tx('Найкращий:', 'Best:')} <b style={{ color: P.ok, fontWeight: 700 }}>{best.day}</b>
             </div>
           )}
           <div style={{ width: '100%', flex: 1 }}>
@@ -567,7 +568,7 @@ export const PERF_WIDGETS = {
                 {grid()}
                 <XAxis dataKey="day" {...AX} />
                 <YAxis {...AX} />
-                {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+                {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [tx(`${fmt(v)} · ${p.payload.trades} угод`, `${fmt(v)} · ${p.payload.trades} ${p.payload.trades === 1 ? 'trade' : 'trades'}`), tx('Результат', 'Result')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
                 <ReferenceLine y={0} stroke={P.lineHover} />
                 <Bar dataKey={o.metric} radius={[3, 3, 3, 3]} maxBarSize={34} isAnimationActive animationDuration={420}>
                   {rows.map((x) => <Cell key={x.day} fill={x[o.metric] > 0 ? 'var(--edge-acc)' : x[o.metric] < 0 ? P.bad : P.lineHover} />)}
@@ -581,13 +582,13 @@ export const PERF_WIDGETS = {
   },
 
   sessions: {
-    title: 'Сесії',
-    hint: 'Скільки платить кожна торгова сесія',
+    title: tx('Сесії', 'Sessions'),
+    hint: tx('Скільки платить кожна торгова сесія', 'What each trading session pays'),
     icon: Clock, group: 'Розрізи', tone: 'var(--edge-ok)', shape: 'bars', defaultW: 2, defaultH: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, metric: metricOption('net') },
+    options: { tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' }, metric: metricOption('net') },
     render: ({ s, o }) => {
       const rows = s.bySession.filter((x) => x.trades);
-      if (!rows.length) return <Empty>Сесії ще не набрали угод</Empty>;
+      if (!rows.length) return <Empty>{tx('Сесії ще не набрали угод', 'No trades in sessions yet')}</Empty>;
       const fmt = fmtBy(o.metric);
       const best = [...rows].sort((a, b) => b[o.metric] - a[o.metric])[0];
 
@@ -595,7 +596,7 @@ export const PERF_WIDGETS = {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minHeight: 120 }}>
           {best && (
             <div style={{ fontFamily: F.sans, fontSize: 11, color: P.text5 }}>
-              Ядро: <b style={{ color: P.ok, fontWeight: 700 }}>{best.session}</b>
+              {tx('Ядро:', 'Core:')} <b style={{ color: P.ok, fontWeight: 700 }}>{best.session}</b>
             </div>
           )}
           <div style={{ width: '100%', flex: 1 }}>
@@ -604,7 +605,7 @@ export const PERF_WIDGETS = {
                 {grid()}
                 <XAxis dataKey="session" {...AX} />
                 <YAxis {...AX} />
-                {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+                {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [tx(`${fmt(v)} · ${p.payload.trades} угод`, `${fmt(v)} · ${p.payload.trades} ${p.payload.trades === 1 ? 'trade' : 'trades'}`), tx('Результат', 'Result')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
                 <ReferenceLine y={0} stroke={P.lineHover} />
                 <Bar dataKey={o.metric} radius={[3, 3, 0, 0]} maxBarSize={54} isAnimationActive animationDuration={420}>
                   {rows.map((x) => <Cell key={x.session} fill={x[o.metric] >= 0 ? P.ok : P.bad} />)}
@@ -618,18 +619,18 @@ export const PERF_WIDGETS = {
   },
 
   hours: {
-    title: 'Години входу',
-    hint: 'О котрій годині рахунок росте, а о котрій тане',
+    title: tx('Години входу', 'Entry hours'),
+    hint: tx('О котрій годині рахунок росте, а о котрій тане', 'Which hours grow the account and which ones drain it'),
     icon: Clock, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'bars', defaultW: 2, defaultH: 2,
     ready: (s) => (s.byHour || []).some((h) => h.trades),
-    lockedHint: 'Заповни час входу хоч в одній угоді — і графік стане доступним',
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
+    lockedHint: tx('Заповни час входу хоч в одній угоді — і графік стане доступним', 'Add entry time to at least one trade to unlock the chart'),
+    options: { tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' } },
     render: ({ s, o }) => {
       const rows = s.byHour.filter((h) => h.trades);
       if (!rows.length) {
         return (
           <div style={{ display: 'flex', flex: 1, minHeight: 120 }}>
-            <BuildingBars color="var(--edge-acc)" label="Години з'являться, щойно проставиш час входу в угодах" />
+            <BuildingBars color="var(--edge-acc)" label={tx("Години з'являться, щойно проставиш час входу в угодах", 'Hours will appear once you add entry times to your trades')} />
           </div>
         );
       }
@@ -641,7 +642,7 @@ export const PERF_WIDGETS = {
               {grid()}
               <XAxis dataKey="hour" {...AX} interval="preserveStartEnd" />
               <YAxis {...AX} />
-              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${signed(v)}R · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [tx(`${signed(v)}R · ${p.payload.trades} угод`, `${signed(v)}R · ${p.payload.trades} ${p.payload.trades === 1 ? 'trade' : 'trades'}`), tx('Результат', 'Result')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
               <ReferenceLine y={0} stroke={P.lineHover} />
               <Bar dataKey="net" radius={[2, 2, 0, 0]} maxBarSize={16} isAnimationActive animationDuration={420}>
                 {rows.map((h) => <Cell key={h.hour} fill={h.net >= 0 ? 'var(--edge-acc)' : P.bad} fillOpacity={0.85} />)}
@@ -654,10 +655,10 @@ export const PERF_WIDGETS = {
   },
 
   distribution: {
-    title: 'Розподіл R-множників',
-    hint: 'Форма результатів: де густо, а де хвіст',
+    title: tx('Розподіл R-множників', 'R-multiple distribution'),
+    hint: tx('Форма результатів: де густо, а де хвіст', "The shape of your results: where it's dense and where the tail is"),
     icon: ChartColumn, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'bars', defaultW: 2, defaultH: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
+    options: { tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' } },
     render: ({ s, o }) => (
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 120 }}>
         <div style={{ width: '100%', flex: 1 }}>
@@ -666,7 +667,7 @@ export const PERF_WIDGETS = {
               {grid()}
               <XAxis dataKey="name" {...AX} tick={{ ...AX.tick, fontSize: 9.5 }} interval={0} />
               <YAxis {...AX} allowDecimals={false} />
-              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [`${v} угод`, 'Кількість']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [tx(`${v} угод`, `${v} ${v === 1 ? 'trade' : 'trades'}`), tx('Кількість', 'Count')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
               <Bar dataKey="value" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={420}>
                 {s.buckets.map((b) => <Cell key={b.name} fill={b.color} fillOpacity={0.85} />)}
               </Bar>
@@ -674,25 +675,25 @@ export const PERF_WIDGETS = {
           </ResponsiveContainer>
         </div>
         <p style={{ margin: '10px 0 0', fontFamily: F.sans, fontSize: 11.5, lineHeight: 1.6, color: P.text5 }}>
-          Хвіст справа — це те, за що ти платиш усіма мінусами. Угод понад 2R: <b style={{ color: P.ok, fontWeight: 700 }}>{s.trades.filter((t) => t.rr > 2).length}</b>.
+          {tx('Хвіст справа — це те, за що ти платиш усіма мінусами. Угод понад 2R:', "The right tail is what you pay for with all your losses. Trades above 2R:")} <b style={{ color: P.ok, fontWeight: 700 }}>{s.trades.filter((t) => t.rr > 2).length}</b>.
         </p>
       </div>
     ),
   },
 
   hold: {
-    title: 'Час утримання проти результату',
-    hint: 'Ліворуч збитки — виходиш рано; праворуч — тримаєш надію',
+    title: tx('Час утримання проти результату', 'Hold time vs result'),
+    hint: tx('Ліворуч збитки — виходиш рано; праворуч — тримаєш надію', "Losses on the left — you exit early; on the right — you're holding on to hope"),
     icon: Timer, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'number', defaultW: 2, defaultH: 2,
     ready: (s) => (s.trades || []).some((t) => typeof t.holdMin === 'number'),
-    lockedHint: 'Заповни час входу й виходу хоч в одній угоді — і графік стане доступним',
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
+    lockedHint: tx('Заповни час входу й виходу хоч в одній угоді — і графік стане доступним', 'Add entry and exit times to at least one trade to unlock the chart'),
+    options: { tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' } },
     render: ({ s, o }) => {
       const rows = s.trades.filter((t) => typeof t.holdMin === 'number');
       if (!rows.length) {
         return (
           <div style={{ display: 'flex', flex: 1, minHeight: 120 }}>
-            <BuildingScatter color="var(--edge-acc)" label="Розклад з'явиться, щойно проставиш час входу й виходу" />
+            <BuildingScatter color="var(--edge-acc)" label={tx("Розклад з'явиться, щойно проставиш час входу й виходу", 'The breakdown will appear once you add entry and exit times')} />
           </div>
         );
       }
@@ -715,12 +716,12 @@ export const PERF_WIDGETS = {
             <ResponsiveContainer>
               <ScatterChart margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
                 {grid()}
-                <XAxis type="number" dataKey="holdMin" name="хв" domain={[Math.max(0, hMin - hPad), hMax + hPad]} {...AX} />
+                <XAxis type="number" dataKey="holdMin" name={tx('хв', 'min')} domain={[Math.max(0, hMin - hPad), hMax + hPad]} {...AX} />
                 <YAxis type="number" dataKey="rr" name="R" {...AX} />
                 {o.tip !== 'off' && <RTooltip
                   {...TIP}
                   cursor={{ strokeDasharray: '3 3', stroke: P.lineHover }}
-                  formatter={(v, n) => [n === 'R' ? `${signed(v, 2)}R` : `${v} хв`, n === 'R' ? 'Результат' : 'Утримання']}
+                  formatter={(v, n) => [n === 'R' ? `${signed(v, 2)}R` : tx(`${v} хв`, `${v} min`), n === 'R' ? tx('Результат', 'Result') : tx('Утримання', 'Hold')]}
                 />}
                 <ReferenceLine y={0} stroke={P.lineHover} />
                 <Scatter data={rows} isAnimationActive={false} shape={AnimatedScatterDot}>
@@ -743,12 +744,12 @@ export const PERF_WIDGETS = {
   },
 
   months: {
-    title: 'По місяцях',
-    hint: 'Чистий R стовпцями і вінрейт лінією поверх',
+    title: tx('По місяцях', 'By month'),
+    hint: tx('Чистий R стовпцями і вінрейт лінією поверх', 'Net R as bars with win rate as a line on top'),
     icon: Layers, group: 'Розрізи', tone: P.ok, shape: 'bars', defaultW: 4, defaultH: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' } },
+    options: { tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' } },
     render: ({ s, o }) => {
-      if (!s.byMonth.length) return <Empty>Місяців з угодами ще немає</Empty>;
+      if (!s.byMonth.length) return <Empty>{tx('Місяців з угодами ще немає', 'No months with trades yet')}</Empty>;
 
       return (
         <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
@@ -760,12 +761,12 @@ export const PERF_WIDGETS = {
               {grid()}
               <XAxis dataKey="m" {...AX} />
               <YAxis {...AX} />
-              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n) => [n === 'Вінрейт %' ? `${v}%` : `${signed(v)}R`, n]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
-              <Bar dataKey="net" name="Чистий R" barSize={40} radius={[3, 3, 0, 0]} isAnimationActive animationDuration={420}>
+              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n) => [n === tx('Вінрейт %', 'Win rate %') ? `${v}%` : `${signed(v)}R`, n]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+              <Bar dataKey="net" name={tx('Чистий R', 'Net R')} barSize={40} radius={[3, 3, 0, 0]} isAnimationActive animationDuration={420}>
                 {s.byMonth.map((m) => <Cell key={m.key} fill={m.net >= 0 ? P.ok : P.bad} />)}
               </Bar>
               <Line
-                type="monotone" dataKey="wr" name="Вінрейт %" stroke={P.warn} strokeWidth={2}
+                type="monotone" dataKey="wr" name={tx('Вінрейт %', 'Win rate %')} stroke={P.warn} strokeWidth={2}
                 dot={{ r: 3 }} isAnimationActive animationDuration={900}
               />
             </ComposedChart>
@@ -776,19 +777,19 @@ export const PERF_WIDGETS = {
   },
 
   equity: {
-    title: 'Крива еквіті',
-    hint: 'Накопичений результат за весь період',
+    title: tx('Крива еквіті', 'Equity curve'),
+    hint: tx('Накопичений результат за весь період', 'Cumulative result for the whole period'),
     icon: TrendingUp, group: 'Динаміка', tone: 'var(--edge-acc)', shape: 'curve', defaultW: 4, defaultH: 2,
     options: {
-      tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' },
-      view: { label: 'Вигляд', choices: [['area', 'Площа'], ['line', 'Лінія']], def: 'area' },
+      tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' },
+      view: { label: tx('Вигляд', 'View'), choices: [['area', tx('Площа', 'Area')], ['line', tx('Лінія', 'Line')]], def: 'area' },
     },
     render: ({ s, o, id }) => {
-      if (!s.equity.length) return <Empty>Ще нема жодної угоди в цьому періоді</Empty>;
+      if (!s.equity.length) return <Empty>{tx('Ще нема жодної угоди в цьому періоді', 'No trades in this period yet')}</Empty>;
       if (s.equity.length < 2) {
         return (
           <div style={{ display: 'flex', flex: 1, minHeight: 120 }}>
-            <Building color="var(--edge-acc)" label="Крива з'явиться, щойно набереться кілька угод" w={130} h={46} />
+            <Building color="var(--edge-acc)" label={tx("Крива з'явиться, щойно набереться кілька угод", 'The curve will appear once you have a few trades')} w={130} h={46} />
           </div>
         );
       }
@@ -806,7 +807,7 @@ export const PERF_WIDGETS = {
               {grid()}
               <XAxis dataKey="date" {...AX} minTickGap={36} />
               <YAxis {...AX} />
-              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [`${signed(v, 2)}R`, 'Еквіті']} />}
+              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [`${signed(v, 2)}R`, tx('Еквіті', 'Equity')]} />}
               <ReferenceLine y={0} stroke={P.lineHover} />
               <Area
                 type="monotone" dataKey="value" stroke="var(--edge-acc)" strokeWidth={2.6}
@@ -822,13 +823,13 @@ export const PERF_WIDGETS = {
   },
 
   emotions: {
-    title: 'Стан проти результату',
-    hint: 'Наскільки емоція множить або ділить результат',
+    title: tx('Стан проти результату', 'State vs result'),
+    hint: tx('Наскільки емоція множить або ділить результат', 'How much emotion multiplies or divides your result'),
     icon: Activity, group: 'Розрізи', tone: 'var(--edge-acc)', shape: 'rows', defaultW: 2, defaultH: 2,
-    options: { tip: { label: 'Підказка', choices: [['on', 'Показати'], ['off', 'Сховати']], def: 'on' }, metric: metricOption('avg') },
+    options: { tip: { label: tx('Підказка', 'Tooltip'), choices: [['on', tx('Показати', 'Show')], ['off', tx('Сховати', 'Hide')]], def: 'on' }, metric: metricOption('avg') },
     render: ({ s, o }) => {
       const rows = (s.emotionStats || []).filter((e) => e.trades);
-      if (!rows.length) return <Empty>Стани ще не проставлені в угодах</Empty>;
+      if (!rows.length) return <Empty>{tx('Стани ще не проставлені в угодах', "You haven't tagged states on your trades yet")}</Empty>;
       const fmt = fmtBy(o.metric);
 
       return (
@@ -838,8 +839,8 @@ export const PERF_WIDGETS = {
               <XAxis type="number" {...AX} />
               {/* 68 обрізало «Впевненість» до «певненість» — найдовшу
                   назву стану треба вміщати цілою, не найкоротшу. */}
-              <YAxis type="category" dataKey="emotion" {...AX} width={92} tickFormatter={(v) => ({ calm: 'Спокій', confident: 'Впевненість', anxious: 'Тривога', tilt: 'Тільт', fomo: 'FOMO' }[v] || v)} />
-              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [`${fmt(v)} · ${p.payload.trades} угод`, 'Результат']} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
+              <YAxis type="category" dataKey="emotion" {...AX} width={92} tickFormatter={(v) => ({ calm: tx('Спокій', 'Calm'), confident: tx('Впевненість', 'Confident'), anxious: tx('Тривога', 'Anxious'), tilt: tx('Тільт', 'Tilt'), fomo: 'FOMO' }[v] || v)} />
+              {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [tx(`${fmt(v)} · ${p.payload.trades} угод`, `${fmt(v)} · ${p.payload.trades} ${p.payload.trades === 1 ? 'trade' : 'trades'}`), tx('Результат', 'Result')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
               <ReferenceLine x={0} stroke={P.lineHover} />
               <Bar dataKey={o.metric} radius={[0, 5, 5, 0]} maxBarSize={22} isAnimationActive animationDuration={420}>
                 {rows.map((e) => <Cell key={e.emotion} fill={e[o.metric] >= 0 ? P.ok : P.bad} fillOpacity={0.85} />)}

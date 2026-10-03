@@ -162,7 +162,7 @@ export default function AutoImport() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('АВТОІМПОРТ', 'AUTO-IMPORT')}</span>
+            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.text3 }}>{tx('АВТОІМПОРТ', 'AUTO-IMPORT')}</span>
           </div>
           <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 10px', color: '#fff' }}>
             {tx('Угоди приїжджають самі', 'Trades arrive on their own')}
@@ -180,8 +180,6 @@ export default function AutoImport() {
       </div>
 
       <div style={{ position: 'relative', background: C.panel, border: `1px solid ${C.line}`, borderRadius: 24, padding: 'clamp(14px,4vw,26px)', overflow: 'hidden' }}>
-        <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${A(0.55)},transparent)` }} />
-        <span aria-hidden style={{ position: 'absolute', top: -80, left: '34%', width: 400, height: 340, background: 'radial-gradient(circle,rgba(74,59,245,.15),transparent 70%)', filter: 'blur(70px)', pointerEvents: 'none' }} />
 
         <div className="ln-autoimport-row" style={{ position: 'relative', display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'stretch' }}>
           {/* ---------- термінал ---------- */}
@@ -230,7 +228,7 @@ export default function AutoImport() {
                   style={{
                     position: 'absolute', width: 92, background: '#12121c',
                     border: `1px solid ${A(0.4)}`, borderRadius: 11, padding: '8px 10px',
-                    boxShadow: '0 12px 30px rgba(74,59,245,.28)',
+                    boxShadow: '0 12px 30px rgba(0,0,0,.45)',
                     animationDuration: `${FLIGHT}ms`, animationTimingFunction: 'linear', animationFillMode: 'forwards',
                     top: `${tk.lane * 44 + 2}px`,
                   }}

@@ -133,7 +133,7 @@ function AddAccountCta({ onClick }) {
         border: '1px solid rgba(139,123,255,0.5)',
         color: '#fff',
         fontFamily: T.sans,
-        boxShadow: '0 10px 28px -12px rgba(139,123,255,0.4)',
+        boxShadow: 'none',
       }}
     >
       <span className="acc-wallet-stage relative h-4 w-4 shrink-0">
@@ -357,9 +357,7 @@ return (
         border-color: rgba(var(--hue), 0.32);
         background-color: rgba(255,255,255,0.024);
         box-shadow:
-          0 16px 32px -18px rgba(0,0,0,0.55),
-          0 0 70px -18px rgba(139,123,255,0.45),
-          0 0 130px -30px rgba(139,123,255,0.28);
+          0 16px 32px -18px rgba(0,0,0,0.55);
       }
       /* SVG завжди розтягнутий рівно по картці (width/height:100% +
          preserveAspectRatio="none"), тому лінія ніколи не обрізається,
@@ -376,9 +374,7 @@ return (
         stroke-dasharray: 0 100;
         opacity: 0;
         filter:
-          drop-shadow(0 0 4px rgba(139,123,255,.9))
-          drop-shadow(0 0 10px rgba(139,123,255,.5))
-          drop-shadow(0 0 20px rgba(139,123,255,.22));
+          none;
         transition: stroke-dasharray 1.1s ease, opacity .35s ease;
       }
       .acc-liquid-soft {
@@ -425,7 +421,7 @@ return (
       .acc-card--soft:hover {
         border-color: rgba(var(--hue), 0.4);
         background-color: rgba(255,255,255,0.028);
-        box-shadow: 0 14px 30px -18px rgba(var(--hue), 0.55), 0 2px 8px -4px rgba(0,0,0,0.4);
+        box-shadow: 0 2px 8px -4px rgba(0,0,0,0.4);
       }
       .acc-card--soft .acc-soft-icon { transition: transform .3s cubic-bezier(.22,1,.36,1); }
       .acc-card--soft:hover .acc-soft-icon { transform: scale(1.12); }
@@ -466,13 +462,11 @@ return (
               Golos. Тут стояв Roboto — сторінка виглядала як із іншого
               застосунку. */}
           <div className="flex items-center gap-[9px]">
-            <span
-              className="h-[5px] w-[5px] rounded-full"
-              style={{ background: 'var(--edge-acc)', boxShadow: `0 0 12px 2px rgba(${T.accRgb},0.67)` }}
-            />
+            {/* Без світної крапки й не акцентом: крапка з ореолом над
+                назвою — прикмета шаблону, а акцент належить головній дії. */}
             <span
               className="text-[11px] font-bold uppercase"
-              style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-acc)' }}
+              style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-text3)' }}
             >
               Capital
             </span>
@@ -649,7 +643,7 @@ return (
                               {acc.firm_name}
                             </h3>
                             <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold" style={{ fontFamily: T.sans, color: isClosed ? T.text4 : T.ok }}>
-                              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: isClosed ? T.text4 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: isClosed ? T.text4 : T.ok, boxShadow: 'none' }} />
                               {isClosed ? 'Closed' : 'Active'}
                             </div>
                           </div>
@@ -784,7 +778,6 @@ return (
             {/* Хедер модалки */}
             <div className="flex shrink-0 justify-between items-center px-5 py-4 sm:px-6 sm:py-5 border-b border-[var(--edge-line)] bg-[var(--edge-sunken)]">
               <h2 className="text-sm font-bold text-[var(--edge-text)] uppercase tracking-wider flex items-center gap-2.5">
-                <span className="w-2 h-2 rounded-full bg-[var(--edge-acc)] shadow-[0_0_10px_rgba(139,123,255,0.6)]"></span>
                 {editingId ? 'Edit account' : 'New account'}
               </h2>
               <button 
@@ -889,7 +882,7 @@ return (
                         onClick={() => setNewFirm(firm)}
                         className={`flex min-w-0 items-center gap-3 p-3.5 rounded-xl border transition-colors duration-300 group text-left ${
                           isSelected 
-                            ? 'bg-[var(--edge-acc)]/10 border-[var(--edge-acc)]/40 shadow-[0_0_20px_rgba(139,123,255,0.05)]' 
+                            ? 'bg-[var(--edge-acc)]/10 border-[var(--edge-acc)]/40' 
                             : 'bg-[#111218] border-[var(--edge-line)] hover:border-white/15'
                         }`}
                       >
@@ -988,7 +981,7 @@ return (
                         onClick={() => setNewBalance(amount.toString())}
                         className={`py-2.5 rounded-lg text-[11px] font-bold tracking-wider transition-colors duration-300 border ${
                           isSelected
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40'
                             : 'bg-[#111218] text-[var(--edge-text3)] border-[var(--edge-line)] hover:border-white/15 hover:text-[var(--edge-text2)]'
                         }`}
                       >
@@ -1070,7 +1063,7 @@ return (
                   {isSubmitting ? (
                     <Loader2 size={18} className="animate-spin text-[var(--edge-acc)]" />
                   ) : (
-                    <span className="text-[var(--edge-text3)] font-sans font-medium uppercase tracking-[0.25em] text-[10.5px] leading-none group-hover:text-[var(--edge-text)] transition-colors duration-300 drop-shadow-[0_0_12px_rgba(139,123,255,0.15)]">
+                    <span className="text-[var(--edge-text3)] font-sans font-medium uppercase tracking-[0.25em] text-[10.5px] leading-none group-hover:text-[var(--edge-text)] transition-colors duration-300">
                       {editingId ? 'Save Configuration' : 'Create Prop Account'}
                     </span>
                   )}

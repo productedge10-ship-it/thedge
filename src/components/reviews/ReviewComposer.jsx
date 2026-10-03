@@ -1,6 +1,7 @@
 import TextareaAutosize from 'react-textarea-autosize';
 import { Check, Sparkles, Save, History, Loader2 } from 'lucide-react';
 import { T } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 import { PROMPTS, EMOTIONS, SCORE_LABELS, fmtRange } from '../../lib/reviewsData';
 
 /* ==================================================================
@@ -65,9 +66,9 @@ export default function ReviewComposer({
           <Sparkles size={15} strokeWidth={2.2} style={{ color: T.acc }} />
         </div>
         <div className="min-w-0">
-          <div className="truncate text-[15px] font-bold" style={{ fontFamily: T.display, color: T.text }}>Висновок</div>
+          <div className="truncate text-[15px] font-bold" style={{ fontFamily: T.display, color: T.text }}>{tx('Висновок', 'Takeaway')}</div>
           <div className="truncate text-[12.5px] tabular-nums" style={{ fontFamily: T.sans, color: T.text4 }}>
-            {fmtRange(from, to)} · обрано {picked}
+            {fmtRange(from, to)} · {tx(`обрано ${picked}`, `${picked} selected`)}
           </div>
         </div>
       </div>
@@ -75,7 +76,7 @@ export default function ReviewComposer({
       {/* минулий розбір */}
       {prevReview && (
         <Block
-          title="Минулого разу ти обіцяв"
+          title={tx('Минулого разу ти обіцяв', 'Last time you promised')}
           hint={fmtRange(prevReview.from, prevReview.to)}
           right={<History size={15} strokeWidth={2.2} style={{ color: T.text4 }} />}
         >
@@ -124,10 +125,10 @@ export default function ReviewComposer({
       <Block
         step="1"
         done={score > 0}
-        title="Дисципліна періоду"
+        title={tx('Дисципліна періоду', 'Discipline this period')}
         right={
           <span className="shrink-0 text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: scoreColor }}>
-            {SCORE_LABELS[score] || 'не оцінено'}
+            {SCORE_LABELS[score] || tx('не оцінено', 'not rated')}
           </span>
         }
       >
@@ -158,7 +159,7 @@ export default function ReviewComposer({
       </Block>
 
       {/* стан */}
-      <Block step="2" done={emotions.length > 0} title="Стан за період" hint="що переважало">
+      <Block step="2" done={emotions.length > 0} title={tx('Стан за період', 'State over the period')} hint={tx('що переважало', 'what dominated')}>
         <div className="flex flex-wrap gap-2">
           {EMOTIONS.map((e) => {
             const on = emotions.includes(e.id);
@@ -206,7 +207,7 @@ export default function ReviewComposer({
       ))}
 
       {/* головна зміна */}
-      <Block step="6" done={!!lesson.trim()} title="Одна зміна на наступний період" hint="те, що ти реально зробиш">
+      <Block step="6" done={!!lesson.trim()} title={tx('Одна зміна на наступний період', 'One change for next period')} hint={tx('те, що ти реально зробиш', "something you'll actually do")}>
         <div
           className="rounded-xl transition-colors duration-200"
           style={{ background: T.sunken, border: `1px solid ${lesson.trim() ? T.lineAcc : T.line}` }}
@@ -214,7 +215,7 @@ export default function ReviewComposer({
           <TextareaAutosize
             value={lesson}
             onChange={(e) => onLesson(e.target.value)}
-            placeholder="Наприклад: жодної угоди поза London — азія закрита."
+            placeholder={tx('Наприклад: жодної угоди поза London — азія закрита.', 'E.g.: no trades outside London — Asia is closed.')}
             minRows={2}
             className="w-full resize-none border-none bg-transparent px-3.5 py-3 outline-none"
             style={{ fontFamily: T.sans, fontSize: 15, lineHeight: 1.7, color: T.text, fontWeight: 500 }}
@@ -232,17 +233,15 @@ export default function ReviewComposer({
             background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans,
             opacity: ready && !saving ? 1 : 0.4,
             cursor: ready ? 'pointer' : 'not-allowed',
-            boxShadow: ready ? `0 6px 18px -8px rgba(${T.accRgb},0.6)` : 'none',
+            boxShadow: 'none',
           }}
-          onMouseEnter={(e) => { if (ready) e.currentTarget.style.boxShadow = `0 10px 26px -8px rgba(${T.accRgb},0.75)`; }}
-          onMouseLeave={(e) => { if (ready) e.currentTarget.style.boxShadow = `0 6px 18px -8px rgba(${T.accRgb},0.6)`; }}
         >
           {saving ? <Loader2 size={16} strokeWidth={3} className="animate-spin" /> : <Save size={16} strokeWidth={2.6} />}
-          Зберегти розбір
+          {tx('Зберегти розбір', 'Save review')}
         </button>
         {!ready && (
           <p className="mt-2.5 text-center text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-            Постав оцінку дисципліни й напиши одну зміну — решта не обовʼязкова.
+            {tx('Постав оцінку дисципліни й напиши одну зміну — решта не обовʼязкова.', 'Rate your discipline and write one change — the rest is optional.')}
           </p>
         )}
       </div>

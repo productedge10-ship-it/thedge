@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 import DateField from '../ui/DateField';
 import MaterialPreview from './MaterialPreview';
 import ImageSlider from '../ui/ImageSlider';
@@ -15,7 +16,7 @@ import { uploadImage, isHttpUrl } from '../../lib/imageStore';
 import { notify } from '../../utils/notify';
 import {
   PROMPTS, EMOTIONS, SCORE_LABELS, MISTAKE_TYPES,
-  fmtDate, fmtR, fmtRange, rOf,
+  fmtDate, fmtR, fmtRange, rOf, planStatusLabel,
 } from '../../lib/reviewsData';
 
 /* ==================================================================
@@ -34,9 +35,9 @@ import {
 ================================================================== */
 
 const PRESETS = [
-  { key: 'day', label: 'День', days: 0 },
-  { key: 'week', label: 'Тиждень', days: 6 },
-  { key: 'month', label: 'Місяць', days: 29 },
+  { key: 'day', label: tx('День', 'Day'), days: 0 },
+  { key: 'week', label: tx('Тиждень', 'Week'), days: 6 },
+  { key: 'month', label: tx('Місяць', 'Month'), days: 29 },
 ];
 
 const mono = (size, extra = {}) => ({ fontFamily: T.mono, fontSize: size, ...extra });
@@ -217,9 +218,9 @@ export default function ReviewBuilder({
     })),
     {
       key: 'lesson',
-      title: 'Одна зміна на наступний період',
-      hint: 'те, що ти реально зробиш',
-      placeholder: 'Наприклад: жодної угоди поза London — азія закрита.',
+      title: tx('Одна зміна на наступний період', 'One change for next period'),
+      hint: tx('те, що ти реально зробиш', "something you'll actually do"),
+      placeholder: tx('Наприклад: жодної угоди поза London — азія закрита.', 'E.g.: no trades outside London — Asia is closed.'),
       accent: true,
     },
   ];
@@ -245,9 +246,9 @@ export default function ReviewBuilder({
 
   const steps = [
     {
-      kicker: 'Стан',
-      title: 'Стан за період',
-      hint: 'Що переважало — обери все, що було. Це допоможе побачити, з якою головою ти торгував.',
+      kicker: tx('Стан', 'State'),
+      title: tx('Стан за період', 'State over the period'),
+      hint: tx('Що переважало — обери все, що було. Це допоможе побачити, з якою головою ти торгував.', 'What dominated — pick everything that applied. It helps you see what headspace you traded in.'),
       preview: emotions.length
         ? emotions.map((id) => EMOTIONS.find((e) => e.id === id)?.label).filter(Boolean).join(' · ')
         : '',
@@ -255,21 +256,21 @@ export default function ReviewBuilder({
     },
     ...textSteps.map((t) => ({
       ...t,
-      kicker: t.accent ? 'Головне' : 'Розбір',
+      kicker: t.accent ? tx('Головне', 'Key') : tx('Розбір', 'Review'),
       kind: 'text',
       preview: valueOf(t.key).trim() ? cut(valueOf(t.key).trim()) : '',
     })),
     {
-      kicker: 'Обіцянка',
-      title: 'Чого дотримуватись',
-      hint: 'Конкретні правила на наступний період. Наступного разу цей список зустріне тебе згори — і ти позначиш, що виконав.',
+      kicker: tx('Обіцянка', 'Promise'),
+      title: tx('Чого дотримуватись', 'What to stick to'),
+      hint: tx('Конкретні правила на наступний період. Наступного разу цей список зустріне тебе згори — і ти позначиш, що виконав.', "Concrete rules for next period. Next time this list will greet you at the top — and you'll tick off what you kept."),
       kind: 'list',
       accent: true,
       /* Тільки кількість. Показувати перше правило поруч було зайвим:
          у списку відповідей це рядок про стан справ, а не місце, де
          їх перечитують. */
       preview: promises.length
-        ? `${promises.length} ${plural(promises.length, 'правило', 'правила', 'правил')}`
+        ? tx(`${promises.length} ${plural(promises.length, 'правило', 'правила', 'правил')}`, `${promises.length} ${promises.length === 1 ? 'rule' : 'rules'}`)
         : '',
     },
   ];
@@ -297,7 +298,7 @@ export default function ReviewBuilder({
      стисненим, бо base64 у тілі розбору роздуває запис у рази. */
   const addShotUrl = (key, url) => {
     const cur = shots[key] || [];
-    if (cur.length >= MAX_SHOTS) { notify.error('Достатньо', `Більше ${MAX_SHOTS} скрінів на крок не тримаємо.`); return; }
+    if (cur.length >= MAX_SHOTS) { notify.error(tx('Достатньо', 'That’s enough'), tx(`Більше ${MAX_SHOTS} скрінів на крок не тримаємо.`, `Up to ${MAX_SHOTS} screenshots per step.`)); return; }
     if (cur.some((x) => x.src === url)) return;
     putShots(key, [...cur, { src: url, name: 'TradingView' }]);
   };
@@ -305,11 +306,11 @@ export default function ReviewBuilder({
   const addShotFiles = async (key, fileList) => {
     const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'));
     if (!files.length) return;
-    if (!userId) { notify.error('Не вийшло', 'Немає користувача для завантаження.'); return; }
+    if (!userId) { notify.error(tx('Не вийшло', 'Didn’t work'), tx('Немає користувача для завантаження.', 'No user to upload for.')); return; }
 
     const cur = shots[key] || [];
     const room = MAX_SHOTS - cur.length;
-    if (room <= 0) { notify.error('Достатньо', `Більше ${MAX_SHOTS} скрінів на крок не тримаємо.`); return; }
+    if (room <= 0) { notify.error(tx('Достатньо', 'That’s enough'), tx(`Більше ${MAX_SHOTS} скрінів на крок не тримаємо.`, `Up to ${MAX_SHOTS} screenshots per step.`)); return; }
 
     try {
       const uploaded = await Promise.all(
@@ -324,11 +325,11 @@ export default function ReviewBuilder({
       const raw = String(e?.message || '');
       if (/bucket not found/i.test(raw)) {
         notify.error(
-          'Сховище не налаштоване',
-          'Виконай src/db/2026-08-07_note_images_storage.sql у Supabase. Поки що вставляй посилання з TradingView — воно працює без сховища.',
+          tx('Сховище не налаштоване', 'Storage isn’t set up'),
+          tx('Виконай src/db/2026-08-07_note_images_storage.sql у Supabase. Поки що вставляй посилання з TradingView — воно працює без сховища.', 'Run src/db/2026-08-07_note_images_storage.sql in Supabase. For now, paste TradingView links — they work without storage.'),
         );
       } else {
-        notify.error('Не вдалось завантажити', raw || 'Спробуй ще раз.');
+        notify.error(tx('Не вдалось завантажити', 'Upload failed'), raw || tx('Спробуй ще раз.', 'Try again.'));
       }
     }
   };
@@ -354,7 +355,7 @@ export default function ReviewBuilder({
       <div className="flex flex-wrap items-center" style={{ gap: 16, padding: '4px 0 22px' }}>
         <button
           onClick={onBack}
-          title="До списку розборів"
+          title={tx('До списку розборів', 'Back to reviews')}
           className="grid shrink-0 place-items-center"
           style={{
             width: 38, height: 38, borderRadius: 11,
@@ -369,7 +370,7 @@ export default function ReviewBuilder({
 
         <div className="min-w-0 flex-1" style={{ minWidth: 150 }}>
           <div className="uppercase" style={mono(11, { letterSpacing: '2.2px', color: T.acc })}>
-            Розбори
+            {tx('Розбори', 'Reviews')}
           </div>
           <div
             style={{
@@ -377,7 +378,7 @@ export default function ReviewBuilder({
               fontWeight: 600, letterSpacing: '-0.7px', color: T.text,
             }}
           >
-            Новий розбір
+            {tx('Новий розбір', 'New review')}
           </div>
         </div>
 
@@ -426,13 +427,13 @@ export default function ReviewBuilder({
           </div>
 
           <div className="flex flex-wrap items-center" style={{ gap: 22 }}>
-            <Pair value={stats.total} unit="угод" />
+            <Pair value={stats.total} unit={tx('угод', 'trades')} />
             <Pair
               value={fmtR(stats.netR)}
               unit="net"
               tone={stats.netR > 0 ? T.ok : stats.netR < 0 ? T.bad : T.text}
             />
-            <Pair value={stats.mistakes} unit="помилок" tone={stats.mistakes > 0 ? T.warn : T.text} />
+            <Pair value={stats.mistakes} unit={tx('помилок', 'mistakes')} tone={stats.mistakes > 0 ? T.warn : T.text} />
             <Chevron open={statsOpen} size={16} />
           </div>
         </div>
@@ -447,7 +448,7 @@ export default function ReviewBuilder({
             style={{ gap: 10, padding: '14px 20px', borderBottom: `1px solid ${T.line}` }}
           >
             <span className="shrink-0" style={{ fontFamily: T.sans, fontSize: 14, color: T.text2 }}>
-              Свій період
+              {tx('Свій період', 'Custom period')}
             </span>
             <div className="min-w-[150px] flex-1">
               <DateField
@@ -476,12 +477,12 @@ export default function ReviewBuilder({
           <div className="grid grid-cols-3" style={{ background: T.sunken }}>
             <Metric label="Win rate" value={`${Math.round(stats.winrate)}%`} />
             <Metric
-              label="За планом"
+              label={tx('За планом', 'By plan')}
               value={`${Math.round(stats.planRate)}%`}
               tone={stats.total ? (stats.planRate >= 70 ? T.ok : T.warn) : T.text}
             />
             <Metric
-              label="Ціна помилок"
+              label={tx('Ціна помилок', 'Cost of mistakes')}
               value={stats.costOfMistakes ? fmtR(stats.costOfMistakes) : '0R'}
               tone={stats.costOfMistakes < 0 ? T.bad : T.text}
               last
@@ -502,17 +503,17 @@ export default function ReviewBuilder({
             </span>
             <div className="min-w-0">
               <div style={{ fontFamily: T.sans, fontSize: 17, fontWeight: 600, color: T.text }}>
-                Що розбираємо
+                {tx('Що розбираємо', "What we're reviewing")}
               </div>
               <div style={{ fontFamily: T.sans, marginTop: 4, fontSize: 14, color: T.text2 }}>
                 {loadingMaterial ? (
                   <span className="inline-flex items-center" style={{ gap: 6 }}>
                     <Loader2 size={12} className="animate-spin" style={{ color: T.acc }} />
-                    збираю за період…
+                    {tx('збираю за період…', 'gathering for the period…')}
                   </span>
                 ) : pickedTotal
-                  ? `обрано ${pickedTotal} з ${counts.trades + counts.plans + counts.mistakes}`
-                  : `${counts.trades} угод · ${counts.plans} планів · ${counts.mistakes} помилок`}
+                  ? tx(`обрано ${pickedTotal} з ${counts.trades + counts.plans + counts.mistakes}`, `${pickedTotal} of ${counts.trades + counts.plans + counts.mistakes} selected`)
+                  : tx(`${counts.trades} угод · ${counts.plans} планів · ${counts.mistakes} помилок`, `${counts.trades} trades · ${counts.plans} plans · ${counts.mistakes} mistakes`)}
               </div>
             </div>
           </div>
@@ -526,9 +527,9 @@ export default function ReviewBuilder({
           >
             <div className="flex" style={{ gap: 3 }}>
               {[
-                { key: 'trades', label: 'Угоди' },
-                { key: 'plans', label: 'Плани' },
-                { key: 'mistakes', label: 'Помилки' },
+                { key: 'trades', label: tx('Угоди', 'Trades') },
+                { key: 'plans', label: tx('Плани', 'Plans') },
+                { key: 'mistakes', label: tx('Помилки', 'Mistakes') },
               ].map((t) => {
                 const on = tab === t.key;
                 return (
@@ -555,7 +556,7 @@ export default function ReviewBuilder({
             {/* Подвійний клік сам себе не показує — і без цього рядка
                 про нього просто ніхто б не дізнався. */}
             <span className="ml-auto mr-4 hidden lg:block" style={{ fontFamily: T.sans, fontSize: 13, color: T.text3 }}>
-              Клік — переглянути, подвійний — взяти в розбір
+              {tx('Клік — переглянути, подвійний — взяти в розбір', 'Click to view, double-click to add to the review')}
             </span>
 
             <button
@@ -568,14 +569,14 @@ export default function ReviewBuilder({
               onMouseEnter={(e) => { if (list.length) e.currentTarget.style.color = T.acc; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = T.text2; }}
             >
-              {allPicked ? 'Зняти все' : 'Вибрати все'}
+              {allPicked ? tx('Зняти все', 'Deselect all') : tx('Вибрати все', 'Select all')}
             </button>
           </div>
 
           <div className="custom-scrollbar" style={{ maxHeight: 460, overflowY: 'auto' }}>
             {list.length === 0 ? (
               <p style={{ fontFamily: T.sans, padding: '48px 20px', textAlign: 'center', fontSize: 15, color: T.text3 }}>
-                За цей період нічого немає.
+                {tx('За цей період нічого немає.', 'Nothing for this period.')}
               </p>
             ) : (
               list.map((item) => (
@@ -608,10 +609,10 @@ export default function ReviewBuilder({
                 <AlertTriangle size={16} strokeWidth={1.7} className="shrink-0" style={{ color: T.warn }} />
                 <div className="min-w-0 flex-1">
                   <div style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.warn }}>
-                    {meta.label} повторюється
+                    {tx(`${meta.label} повторюється`, `${meta.label} repeats`)}
                   </div>
                   <div style={{ fontFamily: T.sans, marginTop: 4, fontSize: 14, color: T.text2 }}>
-                    {r.now} у цьому періоді · {r.before} раніше
+                    {tx(`${r.now} у цьому періоді · ${r.before} раніше`, `${r.now} this period · ${r.before} before`)}
                   </div>
                 </div>
                 {r.cost ? (
@@ -639,10 +640,10 @@ export default function ReviewBuilder({
               </span>
               <div className="min-w-0">
                 <div style={{ fontFamily: T.sans, fontSize: 17, fontWeight: 600, color: T.text }}>
-                  Минулого разу ти обіцяв
+                  {tx('Минулого разу ти обіцяв', 'Last time you promised')}
                 </div>
                 <div className="truncate" style={{ fontFamily: T.sans, marginTop: 3, fontSize: 12.5, color: T.text2 }}>
-                  {fmtRange(prevReview.from, prevReview.to)} · {donePromises}/{(prevReview.promises || []).length} виконано
+                  {fmtRange(prevReview.from, prevReview.to)} · {donePromises}/{(prevReview.promises || []).length} {tx('виконано', 'done')}
                 </div>
               </div>
             </div>
@@ -689,7 +690,7 @@ export default function ReviewBuilder({
                         className="shrink-0"
                         style={mono(12, { fontWeight: 600, letterSpacing: '.4px', color: on ? T.ok : T.text2 })}
                       >
-                        {on ? 'виконано' : 'не виконано'}
+                        {on ? tx('виконано', 'done') : tx('не виконано', 'not done')}
                       </span>
                     </button>
                   );
@@ -705,10 +706,10 @@ export default function ReviewBuilder({
         <div className="flex flex-wrap items-center justify-between" style={{ gap: 20 }}>
           <div className="min-w-0">
             <div style={{ fontFamily: T.sans, fontSize: 16, fontWeight: 600, color: T.text }}>
-              Дисципліна періоду
+              {tx('Дисципліна періоду', 'Discipline this period')}
             </div>
             <div style={{ fontFamily: T.sans, marginTop: 4, fontSize: 13.5, color: T.text2 }}>
-              Наскільки ти тримався плану весь період?
+              {tx('Наскільки ти тримався плану весь період?', 'How well did you stick to the plan this period?')}
             </div>
           </div>
 
@@ -722,7 +723,7 @@ export default function ReviewBuilder({
                 color: score ? scoreTone : T.text3, whiteSpace: 'nowrap',
               }}
             >
-              {score ? SCORE_LABELS[score] : 'не оцінено'}
+              {score ? SCORE_LABELS[score] : tx('не оцінено', 'not rated')}
             </span>
             <div className="flex gap-1.5 sm:gap-2">
               {[1, 2, 3, 4, 5].map((n) => {
@@ -759,10 +760,10 @@ export default function ReviewBuilder({
       <div className="flex flex-wrap items-center justify-between" style={{ gap: 20, marginTop: 32 }}>
         <div className="flex items-baseline" style={{ gap: 14 }}>
           <span className="uppercase" style={mono(12, { fontWeight: 600, letterSpacing: '2.2px', color: T.text2 })}>
-            Висновок
+            {tx('Висновок', 'Takeaway')}
           </span>
           <span style={mono(12.5, { letterSpacing: '1.2px', color: T.text3 })}>
-            крок {idx + 1} з {stepsTotal}
+            {tx(`крок ${idx + 1} з ${stepsTotal}`, `step ${idx + 1} of ${stepsTotal}`)}
           </span>
         </div>
 
@@ -966,7 +967,7 @@ export default function ReviewBuilder({
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
           >
             <ChevronLeft size={16} strokeWidth={2} />
-            Назад
+            {tx('Назад', 'Back')}
           </button>
 
           <div className="flex items-center gap-2 sm:gap-2.5">
@@ -977,7 +978,7 @@ export default function ReviewBuilder({
                 onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
               >
-                Пропустити
+                {tx('Пропустити', 'Skip')}
               </button>
             )}
 
@@ -991,10 +992,10 @@ export default function ReviewBuilder({
                 fontSize: 15, fontWeight: 600, transition: 'all .18s',
                 opacity: idx === stepsTotal - 1 ? 0.45 : 1,
                 cursor: idx === stepsTotal - 1 ? 'default' : 'pointer',
-                boxShadow: `0 14px 30px -18px rgba(${T.accRgb},0.9)`,
+                boxShadow: 'none',
               }}
             >
-              {idx === stepsTotal - 1 ? 'Готово' : 'Далі'}
+              {idx === stepsTotal - 1 ? tx('Готово', 'Done') : tx('Далі', 'Next')}
               {idx < stepsTotal - 1 && <ChevronRight size={16} strokeWidth={2} />}
             </button>
           </div>
@@ -1049,11 +1050,11 @@ export default function ReviewBuilder({
             fontSize: 16, fontWeight: 600, transition: 'all .18s',
             opacity: ready && !saving ? 1 : 0.4,
             cursor: ready && !saving ? 'pointer' : 'not-allowed',
-            boxShadow: ready ? `0 16px 34px -18px rgba(${T.accRgb},0.9)` : 'none',
+            boxShadow: 'none',
           }}
         >
           {saving ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} strokeWidth={1.9} />}
-          Зберегти розбір
+          {tx('Зберегти розбір', 'Save review')}
         </button>
 
         <button
@@ -1065,13 +1066,13 @@ export default function ReviewBuilder({
           onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text2; }}
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
         >
-          Скасувати
+          {tx('Скасувати', 'Cancel')}
         </button>
       </div>
       )}
 
       <p style={{ fontFamily: T.sans, marginTop: 14, textAlign: 'center', fontSize: 14, color: T.text3 }}>
-        Обовʼязкові тільки оцінка дисципліни й одна зміна на наступний період — решту можна пропустити
+        {tx('Обовʼязкові тільки оцінка дисципліни й одна зміна на наступний період — решту можна пропустити', 'Only the discipline score and one change for next period are required — you can skip the rest')}
       </p>
 
       <AnimatePresence>
@@ -1196,7 +1197,7 @@ function MaterialRow({ kind, item, on, onToggle, onPreview }) {
     );
     note = item.note || '';
     flagged = !item.followedPlan;
-    if (flagged) note = note ? `${note} · не за планом` : 'не за планом';
+    if (flagged) note = note ? `${note} · ${tx('не за планом', 'off plan')}` : tx('не за планом', 'off plan');
     meta = `${fmtDate(item.date)} · ${item.session}`;
   } else if (kind === 'plans') {
     const done = item.status === 'Відпрацьовано';
@@ -1210,7 +1211,7 @@ function MaterialRow({ kind, item, on, onToggle, onPreview }) {
           color: done ? T.ok : T.warn,
         }}
       >
-        {item.status}
+        {planStatusLabel(item.status)}
       </span>,
     );
     note = item.text || '';
@@ -1343,7 +1344,7 @@ function Field({ value, onChange, placeholder, accent }) {
           transition: 'color .18s ease',
         }}
       >
-        {accent ? 'Зміна' : 'Відповідь'}
+        {accent ? tx('Зміна', 'Change') : tx('Відповідь', 'Answer')}
       </div>
 
       {/* Росте до шести рядків, далі прокрутка. Ручка розтягування
@@ -1435,7 +1436,7 @@ function Checklist({ items, onChange }) {
               </span>
               <button
                 onClick={() => remove(i)}
-                title="Прибрати"
+                title={tx('Прибрати', 'Remove')}
                 className="grid shrink-0 place-items-center opacity-0 transition-all duration-200 group-hover/row:opacity-100"
                 style={{ width: 28, height: 28, borderRadius: 9, color: T.text3 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
@@ -1464,7 +1465,7 @@ function Checklist({ items, onChange }) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
-          placeholder="Наприклад: після двох стопів — стоп на день"
+          placeholder={tx('Наприклад: після двох стопів — стоп на день', 'E.g.: after two stops — done for the day')}
           className="min-w-0 flex-1 bg-transparent outline-none"
           style={{ fontFamily: T.sans, height: 56, fontSize: 16, color: T.text }}
         />
@@ -1481,14 +1482,14 @@ function Checklist({ items, onChange }) {
             transition: 'all .18s',
           }}
         >
-          Додати
+          {tx('Додати', 'Add')}
         </button>
       </div>
       )}
 
       {!full && (
         <p style={{ fontFamily: T.sans, marginTop: 10, fontSize: 13.5, color: T.text3 }}>
-          Enter додає правило. Максимум {MAX_RULES} — стільки реально тримаєш у голові під час сесії.
+          {tx(`Enter додає правило. Максимум ${MAX_RULES} — стільки реально тримаєш у голові під час сесії.`, `Enter adds a rule. Max ${MAX_RULES} — that's what you can really keep in mind during a session.`)}
         </p>
       )}
     </div>
@@ -1535,10 +1536,10 @@ function Shots({ items, max, onFiles, onUrl, onRemove }) {
     <div style={{ marginTop: 20 }}>
       <div className="flex items-center justify-between" style={{ gap: 16 }}>
         <span className="uppercase" style={mono(11, { fontWeight: 600, letterSpacing: '1.6px', color: T.text3 })}>
-          Скріншоти
+          {tx('Скріншоти', 'Screenshots')}
         </span>
         <span style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text3 }}>
-          {items.length ? `${items.length} з ${max}` : 'немає'}
+          {items.length ? tx(`${items.length} з ${max}`, `${items.length} of ${max}`) : tx('немає', 'none')}
         </span>
       </div>
 
@@ -1560,7 +1561,7 @@ function Shots({ items, max, onFiles, onUrl, onRemove }) {
 
             <button
               onClick={(e) => { e.stopPropagation(); onRemove(i); }}
-              title="Прибрати"
+              title={tx('Прибрати', 'Remove')}
               className="absolute grid place-items-center opacity-0 transition-all duration-200 group-hover/shot:opacity-100"
               style={{
                 top: 6, right: 6, width: 24, height: 24, borderRadius: 8,
@@ -1605,7 +1606,7 @@ function Shots({ items, max, onFiles, onUrl, onRemove }) {
           >
             <ImagePlus size={19} strokeWidth={1.7} />
             <span style={{ fontFamily: T.sans, fontSize: 13 }}>
-              {hot ? 'Відпусти' : 'Додати'}
+              {hot ? tx('Відпусти', 'Drop it') : tx('Додати', 'Add')}
             </span>
             <input
               type="file"
@@ -1619,7 +1620,7 @@ function Shots({ items, max, onFiles, onUrl, onRemove }) {
       </div>
 
       <div style={{ fontFamily: T.sans, marginTop: 10, fontSize: 13, color: T.text3 }}>
-        Ctrl+V посилання з TradingView, перетягни файл або вибери — до {max} на крок
+        {tx(`Ctrl+V посилання з TradingView, перетягни файл або вибери — до ${max} на крок`, `Ctrl+V a TradingView link, drag a file or pick one — up to ${max} per step`)}
       </div>
 
       {view >= 0 && (
@@ -1647,7 +1648,7 @@ function Pick({ on, onClick }) {
   return (
     <button
       onClick={onClick}
-      title={on ? 'Прибрати з розбору' : 'Додати в розбір'}
+      title={on ? tx('Прибрати з розбору', 'Remove from review') : tx('Додати в розбір', 'Add to review')}
       className="flex shrink-0 items-center justify-center"
       style={{
         gap: 7,
@@ -1675,7 +1676,7 @@ function Pick({ on, onClick }) {
       {on ? <Check size={13} strokeWidth={2.4} /> : <Plus size={13} strokeWidth={2.2} />}
       {on && (
         <span className="uppercase" style={mono(10, { letterSpacing: '1.3px', whiteSpace: 'nowrap' })}>
-          у розборі
+          {tx('у розборі', 'in review')}
         </span>
       )}
     </button>

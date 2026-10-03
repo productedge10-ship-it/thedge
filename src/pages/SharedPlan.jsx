@@ -414,12 +414,12 @@ export default function SharedPlan() {
                     style={{
                       background: `linear-gradient(135deg, rgba(${typeTone.rgb},0.18), rgba(${typeTone.rgb},0.05))`,
                       border: `1px solid rgba(${typeTone.rgb},0.34)`,
-                      boxShadow: `0 10px 28px -14px rgba(${typeTone.rgb},0.8)`,
+                      boxShadow: 'none',
                     }}
                   >
                     <span className="relative grid h-9 w-9 place-items-center rounded-lg" style={{ background: `rgba(${typeTone.rgb},0.2)`, color: typeTone.c }}>
                       {isWeekly ? <CalendarRange size={17} strokeWidth={2.3} /> : <CalendarDays size={17} strokeWidth={2.3} />}
-                      <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full" style={{ background: typeTone.c, boxShadow: `0 0 8px rgba(${typeTone.rgb},0.9)` }} />
+                      <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full" style={{ background: typeTone.c, boxShadow: 'none' }} />
                     </span>
                     <span className="flex flex-col leading-none">
                       <span className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ fontFamily: T.sans, color: T.text4 }}>Спільний</span>
@@ -463,7 +463,7 @@ export default function SharedPlan() {
                   ) : bias ? (
                     <div
                       className="flex items-center gap-3 rounded-2xl px-4 py-3"
-                      style={{ background: `rgba(${bias.rgb},0.1)`, border: `1px solid rgba(${bias.rgb},0.3)`, boxShadow: `0 0 40px -10px rgba(${bias.rgb},0.45)` }}
+                      style={{ background: `rgba(${bias.rgb},0.1)`, border: `1px solid rgba(${bias.rgb},0.3)`, boxShadow: 'none' }}
                     >
                       <span className="grid h-11 w-11 place-items-center rounded-xl" style={{ background: `rgba(${bias.rgb},0.16)`, color: bias.color }}>
                         {(() => { const I = bias.icon; return <I size={22} strokeWidth={2.4} />; })()}

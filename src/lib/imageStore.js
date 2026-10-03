@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Картинки нотаток.
@@ -65,20 +66,20 @@ export const isStored = (s) => typeof s === 'string' && s.includes(`/${BUCKET}/`
 const loadBitmap = (src) => new Promise((resolve, reject) => {
   const img = new Image();
   img.onload = () => resolve(img);
-  img.onerror = () => reject(new Error('Не вдалось прочитати зображення'));
+  img.onerror = () => reject(new Error(tx('Не вдалось прочитати зображення', 'Couldn’t read the image')));
   img.src = src;
 });
 
 const readAsDataUrl = (file) => new Promise((resolve, reject) => {
   const r = new FileReader();
   r.onload = () => resolve(r.result);
-  r.onerror = () => reject(new Error('Не вдалось прочитати файл'));
+  r.onerror = () => reject(new Error(tx('Не вдалось прочитати файл', 'Couldn’t read the file')));
   r.readAsDataURL(file);
 });
 
 const canvasToBlob = (canvas, type, quality) => new Promise((resolve, reject) => {
   canvas.toBlob(
-    (b) => (b ? resolve(b) : reject(new Error('Не вдалось стиснути зображення'))),
+    (b) => (b ? resolve(b) : reject(new Error(tx('Не вдалось стиснути зображення', 'Couldn’t compress the image')))),
     type,
     quality,
   );
@@ -141,7 +142,7 @@ const randomName = () => (globalThis.crypto?.randomUUID
   : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
 
 export async function uploadImage(userId, noteId, file, opts) {
-  if (!userId) throw new Error('Немає користувача');
+  if (!userId) throw new Error(tx('Немає користувача', 'No user'));
 
   const { blob, ext, type } = await compress(file, opts);
   /* note_id у шляху — щоб потім можна було прибрати картинки
@@ -202,7 +203,7 @@ export async function removeImages(urls) {
    кілобайт на хвилину. Чіпати його — псувати мову заради нічого.
 ------------------------------------------------------------------ */
 export async function uploadAudio(userId, noteId, blob) {
-  if (!userId) throw new Error('Немає користувача');
+  if (!userId) throw new Error(tx('Немає користувача', 'No user'));
 
   /* `audio/webm;codecs=opus` — валідний тип для браузера, але для
      перевірки дозволених типів у сховищі це вже інший рядок, ніж

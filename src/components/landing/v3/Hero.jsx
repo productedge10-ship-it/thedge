@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, RotateCcw } from 'lucide-react';
-import { C, F, A, Cat, Glow, useInView, reducedMotion, SHELL } from './base';
+import { C, F, A, Cat, useInView, reducedMotion, SHELL } from './base';
 import DemoTransition from './DemoTransition';
 import { useLang, useTx, pick } from './lang';
 
@@ -150,7 +150,6 @@ export default function Hero() {
           .ln-hero-mood, .ln-hero-fresh { display: none !important; }
         }
       `}</style>
-      <Glow x={-120} y={-30} size={500} />
 
       <div style={{ display: 'flex', gap: 56, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
         {/* ---------- текст ---------- */}
@@ -211,10 +210,8 @@ export default function Hero() {
                 background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff',
                 fontFamily: F.sans, fontSize: 15.5, fontWeight: 700, padding: '16px 28px',
                 borderRadius: 14, cursor: 'pointer', whiteSpace: 'nowrap',
-                boxShadow: '0 16px 44px rgba(74,59,245,.4)', transition: 'all .2s',
+                transition: 'all .2s',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 20px 54px rgba(74,59,245,.56)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 16px 44px rgba(74,59,245,.4)'; e.currentTarget.style.transform = 'none'; }}
             >
               {tx('Почати безкоштовно', 'Start free')}
               <ArrowRight size={16} strokeWidth={2.4} />
@@ -263,8 +260,6 @@ export default function Hero() {
 
         {/* ---------- журнал ---------- */}
         <div style={{ flex: '1 1 560px', minWidth: 'min(340px,100%)', position: 'relative' }}>
-          <Glow x="calc(100% - 270px)" y={-20} size={320} color={A(0.15)} blur={80} />
-
           <div
             style={{
               position: 'relative',
@@ -273,8 +268,6 @@ export default function Hero() {
               boxShadow: '0 40px 100px rgba(0,0,0,.6)',
             }}
           >
-            <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${A(0.55)},transparent)` }} />
-
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 18px', borderBottom: `1px solid ${C.lineSoft}` }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: F.mono, fontSize: 11.5, fontWeight: 600, letterSpacing: '1.3px', color: C.text4 }}>
                 {tx('ЖУРНАЛ', 'JOURNAL')} · {onCount} {tx('З', 'OF')} {rows.length} {tx('УГОД', 'TRADES')}
@@ -361,7 +354,7 @@ export default function Hero() {
                     {label}
                   </div>
                   {/* Цифра лежить у два шари: нижній — сама
-                      величина, верхній — її ж світна копія, яка
+                      величина, верхній — її ж копія акцентним кольором (без ореолу), яка
                       гасне прозорістю. Копія абсолютна, тож у
                       розмітці не займає місця й не зсуває сусідів,
                       а накреслення успадковує від батька — інакше
@@ -374,7 +367,6 @@ export default function Hero() {
                         position: 'absolute',
                         inset: 0,
                         color: C.acc,
-                        textShadow: '0 0 26px rgba(139,123,255,.6)',
                         /* Спокійний стан — невидимий. Кадри йдуть від
                            одиниці до нуля й нічого по собі не лишають,
                            тож після спалаху шар сам повертається сюди.

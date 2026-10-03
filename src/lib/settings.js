@@ -15,6 +15,8 @@
    між пристроями разом із рештою.
 ================================================================== */
 
+import { t as tx } from './lang';
+
 export const KEY = 'settings';
 
 /* Меню як дані, а не як розмітка. Раніше пункти жили прямо в JSX
@@ -73,9 +75,9 @@ export const ALL_NAV = NAV.flatMap((g) => g.items);
 export const HIDEABLE = ALL_NAV.filter((i) => !i.fixed);
 
 export const MOTION = [
-  { id: 'full', label: 'Повні', hint: 'усе рухається, як задумано' },
-  { id: 'calm', label: 'Спокійні', hint: 'без фону й ефектів входу' },
-  { id: 'off', label: 'Вимкнені', hint: 'нічого не рухається взагалі' },
+  { id: 'full', label: tx('Повні', 'Full'), hint: tx('усе рухається, як задумано', 'everything moves the way it was designed') },
+  { id: 'calm', label: tx('Спокійні', 'Calm'), hint: tx('без фону й ефектів входу', 'no background, no entrance effects') },
+  { id: 'off', label: tx('Вимкнені', 'Off'), hint: tx('нічого не рухається взагалі', 'nothing moves at all') },
 ];
 
 /* ---------- світло за курсором ----------
@@ -94,10 +96,10 @@ export const MOTION = [
    світло під курсором. Раніше людина, яка хотіла живий інтерфейс без
    блимання під мишкою, змушена була вимикати все підряд. */
 export const FX = [
-  { id: 'off', label: 'Без світла', value: 0, hint: 'жодного ореолу під курсором' },
-  { id: 'soft', label: 'Ледь помітно', value: 0.35, hint: 'натяк, який видно тільки якщо шукати' },
-  { id: 'medium', label: 'Помірно', value: 0.6, hint: 'видно, але не тягне погляд' },
-  { id: 'full', label: 'Яскраво', value: 1, hint: 'як було задумано спочатку' },
+  { id: 'off', label: tx('Без світла', 'No glow'), value: 0, hint: tx('жодного ореолу під курсором', 'no halo under the cursor at all') },
+  { id: 'soft', label: tx('Ледь помітно', 'Barely there'), value: 0.35, hint: tx('натяк, який видно тільки якщо шукати', 'a hint you only notice if you look for it') },
+  { id: 'medium', label: tx('Помірно', 'Moderate'), value: 0.6, hint: tx('видно, але не тягне погляд', 'visible, but it doesn’t pull your eye') },
+  { id: 'full', label: tx('Яскраво', 'Bright'), value: 1, hint: tx('як було задумано спочатку', 'the way it was meant to look') },
 ];
 
 export const fxValue = (id) => (FX.find((f) => f.id === id) || FX[2]).value;
@@ -117,8 +119,8 @@ export const fxValue = (id) => (FX.find((f) => f.id === id) || FX[2]).value;
    Помилка лишається в обох режимах: з неї народжується запис у
    Журналі помилок, і вимкнути її означало б відрізати цілий розділ. */
 export const PSY = [
-  { id: 'short', label: 'Коротко', hint: 'три питання, з яких будується статистика' },
-  { id: 'full', label: 'Повністю', hint: 'усі сім — більше матеріалу для розбору' },
+  { id: 'short', label: tx('Коротко', 'Short'), hint: tx('три питання, з яких будується статистика', 'the three questions the stats are built from') },
+  { id: 'full', label: tx('Повністю', 'Full'), hint: tx('усі сім — більше матеріалу для розбору', 'all seven — more material to work with') },
 ];
 
 export const PSY_SHORT = ['followedPlan', 'rushed', 'hasMistake'];
@@ -137,33 +139,33 @@ export const PSY_SHORT = ['followedPlan', 'rushed', 'hasMistake'];
 export const GOALS = [
   {
     id: 'clean',
-    label: 'Чисті дні',
-    unit: 'днів',
-    hint: 'дні, коли всі угоди були за планом і без помилок',
+    label: tx('Чисті дні', 'Clean days'),
+    unit: tx('днів', 'days'),
+    hint: tx('дні, коли всі угоди були за планом і без помилок', 'days when every trade followed the plan, with no mistakes'),
     def: 3,
     max: 7,
   },
   {
     id: 'trades',
-    label: 'Кількість угод',
-    unit: 'угод',
-    hint: 'просто обсяг роботи за тиждень',
+    label: tx('Кількість угод', 'Trade count'),
+    unit: tx('угод', 'trades'),
+    hint: tx('просто обсяг роботи за тиждень', 'plain volume of work for the week'),
     def: 5,
     max: 40,
   },
   {
     id: 'r',
-    label: 'Результат у R',
+    label: tx('Результат у R', 'Result in R'),
     unit: 'R',
-    hint: 'тримай обережно: ціль по прибутку підштовхує добирати угоди',
+    hint: tx('тримай обережно: ціль по прибутку підштовхує добирати угоди', 'handle with care: a profit goal nudges you into extra trades'),
     def: 5,
     max: 30,
   },
   {
     id: 'none',
-    label: 'Без цілі',
+    label: tx('Без цілі', 'No goal'),
     unit: '',
-    hint: 'плашка просто підсумовує тиждень',
+    hint: tx('плашка просто підсумовує тиждень', 'the tile just sums up the week'),
     def: 0,
     max: 0,
   },

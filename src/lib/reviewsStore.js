@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { readShared } from './sharedRead';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Розбори в базі + матеріал, з якого вони збираються.
@@ -146,7 +147,7 @@ const toPlan = (row) => {
     /* analysisMistake — прапорець «в аналізі була помилка», а текст
        лежить окремо в analysisMistakeText. Раніше я брав сам прапорець
        як текст, і блок мовчки не малювався: React не виводить boolean. */
-    analysisMistake: d.analysisMistake ? (d.analysisMistakeText || 'Помилка в аналізі позначена, без опису.') : '',
+    analysisMistake: d.analysisMistake ? (d.analysisMistakeText || tx('Помилка в аналізі позначена, без опису.', 'Analysis mistake flagged, no description.')) : '',
 
     /* Розбір по таймфреймах — головний зміст плану. Це те, заради чого
        план узагалі відкривають повторно.
@@ -209,7 +210,7 @@ export async function loadMaterial(userId, from, to) {
      невдале завантаження, їй просто ніхто не давав шансу: без throw
      обіцянка завжди виконувалась успішно з порожнім результатом. */
   const failed = tradesRes.error || plansRes.error;
-  if (failed) throw new Error(failed.message || 'не вдалось прочитати матеріал');
+  if (failed) throw new Error(failed.message || tx('не вдалось прочитати матеріал', "couldn't load the material"));
 
   const tradeRows = tradesRes.data || [];
 

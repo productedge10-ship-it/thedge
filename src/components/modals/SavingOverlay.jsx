@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { t as tx } from '../../lib/lang';
 
 export default function SavingOverlay() {
   return (
@@ -8,8 +9,8 @@ export default function SavingOverlay() {
       className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-lg"
     >
       <Loader2 size={48} className="text-blue-500 animate-spin mb-6" />
-      <h3 className="text-2xl font-black text-[var(--edge-text)] tracking-[0.2em] uppercase mb-2">Saving Progress</h3>
-      <p className="text-gray-400 font-medium">Синхронізуємо ваші дані перед виходом...</p>
+      <h3 className="text-2xl font-black text-[var(--edge-text)] tracking-[0.2em] uppercase mb-2">{tx('Зберігаємо прогрес', 'Saving progress')}</h3>
+      <p className="text-gray-400 font-medium">{tx('Синхронізуємо твої дані перед виходом...', 'Syncing your data before you leave...')}</p>
     </motion.div>
   );
 }

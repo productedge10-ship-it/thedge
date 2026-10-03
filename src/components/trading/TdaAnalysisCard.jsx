@@ -2,6 +2,7 @@ import { Compass, Link as LinkIcon, Search as SearchIcon, Loader2, Plus } from '
 import NarrativeSelect from '../ui/NarrativeSelect';
 import { FieldLabel } from './PlanPrimitives';
 import { T } from './planTheme';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Top-down розбір у тижневому плані: актив, bias і власна сітка ТФ,
@@ -16,7 +17,7 @@ export function TdaAnalysisFields({ analysis, onOpenAssetModal, isLoadingAssets,
   return (
     <div className="flex flex-wrap items-end gap-3.5">
       <div className="flex min-w-[140px] flex-1 flex-col gap-1.5 sm:max-w-[210px]">
-        <FieldLabel icon={LinkIcon} required filled={!!analysis.pair}>Актив</FieldLabel>
+        <FieldLabel icon={LinkIcon} required filled={!!analysis.pair}>{tx('Актив', 'Asset')}</FieldLabel>
         <button
           onClick={() => onOpenAssetModal(analysis.id)}
           disabled={isLoadingAssets}
@@ -29,7 +30,7 @@ export function TdaAnalysisFields({ analysis, onOpenAssetModal, isLoadingAssets,
             cursor: isLoadingAssets ? 'wait' : 'pointer',
           }}
         >
-          <span className="truncate">{analysis.pair || 'Вибрати...'}</span>
+          <span className="truncate">{analysis.pair || tx('Вибрати...', 'Choose...')}</span>
           {isLoadingAssets
             ? <Loader2 size={14} className="animate-spin shrink-0" style={{ color: T.text4 }} />
             : <SearchIcon size={14} strokeWidth={2.2} className="shrink-0" style={{ color: analysis.pair ? T.acc : T.warn }} />}
@@ -37,7 +38,7 @@ export function TdaAnalysisFields({ analysis, onOpenAssetModal, isLoadingAssets,
       </div>
 
       <div className="flex min-w-[160px] flex-1 flex-col gap-1.5 sm:max-w-[220px]">
-        <FieldLabel icon={Compass} filled={!!analysis.narrative}>Плановий bias</FieldLabel>
+        <FieldLabel icon={Compass} filled={!!analysis.narrative}>{tx('Плановий bias', 'Planned bias')}</FieldLabel>
         <NarrativeSelect value={analysis.narrative} onChange={(v) => patch({ narrative: v })} />
       </div>
     </div>
@@ -54,7 +55,7 @@ export function AddTdaButton({ onAdd }) {
       onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; e.currentTarget.style.background = 'transparent'; }}
     >
       <Plus size={14} strokeWidth={2.6} className="transition-transform duration-300 group-hover:rotate-90" />
-      Ще один розбір
+      {tx('Ще один розбір', 'Another analysis')}
     </button>
   );
 }

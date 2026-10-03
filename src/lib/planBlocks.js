@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { t as tx } from './lang';
 
 /* Набір блоків плану, які людина може прибрати зі сторінки.
    Приховування — це вибір «мені цей блок не потрібен», а не згортання:
@@ -7,18 +8,18 @@ import { useCallback, useEffect, useState } from 'react';
 
 export const PLAN_BLOCKS = {
   daily: [
-    { id: 'tda', phase: 'plan', title: 'Top-down аналіз' },
-    { id: 'strategy', phase: 'plan', title: 'Стратегія та точки входу' },
-    { id: 'updates', phase: 'live', title: 'Апдейти по ходу сесії' },
-    { id: 'diagnostics', phase: 'review', title: 'Діагностика' },
-    { id: 'conclusions', phase: 'review', title: 'Ревю дня' },
+    { id: 'tda', phase: 'plan', title: tx('Top-down аналіз', 'Top-down analysis') },
+    { id: 'strategy', phase: 'plan', title: tx('Стратегія та точки входу', 'Strategy & entries') },
+    { id: 'updates', phase: 'live', title: tx('Апдейти по ходу сесії', 'Live session updates') },
+    { id: 'diagnostics', phase: 'review', title: tx('Діагностика', 'Diagnostics') },
+    { id: 'conclusions', phase: 'review', title: tx('Ревю дня', 'Day review') },
   ],
   weekly: [
-    { id: 'week-tda', phase: 'plan', title: 'Top-down аналізи' },
-    { id: 'week-thesis', phase: 'plan', title: 'Теза тижня' },
-    { id: 'week-updates', phase: 'live', title: 'Проміжні перевірки' },
-    { id: 'week-outcome', phase: 'review', title: 'Що вийшло по активах' },
-    { id: 'week-conclusions', phase: 'review', title: 'Висновки тижня' },
+    { id: 'week-tda', phase: 'plan', title: tx('Top-down аналізи', 'Top-down analyses') },
+    { id: 'week-thesis', phase: 'plan', title: tx('Теза тижня', 'Weekly thesis') },
+    { id: 'week-updates', phase: 'live', title: tx('Проміжні перевірки', 'Mid-week check-ins') },
+    { id: 'week-outcome', phase: 'review', title: tx('Що вийшло по активах', 'Outcome by asset') },
+    { id: 'week-conclusions', phase: 'review', title: tx('Висновки тижня', 'Weekly takeaways') },
   ],
 };
 

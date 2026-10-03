@@ -149,7 +149,7 @@ export default function ViewShell() {
           style={{
             fontFamily: F.sans, fontSize: 12.5, fontWeight: 700, color: '#fff', flexShrink: 0,
             background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, borderRadius: 9,
-            padding: '7px 14px', whiteSpace: 'nowrap', boxShadow: '0 8px 22px rgba(74,59,245,.32)',
+            padding: '7px 14px', whiteSpace: 'nowrap',
           }}
         >
           <span className="demo-bar-label">Вести свій журнал</span>

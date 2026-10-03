@@ -13,6 +13,7 @@ import { DEMO_SESSIONS, isDemo } from '../lib/backtestDemo';
 import { setBacktestPublic } from '../lib/backtestShare';
 import { notify } from '../utils/notify';
 import { ACT } from '../components/backtest/accent';
+import { t as tx } from '../lib/lang';
 import BacktestCard from '../components/backtest/BacktestCard';
 import NewBacktestModal from '../components/backtest/NewBacktestModal';
 
@@ -53,10 +54,10 @@ function Summary({ sessions }) {
      кожна цифра має свій відтінок, погляд знаходить потрібну, не
      перечитуючи підписи. */
   const items = [
-    { label: 'Бектестів', value: agg.count, hue: ACT.tint, rgb: ACT.rgb },
-    { label: 'Угод усього', value: agg.trades, hue: T.info, rgb: T.infoRgb },
+    { label: tx('Бектестів', 'Backtests'), value: agg.count, hue: ACT.tint, rgb: ACT.rgb },
+    { label: tx('Угод усього', 'Total trades'), value: agg.trades, hue: T.info, rgb: T.infoRgb },
     {
-      label: 'Сумарний R',
+      label: tx('Сумарний R', 'Total R'),
       value: agg.trades ? fmtR(agg.netR) : '—',
       hue: agg.netR >= 0 ? T.ok : T.bad,
       rgb: agg.netR >= 0 ? T.okRgb : T.badRgb,
@@ -97,7 +98,7 @@ function Summary({ sessions }) {
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = `rgba(${it.rgb},0.45)`;
-            e.currentTarget.style.boxShadow = `0 18px 40px -26px rgba(${it.rgb},0.55)`;
+            e.currentTarget.style.boxShadow = 'none';
             e.currentTarget.style.transform = 'translateY(-2px)';
           }}
           onMouseLeave={(e) => {
@@ -163,18 +164,18 @@ function NewBacktestButton({ onClick }) {
         border: '1px solid rgba(139,123,255,0.5)',
         color: '#fff',
         fontFamily: T.sans,
-        boxShadow: '0 10px 28px -12px rgba(139,123,255,0.4)',
+        boxShadow: 'none',
       }}
     >
       <span className="bt-stream-bg" aria-hidden="true">
         <span className="bt-stream-row bt-stream-row-a">
           <span className="bt-pill">EURUSD</span>
           <span className="bt-pill bt-pill-ok">+2.4R</span>
-          <span className="bt-pill">Ризик 1%</span>
+          <span className="bt-pill">{tx('Ризик 1%', 'Risk 1%')}</span>
           <span className="bt-pill bt-pill-ok">Win 62%</span>
           <span className="bt-pill">EURUSD</span>
           <span className="bt-pill bt-pill-ok">+2.4R</span>
-          <span className="bt-pill">Ризик 1%</span>
+          <span className="bt-pill">{tx('Ризик 1%', 'Risk 1%')}</span>
           <span className="bt-pill bt-pill-ok">Win 62%</span>
         </span>
         <span className="bt-stream-row bt-stream-row-b">
@@ -193,7 +194,7 @@ function NewBacktestButton({ onClick }) {
         <Plus size={16} strokeWidth={2.6} className="bt-stream-plus" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
         <SlidersVertical size={15} strokeWidth={2.3} className="bt-stream-sliders" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
       </span>
-      <span className="bt-stream-label whitespace-nowrap">Новий бектест</span>
+      <span className="bt-stream-label whitespace-nowrap">{tx('Новий бектест', 'New backtest')}</span>
     </button>
   );
 }
@@ -283,7 +284,7 @@ export default function Backtest() {
       navigate(`/backtest/${data.id}`);
     } catch (e) {
       console.error(e);
-      alert(e.message || 'Не вдалось створити бектест');
+      alert(e.message || tx('Не вдалось створити бектест', 'Couldn’t create the backtest'));
     } finally {
       setSaving(false);
     }
@@ -304,9 +305,9 @@ export default function Backtest() {
         setSessions((list) => list.map((x) => (x.id === s.id ? { ...x, ...next } : x)));
       }
       await navigator.clipboard.writeText(`${window.location.origin}/shared/backtest/${s.id}`);
-      notify.success('Лінк скопійовано', 'Бектест відкритий для перегляду за посиланням.');
+      notify.success(tx('Лінк скопійовано', 'Link copied'), tx('Бектест відкритий для перегляду за посиланням.', 'Anyone with the link can now view this backtest.'));
     } catch (e) {
-      notify.error('Не вдалось поділитись', e.message);
+      notify.error(tx('Не вдалось поділитись', 'Couldn’t share'), e.message);
     } finally {
       setSharingId(null);
     }
@@ -350,17 +351,17 @@ export default function Backtest() {
          базою. */
       if (!gone || gone.length === 0) {
         notify.error(
-          'Бектест не видалено',
-          'Схоже, він належить іншому акаунту або вже видалений — онови сторінку.',
+          tx('Бектест не видалено', 'Backtest not deleted'),
+          tx('Схоже, він належить іншому акаунту або вже видалений — онови сторінку.', 'Looks like it belongs to another account or is already deleted — refresh the page.'),
         );
         return;
       }
 
       setSessions((list) => list.filter((x) => x.id !== s.id));
-      notify.success('Бектест видалено', `«${s.name}» більше немає.`);
+      notify.success(tx('Бектест видалено', 'Backtest deleted'), tx(`«${s.name}» більше немає.`, `“${s.name}” is gone.`));
     } catch (e) {
       console.error(e);
-      notify.error('Не вдалось видалити бектест', e.message || 'Спробуй ще раз.');
+      notify.error(tx('Не вдалось видалити бектест', 'Couldn’t delete the backtest'), e.message || tx('Спробуй ще раз.', 'Please try again.'));
     } finally {
       setConfirm(null);
     }
@@ -392,9 +393,9 @@ export default function Backtest() {
   /* Суперлативи, а не назви ключів: «Highest R» одразу каже, що
      згори найкращі, тоді як «За R» лишало здогадуватись про напрям. */
   const SORTS = [
-    { key: 'recent', label: 'Newest' },
-    { key: 'netR', label: 'Highest R' },
-    { key: 'trades', label: 'Most trades' },
+    { key: 'recent', label: tx('Найновіші', 'Newest') },
+    { key: 'netR', label: tx('Найбільший R', 'Highest R') },
+    { key: 'trades', label: tx('Найбільше угод', 'Most trades') },
   ];
 
   return (
@@ -417,7 +418,7 @@ export default function Backtest() {
               <span
                 style={{
                   width: 6, height: 6, borderRadius: 99,
-                  background: ACT.tint, boxShadow: `0 0 12px ${ACT.tint}`,
+                  background: ACT.tint, boxShadow: 'none',
                 }}
               />
               <span
@@ -435,13 +436,13 @@ export default function Backtest() {
                 letterSpacing: '-1.3px', lineHeight: 1, color: T.text,
               }}
             >
-              Бектести
+              {tx('Бектести', 'Backtests')}
             </h1>
 
             <p style={{ fontFamily: T.sans, marginTop: 11, fontSize: 14, color: T.text2 }}>
               {usingDemo
-                ? 'Це демо-дані — створи свій бектест, і вони зникнуть.'
-                : `${sessions.length} ${plural(sessions.length, 'бектест', 'бектести', 'бектестів')} · ${totalTrades} ${plural(totalTrades, 'угода', 'угоди', 'угод')}`}
+                ? tx('Це демо-дані — створи свій бектест, і вони зникнуть.', 'This is demo data — create your own backtest and it’ll disappear.')
+                : tx(`${sessions.length} ${plural(sessions.length, 'бектест', 'бектести', 'бектестів')} · ${totalTrades} ${plural(totalTrades, 'угода', 'угоди', 'угод')}`, `${sessions.length} ${sessions.length === 1 ? 'backtest' : 'backtests'} · ${totalTrades} ${totalTrades === 1 ? 'trade' : 'trades'}`)}
             </p>
           </div>
 
@@ -489,7 +490,7 @@ export default function Backtest() {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Пошук"
+                  placeholder={tx('Пошук', 'Search')}
                   className="min-w-0 flex-1 bg-transparent outline-none"
                   style={{ fontFamily: T.sans, fontSize: 14, color: T.text }}
                 />
@@ -516,9 +517,7 @@ export default function Backtest() {
                         background: on
                           ? `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`
                           : 'rgba(255,255,255,0.03)',
-                        boxShadow: on
-                          ? `inset 0 1px 0 rgba(255,255,255,0.2), 0 8px 20px -10px rgba(${ACT.rgb},0.9)`
-                          : `inset 0 0 0 1px ${T.line}`,
+                        boxShadow: on ? `inset 0 1px 0 rgba(255,255,255,0.2)` : `inset 0 0 0 1px ${T.line}`,
                       }}
                       onMouseEnter={(e) => { if (!on) e.currentTarget.style.color = T.text; }}
                       onMouseLeave={(e) => { if (!on) e.currentTarget.style.color = T.text2; }}
@@ -541,12 +540,12 @@ export default function Backtest() {
                   <FlaskConical size={24} strokeWidth={1.7} />
                 </div>
                 <div className="mb-2.5 text-[21px] font-bold" style={{ fontFamily: T.display, color: T.text }}>
-                  {sessions.length === 0 ? 'Ще немає бектестів' : 'Нічого не знайшлось'}
+                  {sessions.length === 0 ? tx('Ще немає бектестів', 'No backtests yet') : tx('Нічого не знайшлось', 'Nothing found')}
                 </div>
                 <p className="mb-7 max-w-[440px] text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.7 }}>
                   {sessions.length === 0
-                    ? 'Створи бектест під конкретну гіпотезу — і прожени по ній 50–100 угод. Статистика покаже, чи варта вона реальних грошей.'
-                    : 'Спробуй інші слова в пошуку.'}
+                    ? tx('Створи бектест під конкретну гіпотезу — і прожени по ній 50–100 угод. Статистика покаже, чи варта вона реальних грошей.', 'Create a backtest for a specific hypothesis and run 50–100 trades through it. The stats will show if it’s worth real money.')
+                    : tx('Спробуй інші слова в пошуку.', 'Try different search words.')}
                 </p>
                 <button
                   onClick={() => (sessions.length === 0 ? setCreating(true) : setSearch(''))}
@@ -555,10 +554,10 @@ export default function Backtest() {
                     fontFamily: T.sans,
                     background: `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`,
                     color: '#fff',
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 30px -12px rgba(${ACT.rgb},0.9)`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2)`,
                   }}
                 >
-                  {sessions.length === 0 ? <><Plus size={15} strokeWidth={3} /> Створити перший</> : 'Скинути пошук'}
+                  {sessions.length === 0 ? <><Plus size={15} strokeWidth={3} /> {tx('Створити перший', 'Create your first')}</> : tx('Скинути пошук', 'Clear search')}
                 </button>
               </div>
             ) : (
@@ -591,7 +590,7 @@ export default function Backtest() {
               >
                 <Layers size={16} strokeWidth={2.2} style={{ color: T.warn }} />
                 <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: T.text2 }}>
-                  Демо-бектести показані для прикладу. У них можна клікати й навіть додавати угоди — але після перезавантаження вони повернуться як були.
+                  {tx('Демо-бектести показані для прикладу. У них можна клікати й навіть додавати угоди — але після перезавантаження вони повернуться як були.', 'Demo backtests are shown as an example. You can click around and even add trades — but after a reload they’ll reset.')}
                 </span>
               </div>
             )}
@@ -642,12 +641,12 @@ export default function Backtest() {
                   display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                 }}
               >
-                Видалити «{confirm.name}»?
+                {tx(`Видалити «${confirm.name}»?`, `Delete “${confirm.name}”?`)}
               </div>
               <p className="mb-6 text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
                 {confirm.demo
-                  ? 'Це приклад, не твої дані — просто сховається з цього перегляду. Онови сторінку, і він зʼявиться знову, поки не створиш свій перший бектест.'
-                  : `Разом із бектестом зникнуть усі ${confirm.trades?.length || 0} угод у ньому.`}
+                  ? tx('Це приклад, не твої дані — просто сховається з цього перегляду. Онови сторінку, і він зʼявиться знову, поки не створиш свій перший бектест.', 'This is an example, not your data — it’ll just be hidden from this view. Refresh the page and it’ll come back until you create your first backtest.')
+                  : tx(`Разом із бектестом зникнуть усі ${confirm.trades?.length || 0} угод у ньому.`, `All ${confirm.trades?.length || 0} trades in it will be deleted along with the backtest.`)}
               </p>
               <div className="flex gap-2.5">
                 <button
@@ -655,14 +654,14 @@ export default function Backtest() {
                   className="h-11 flex-1 rounded-xl text-[14px] font-semibold"
                   style={{ background: T.surfaceHi, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
                 >
-                  Залишити
+                  {tx('Залишити', 'Keep')}
                 </button>
                 <button
                   onClick={() => removeSession(confirm)}
                   className="h-11 flex-1 rounded-xl text-[14px] font-bold"
                   style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
-                  Видалити
+                  {tx('Видалити', 'Delete')}
                 </button>
               </div>
             </motion.div>

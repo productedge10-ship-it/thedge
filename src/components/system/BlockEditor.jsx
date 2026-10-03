@@ -5,6 +5,7 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { Trash2, ChevronRight } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { emptyBlock, uid } from '../../lib/systemDoc';
+import { t as tx } from '../../lib/lang';
 import SlashMenu from './SlashMenu';
 import ImageBlock from './blocks/ImageBlock';
 import TableBlock from './blocks/TableBlock';
@@ -42,10 +43,10 @@ const GAP = {
 };
 
 const PLACEHOLDER = {
-  h1: 'Заголовок', h2: 'Підзаголовок', h3: 'Дрібний заголовок',
-  text: 'Пиши тут або тисни «/» для блоків',
-  bullet: 'Пункт списку', number: 'Пункт списку', todo: 'Що перевірити',
-  toggle: 'Заголовок згортання', callout: 'Правило або попередження', quote: 'Цитата',
+  h1: tx('Заголовок', 'Heading'), h2: tx('Підзаголовок', 'Subheading'), h3: tx('Дрібний заголовок', 'Small heading'),
+  text: tx('Пиши тут або тисни «/» для блоків', 'Type here or press “/” for blocks'),
+  bullet: tx('Пункт списку', 'List item'), number: tx('Пункт списку', 'List item'), todo: tx('Що перевірити', 'What to check'),
+  toggle: tx('Заголовок згортання', 'Toggle heading'), callout: tx('Правило або попередження', 'Rule or warning'), quote: tx('Цитата', 'Quote'),
 };
 
 /* ---------- один блок ---------- */
@@ -252,7 +253,7 @@ function Block({
                 const next = order[(order.indexOf(block.tone || 'acc') + 1) % order.length];
                 onChange({ tone: next });
               }}
-              title="Змінити колір"
+              title={tx('Змінити колір', 'Change color')}
               className="mt-[1px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[7px] text-[12px] leading-none"
               style={{ fontFamily: T.mono, background: `rgba(${tone.rgb},0.16)`, color: `rgb(${tone.rgb})` }}
             >
@@ -326,7 +327,7 @@ function Block({
         <div className="absolute left-0 top-0 hidden items-center gap-1 opacity-0 transition-opacity duration-150 no-print group-hover/block:opacity-100 sm:flex">
           <button
             onPointerDown={(e) => controls.start(e)}
-            title="Перетягнути"
+            title={tx('Перетягнути', 'Drag')}
             className="grid h-6 w-6 cursor-grab place-items-center rounded-[7px] text-[11px] transition-colors duration-150 active:cursor-grabbing"
             style={{ background: 'rgba(var(--edge-text-rgb),0.04)', border: `1px solid ${T.line}`, color: T.text4 }}
             onMouseEnter={(e) => { e.currentTarget.style.color = T.text2; }}
@@ -341,7 +342,7 @@ function Block({
       {total > 1 && !compact && (
         <button
           onClick={onDelete}
-          title="Видалити блок"
+          title={tx('Видалити блок', 'Delete block')}
           className="absolute -right-8 top-0 z-10 hidden h-6 w-6 place-items-center rounded-[7px] opacity-0 transition-all duration-150 no-print group-hover/block:opacity-100 sm:grid"
           style={{ color: T.text4 }}
           onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
@@ -442,7 +443,7 @@ export default function BlockEditor({ blocks, onChange, onFullscreen, depth = 0,
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; e.currentTarget.style.borderColor = T.line; e.currentTarget.style.background = 'transparent'; }}
         >
           <span className="text-[15px] leading-none">+</span>
-          Додати блок — або тисни «/» у тексті
+          {tx('Додати блок — або тисни «/» у тексті', 'Add a block — or press “/” in the text')}
         </button>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { t as tx } from '../lib/lang';
 import { TRADES, ASSETS, EMOTIONS, MISTAKES, DOW } from './tradingData';
 
 export const sum = (a) => a.reduce((s, x) => s + x, 0);
@@ -87,7 +88,7 @@ export function useStats() {
         return c === depth;
       });
       return {
-        depth: depth === 0 ? 'Свіжа голова' : `Після ${depth} збитк${depth === 1 ? 'у' : 'ів'}`,
+        depth: depth === 0 ? tx('Свіжа голова', 'Fresh start') : tx(`Після ${depth} збитк${depth === 1 ? 'у' : 'ів'}`, `After ${depth} loss${depth === 1 ? '' : 'es'}`),
         avg: bucket.length ? +(sum(bucket.map((x) => x.rr)) / bucket.length).toFixed(2) : 0,
         n: bucket.length,
       };

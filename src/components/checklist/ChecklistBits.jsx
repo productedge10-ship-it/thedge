@@ -58,14 +58,7 @@ export function ProgressRing({ value, total, color, size = 74 }) {
 
   return (
     <div className="relative grid shrink-0 place-items-center" style={{ width: size, height: size }}>
-      {/* світло за кільцем прокидається тільки коли все закрито */}
-      <motion.span
-        className="pointer-events-none absolute rounded-full"
-        style={{ width: size, height: size, background: color, filter: 'blur(18px)' }}
-        initial={false}
-        animate={{ opacity: full ? 0.28 : 0.06 }}
-        transition={{ duration: 0.6, ease: EASE }}
-      />
+      {/* Розмиту кольорову пляму прибрано: світіння за блоком — прикмета шаблону, глибину дають поверхні. */}
 
       <svg width={size} height={size} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={R} fill="none" stroke={T.line} strokeWidth="4" />

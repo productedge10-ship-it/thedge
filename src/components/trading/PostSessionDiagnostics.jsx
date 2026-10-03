@@ -13,6 +13,7 @@ import {
   reviewFilled, REVIEW_STEPS,
 } from '../../lib/dayReview';
 import { T, EASE, SPRING } from './planTheme';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Розбір дня.
@@ -29,7 +30,7 @@ import { T, EASE, SPRING } from './planTheme';
 ================================================================== */
 
 function BiasBadge({ value }) {
-  if (!value) return <span className="text-[15px] font-medium" style={{ color: T.text4 }}>Не вказано</span>;
+  if (!value) return <span className="text-[15px] font-medium" style={{ color: T.text4 }}>{tx('Не вказано', 'Not set')}</span>;
   const map = {
     Bullish: [T.ok, T.okRgb],
     Bearish: [T.bad, T.badRgb],
@@ -41,7 +42,7 @@ function BiasBadge({ value }) {
       className="rounded-lg px-2.5 py-1 text-[14px] font-semibold"
       style={{ background: `rgba(${rgb},0.10)`, border: `1px solid rgba(${rgb},0.24)`, color: c, fontFamily: T.sans }}
     >
-      {value}
+      {value === 'Напрям не вказано' ? tx('Напрям не вказано', 'No bias set') : value}
     </span>
   );
 }
@@ -294,11 +295,11 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
       </div>
 
       {/* 01 — Bias */}
-      <Step n="01" title="Напрямок ринку" hint="Ринок підтвердив твоє читання?" done={!!planData.actualNarrative}>
+      <Step n="01" title={tx('Напрямок ринку', 'Market direction')} hint={tx('Ринок підтвердив твоє читання?', 'Did the market confirm your read?')} done={!!planData.actualNarrative}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex flex-1 flex-col gap-2">
             <span className="text-[12px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              Планував
+              {tx('Планував', 'Planned')}
             </span>
             <div
               className="flex h-[42px] items-center rounded-xl px-3.5"
@@ -314,7 +315,7 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
 
           <div className="flex flex-1 flex-col gap-2">
             <span className="text-[12px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              Фактично
+              {tx('Фактично', 'Actual')}
             </span>
             <NarrativeSelect
               value={planData.actualNarrative}
@@ -339,13 +340,13 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
             >
               <span
                 className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: matched ? T.ok : T.bad, boxShadow: `0 0 8px ${matched ? T.ok : T.bad}` }}
+                style={{ background: matched ? T.ok : T.bad, boxShadow: 'none' }}
               />
               <span className="text-[14px] font-semibold" style={{ color: matched ? T.ok : T.bad, fontFamily: T.sans }}>
-                {matched ? 'Читання підтвердилось' : 'Читання не спрацювало'}
+                {matched ? tx('Читання підтвердилось', 'Your read was confirmed') : tx('Читання не спрацювало', 'Your read didn’t play out')}
               </span>
               <span className="ml-auto hidden text-[13px] font-medium sm:block" style={{ color: T.text4 }}>
-                {matched ? 'Bias збігся з ринком' : 'Ринок пішов проти очікування'}
+                {matched ? tx('Bias збігся з ринком', 'Bias matched the market') : tx('Ринок пішов проти очікування', 'The market went against expectations')}
               </span>
             </motion.div>
           )}
@@ -355,8 +356,8 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
       {/* 02 — як минув день */}
       <Step
         n="02"
-        title="Як минув торговий день"
-        hint="Можна кілька — день рідко буває однорідним"
+        title={tx('Як минув торговий день', 'How the trading day went')}
+        hint={tx('Можна кілька — день рідко буває однорідним', 'Pick several — a day is rarely just one thing')}
         done={flow.length > 0}
       >
         <div className="grid gap-2 sm:grid-cols-2">
@@ -409,7 +410,7 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
                     зміна чужого кроку — найшвидший спосіб змусити
                     людину не довіряти формі. */}
                 <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  Обрана причина сама проставить стан у кроці 03 — його можна змінити руками
+                  {tx('Обрана причина сама проставить стан у кроці 03 — його можна змінити руками', 'The chosen reason will auto-fill your state in step 03 — you can change it manually')}
                 </span>
               </div>
             </motion.div>
@@ -440,7 +441,7 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
                 <TextareaAutosize
                   value={planData.analysisMistakeText}
                   onChange={(e) => updatePlanData({ analysisMistakeText: e.target.value })}
-                  placeholder="Що саме сталося? Яку структуру пропустив, де зрізав кут?"
+                  placeholder={tx('Що саме сталося? Яку структуру пропустив, де зрізав кут?', 'What exactly happened? What structure did you miss, where did you cut corners?')}
                   minRows={3}
                   spellCheck={false}
                   className="w-full resize-none border-none bg-transparent px-4 py-3.5 outline-none"
@@ -474,7 +475,7 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
                     </span>
                   ) : (
                     <span className="text-[12.5px] font-medium" style={{ fontFamily: T.sans, color: T.text4 }}>
-                      Полетить у Журнал помилок
+                      {tx('Полетить у Журнал помилок', 'Will go to the Mistakes Journal')}
                     </span>
                   )}
 
@@ -500,7 +501,7 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
                     onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.1)`; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
-                    {errDraft ? 'Змінити розбір' : 'Розібрати детально'}
+                    {errDraft ? tx('Змінити розбір', 'Edit breakdown') : tx('Розібрати детально', 'Break it down')}
                   </button>
                 </div>
               </div>
@@ -512,8 +513,8 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
       {/* 03 — стан */}
       <Step
         n="03"
-        title="Що керувало тобою сьогодні"
-        hint="Частину проставлять відповіді вище — лишається перевірити й доповнити"
+        title={tx('Що керувало тобою сьогодні', 'What drove you today')}
+        hint={tx('Частину проставлять відповіді вище — лишається перевірити й доповнити', 'Some are pre-filled from answers above — just check and complete')}
         done={state.length > 0}
       >
         <div className="flex flex-wrap gap-2">
@@ -531,8 +532,8 @@ export default function PostSessionDiagnostics({ planData, updatePlanData, planI
       {/* 04 — навичка */}
       <Step
         n="04"
-        title="Що далося найважче"
-        hint="Питання про дію, а не про почуття — з нього видно, якої навички бракує"
+        title={tx('Що далося найважче', 'What was hardest')}
+        hint={tx('Питання про дію, а не про почуття — з нього видно, якої навички бракує', 'This is about actions, not feelings — it shows which skill is missing')}
         done={hard.length > 0}
         last
       >

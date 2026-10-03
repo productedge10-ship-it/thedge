@@ -10,6 +10,7 @@ import { useSettings } from '../../context/SettingsContext';
 import {
   findAnswer, HELLO, MISS, STARTERS, OPEN_EVENT,
 } from '../../lib/catChat';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Чат із котом.
@@ -198,11 +199,11 @@ export default function CatChat() {
 
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
-                  Кіт
+                  {tx('Кіт', 'The Cat')}
                 </div>
                 <div className="flex items-center gap-1.5 text-[11.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: T.ok }} />
-                  знає, де що лежить
+                  {tx('знає, де що лежить', 'knows where everything is')}
                 </div>
               </div>
 
@@ -244,7 +245,7 @@ export default function CatChat() {
                       className="mt-1.5 flex h-8 items-center gap-1.5 rounded-lg px-3 text-[12.5px] font-bold transition-transform active:scale-[0.98]"
                       style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                     >
-                      {m.cta || 'Перейти'}
+                      {m.cta || tx('Перейти', 'Go')}
                       <ArrowRight size={12} strokeWidth={2.8} />
                     </motion.button>
                   )}
@@ -303,7 +304,7 @@ export default function CatChat() {
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') ask(draft); }}
-                  placeholder="Спитай, де що лежить…"
+                  placeholder={tx('Спитай, де що лежить…', 'Ask where something is…')}
                   className="h-11 w-full min-w-0 bg-transparent text-[13.5px] outline-none placeholder:opacity-60"
                   style={{ fontFamily: T.sans, color: T.text }}
                 />
@@ -322,7 +323,7 @@ export default function CatChat() {
               </div>
 
               <p className="mt-2 px-1 text-[11px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.45 }}>
-                Поки що відповідаю з довідки. Розумніший помічник — попереду.
+                {tx('Поки що відповідаю з довідки. Розумніший помічник — попереду.', 'For now I answer from the help pages. A smarter assistant is on the way.')}
               </p>
             </div>
           </motion.aside>

@@ -8,6 +8,7 @@ import TourOverlay from '../components/demo/TourOverlay';
 import { STEPS } from '../components/demo/steps';
 import { resetDemoDb } from '../lib/demoDb';
 import { C, F, A } from '../components/landing/v3/base';
+import { t as tx } from '../lib/lang';
 
 /* ==================================================================
    Оболонка демо.
@@ -132,15 +133,15 @@ export default function DemoShell() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <a href="/" className="demo-bar-btn" style={btn(false)} title="На сайт">
+          <a href="/" className="demo-bar-btn" style={btn(false)} title={tx('На сайт', 'Back to site')}>
             <ArrowLeft size={14} strokeWidth={2.2} />
-            <span className="demo-bar-label">На сайт</span>
+            <span className="demo-bar-label">{tx('На сайт', 'Back to site')}</span>
           </a>
           <span className="demo-bar-desc" style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: '1.6px', color: C.accSoft, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            ДЕМО · ДАНІ ВИГАДАНІ Й ЖИВУТЬ ЛИШЕ В ЦЬОМУ БРАУЗЕРІ
+            {tx('ДЕМО · ДАНІ ВИГАДАНІ Й ЖИВУТЬ ЛИШЕ В ЦЬОМУ БРАУЗЕРІ', 'DEMO · THE DATA IS MADE UP AND LIVES ONLY IN THIS BROWSER')}
           </span>
           <span className="demo-bar-badge" style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 700, letterSpacing: '1px', color: C.accSoft, flexShrink: 0 }}>
-            ДЕМО
+            {tx('ДЕМО', 'DEMO')}
           </span>
         </div>
 
@@ -150,15 +151,15 @@ export default function DemoShell() {
             className="demo-bar-btn"
             onClick={() => { resetDemoDb(); window.location.reload(); }}
             style={btn(false)}
-            title="Повернути демо у початковий стан"
+            title={tx('Повернути демо у початковий стан', 'Reset the demo to its initial state')}
           >
             <RotateCcw size={14} strokeWidth={2.2} />
-            <span className="demo-bar-label">Скинути</span>
+            <span className="demo-bar-label">{tx('Скинути', 'Reset')}</span>
           </button>
 
-          <button type="button" className="demo-bar-btn" onClick={() => { setHints((v) => !v); setStepIdx(0); }} style={btn(hints)} title={hints ? 'Підказки увімкнені' : 'Підказки вимкнені'}>
+          <button type="button" className="demo-bar-btn" onClick={() => { setHints((v) => !v); setStepIdx(0); }} style={btn(hints)} title={hints ? tx('Підказки увімкнені', 'Hints on') : tx('Підказки вимкнені', 'Hints off')}>
             {hints ? <Lightbulb size={14} strokeWidth={2} /> : <LightbulbOff size={14} strokeWidth={2} />}
-            <span className="demo-bar-label">{hints ? 'Підказки увімкнені' : 'Підказки вимкнені'}</span>
+            <span className="demo-bar-label">{hints ? tx('Підказки увімкнені', 'Hints on') : tx('Підказки вимкнені', 'Hints off')}</span>
           </button>
 
           <a
@@ -167,11 +168,11 @@ export default function DemoShell() {
             style={{
               fontFamily: F.sans, fontSize: 12.5, fontWeight: 700, color: '#fff',
               background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, borderRadius: 9,
-              padding: '7px 14px', whiteSpace: 'nowrap', boxShadow: '0 8px 22px rgba(74,59,245,.32)',
+              padding: '7px 14px', whiteSpace: 'nowrap',
             }}
           >
-            <span className="demo-bar-label">Почати безкоштовно</span>
-            <span className="demo-bar-badge">Почати</span>
+            <span className="demo-bar-label">{tx('Почати безкоштовно', 'Start for free')}</span>
+            <span className="demo-bar-badge">{tx('Почати', 'Start')}</span>
           </a>
         </div>
       </div>

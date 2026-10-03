@@ -7,6 +7,8 @@
    а гроші — похідна від нього.
 ================================================================== */
 
+import { t as tx } from './lang';
+
 export const SESSIONS = ['Asia', 'London', 'New York'];
 export const QUALITIES = ['A+', 'A', 'B', 'C'];
 /* Стартовий список активів. Він не претендує на повноту — це те, з
@@ -21,7 +23,7 @@ export const RESULTS = ['WIN', 'LOSS', 'BE'];
    самого трейду: угода закрилась по тейку або по стопу. */
 export const RESULT_LABEL = { WIN: 'Take', LOSS: 'Stop', BE: 'BE' };
 export const resultLabel = (r) => RESULT_LABEL[r] || r;
-export const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
+export const WEEKDAYS = tx(['Пн', 'Вт', 'Ср', 'Чт', 'Пт'], ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
 
 /* R угоди. LOSS завжди -1R: у бектесті ризик однаковий. */
 export const rOf = (t) => {
@@ -94,7 +96,7 @@ export function computeStats(rawTrades, initialBalance = 10000) {
 
   /* крива еквіті + просадка (в R і у %) */
   const riskPerTrade = initialBalance * 0.01;
-  const equity = [{ i: 0, label: 'Старт', r: 0, balance: initialBalance, dd: 0, date: null }];
+  const equity = [{ i: 0, label: tx('Старт', 'Start'), r: 0, balance: initialBalance, dd: 0, date: null }];
   let cum = 0, peak = 0, maxDD = 0;
   trades.forEach((t, i) => {
     cum += rs[i];

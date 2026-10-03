@@ -1,3 +1,4 @@
+import { t as tx, LOCALE } from './lang';
 /* ==================================================================
    Завдання, матриця Ейзенхауера і помідори.
    Поки що все локально — структура вже така, якою піде в базу.
@@ -17,10 +18,10 @@ export const KEYS = {
 /* Квадранти. Підпис — це не назва осі, а дія: матриця корисна саме
    тим, що каже, ЩО робити з завданням, а не куди його покласти. */
 export const QUADRANTS = [
-  { id: 'q1', label: 'Роби зараз',  axis: 'Терміново · Важливо',        tone: 'bad',   hint: 'Горить і має значення' },
-  { id: 'q2', label: 'Заплануй',    axis: 'Не терміново · Важливо',     tone: 'ok',    hint: 'Тут живе розвиток' },
-  { id: 'q3', label: 'Швидко зроби', axis: 'Терміново · Неважливо',     tone: 'warn',  hint: 'Зʼїдає день по шматочку' },
-  { id: 'q4', label: 'Прибери',     axis: 'Не терміново · Неважливо',   tone: 'muted', hint: 'Чесно спитай, навіщо воно' },
+  { id: 'q1', label: tx('Роби зараз', 'Do now'),  axis: tx('Терміново · Важливо', 'Urgent · Important'),        tone: 'bad',   hint: tx('Горить і має значення', 'On fire and it matters') },
+  { id: 'q2', label: tx('Заплануй', 'Schedule'),    axis: tx('Не терміново · Важливо', 'Not urgent · Important'),     tone: 'ok',    hint: tx('Тут живе розвиток', 'This is where growth lives') },
+  { id: 'q3', label: tx('Швидко зроби', 'Do it quickly'), axis: tx('Терміново · Неважливо', 'Urgent · Not important'),     tone: 'warn',  hint: tx('Зʼїдає день по шматочку', 'Eats your day bit by bit') },
+  { id: 'q4', label: tx('Прибери', 'Drop it'),     axis: tx('Не терміново · Неважливо', 'Not urgent · Not important'),   tone: 'muted', hint: tx('Чесно спитай, навіщо воно', 'Honestly ask why it’s there') },
 ];
 
 export const DEFAULT_SETTINGS = {
@@ -48,25 +49,25 @@ export const addDays = (iso, n) => {
 };
 
 export const fmtDay = (iso) => {
-  if (!iso) return 'без дати';
+  if (!iso) return tx('без дати', 'no date');
   const d = new Date(`${iso}T12:00:00`);
   if (isNaN(d)) return iso;
-  return d.toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' }).replace(/\sр\./, '');
+  return d.toLocaleDateString(LOCALE, { day: '2-digit', month: 'short' }).replace(/\sр\./, '');
 };
 
 export const fmtDayLong = (iso) => {
-  if (!iso) return 'Без дати';
+  if (!iso) return tx('Без дати', 'No date');
   const d = new Date(`${iso}T12:00:00`);
   if (isNaN(d)) return iso;
-  return d.toLocaleDateString('uk-UA', { weekday: 'long', day: '2-digit', month: 'long' });
+  return d.toLocaleDateString(LOCALE, { weekday: 'long', day: '2-digit', month: 'long' });
 };
 
 export const relativeDay = (iso) => {
-  if (!iso) return 'колись';
+  if (!iso) return tx('колись', 'someday');
   const t = today();
-  if (iso === t) return 'сьогодні';
-  if (iso === addDays(t, 1)) return 'завтра';
-  if (iso === addDays(t, -1)) return 'вчора';
+  if (iso === t) return tx('сьогодні', 'today');
+  if (iso === addDays(t, 1)) return tx('завтра', 'tomorrow');
+  if (iso === addDays(t, -1)) return tx('вчора', 'yesterday');
   return fmtDay(iso);
 };
 
@@ -212,8 +213,8 @@ export function parseWhen(raw) {
   return { text: raw.trim(), due, dueTime };
 }
 
-export const MONTHS = ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
-export const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+export const MONTHS = tx(['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'], ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
+export const WEEKDAYS = tx(['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'], ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
 
 /* Сітка місяця: завжди повні тижні з понеділка */
 export function monthGrid(year, month) {

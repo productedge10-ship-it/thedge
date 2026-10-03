@@ -55,7 +55,7 @@ export function Rhythm() {
     <section style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('РИТМ', 'RHYTHM')}</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.text3 }}>{tx('РИТМ', 'RHYTHM')}</span>
       </div>
 
       <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(26px,2.3vw,44px)', letterSpacing: '-1.6px', lineHeight: 1.1, margin: '0 0 12px', color: '#fff' }}>
@@ -113,7 +113,6 @@ export function NotDoing() {
     <section style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ position: 'relative', background: 'linear-gradient(150deg,rgba(245,163,59,.11),rgba(245,163,59,.03) 55%,transparent)', border: '1px solid rgba(245,163,59,.3)', borderRadius: 24, padding: 'clamp(18px,4.5vw,30px)', overflow: 'hidden' }}>
         <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,#f5a33b,rgba(245,163,59,.2),transparent)' }} />
-        <span aria-hidden style={{ position: 'absolute', top: -90, right: -40, width: 320, height: 320, background: 'radial-gradient(circle,rgba(245,163,59,.16),transparent 70%)', filter: 'blur(60px)', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ flex: '1 1 300px', minWidth: 'min(260px,100%)' }}>
@@ -245,7 +244,7 @@ export function Pricing() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('ЦІНИ', 'PRICING')}</span>
+            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.text3 }}>{tx('ЦІНИ', 'PRICING')}</span>
           </div>
           <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 10px', color: '#fff' }}>
             {tx('Дешевше за одну погану угоду', 'Cheaper than one bad trade')}
@@ -290,8 +289,7 @@ export function Pricing() {
           </a>
         </div>
 
-        <div style={{ position: 'relative', background: 'linear-gradient(160deg,#12121c,#0c0c14)', border: `1px solid ${A(0.42)}`, borderRadius: 22, padding: 'clamp(20px,5vw,30px) clamp(18px,4.5vw,28px)', display: 'flex', flexDirection: 'column', boxShadow: '0 28px 74px rgba(74,59,245,.2)', transform: 'translateY(-6px)' }}>
-          <span style={{ position: 'absolute', top: 0, left: 28, right: 28, height: 1, background: `linear-gradient(90deg,transparent,${C.acc},transparent)` }} />
+        <div style={{ position: 'relative', background: 'linear-gradient(160deg,#12121c,#0c0c14)', border: `1px solid ${A(0.42)}`, borderRadius: 22, padding: 'clamp(20px,5vw,30px) clamp(18px,4.5vw,28px)', display: 'flex', flexDirection: 'column', transform: 'translateY(-6px)' }}>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginBottom: 16 }}>
             <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2px', color: C.accSoft }}>PRO</span>
@@ -352,9 +350,7 @@ export function Pricing() {
               «подивитись», а по підписку. */}
           <a
             href="/auth?next=pro"
-            style={{ marginTop: 'auto', width: '100%', background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff', fontFamily: F.sans, fontSize: 14.5, fontWeight: 700, padding: 14, borderRadius: 13, cursor: 'pointer', textAlign: 'center', boxShadow: '0 14px 36px rgba(74,59,245,.4)', transition: 'box-shadow .2s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 18px 46px rgba(74,59,245,.55)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 14px 36px rgba(74,59,245,.4)'; }}
+            style={{ marginTop: 'auto', width: '100%', background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff', fontFamily: F.sans, fontSize: 14.5, fontWeight: 700, padding: 14, borderRadius: 13, cursor: 'pointer', textAlign: 'center', transition: 'box-shadow .2s' }}
           >
             {tx('Почати безкоштовно', 'Start free')}
           </a>
@@ -434,14 +430,6 @@ export function FinalFaq() {
     <section id="faq" style={{ ...SHELL, paddingTop: '0', paddingBottom: '76px' }}>
       <div style={{ display: 'flex', gap: 52, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div style={{ flex: '1 1 380px', minWidth: 'min(280px,100%)', position: 'relative' }}>
-          <span
-            aria-hidden
-            style={{
-              position: 'absolute', top: -40, left: -70, width: 340, height: 340,
-              background: 'radial-gradient(circle,rgba(74,59,245,.16),transparent 70%)', filter: 'blur(70px)',
-              pointerEvents: 'none', animation: reduced ? 'none' : 'lnBreathe 7s ease-in-out infinite',
-            }}
-          />
 
           <div style={{ position: 'relative' }}>
             <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.07, margin: '0 0 16px', color: '#fff', textWrap: 'balance' }}>
@@ -453,9 +441,7 @@ export function FinalFaq() {
 
             <a
               href="/auth"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff', fontFamily: F.sans, fontSize: 15.5, fontWeight: 700, padding: '17px 30px', borderRadius: 14, cursor: 'pointer', boxShadow: '0 18px 50px rgba(74,59,245,.42)', whiteSpace: 'nowrap', transition: 'all .2s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 22px 60px rgba(74,59,245,.58)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 18px 50px rgba(74,59,245,.42)'; e.currentTarget.style.transform = 'none'; }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff', fontFamily: F.sans, fontSize: 15.5, fontWeight: 700, padding: '17px 30px', borderRadius: 14, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .2s' }}
             >
               {tx('Почати безкоштовно', 'Start free')}
               <ArrowRight size={16} strokeWidth={2.4} />

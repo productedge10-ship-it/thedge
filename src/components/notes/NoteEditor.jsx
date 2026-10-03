@@ -670,13 +670,6 @@ export default function NoteEditor({
           boxShadow: `0 50px 110px -40px #000, 0 0 0 1px ${A(0.08)}`,
           }}
       >
-        <span
-          className="pointer-events-none absolute inset-x-0 top-0 h-px"
-          style={{
-            borderRadius: '24px 24px 0 0',
-            background: `linear-gradient(90deg,transparent,${A(0.8)} 30%,rgba(var(--edge-acc-rgb),0.80) 70%,transparent)`,
-          }}
-        />
 
         {/* ─── шапка ─── */}
         <div
@@ -701,7 +694,7 @@ export default function NoteEditor({
               <div className="mt-1 flex items-center gap-[7px] truncate text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
                 <span
                   className="h-[5px] w-[5px] rounded-full"
-                  style={{ background: busy ? 'var(--edge-warn)' : 'var(--edge-ok)', boxShadow: `0 0 8px 1px ${busy ? 'rgba(var(--edge-warn-rgb),0.60)' : 'rgba(var(--edge-ok-rgb),0.60)'}` }}
+                  style={{ background: busy ? 'var(--edge-warn)' : 'var(--edge-ok)', boxShadow: 'none' }}
                 />
                 <span>
                   {busy > 0
@@ -773,7 +766,7 @@ export default function NoteEditor({
                         background: on ? A(0.17) : 'rgba(var(--edge-hair-rgb),0.03)',
                         border: `1px solid ${on ? A(0.5) : 'var(--edge-line)'}`,
                         color: on ? 'var(--edge-text)' : 'var(--edge-text3)',
-                        boxShadow: on ? `0 0 18px -6px ${A(0.6)}` : 'none',
+                        boxShadow: 'none',
                         transition: 'all .16s',
                       }}
                     >
@@ -1066,7 +1059,7 @@ export default function NoteEditor({
                     <PickRow key={f.id || 'none'} color={f.color} active={on} onClick={() => patch({ folder_id: f.id })}>
                       <span
                         className="h-[7px] w-[7px] shrink-0 rounded-full"
-                        style={{ background: f.color, boxShadow: on ? `0 0 9px 1px ${f.color}cc` : 'none' }}
+                        style={{ background: f.color, boxShadow: 'none' }}
                       />
                       <span className="min-w-0 flex-1 truncate text-left">{f.name}</span>
                       {on && <Check size={13} strokeWidth={2.2} style={{ flex: 'none' }} />}
@@ -1306,7 +1299,7 @@ export default function NoteEditor({
                           style={{
                             background: `linear-gradient(160deg, ${col}, ${col}b3)`,
                             border: `2px solid ${on ? 'var(--edge-text)' : 'transparent'}`,
-                            boxShadow: on ? `0 0 0 3px ${col}44, 0 6px 16px -6px ${col}cc` : 'none',
+                            boxShadow: on ? `0 0 0 3px ${col}44` : 'none', /* кільце — позначка вибраного кольору, не ореол */
                             transform: `scale(${on ? 1 : 0.88})`,
                             transition: 'all .18s',
                           }}
@@ -1350,7 +1343,7 @@ export default function NoteEditor({
                           style={{
                             background: on ? `${look}1f` : 'rgba(var(--edge-hair-rgb),0.02)',
                             border: `1px solid ${on ? `${look}80` : 'var(--edge-line)'}`,
-                            boxShadow: on ? `0 0 18px -8px ${look}cc` : 'none',
+                            boxShadow: 'none',
                             transition: 'all .16s',
                           }}
                         >
@@ -1541,9 +1534,7 @@ function SaveBtn({ onClick, disabled, saving, label }) {
       className="relative flex h-[42px] items-center gap-[9px] overflow-hidden rounded-xl px-5"
       style={{
         background: `linear-gradient(180deg, ${on ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
-        boxShadow: on
-          ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)`
-          : `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
+        boxShadow: on ? `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)` : `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
         transform: `translateY(${on ? '-2px' : '0'})`,
         opacity: disabled ? 0.45 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',

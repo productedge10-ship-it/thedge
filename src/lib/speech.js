@@ -18,6 +18,8 @@
    залежить.
 ================================================================== */
 
+import { t as tx, isEn } from './lang';
+
 export const SPEECH_LANGS = [
   { id: 'uk-UA', short: 'UA', name: 'Українська' },
   { id: 'en-US', short: 'EN', name: 'English' },
@@ -38,8 +40,8 @@ const LANG_KEY = 'edge.voice.lang';
 export const savedLang = () => {
   try {
     const v = localStorage.getItem(LANG_KEY);
-    return SPEECH_LANGS.some((l) => l.id === v) ? v : 'uk-UA';
-  } catch { return 'uk-UA'; }
+    return SPEECH_LANGS.some((l) => l.id === v) ? v : (isEn ? 'en-US' : 'uk-UA');
+  } catch { return isEn ? 'en-US' : 'uk-UA'; }
 };
 export const rememberLang = (id) => {
   try { localStorage.setItem(LANG_KEY, id); } catch { /* приватний режим */ }
@@ -80,8 +82,8 @@ export function createRecognizer({ lang, onPartial, onFinal, onError, onEnd }) {
        лякати там, де все гаразд. */
     if (e.error === 'no-speech' || e.error === 'aborted') return;
     onError?.(e.error === 'not-allowed'
-      ? 'Браузер не дав доступ до мікрофона'
-      : `Розпізнавання не вдалось: ${e.error}`);
+      ? tx('Браузер не дав доступ до мікрофона', "The browser didn't allow microphone access")
+      : tx(`Розпізнавання не вдалось: ${e.error}`, `Speech recognition failed: ${e.error}`));
   };
 
   /* Браузер сам завершує сесію через кілька десятків секунд.

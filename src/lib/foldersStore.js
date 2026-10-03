@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { CAT_COLORS } from './noteTags';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Папки нотаток.
@@ -42,11 +43,11 @@ export const ALL_NOTES = '__all__';
    перефарбувати й видалити можна кожну.
 ------------------------------------------------------------------ */
 export const DEFAULT_FOLDERS = [
-  { name: 'Спостереження', color: FOLDER_COLORS[0] },
-  { name: 'Правила',       color: FOLDER_COLORS[2] },
-  { name: 'Розбори',       color: FOLDER_COLORS[1] },
-  { name: 'Ідеї',          color: FOLDER_COLORS[3] },
-  { name: 'Інше',          color: FOLDER_COLORS[7] },
+  { name: tx('Спостереження', 'Observations'), color: FOLDER_COLORS[0] },
+  { name: tx('Правила', 'Rules'),       color: FOLDER_COLORS[2] },
+  { name: tx('Розбори', 'Reviews'),       color: FOLDER_COLORS[1] },
+  { name: tx('Ідеї', 'Ideas'),          color: FOLDER_COLORS[3] },
+  { name: tx('Інше', 'Other'),          color: FOLDER_COLORS[7] },
 ];
 
 /* Схема на базі може відставати від коду: закріплення папок
@@ -79,7 +80,7 @@ const clean = (rows) => {
 
 const toApp = (row) => ({
   id: row.id,
-  name: row.name || 'Без назви',
+  name: row.name || tx('Без назви', 'Untitled'),
   color: row.color || FOLDER_COLORS[0],
   position: typeof row.position === 'number' ? row.position : 0,
   pinned: !!row.pinned,
@@ -148,7 +149,7 @@ const COLS_NO_ICON = 'id, name, color, position, pinned';
 export async function createFolder(userId, { name, color, position, pinned, icon }) {
   const base = {
     user_id: userId,
-    name: (name || '').trim() || 'Нова папка',
+    name: (name || '').trim() || tx('Нова папка', 'New folder'),
     color: color || FOLDER_COLORS[0],
     position: position ?? 0,
   };
@@ -203,7 +204,7 @@ export async function createDefaultFolders(userId) {
 export async function updateFolder(userId, id, patch) {
   const build = (level) => {
     const row = { updated_at: new Date().toISOString() };
-    if (patch.name !== undefined) row.name = (patch.name || '').trim() || 'Без назви';
+    if (patch.name !== undefined) row.name = (patch.name || '').trim() || tx('Без назви', 'Untitled');
     if (patch.color !== undefined) row.color = patch.color;
     if (level >= 1 && patch.pinned !== undefined) row.pinned = !!patch.pinned;
     if (level >= 2 && patch.icon !== undefined) row.icon = patch.icon || '';

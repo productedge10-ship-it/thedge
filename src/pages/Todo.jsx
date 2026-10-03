@@ -401,7 +401,7 @@ export default function Todo() {
                 border: '1px solid rgba(139,123,255,0.5)',
                 color: '#fff',
                 fontFamily: T.sans,
-                boxShadow: '0 10px 28px -12px rgba(139,123,255,0.4)',
+                boxShadow: 'none',
               }}
             >
               <span className="pomodoro-cta-ecg" aria-hidden="true">

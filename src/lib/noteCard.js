@@ -1,4 +1,5 @@
 import { CAT_COLORS } from './noteTags';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Вигляд картки запису.
@@ -23,22 +24,22 @@ export const CARD_COLORS = CAT_COLORS;
 export const CARD_ICONS = ['📈', '💡', '🔥', '⚠️', '✅', '🧠', '📚', '🎯', '🍲'];
 
 export const CARD_SIZES = [
-  { id: 'normal', name: 'Звичайна' },
-  { id: 'tall', name: 'Висока' },
+  { id: 'normal', name: tx('Звичайна', 'Normal') },
+  { id: 'tall', name: tx('Висока', 'Tall') },
 ];
 
 /* Фон картки. Не «тема», а рівно чотири варіанти щільності кольору:
    від нічого до сітки з крапок. Більше варіантів — і полиця стає
    строкатою, менше — і вибір нічого не міняє. */
 export const CARD_BGS = [
-  { id: 'none', name: 'Без фону' },
-  { id: 'tint', name: 'Тонований' },
-  { id: 'gradient', name: 'Градієнт' },
-  { id: 'glow', name: 'Сяйво' },
-  { id: 'dots', name: 'Крапки' },
-  { id: 'grid', name: 'Сітка' },
-  { id: 'lines', name: 'Смуги' },
-  { id: 'aurora', name: 'Аврора' },
+  { id: 'none', name: tx('Без фону', 'No background') },
+  { id: 'tint', name: tx('Тонований', 'Tint') },
+  { id: 'gradient', name: tx('Градієнт', 'Gradient') },
+  { id: 'glow', name: tx('Сяйво', 'Glow') },
+  { id: 'dots', name: tx('Крапки', 'Dots') },
+  { id: 'grid', name: tx('Сітка', 'Grid') },
+  { id: 'lines', name: tx('Смуги', 'Stripes') },
+  { id: 'aurora', name: tx('Аврора', 'Aurora') },
 ];
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -62,7 +63,7 @@ export const cardOf = (note) => {
     /* Звʼязок з бектестом лежить тут же, а не окремою колонкою: це
        та сама «додаткова інформація про запис», і платити за неї
        ще однією міграцією не варто. */
-    trade: raw.trade && raw.trade.id ? { id: String(raw.trade.id), name: String(raw.trade.name || 'Бектест') } : null,
+    trade: raw.trade && raw.trade.id ? { id: String(raw.trade.id), name: String(raw.trade.name || tx('Бектест', 'Backtest')) } : null,
     /* Закріплення теж тут: у нотаток немає своєї колонки під нього, а
        заводити другу міграцію заради одного прапорця не варто. */
     pin: !!raw.pin,

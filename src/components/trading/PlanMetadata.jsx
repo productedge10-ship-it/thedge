@@ -3,12 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Link as LinkIcon, Book, Search as SearchIcon, Loader2 } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import { format, subDays } from 'date-fns';
-import { uk } from 'date-fns/locale';
+import { uk, enUS } from 'date-fns/locale';
 import 'react-day-picker/dist/style.css';
 
 import NarrativeSelect from '../ui/NarrativeSelect';
 import { T, EASE } from './planTheme';
 import { FieldLabel } from './PlanPrimitives';
+import { t as tx, isEn } from '../../lib/lang';
+import { pairLabel } from '../../lib/planAssets';
 
 const CONTROL = 'flex h-[42px] w-full items-center justify-between rounded-xl px-3.5 text-[15px] font-semibold transition-all duration-200';
 
@@ -65,9 +67,9 @@ function PlanDatePicker({ dateStr, onChange }) {
           >
             <div className="flex w-[118px] shrink-0 flex-col gap-0.5 p-2" style={{ borderRight: `1px solid ${T.line}`, background: T.sunken }}>
               <span className="px-2.5 pb-1 pt-1.5 text-[12px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                Швидко
+                {tx('Швидко', 'Quick')}
               </span>
-              {[['Сьогодні', 0], ['Вчора', 1], ['Позавчора', 2]].map(([label, n]) => (
+              {[[tx('Сьогодні', 'Today'), 0], [tx('Вчора', 'Yesterday'), 1], [tx('Позавчора', '2 days ago'), 2]].map(([label, n]) => (
                 <button
                   key={label}
                   onClick={() => pick(subDays(new Date(), n))}
@@ -81,7 +83,7 @@ function PlanDatePicker({ dateStr, onChange }) {
               ))}
             </div>
             <div className="p-3">
-              <DayPicker mode="single" selected={selected} onSelect={pick} locale={uk} showOutsideDays className="edge-cal m-0" />
+              <DayPicker mode="single" selected={selected} onSelect={pick} locale={isEn ? enUS : uk} weekStartsOn={1} showOutsideDays className="edge-cal m-0" />
             </div>
           </motion.div>
         )}
@@ -118,13 +120,13 @@ export default function PlanMetadata({
       <div className="flex flex-wrap items-end gap-4">
         {/* Дата */}
         <div className="flex min-w-[150px] flex-1 flex-col gap-2 sm:max-w-[180px]">
-          <FieldLabel icon={Calendar}>Дата</FieldLabel>
+          <FieldLabel icon={Calendar}>{tx('Дата', 'Date')}</FieldLabel>
           <PlanDatePicker dateStr={date} onChange={onDateChange} />
         </div>
 
         {/* Актив */}
         <div className="flex min-w-[150px] flex-1 flex-col gap-2 sm:max-w-[190px]">
-          <FieldLabel icon={LinkIcon} required filled={!!pair}>Актив</FieldLabel>
+          <FieldLabel icon={LinkIcon} required filled={!!pair}>{tx('Актив', 'Asset')}</FieldLabel>
           <motion.button
             whileTap={{ scale: 0.985 }}
             onClick={onOpenAssetModal}
@@ -138,7 +140,7 @@ export default function PlanMetadata({
               cursor: isLoadingAssets ? 'wait' : 'pointer',
             }}
           >
-            {pair || 'Вибрати...'}
+            {pairLabel(pair) || tx('Вибрати...', 'Choose...')}
             {isLoadingAssets
               ? <Loader2 size={14} className="animate-spin" style={{ color: T.text4 }} />
               : <SearchIcon size={14} strokeWidth={2.2} style={{ color: pair ? T.acc : T.warn }} />}
@@ -147,7 +149,7 @@ export default function PlanMetadata({
 
         {/* Bias */}
         <div className="flex min-w-[180px] flex-1 flex-col gap-2 sm:max-w-[240px]">
-          <FieldLabel icon={Book} required filled={!!narrative}>Плановий bias</FieldLabel>
+          <FieldLabel icon={Book} required filled={!!narrative}>{tx('Плановий bias', 'Planned bias')}</FieldLabel>
           <NarrativeSelect value={narrative} onChange={onNarrativeChange} />
         </div>
       </div>

@@ -9,6 +9,7 @@ import ImageSlider from '../ui/ImageSlider';
 import { allSetups, customSetups, addCustomSetup, removeCustomSetup } from '../../lib/backtestSetups';
 import AssetPicker from './AssetPicker';
 import AssetIcon from '../ui/AssetIcon';
+import { t as tx } from '../../lib/lang';
 import useImageAttach, { filesFromPaste } from '../../hooks/useImageAttach';
 
 /* ==================================================================
@@ -20,9 +21,9 @@ import useImageAttach, { filesFromPaste } from '../../hooks/useImageAttach';
 
 /* Тип активу — підказка в списку, щоб не вчитуватись у тікер */
 const KIND = {
-  NAS100: 'Індекси', US30: 'Індекси', GER40: 'Індекси',
-  XAUUSD: 'Метали',
-  BTCUSD: 'Крипто', ETHUSD: 'Крипто',
+  NAS100: tx('Індекси', 'Indices'), US30: tx('Індекси', 'Indices'), GER40: tx('Індекси', 'Indices'),
+  XAUUSD: tx('Метали', 'Metals'),
+  BTCUSD: tx('Крипто', 'Crypto'), ETHUSD: tx('Крипто', 'Crypto'),
   EURUSD: 'Forex', GBPUSD: 'Forex', USDJPY: 'Forex',
 };
 
@@ -379,7 +380,7 @@ export default function TradeSheet({
               className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[14px]"
               style={{
                 background: fill(T.okRgb),
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 10px 22px -12px rgba(${short ? T.badRgb : T.okRgb},0.9)`,
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25)`,
                 transition: 'box-shadow .5s ease',
               }}
             >
@@ -413,17 +414,17 @@ export default function TradeSheet({
               {/* Пігулки результату немає: він стоїть перемикачем за
                   пару сантиметрів нижче й дублювати його нема сенсу. */}
               <div className="text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}>
-                {f.id ? 'Угода' : 'Нова угода'}
+                {f.id ? tx('Угода', 'Trade') : tx('Нова угода', 'New trade')}
               </div>
               <div className="mt-[5px] truncate text-[12.5px]" style={{ fontFamily: T.mono, color: T.text3 }}>
-                {f.pair || 'без активу'} · {f.session} · {dateLabel}
+                {f.pair || tx('без активу', 'no asset')} · {f.session} · {dateLabel}
               </div>
             </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {!readOnly && f.id && onDelete && <IconBtn icon={Trash2} label="Видалити" onClick={() => onDelete(f.id)} danger />}
-            <IconBtn icon={X} label="Закрити (Esc)" onClick={onClose} />
+            {!readOnly && f.id && onDelete && <IconBtn icon={Trash2} label={tx('Видалити', 'Delete')} onClick={() => onDelete(f.id)} danger />}
+            <IconBtn icon={X} label={tx('Закрити (Esc)', 'Close (Esc)')} onClick={onClose} />
           </div>
         </div>
 
@@ -431,14 +432,14 @@ export default function TradeSheet({
         <div className="flex flex-col gap-5 px-6 pb-5 pt-[22px]" style={{ borderBottom: `1px solid ${T.line}` }}>
             <div>
               <Label
-                hint={locked ? null : 'Ctrl+V, файл або посилання'}
+                hint={locked ? null : tx('Ctrl+V, файл або посилання', 'Ctrl+V, a file or a link')}
                 right={f.shots.length > 1 ? (
                   <span className="shrink-0 text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
                     {f.shots.length}
                   </span>
                 ) : null}
               >
-                Графік
+                {tx('Графік', 'Chart')}
               </Label>
 
               {f.shots.length > 0 ? (
@@ -463,7 +464,7 @@ export default function TradeSheet({
                           <img src={src} alt="" className="h-full w-full object-cover" />
                           <button
                             onClick={() => dropShot(i)}
-                            title="Прибрати скрін"
+                            title={tx('Прибрати скрін', 'Remove screenshot')}
                             className="absolute inset-0 hidden place-items-center transition-colors group-hover/shot:grid"
                             style={{ background: 'rgba(10,10,12,0.7)', color: '#fff' }}
                           >
@@ -474,7 +475,7 @@ export default function TradeSheet({
 
                       <button
                         onClick={() => fileRef.current?.click()}
-                        title="Додати ще скрін"
+                        title={tx('Додати ще скрін', 'Add another screenshot')}
                         className="grid h-10 w-10 shrink-0 place-items-center rounded-lg transition-colors"
                         style={{ border: `1px dashed ${T.lineHi}`, color: T.text3 }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = ACT.tint; e.currentTarget.style.borderColor = act(0.5); e.currentTarget.style.background = act(0.07); }}
@@ -490,7 +491,7 @@ export default function TradeSheet({
                   className="mt-3 grid h-[288px] w-full place-items-center rounded-2xl text-[13px]"
                   style={{ background: T.bg, border: `1px solid ${T.line}`, fontFamily: T.sans, color: T.text3 }}
                 >
-                  Скрінів немає
+                  {tx('Скрінів немає', 'No screenshots')}
                 </div>
               ) : (
                 <button
@@ -513,10 +514,10 @@ export default function TradeSheet({
                     <ImagePlus size={25} strokeWidth={1.7} style={{ color: ACT.tint }} />
                   </span>
                   <span className="mt-3.5 text-[15.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
-                    Встав скрін графіка
+                    {tx('Встав скрін графіка', 'Paste a chart screenshot')}
                   </span>
                   <span className="mt-[7px] text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                    PNG, JPG або посилання TradingView
+                    {tx('PNG, JPG або посилання TradingView', 'PNG, JPG or a TradingView link')}
                   </span>
                 </button>
               )}
@@ -538,7 +539,7 @@ export default function TradeSheet({
                   </span>
                 ) : null}
               >
-                Запис
+                {tx('Запис', 'Notes')}
               </Label>
               <div
                 className="mt-[11px] flex h-[80px] overflow-hidden rounded-[14px]"
@@ -551,11 +552,11 @@ export default function TradeSheet({
                 <textarea
                   value={f.notes}
                   readOnly={locked}
-                  placeholder={locked ? 'Записів до угоди немає.' : undefined}
+                  placeholder={locked ? tx('Записів до угоди немає.', 'No notes for this trade.') : undefined}
                   onChange={(e) => set({ notes: e.target.value })}
                   onFocus={() => setFocus('n')}
                   onBlur={() => setFocus(null)}
-                  {...(locked ? {} : { placeholder: 'Що бачив, чому зайшов, що зробив би інакше.' })}
+                  {...(locked ? {} : { placeholder: tx('Що бачив, чому зайшов, що зробив би інакше.', 'What you saw, why you entered, what you’d do differently.') })}
                   className="h-full w-full resize-none border-none bg-transparent px-4 py-3 outline-none"
                   style={{ fontFamily: T.sans, fontSize: 14, lineHeight: 1.55, color: locked ? T.text2 : T.text, cursor: locked ? 'default' : 'text' }}
                 />
@@ -567,7 +568,7 @@ export default function TradeSheet({
         <div className="flex flex-col gap-[18px] px-6 pb-6 pt-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label>Напрям</Label>
+                <Label>{tx('Напрям', 'Side')}</Label>
                 {locked ? (
                   <StaticField height={44}>
                     <span className="text-[13px] font-bold tracking-[0.07em]" style={{ fontFamily: T.mono, color: T.text }}>
@@ -579,7 +580,7 @@ export default function TradeSheet({
                 )}
               </div>
               <div>
-                <Label>Результат</Label>
+                <Label>{tx('Результат', 'Result')}</Label>
                 {locked ? (
                   <StaticField height={44}>
                     <span className="text-[13px] font-bold tracking-[0.07em]" style={{ fontFamily: T.mono, color: T.text }}>
@@ -594,7 +595,7 @@ export default function TradeSheet({
 
             <div className="grid gap-3 sm:grid-cols-[1.1fr_1fr_1.15fr]">
               <div className="min-w-0">
-                <Label>Актив</Label>
+                <Label>{tx('Актив', 'Asset')}</Label>
                 {locked ? (
                   <StaticField>
                     {f.pair && <AssetIcon symbol={f.pair} />}
@@ -613,7 +614,7 @@ export default function TradeSheet({
               </div>
 
               <div className="min-w-0">
-                <Label hint={f.result !== 'WIN' ? 'авто' : null}>R</Label>
+                <Label hint={f.result !== 'WIN' ? tx('авто', 'auto') : null}>R</Label>
                 <div
                   className="mt-[9px] flex h-[46px] items-center overflow-hidden rounded-xl"
                   style={{ ...fieldStyle(focus === 'r'), opacity: f.result === 'WIN' ? 1 : 0.55 }}
@@ -632,7 +633,7 @@ export default function TradeSheet({
               </div>
 
               <div className="min-w-0">
-                <Label>Дата</Label>
+                <Label>{tx('Дата', 'Date')}</Label>
                 {/* Наш календар, а не системний: попап ОС світлий і
                     малюється чужим шрифтом поверх темної модалки */}
                 {locked ? (
@@ -661,7 +662,7 @@ export default function TradeSheet({
             </div>
 
             <div>
-              <Label>Сесія</Label>
+              <Label>{tx('Сесія', 'Session')}</Label>
               {/* Три коротких слова не тягнемо на всю ширину: розтягнута
                   смуга читається як помилка верстки. */}
               {locked ? (
@@ -681,11 +682,11 @@ export default function TradeSheet({
               <Label
                 right={f.tags.length ? (
                   <span className="shrink-0 text-[11px] font-bold" style={{ fontFamily: T.mono, color: locked ? T.text3 : ACT.tint }}>
-                    {f.tags.length} обрано
+                    {f.tags.length} {tx('обрано', 'selected')}
                   </span>
                 ) : null}
               >
-                Сетап
+                {tx('Сетап', 'Setup')}
               </Label>
               {/* Згорнутий вигляд: у рядку лише те, що обрано.
 
@@ -718,7 +719,7 @@ export default function TradeSheet({
                       </span>
                     )) : (
                       <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                        {setupsOpen ? 'Обери сетап зі списку' : 'Сетап не вказано'}
+                        {setupsOpen ? tx('Обери сетап зі списку', 'Pick a setup from the list') : tx('Сетап не вказано', 'No setup')}
                       </span>
                     )}
                   </span>
@@ -740,7 +741,7 @@ export default function TradeSheet({
                 <div style={locked ? undefined : { overflow: 'hidden' }}>
               <div className="mt-[11px] flex flex-wrap gap-[7px]">
                 {locked && f.tags.length === 0 && (
-                  <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>Сетап не вказано</span>
+                  <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>{tx('Сетап не вказано', 'No setup')}</span>
                 )}
                 {(locked ? f.tags : setups).map((tag) => {
                   const on = f.tags.includes(tag);
@@ -773,7 +774,7 @@ export default function TradeSheet({
                         <span
                           role="button"
                           tabIndex={-1}
-                          title="Прибрати сетап зі списку"
+                          title={tx('Прибрати сетап зі списку', 'Remove setup from list')}
                           onClick={(e) => forgetSetup(e, tag)}
                           className="absolute right-[7px] top-1/2 grid h-4 w-4 -translate-y-1/2 place-items-center rounded opacity-0 transition-opacity duration-150 group-hover/tag:opacity-100"
                           style={{ color: T.text4 }}
@@ -805,7 +806,7 @@ export default function TradeSheet({
                         if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); setDraft(''); }
                       }}
                       onBlur={commitSetup}
-                      placeholder="Назва сетапу"
+                      placeholder={tx('Назва сетапу', 'Setup name')}
                       className="w-[140px] bg-transparent text-[13px] font-semibold outline-none"
                       style={{ fontFamily: T.sans, color: T.text }}
                     />
@@ -833,7 +834,7 @@ export default function TradeSheet({
                     onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.background = 'transparent'; }}
                   >
                     <Plus size={13} strokeWidth={2.8} />
-                    Свій сетап
+                    {tx('Свій сетап', 'Custom setup')}
                   </motion.button>
                 )}
 
@@ -864,7 +865,7 @@ export default function TradeSheet({
                   onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
                 >
-                  Закрити
+                  {tx('Закрити', 'Close')}
                 </button>
 
                 {/* Редагування — окрема дія, а не режим за замовчуванням */}
@@ -875,13 +876,13 @@ export default function TradeSheet({
                     style={{
                       fontFamily: T.sans, color: '#fff',
                       background: actGradient,
-                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 30px -12px ${act(0.9)}`,
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25)`,
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = actGradientHover; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = actGradient; }}
                   >
                     <Pencil size={15} strokeWidth={2.4} />
-                    Редагувати
+                    {tx('Редагувати', 'Edit')}
                   </button>
                 )}
               </>
@@ -894,7 +895,7 @@ export default function TradeSheet({
                   onMouseEnter={(e) => { e.currentTarget.style.background = T.surfaceHi; e.currentTarget.style.color = T.text; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
                 >
-                  Скасувати
+                  {tx('Скасувати', 'Cancel')}
                 </button>
                 <button
                   onClick={submit}
@@ -903,14 +904,14 @@ export default function TradeSheet({
                   style={{
                     fontFamily: T.sans, color: '#fff',
                     background: actGradient,
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 30px -12px ${act(0.9)}`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25)`,
                     opacity: saving ? 0.6 : 1,
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = actGradientHover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = actGradient; }}
                 >
                   {saving ? <Loader2 size={16} strokeWidth={3} className="animate-spin" /> : <Check size={16} strokeWidth={2.6} />}
-                  {f.id ? 'Зберегти' : 'Додати угоду'}
+                  {f.id ? tx('Зберегти', 'Save') : tx('Додати угоду', 'Add trade')}
                 </button>
               </>
             )}

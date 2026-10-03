@@ -17,6 +17,7 @@ import { loadHubState, daysSince, greeting } from '../lib/hubData';
 import { DEFAULT_LAYOUT, normalizeLayout, move } from '../lib/launchpad';
 import { goalById } from '../lib/settings';
 import useTerminalSkin from '../hooks/useTerminalSkin';
+import { t as tx, LOCALE } from '../lib/lang';
 
 
 /* ==================================================================
@@ -187,73 +188,73 @@ function Slot({ slot, dragging, drag, bounds, onStart, onMove, onEnd, children }
    так дані не розповзаються по компонентах. */
 const SECTIONS = [
   {
-    group: 'Перед сесією',
-    hint: 'Підготуватись, поки ринок ще не відкрився',
+    group: tx('Перед сесією', 'Before the session'),
+    hint: tx('Підготуватись, поки ринок ще не відкрився', 'Get ready while the market is still closed'),
     items: [
       {
         to: '/plan', icon: Target, title: 'Trading Plan', hue: HUE.ice,
-        text: 'Розписати день по таймфреймах і визначити bias',
-        badge: (s) => (s.plansToday ? `${s.plansToday} на сьогодні` : 'ще не створений'),
+        text: tx('Розписати день по таймфреймах і визначити bias', 'Map out the day across timeframes and set your bias'),
+        badge: (s) => (s.plansToday ? tx(`${s.plansToday} на сьогодні`, `${s.plansToday} for today`) : tx('ще не створений', 'not created yet')),
         alert: (s) => !s.plansToday,
         big: true,
         resize: true,
       },
       {
-        to: '/checklist', icon: ClipboardCheck, title: 'Чекліст входу', hue: HUE.mint,
-        text: 'Пройтись по своїх правилах перед позицією',
+        to: '/checklist', icon: ClipboardCheck, title: tx('Чекліст входу', 'Entry checklist'), hue: HUE.mint,
+        text: tx('Пройтись по своїх правилах перед позицією', 'Run through your rules before a position'),
       },
       {
-        to: '/calculator', icon: Calculator, title: 'Калькулятор', hue: HUE.sky,
-        text: 'Порахувати обсяг під ризик',
+        to: '/calculator', icon: Calculator, title: tx('Калькулятор', 'Calculator'), hue: HUE.sky,
+        text: tx('Порахувати обсяг під ризик', 'Size your position for your risk'),
       },
       {
-        to: '/system', icon: NotebookPen, title: 'Торгова система', hue: HUE.violet,
-        text: 'Правила, за якими ти торгуєш',
+        to: '/system', icon: NotebookPen, title: tx('Торгова система', 'Trading system'), hue: HUE.violet,
+        text: tx('Правила, за якими ти торгуєш', 'The rules you trade by'),
       },
     ],
   },
   {
-    group: 'Під час і після',
-    hint: 'Зафіксувати те, що сталось, поки памʼятаєш',
+    group: tx('Під час і після', 'During and after'),
+    hint: tx('Зафіксувати те, що сталось, поки памʼятаєш', 'Record what happened while you still remember'),
     items: [
       {
-        to: '/journal', icon: BookOpen, title: 'Журнал угод', hue: HUE.lime,
-        text: 'Записати угоду разом із розбором себе',
-        badge: (s) => (s.tradesWeek ? `${s.tradesWeek} за тиждень` : 'порожньо за тиждень'),
+        to: '/journal', icon: BookOpen, title: tx('Журнал угод', 'Trade journal'), hue: HUE.lime,
+        text: tx('Записати угоду разом із розбором себе', 'Log a trade along with a look at yourself'),
+        badge: (s) => (s.tradesWeek ? tx(`${s.tradesWeek} за тиждень`, `${s.tradesWeek} this week`) : tx('порожньо за тиждень', 'empty this week')),
         big: true,
         resize: true,
       },
       {
-        to: '/todo', icon: CheckSquare, title: 'Завдання', hue: HUE.amber,
-        text: 'Список, матриця, помодоро',
+        to: '/todo', icon: CheckSquare, title: tx('Завдання', 'Tasks'), hue: HUE.amber,
+        text: tx('Список, матриця, помодоро', 'List, matrix, pomodoro'),
         badge: (s) => (s.tasksOverdue
-          ? `${s.tasksOverdue} прострочено`
-          : s.tasksToday ? `${s.tasksToday} на сьогодні` : null),
+          ? tx(`${s.tasksOverdue} прострочено`, `${s.tasksOverdue} overdue`)
+          : s.tasksToday ? tx(`${s.tasksToday} на сьогодні`, `${s.tasksToday} for today`) : null),
         alert: (s) => s.tasksOverdue > 0,
       },
       {
-        to: '/error', icon: AlertTriangle, title: 'Журнал помилок', hue: HUE.rose,
-        text: 'Що зламалось і скільки це коштувало',
-        badge: (s) => (s.mistakesWeek ? `${s.mistakesWeek} за тиждень` : null),
+        to: '/error', icon: AlertTriangle, title: tx('Журнал помилок', 'Error log'), hue: HUE.rose,
+        text: tx('Що зламалось і скільки це коштувало', 'What broke and what it cost'),
+        badge: (s) => (s.mistakesWeek ? tx(`${s.mistakesWeek} за тиждень`, `${s.mistakesWeek} this week`) : null),
         alert: (s) => s.mistakesWeek > 0,
       },
       {
-        to: '/notes', icon: FileText, title: 'Нотатки', hue: HUE.peach,
-        text: 'Думки, ідеї, спостереження',
+        to: '/notes', icon: FileText, title: tx('Нотатки', 'Notes'), hue: HUE.peach,
+        text: tx('Думки, ідеї, спостереження', 'Thoughts, ideas, observations'),
       },
     ],
   },
   {
-    group: 'Розібратись',
-    hint: 'Побачити закономірність, а не окрему угоду',
+    group: tx('Розібратись', 'Review'),
+    hint: tx('Побачити закономірність, а не окрему угоду', 'See the pattern, not a single trade'),
     items: [
       {
-        to: '/reviews', icon: BrainCircuit, title: 'Розбори', hue: HUE.violet,
-        text: 'Зібрати тиждень і вирішити, що змінити',
+        to: '/reviews', icon: BrainCircuit, title: tx('Розбори', 'Reviews'), hue: HUE.violet,
+        text: tx('Зібрати тиждень і вирішити, що змінити', 'Pull the week together and decide what to change'),
         badge: (s) => {
           const n = daysSince(s.lastReviewTo);
-          if (n === null) return 'ще жодного';
-          return n <= 1 ? 'свіжий' : `${n} днів тому`;
+          if (n === null) return tx('ще жодного', 'none yet');
+          return n <= 1 ? tx('свіжий', 'fresh') : tx(`${n} днів тому`, `${n} days ago`);
         },
         alert: (s) => {
           const n = daysSince(s.lastReviewTo);
@@ -263,37 +264,37 @@ const SECTIONS = [
         resize: true,
       },
       {
-        to: '/analytics', icon: BarChart2, title: 'Аналітика', hue: HUE.ice,
-        text: 'Статистика по сесіях, активах і психології',
+        to: '/analytics', icon: BarChart2, title: tx('Аналітика', 'Analytics'), hue: HUE.ice,
+        text: tx('Статистика по сесіях, активах і психології', 'Stats by session, asset and psychology'),
         resize: true,
       },
       {
-        to: '/analyses', icon: FileText, title: 'Архів планів', hue: HUE.sky,
-        text: 'Усі минулі плани й наскільки вони справдились',
+        to: '/analyses', icon: FileText, title: tx('Архів планів', 'Plan archive'), hue: HUE.sky,
+        text: tx('Усі минулі плани й наскільки вони справдились', 'All your past plans and how well they played out'),
       },
       {
-        to: '/backtest', icon: History, title: 'Бектести', hue: HUE.mint,
-        text: 'Перевірити ідею на історії',
-        badge: (s) => (s.backtests ? `${s.backtests} прогонів` : 'ще жодного'),
+        to: '/backtest', icon: History, title: tx('Бектести', 'Backtests'), hue: HUE.mint,
+        text: tx('Перевірити ідею на історії', 'Test an idea on historical data'),
+        badge: (s) => (s.backtests ? tx(`${s.backtests} прогонів`, `${s.backtests} ${s.backtests === 1 ? 'run' : 'runs'}`) : tx('ще жодного', 'none yet')),
       },
       {
-        to: '/20-trades', icon: Activity, title: '20 угод', hue: HUE.lime,
-        text: 'Вправа на дисципліну, а не на прибуток',
+        to: '/20-trades', icon: Activity, title: tx('20 угод', '20 trades'), hue: HUE.lime,
+        text: tx('Вправа на дисципліну, а не на прибуток', 'A discipline exercise, not a profit one'),
       },
       {
-        to: '/accounts', icon: Users, title: 'Рахунки', hue: HUE.peach,
-        text: 'Депозити й проп-акаунти',
+        to: '/accounts', icon: Users, title: tx('Рахунки', 'Accounts'), hue: HUE.peach,
+        text: tx('Депозити й проп-акаунти', 'Deposits and prop accounts'),
         resize: true,
       },
     ],
   },
   {
-    group: 'Читати',
-    hint: 'Публічна частина — те, чим можна поділитись поза журналом',
+    group: tx('Читати', 'Read'),
+    hint: tx('Публічна частина — те, чим можна поділитись поза журналом', 'The public side — things you can share outside the journal'),
     items: [
       {
-        to: '/blog', icon: Newspaper, title: 'Блог', hue: HUE.indigo,
-        text: 'Статті про психологію, бектести й підхід до трейдингу',
+        to: '/blog', icon: Newspaper, title: tx('Блог', 'Blog'), hue: HUE.indigo,
+        text: tx('Статті про психологію, бектести й підхід до трейдингу', 'Articles on psychology, backtesting and approaching trading'),
       },
     ],
   },
@@ -417,7 +418,7 @@ function Tile({ item, state, index, onGo, edit, onHide, size, onSize }) {
           <span
             className="grid h-8 w-8 place-items-center rounded-lg"
             style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text4 }}
-            title="Перетягни, щоб переставити"
+            title={tx('Перетягни, щоб переставити', 'Drag to rearrange')}
           >
             <GripVertical size={14} strokeWidth={2.2} />
           </span>
@@ -443,7 +444,7 @@ function Tile({ item, state, index, onGo, edit, onHide, size, onSize }) {
                     style={{ color: off ? T.line : T.text3, cursor: off ? 'default' : 'pointer' }}
                     onMouseEnter={(e) => { if (!off) e.currentTarget.style.color = T.text; }}
                     onMouseLeave={(e) => { e.currentTarget.style.color = off ? (T.line) : T.text3; }}
-                    title={k === '-' ? 'Вужча плитка' : 'Ширша плитка'}
+                    title={k === '-' ? tx('Вужча плитка', 'Narrower tile') : tx('Ширша плитка', 'Wider tile')}
                   >
                     <Ico size={14} strokeWidth={2.2} />
                   </button>
@@ -457,7 +458,7 @@ function Tile({ item, state, index, onGo, edit, onHide, size, onSize }) {
             style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text3 }}
             onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.35)`; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
-            title="Сховати розділ"
+            title={tx('Сховати розділ', 'Hide section')}
           >
             <EyeOff size={14} strokeWidth={2.2} />
           </button>
@@ -642,8 +643,8 @@ export default function Hub() {
     if (type === 'none' || !need) {
       return {
         value: s.tradesWeek
-          ? `${s.tradesWeek} угод · ${s.netRWeek > 0 ? '+' : ''}${s.netRWeek}R`
-          : 'без угод',
+          ? tx(`${s.tradesWeek} угод · ${s.netRWeek > 0 ? '+' : ''}${s.netRWeek}R`, `${s.tradesWeek} ${s.tradesWeek === 1 ? 'trade' : 'trades'} · ${s.netRWeek > 0 ? '+' : ''}${s.netRWeek}R`)
+          : tx('без угод', 'no trades'),
         done: false,
         tone: s.tradesWeek ? (s.netRWeek >= 0 ? T.ok : T.bad) : T.text3,
       };
@@ -657,7 +658,7 @@ export default function Hub() {
     const done = have >= need;
 
     return {
-      value: `${have} з ${need} ${g.unit}`.trim(),
+      value: tx(`${have} з ${need} ${g.unit}`, `${have} of ${need} ${g.unit}`).trim(),
       done,
       /* Мінусовий тиждень при ціллі в R — окремий випадок: людина має
          бачити, що вона не просто «не дійшла», а пішла в інший бік. */
@@ -667,12 +668,12 @@ export default function Hub() {
 
   /* Одна головна підказка — те, чого бракує найбільше */
   const nudge = useMemo(() => {
-    if (!s.diagDone) return { text: 'Почни з діагностики стану — це дві хвилини', to: '/plan' };
-    if (!s.plansToday) return { text: 'Плану на сьогодні ще немає', to: '/plan' };
-    if (s.tasksOverdue) return { text: `${s.tasksOverdue} прострочених завдань чекають`, to: '/todo' };
+    if (!s.diagDone) return { text: tx('Почни з діагностики стану — це дві хвилини', 'Start with a state check — it takes two minutes'), to: '/plan' };
+    if (!s.plansToday) return { text: tx('Плану на сьогодні ще немає', 'No plan for today yet'), to: '/plan' };
+    if (s.tasksOverdue) return { text: tx(`${s.tasksOverdue} прострочених завдань чекають`, `${s.tasksOverdue} overdue ${s.tasksOverdue === 1 ? 'task is' : 'tasks are'} waiting`), to: '/todo' };
     const n = daysSince(s.lastReviewTo);
-    if (n === null || n > 7) return { text: 'Час зробити розбір тижня', to: '/reviews' };
-    return { text: 'Підготовка закрита — можна працювати', to: null };
+    if (n === null || n > 7) return { text: tx('Час зробити розбір тижня', 'Time to review your week'), to: '/reviews' };
+    return { text: tx('Підготовка закрита — можна працювати', 'Prep is done — you can get to work'), to: null };
   }, [s]);
 
   /* Нікнейм із налаштувань, інакше — початок пошти. Звертання
@@ -912,7 +913,6 @@ export default function Hub() {
           background-color: ${T.surfaceHi} !important;
           box-shadow:
             0 0 0 1px rgba(var(--hue), 0.12),
-            0 30px 70px -38px rgba(var(--hue), 0.6),
             0 18px 40px -30px rgba(0,0,0,0.92);
         }
 
@@ -933,8 +933,7 @@ export default function Hub() {
         :root.edge-light .hub-tile:hover {
           box-shadow:
             0 0 0 1px rgba(var(--hue), 0.30),
-            0 2px 4px rgba(60,45,20,0.06),
-            0 18px 36px -22px rgba(var(--hue), 0.40);
+            0 2px 4px rgba(60,45,20,0.06);
         }
         :root.edge-light .hub-facets,
         :root.edge-light .hub-prism,
@@ -1079,7 +1078,7 @@ export default function Hub() {
         }
         .hub-tile:hover .hub-icon {
           transform: scale(1.06);
-          box-shadow: 0 0 22px -6px rgba(var(--hue), 0.55);
+          box-shadow: none;
         }
 
         /* стрілка виїжджає */
@@ -1158,7 +1157,7 @@ export default function Hub() {
         }
         .hub-stat:hover .hub-stat-icon {
           transform: scale(1.08);
-          box-shadow: 0 0 18px -6px rgba(var(--hue), 0.5);
+          box-shadow: none;
         }
 
         .hub-stat-label { transition: color .3s ease; }
@@ -1194,7 +1193,7 @@ export default function Hub() {
             className="mb-2.5 text-[12px] font-bold uppercase tracking-[0.22em]"
             style={{ fontFamily: T.sans, color: T.acc }}
           >
-            {new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {new Date().toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })}
           </div>
 
           <h1
@@ -1243,14 +1242,14 @@ export default function Hub() {
             <div className="col-span-full flex items-center gap-2.5 py-1">
               <Loader2 size={15} className="animate-spin" style={{ color: T.text4 }} />
               <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                дивлюсь, як минає день…
+                {tx('дивлюсь, як минає день…', 'checking how your day is going…')}
               </span>
             </div>
           ) : (
             <>
               <DayStat
-                label="Діагностика"
-                value={s.diagDone ? 'пройдена' : `${s.diagCount} з 4`}
+                label={tx('Діагностика', 'Diagnostics')}
+                value={s.diagDone ? tx('пройдена', 'done') : tx(`${s.diagCount} з 4`, `${s.diagCount} of 4`)}
                 done={s.diagDone}
                 tone={s.diagDone ? T.ok : T.warn}
                 hue={HUE.mint}
@@ -1258,8 +1257,8 @@ export default function Hub() {
                 onGo={navigate}
               />
               <DayStat
-                label="План на сьогодні"
-                value={s.plansToday ? `${s.plansToday} ${s.plansToday === 1 ? 'актив' : 'активи'}` : 'немає'}
+                label={tx('План на сьогодні', 'Plan for today')}
+                value={s.plansToday ? tx(`${s.plansToday} ${s.plansToday === 1 ? 'актив' : 'активи'}`, `${s.plansToday} ${s.plansToday === 1 ? 'asset' : 'assets'}`) : tx('немає', 'none')}
                 done={s.plansToday > 0}
                 tone={s.plansToday ? T.text : T.warn}
                 hue={HUE.ice}
@@ -1268,7 +1267,7 @@ export default function Hub() {
               />
               <DayStat
                 tour="week"
-                label={goal?.type && goal.type !== 'none' ? goalById(goal.type).label : 'Тиждень'}
+                label={goal?.type && goal.type !== 'none' ? goalById(goal.type).label : tx('Тиждень', 'Week')}
                 value={week.value}
                 done={week.done}
                 tone={week.tone}
@@ -1277,10 +1276,10 @@ export default function Hub() {
                 onGo={navigate}
               />
               <DayStat
-                label="Завдання"
+                label={tx('Завдання', 'Tasks')}
                 value={s.tasksOverdue
-                  ? `${s.tasksOverdue} прострочено`
-                  : s.tasksToday ? `${s.tasksToday} на сьогодні` : 'усе закрито'}
+                  ? tx(`${s.tasksOverdue} прострочено`, `${s.tasksOverdue} overdue`)
+                  : s.tasksToday ? tx(`${s.tasksToday} на сьогодні`, `${s.tasksToday} for today`) : tx('усе закрито', 'all done')}
                 done={!s.tasksOverdue && !s.tasksToday}
                 tone={s.tasksOverdue ? T.bad : T.text2}
                 hue={HUE.amber}
@@ -1297,10 +1296,10 @@ export default function Hub() {
             className="text-[19px] font-bold"
             style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
           >
-            Розділи
+            {tx('Розділи', 'Sections')}
           </h2>
           <span className="text-[13.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-            {edit ? 'Перетягни, щоб переставити · сховай зайве' : `${visible.length} на екрані`}
+            {edit ? tx('Перетягни, щоб переставити · сховай зайве', 'Drag to rearrange · hide what you don\'t need') : tx(`${visible.length} на екрані`, `${visible.length} on screen`)}
           </span>
 
           <span className="ml-auto flex items-center gap-2">
@@ -1312,7 +1311,7 @@ export default function Hub() {
                 onMouseEnter={(e) => { e.currentTarget.style.color = T.warn; e.currentTarget.style.borderColor = `rgba(${T.warnRgb},0.3)`; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
               >
-                <RotateCcw size={13} strokeWidth={2.3} /> Як було
+                <RotateCcw size={13} strokeWidth={2.3} /> {tx('Як було', 'Reset')}
               </button>
             )}
             <button
@@ -1327,7 +1326,7 @@ export default function Hub() {
               onMouseEnter={(e) => { if (!edit) e.currentTarget.style.borderColor = T.lineHi; }}
               onMouseLeave={(e) => { if (!edit) e.currentTarget.style.borderColor = T.line; }}
             >
-              {edit ? <><Check size={14} strokeWidth={3} /> Готово</> : <><SlidersHorizontal size={13} strokeWidth={2.3} /> Налаштувати</>}
+              {edit ? <><Check size={14} strokeWidth={3} /> {tx('Готово', 'Done')}</> : <><SlidersHorizontal size={13} strokeWidth={2.3} /> {tx('Налаштувати', 'Customize')}</>}
             </button>
           </span>
         </div>
@@ -1415,10 +1414,10 @@ export default function Hub() {
                     className="text-[13px] font-bold uppercase tracking-[0.16em]"
                     style={{ fontFamily: T.sans, color: T.text4 }}
                   >
-                    Сховано
+                    {tx('Сховано', 'Hidden')}
                   </h3>
                   <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                    {hiddenTiles.length} — натисни, щоб повернути
+                    {tx(`${hiddenTiles.length} — натисни, щоб повернути`, `${hiddenTiles.length} — click to restore`)}
                   </span>
                 </div>
 
@@ -1460,14 +1459,14 @@ export default function Hub() {
           >
             <EyeOff size={22} strokeWidth={1.8} style={{ color: T.text4 }} />
             <p className="text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              Усі розділи сховані.
+              {tx('Усі розділи сховані.', 'All sections are hidden.')}
             </p>
             <button
               onClick={() => setEdit(true)}
               className="mt-1 flex h-11 items-center gap-2 rounded-xl px-4 text-[13.5px] font-bold"
               style={{ fontFamily: T.sans, background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)' }}
             >
-              <Eye size={14} strokeWidth={2.6} /> Повернути
+              <Eye size={14} strokeWidth={2.6} /> {tx('Повернути', 'Restore')}
             </button>
           </div>
         )}

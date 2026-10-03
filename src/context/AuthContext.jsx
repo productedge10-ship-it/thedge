@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { claimDevice } from '../lib/deviceScope';
+import { t as tx } from '../lib/lang';
 
 /* ==================================================================
    Сесія користувача + статус підтвердження пошти.
@@ -109,7 +110,7 @@ export const AuthProvider = ({ children }) => {
      shouldCreateUser: false — якщо адреси раптом не виявиться в базі,
      краще помилка, ніж тихо створений порожній акаунт. */
   const sendVerification = useCallback(async () => {
-    if (!email) return { error: new Error('Немає адреси') };
+    if (!email) return { error: new Error(tx('Немає адреси', 'No email address')) };
     return supabase.auth.signInWithOtp({
       email,
       options: { shouldCreateUser: false },
@@ -125,7 +126,7 @@ export const AuthProvider = ({ children }) => {
      входу означало б вдавати, ніби вона розлогінилась. Мітка
      ?newpass=1 каже налаштуванням відкритись одразу з формою. */
   const sendPasswordReset = useCallback(async () => {
-    if (!email) return { error: new Error('Немає адреси') };
+    if (!email) return { error: new Error(tx('Немає адреси', 'No email address')) };
     return supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + '/app?newpass=1',
     });

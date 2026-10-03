@@ -175,7 +175,7 @@ function Ring({ value, total, color }) {
           initial={{ strokeDashoffset: C }}
           animate={{ strokeDashoffset: C * (1 - value / total) }}
           transition={{ duration: 0.9, ease: EASE, delay: 0.3 }}
-          style={{ filter: `drop-shadow(0 0 6px ${color}66)` }}
+          style={{ filter: 'none' }}
         />
       </svg>
       <span className="absolute text-[19px] font-bold tabular-nums" style={{ fontFamily: T.mono, color }}>
@@ -430,7 +430,7 @@ export default function SharedTrade() {
                     <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ fontFamily: T.sans, color: T.text4 }}>Результат</div>
                     <div
                       className="mt-1 text-[56px] font-bold leading-none tabular-nums sm:text-[72px]"
-                      style={{ fontFamily: T.mono, color: tone.c, letterSpacing: '-0.04em', textShadow: `0 0 40px rgba(${tone.rgb},0.35)` }}
+                      style={{ fontFamily: T.mono, color: tone.c, letterSpacing: '-0.04em', textShadow: 'none' }}
                     >
                       {rr > 0 ? '+' : ''}{rr}R
                     </div>

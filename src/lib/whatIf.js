@@ -1,3 +1,4 @@
+import { t as tx } from './lang';
 /* ==================================================================
    «Що якби» — скільки коштували власні звички.
 
@@ -27,37 +28,37 @@
 export const RULES = [
   {
     id: 'revenge',
-    label: 'Не відігруватись',
-    hint: 'прибрати угоди, де було бажання відігратись',
-    tag: 'угоди у відіграші',
+    label: tx('Не відігруватись', 'No revenge trading'),
+    hint: tx('прибрати угоди, де було бажання відігратись', 'remove trades driven by the urge to win it back'),
+    tag: tx('угоди у відіграші', 'revenge trades'),
     test: (t) => t.emotion === 'tilt',
   },
   {
     id: 'rushed',
-    label: 'Не поспішати',
-    hint: 'прибрати входи з поспіхом і FOMO',
-    tag: 'поспішні входи',
+    label: tx('Не поспішати', "Don't rush"),
+    hint: tx('прибрати входи з поспіхом і FOMO', 'remove rushed and FOMO entries'),
+    tag: tx('поспішні входи', 'rushed entries'),
     test: (t) => t.rushed,
   },
   {
     id: 'offplan',
-    label: 'Тільки за планом',
-    hint: 'прибрати все, що йшло повз план',
-    tag: 'угоди поза планом',
+    label: tx('Тільки за планом', 'Plan only'),
+    hint: tx('прибрати все, що йшло повз план', 'remove everything that went off plan'),
+    tag: tx('угоди поза планом', 'off-plan trades'),
     test: (t) => !t.planFollowed,
   },
   {
     id: 'mistake',
-    label: 'Без помилок виконання',
-    hint: 'прибрати угоди з позначеною помилкою',
-    tag: 'угоди з помилкою',
+    label: tx('Без помилок виконання', 'No execution mistakes'),
+    hint: tx('прибрати угоди з позначеною помилкою', 'remove trades marked with a mistake'),
+    tag: tx('угоди з помилкою', 'trades with mistakes'),
     test: (t) => (t.mistakes || []).length > 0,
   },
   {
     id: 'anxious',
-    label: 'Не входити зі страхом',
-    hint: 'прибрати входи, де фіксувалась тривога',
-    tag: 'входи зі страхом',
+    label: tx('Не входити зі страхом', "Don't enter in fear"),
+    hint: tx('прибрати входи, де фіксувалась тривога', 'remove entries where you logged anxiety'),
+    tag: tx('входи зі страхом', 'fearful entries'),
     test: (t) => t.emotion === 'anxious',
   },
 ];
@@ -66,12 +67,12 @@ export const RULES = [
    Вони не «прибрати погане», а «торгувати тільки ось це», тому й
    рахуються окремо: людина обирає, що лишити, а не що викинути. */
 export const DIMS = [
-  { id: 'session', label: 'Сесія', of: (t) => t.session },
-  { id: 'asset', label: 'Актив', of: (t) => t.asset },
-  { id: 'setup', label: 'Сетап', of: (t) => t.setup },
+  { id: 'session', label: tx('Сесія', 'Session'), of: (t) => t.session },
+  { id: 'asset', label: tx('Актив', 'Asset'), of: (t) => t.asset },
+  { id: 'setup', label: tx('Сетап', 'Setup'), of: (t) => t.setup },
 ];
 
-export const DOW = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+export const DOW = tx(['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'], ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
 
 const r2 = (n) => Math.round(n * 100) / 100;
 
@@ -135,7 +136,7 @@ export function apply(trades, on, keep) {
       if (!picked || !picked.length) return false;
       return !picked.includes(d.of(t));
     });
-    if (outside) { removed.push({ t, why: { id: outside.id, tag: `інші ${outside.label.toLowerCase()}` } }); return false; }
+    if (outside) { removed.push({ t, why: { id: outside.id, tag: tx(`інші ${outside.label.toLowerCase()}`, `other ${outside.label.toLowerCase()}`) } }); return false; }
 
     return true;
   });
@@ -169,29 +170,29 @@ export function breakdown(trades, on) {
    людина побачила різницю між «є закономірність» і «є збіг». */
 export function confidence(removedCount, keptCount) {
   if (removedCount === 0) {
-    return { level: 'none', text: 'Це правило не прибрало жодної угоди — у твоїй історії його вже дотримано.' };
+    return { level: 'none', text: tx('Це правило не прибрало жодної угоди — у твоїй історії його вже дотримано.', "This rule didn't remove a single trade — your history already follows it.") };
   }
   if (removedCount < 5) {
     return {
       level: 'low',
-      text: `Всього ${removedCount} ${removedCount === 1 ? 'угода' : 'угоди'} — це надто мало для висновку. Цифра нижче показує, що сталось, але правилом це ще не робить.`,
+      text: tx(`Всього ${removedCount} ${removedCount === 1 ? 'угода' : 'угоди'} — це надто мало для висновку. Цифра нижче показує, що сталось, але правилом це ще не робить.`, `Only ${removedCount} ${removedCount === 1 ? 'trade' : 'trades'} — too few to draw a conclusion. The number below shows what happened, but that doesn't make it a rule yet.`),
     };
   }
   if (removedCount < 15) {
     return {
       level: 'mid',
-      text: `${removedCount} угод — уже помітно, але ще в межах випадковості. Подивись знову, коли їх стане більше.`,
+      text: tx(`${removedCount} угод — уже помітно, але ще в межах випадковості. Подивись знову, коли їх стане більше.`, `${removedCount} trades — noticeable, but still within chance. Check again when there are more.`),
     };
   }
   if (keptCount < 20) {
     return {
       level: 'mid',
-      text: `Після фільтра лишилось ${keptCount} угод — замало, щоб довіряти кривій. Пом'якшуй умови або чекай на історію.`,
+      text: tx(`Після фільтра лишилось ${keptCount} угод — замало, щоб довіряти кривій. Пом'якшуй умови або чекай на історію.`, `Only ${keptCount} ${keptCount === 1 ? 'trade' : 'trades'} left after the filter — too few to trust the curve. Loosen the conditions or wait for more history.`),
     };
   }
   return {
     level: 'high',
-    text: `${removedCount} угод — вибірка достатня, щоб говорити про звичку, а не про збіг.`,
+    text: tx(`${removedCount} угод — вибірка достатня, щоб говорити про звичку, а не про збіг.`, `${removedCount} trades — a big enough sample to talk about a habit, not a coincidence.`),
   };
 }
 

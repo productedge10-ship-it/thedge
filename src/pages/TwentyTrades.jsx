@@ -119,14 +119,7 @@ const SEG_COLOR = {
 function SeriesRing({ states, discipline, color }) {
   return (
     <div className="relative shrink-0" style={{ width: RING, height: RING }}>
-      {/* дихання під кільцем — щоб центр не був мертвою плямою */}
-      <motion.span
-        aria-hidden
-        className="absolute inset-6 rounded-full"
-        style={{ background: `radial-gradient(circle, rgba(${T.accRgb},0.16), transparent 68%)`, filter: 'blur(14px)' }}
-        animate={{ opacity: [0.45, 0.8, 0.45], scale: [0.96, 1.03, 0.96] }}
-        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
-      />
+      {/* Розмиту кольорову пляму прибрано: світіння за блоком — прикмета шаблону, глибину дають поверхні. */}
 
       <svg width={RING} height={RING} className="absolute inset-0">
         {ARCS.map((d, i) => (
@@ -247,7 +240,7 @@ const TradeCard = memo(function TradeCard({ trade, index, onToggle }) {
           className="h-1.5 w-1.5 rounded-full"
           style={{
             background: state === 'empty' ? T.lineHi : `rgb(${hue})`,
-            boxShadow: state === 'empty' ? 'none' : `0 0 8px rgba(${hue},0.8)`,
+            boxShadow: 'none',
             transition: 'background .4s ease, box-shadow .4s ease',
           }}
         />
@@ -494,7 +487,6 @@ export default function TwentyTrades() {
           background-color: ${T.surfaceHi} !important;
           box-shadow:
             0 0 0 1px rgba(var(--hue), 0.16),
-            0 26px 60px -34px rgba(var(--hue), 0.75),
             0 16px 36px -28px rgba(0,0,0,0.9) !important;
         }
 

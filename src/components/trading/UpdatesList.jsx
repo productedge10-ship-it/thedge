@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Radio } from 'lucide-react';
 import TdaBlock from './TdaBlock';
 import { T, EASE, SPRING } from './planTheme';
+import { t as tx } from '../../lib/lang';
 
 export default function UpdatesList({ updates, onAdd, onSave }) {
   const empty = updates.length === 0;
@@ -23,7 +24,7 @@ export default function UpdatesList({ updates, onAdd, onSave }) {
           }}
         >
           <Plus size={14} strokeWidth={3} className="transition-transform duration-300 group-hover:rotate-90" />
-          Додати апдейт
+          {tx('Додати апдейт', 'Add update')}
         </motion.button>
 
         {!empty && (
@@ -31,7 +32,7 @@ export default function UpdatesList({ updates, onAdd, onSave }) {
             className="text-[12px] font-bold uppercase tracking-[0.16em] tabular-nums"
             style={{ fontFamily: T.sans, color: T.text3 }}
           >
-            {updates.length} {updates.length === 1 ? 'запис' : 'записів'}
+            {updates.length} {updates.length === 1 ? tx('запис', 'entry') : tx('записів', 'entries')}
           </span>
         )}
       </div>
@@ -44,10 +45,10 @@ export default function UpdatesList({ updates, onAdd, onSave }) {
           <Radio size={24} strokeWidth={1.6} style={{ color: T.text4 }} />
           <div className="flex flex-col gap-1">
             <span className="text-[15px] font-semibold" style={{ color: T.text2, fontFamily: T.sans }}>
-              Поки що тихо
+              {tx('Поки що тихо', 'All quiet so far')}
             </span>
             <span className="max-w-[320px] text-[14px] font-medium leading-relaxed" style={{ color: T.text4 }}>
-              Фіксуй тут зміни по ходу сесії — коли структура ламається або ринок іде не за планом.
+              {tx('Фіксуй тут зміни по ходу сесії — коли структура ламається або ринок іде не за планом.', 'Log changes during the session here — when structure breaks or the market goes off-plan.')}
             </span>
           </div>
         </div>

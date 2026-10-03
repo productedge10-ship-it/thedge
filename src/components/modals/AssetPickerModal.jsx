@@ -16,6 +16,7 @@ import { Search as SearchIcon, X, Star, ChevronDown, ChevronRight, Check } from 
    потрібен окремо — самим `export … from` у локальну область видимості
    нічого не потрапляє, а розмітка нижче користується ним напряму. */
 import AssetIcon, { CURRENCY_TO_FLAG } from '../ui/AssetIcon';
+import { t as tx, LOCALE } from '../../lib/lang';
 
 export { AssetIcon, CURRENCY_TO_FLAG };
 
@@ -172,15 +173,15 @@ export default function AssetPickerModal({ isOpen, onClose, onSelect, selectedAs
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             onAnimationComplete={() => searchInputRef.current?.focus()}
-            className="bg-[var(--edge-surface)] border border-blue-500/20 w-full max-w-2xl rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(59,130,246,0.18)] flex flex-col h-[85vh] md:h-[80vh]"
+            className="bg-[var(--edge-surface)] border border-blue-500/20 w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col h-[85vh] md:h-[80vh]"
           >
             <div className="p-6 border-b border-[var(--edge-hair)] relative bg-[var(--edge-surface)]">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-[1px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent"></div>
               
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-[var(--edge-text)] uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_var(--edge-info)]"></span>
-                  Select Trading Instrument
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                  {tx('Обери інструмент', 'Select trading instrument')}
                 </h3>
                 <button onClick={handleModalClose} className="text-zinc-500 hover:text-[var(--edge-text)] transition-colors p-1 bg-[var(--edge-hair)] rounded-lg border border-[var(--edge-hair)]">
                   <X size={18} />
@@ -193,7 +194,7 @@ export default function AssetPickerModal({ isOpen, onClose, onSelect, selectedAs
                   type="text" 
                   value={assetSearch} 
                   onChange={(e) => setAssetSearch(e.target.value)} 
-                  placeholder="Search e.g. EUR/USD, BTC, GER40..." 
+                  placeholder={tx('Пошук, напр. EUR/USD, BTC, GER40...', 'Search e.g. EUR/USD, BTC, GER40...')} 
                   className="w-full bg-[var(--edge-surface)] border border-blue-500/20 focus:border-blue-500/60 rounded-xl pl-12 pr-4 py-3.5 text-[var(--edge-text)] outline-none text-sm transition-all tracking-wide font-medium" 
                 />
               </div>
@@ -204,7 +205,7 @@ export default function AssetPickerModal({ isOpen, onClose, onSelect, selectedAs
               {deferredSearch.trim() === '' && favoriteAssetsList.length > 0 && (
                 <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
                   <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
-                    <Star size={12} className="fill-amber-500" /> My Favorites
+                    <Star size={12} className="fill-amber-500" /> {tx('Обране', 'My favorites')}
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {favoriteAssetsList.map(asset => (
@@ -222,7 +223,7 @@ export default function AssetPickerModal({ isOpen, onClose, onSelect, selectedAs
 
               {deferredSearch.trim() === '' && quickSelectAssets.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 pl-1">Quick Select</h4>
+                  <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 pl-1">{tx('Швидкий вибір', 'Quick select')}</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {quickSelectAssets.map(asset => {
                       const isFav = favorites.includes(asset.symbol);
@@ -241,7 +242,7 @@ export default function AssetPickerModal({ isOpen, onClose, onSelect, selectedAs
               )}
 
               <div>
-                <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 pl-1">All Markets</h4>
+                <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 pl-1">{tx('Усі ринки', 'All markets')}</h4>
                 <div className="space-y-3">
                   {Object.keys(displayCategories).length > 0 ? (
                     Object.entries(displayCategories).map(([category, items]) => {
@@ -264,7 +265,7 @@ export default function AssetPickerModal({ isOpen, onClose, onSelect, selectedAs
                                         <AssetIcon symbol={asset.symbol} category={asset.category} />
                                         <div>
                                           <div className="text-xs font-bold uppercase tracking-wider text-zinc-200">{asset.symbol}</div>
-                                          <div className="text-[10px] text-zinc-500 mt-0.5">Contract Size: {asset.contractSize.toLocaleString()}</div>
+                                          <div className="text-[10px] text-zinc-500 mt-0.5">{tx('Розмір контракту', 'Contract size')}: {asset.contractSize.toLocaleString(LOCALE)}</div>
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-3">
@@ -281,7 +282,7 @@ export default function AssetPickerModal({ isOpen, onClose, onSelect, selectedAs
                       );
                     })
                   ) : (
-                    <div className="p-8 text-center text-xs text-zinc-600 font-bold uppercase tracking-widest">No matching tools found</div>
+                    <div className="p-8 text-center text-xs text-zinc-600 font-bold uppercase tracking-widest">{tx('Нічого не знайдено', 'No matching instruments')}</div>
                   )}
                 </div>
               </div>

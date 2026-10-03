@@ -7,6 +7,7 @@ import { T } from '../../lib/theme';
 import AssetIcon from '../ui/AssetIcon';
 import { formatBiasData } from '../../utils/biasUtils';
 import { biasOf, biasResult } from './AnalysisCard';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Швидкий перегляд плану при наведенні.
@@ -122,7 +123,7 @@ export default function PremiumAnalysisHover({ children, planData }) {
                 <span className="flex items-center gap-2">
                   <LayoutGrid size={15} style={{ color: accent }} />
                   <span className="text-[12px] font-bold uppercase tracking-[0.16em]" style={{ fontFamily: T.sans, color: T.text }}>
-                    Огляд плану
+                    {tx('Огляд плану', 'Plan overview')}
                   </span>
                 </span>
                 <span
@@ -151,39 +152,39 @@ export default function PremiumAnalysisHover({ children, planData }) {
                       : <X size={14} strokeWidth={3.4} style={{ color: T.bad }} />}
                   </span>
                   <span className="text-[13.5px] font-bold" style={{ fontFamily: T.sans, color: hit ? T.ok : T.bad }}>
-                    {hit ? 'Ринок пішов за планом' : 'Ринок пішов інакше'}
+                    {hit ? tx('Ринок пішов за планом', 'The market followed the plan') : tx('Ринок пішов інакше', 'The market went the other way')}
                   </span>
                 </div>
               )}
 
               <div className="relative z-10 grid grid-cols-2 gap-2.5">
-                <Cell icon={Target} label="Актив">
+                <Cell icon={Target} label={tx('Актив', 'Asset')}>
                   <span className="flex items-center gap-2">
                     <AssetIcon symbol={data.pair} category={planData?.plan_data?.category} />
                     <span className="truncate text-[14px] font-bold" style={{ fontFamily: T.display, color: T.text }}>{data.pair}</span>
                   </span>
                 </Cell>
 
-                <Cell icon={Crosshair} label="План">
+                <Cell icon={Crosshair} label={tx('План', 'Plan')}>
                   <span className="text-[14px] font-bold" style={{ fontFamily: T.sans, color: planned?.color || T.text3 }}>
                     {planned?.label || data.planned}
                   </span>
                 </Cell>
 
-                <Cell icon={ShieldCheck} label="Факт">
+                <Cell icon={ShieldCheck} label={tx('Факт', 'Actual')}>
                   <span className="text-[14px] font-bold" style={{ fontFamily: T.sans, color: actual?.color || T.text4 }}>
-                    {actual?.label || 'не вказано'}
+                    {actual?.label || tx('не вказано', 'not set')}
                   </span>
                 </Cell>
 
-                <Cell icon={Activity} label="Оцінка">
+                <Cell icon={Activity} label={tx('Оцінка', 'Rating')}>
                   <span className="flex items-baseline gap-1 text-[14px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: T.text }}>
                     {data.rating}
                     <span className="text-[12px]" style={{ color: T.text4 }}>/ 5</span>
                   </span>
                 </Cell>
 
-                <Cell icon={RefreshCw} label="Оновлень">
+                <Cell icon={RefreshCw} label={tx('Оновлень', 'Updates')}>
                   <span className="text-[14px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: data.updates ? T.acc : T.text4 }}>
                     {data.updates}
                   </span>
@@ -191,11 +192,11 @@ export default function PremiumAnalysisHover({ children, planData }) {
 
                 <Cell
                   icon={AlertTriangle}
-                  label="Помилки"
+                  label={tx('Помилки', 'Mistakes')}
                   accent={data.mistake ? `rgba(${T.badRgb},0.28)` : undefined}
                 >
                   <span className="text-[14px] font-bold" style={{ fontFamily: T.sans, color: data.mistake ? T.bad : T.ok }}>
-                    {data.mistake ? 'є' : 'чисто'}
+                    {data.mistake ? tx('є', 'yes') : tx('чисто', 'clean')}
                   </span>
                 </Cell>
               </div>

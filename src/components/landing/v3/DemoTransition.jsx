@@ -123,7 +123,6 @@ export default function DemoTransition({ origin, onDone }) {
               height: '100%', borderRadius: 999,
               width: `${Math.min(100, phase * 25)}%`,
               background: `linear-gradient(90deg,${C.accDeep},${C.acc})`,
-              boxShadow: `0 0 14px ${A(0.7)}`,
               transition: 'width .34s cubic-bezier(.22,1,.36,1)',
             }}
           />

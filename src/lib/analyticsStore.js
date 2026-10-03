@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { getTradeProfit } from '../utils/journalUtils';
 import { accountSize } from './accountsStore';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Угоди для аналітики.
@@ -64,7 +65,7 @@ function emotionOf(row) {
 }
 
 /* Сесія в базі може бути порожньою — у старих записах її не питали */
-const sessionOf = (row) => row.session || 'Не вказано';
+const sessionOf = (row) => row.session || tx('Не вказано', 'Not set');
 
 const toApp = (row, sizes = {}) => {
   const date = row.plan_date || (row.created_at || '').slice(0, 10);
@@ -87,7 +88,7 @@ const toApp = (row, sizes = {}) => {
     result: RESULT[String(row.result || '').trim().toLowerCase()],
     rr: typeof row.rr === 'number' ? row.rr : 0,
     mistakes: row.has_mistake
-      ? [row.mistake_category || 'Помилка без категорії']
+      ? [row.mistake_category || tx('Помилка без категорії', 'Uncategorized mistake')]
       : [],
     planFollowed: !!row.followed_plan && !row.has_mistake,
     rushed: !!row.rushed,

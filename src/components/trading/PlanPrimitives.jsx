@@ -5,6 +5,7 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { Maximize2, Minimize2, Check, ChevronDown, EyeOff } from 'lucide-react';
 import { T, EASE, SPRING } from './planTheme';
 import { Spotlight } from '../ui/Hovers';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Спільні будівельні блоки сторінки плану.
@@ -223,7 +224,7 @@ export function Section({
             <span
               role="button"
               tabIndex={0}
-              title="Прибрати блок зі сторінки (повернути — у «Блоках плану» внизу)"
+              title={tx('Прибрати блок зі сторінки (повернути — у «Блоках плану» внизу)', 'Hide block from page (restore it under “Plan blocks” below)')}
               onClick={(e) => { e.stopPropagation(); onHide(); }}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onHide(); } }}
               className="no-print grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors duration-150"
@@ -361,7 +362,7 @@ export function WriteBlock({
               className="text-[12px] font-bold uppercase tracking-[0.14em]"
               style={{ fontFamily: T.sans, color: T.text4 }}
             >
-              {hint || 'Markdown не потрібен — пиши як думаєш'}
+              {hint || tx('Markdown не потрібен — пиши як думаєш', 'No Markdown needed — write as you think')}
             </span>
 
             <div className="flex items-center gap-3">
@@ -369,11 +370,11 @@ export function WriteBlock({
                 className="text-[12px] font-semibold tabular-nums"
                 style={{ fontFamily: T.sans, color: words > 0 ? T.text3 : T.text4 }}
               >
-                {words} сл.
+                {words} {tx('сл.', 'words')}
               </span>
               <button
                 onClick={() => setZen(true)}
-                title="Режим фокусу (Esc — вийти)"
+                title={tx('Режим фокусу (Esc — вийти)', 'Focus mode (Esc to exit)')}
                 className="grid h-6 w-6 place-items-center rounded-md transition-colors"
                 style={{ color: T.text4 }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = T.text2)}
@@ -413,7 +414,7 @@ export function WriteBlock({
                   className="text-[12px] font-bold uppercase tracking-[0.18em]"
                   style={{ fontFamily: T.sans, color: T.text3 }}
                 >
-                  Режим фокусу · {words} сл.
+                  {tx('Режим фокусу', 'Focus mode')} · {words} {tx('сл.', 'words')}
                 </span>
                 <button
                   onClick={() => setZen(false)}

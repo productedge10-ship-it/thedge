@@ -272,7 +272,7 @@ h1, h2, h3, h4, h5, h6 {
 .acc-burst:hover,
 .acc-burst:focus-visible {
   border-color: rgba(139,123,255,0.9) !important;
-  box-shadow: 0 16px 38px -14px rgba(139,123,255,0.7), 0 0 0 3px rgba(139,123,255,0.12) !important;
+  box-shadow: none !important;
 }
 
 /* Крапка відліку: рівно розміром з іконку, щоб і гаманці, і монети
@@ -399,7 +399,7 @@ h1, h2, h3, h4, h5, h6 {
 .bt-stream:hover,
 .bt-stream:focus-visible {
   border-color: rgba(139,123,255,0.75) !important;
-  box-shadow: 0 16px 34px -14px rgba(139,123,255,0.6), 0 0 0 3px rgba(139,123,255,0.10) !important;
+  box-shadow: none !important;
   transform: translateY(-1px);
 }
 
@@ -535,7 +535,7 @@ h1, h2, h3, h4, h5, h6 {
    без !important колір рамки й тінь тут просто не змінювались. */
 .folder-cta.is-hover {
   border-color: rgba(251,191,36,0.60) !important;
-  box-shadow: 0 14px 32px -14px rgba(251,191,36,0.35), inset 0 0 18px rgba(251,191,36,0.08) !important;
+  box-shadow: inset 0 0 18px rgba(251,191,36,0.08) !important;
   transform: translateY(-2px);
 }
 
@@ -637,7 +637,7 @@ h1, h2, h3, h4, h5, h6 {
 .folder-cta.is-lit .folder-cta-bulb {
   opacity: 1;
   transform: translateY(-50%) scale(1);
-  filter: grayscale(0) brightness(1) drop-shadow(0 0 6px rgba(251,191,36,.65));
+  filter: grayscale(0) brightness(1);
 }
 
 /* Спалах у мить запалення: коло розходиться від лампочки й гасне —
@@ -697,7 +697,7 @@ h1, h2, h3, h4, h5, h6 {
 .pomodoro-cta:hover,
 .pomodoro-cta:focus-visible {
   border-color: rgba(239,68,68,0.55) !important;
-  box-shadow: 0 14px 32px -14px rgba(239,68,68,0.4), inset 0 0 18px rgba(239,68,68,0.08) !important;
+  box-shadow: inset 0 0 18px rgba(239,68,68,0.08) !important;
   transform: translateY(-2px);
 }
 
@@ -748,7 +748,7 @@ h1, h2, h3, h4, h5, h6 {
   inset: 0;
   opacity: 0;
   transform: scale(.3);
-  filter: drop-shadow(0 1px 5px rgba(239,68,68,.5));
+  filter: none;
   transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .25s ease;
 }
 .pomodoro-cta:hover .pomodoro-cta-heart,
@@ -883,7 +883,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   height: 2px;
   background: #fff;
-  box-shadow: 0 0 8px #fff, 0 3px 14px rgba(var(--edge-acc-rgb, 139,123,255), .85);
+  box-shadow: 0 0 8px #fff;
   opacity: 0;
   transform: translateY(0);
   transition: opacity .25s ease;
@@ -988,7 +988,7 @@ h1, h2, h3, h4, h5, h6 {
    картка експорту. */
 .receipt-cta { isolation: isolate; transition: transform .18s ease, box-shadow .22s ease; }
 .receipt-cta:hover,
-.receipt-cta:focus-visible { transform: translateY(-1px); box-shadow: 0 8px 22px -6px rgba(var(--edge-acc-rgb, 139,123,255),.65); }
+.receipt-cta:focus-visible { transform: translateY(-1px); box-shadow: none; }
 
 /* Дефолтний напис тане й трохи спадає — звільняє місце ядру, а не
    просто зникає різко. */
@@ -2607,7 +2607,7 @@ input.edge-page-title { line-height: 1.15 !important; }
   font-size: 12px;
   opacity: .5;
   transform-origin: bottom center;
-  text-shadow: 0 0 9px rgba(var(--edge-acc-rgb, 139, 123, 255), 0.9);
+  text-shadow: none;
 }
 
 /* Промінь сканера. Тонка смуга з розмитими краями — саме розмиття
@@ -2728,7 +2728,7 @@ input.edge-page-title { line-height: 1.15 !important; }
   0%   { transform: translateX(0);    text-shadow: none; }
   30%  { transform: translateX(-1px); text-shadow: 1.5px 0 rgba(var(--edge-bad-rgb, 248, 113, 113), .8), -1.5px 0 rgba(94, 234, 212, .8); }
   60%  { transform: translateX(1px);  text-shadow: -1.5px 0 rgba(var(--edge-bad-rgb, 248, 113, 113), .8), 1.5px 0 rgba(94, 234, 212, .8); }
-  100% { transform: translateX(0);    text-shadow: 0 0 10px rgba(var(--edge-acc-rgb, 139, 123, 255), .7); }
+  100% { transform: translateX(0);    text-shadow: none; }
 }
 
 @keyframes planAsciiScan {
@@ -2971,7 +2971,7 @@ input.edge-page-title { line-height: 1.15 !important; }
 .sub-cta:hover .sub-cta-label,
 .sub-cta:focus-visible .sub-cta-label {
   letter-spacing: .012em;
-  text-shadow: 0 0 18px rgba(var(--edge-acc-rgb, 139,123,255), .55);
+  text-shadow: none;
 }
 
 .sub-cta:hover .sub-cta-days,
@@ -3177,7 +3177,7 @@ input.edge-page-title { line-height: 1.15 !important; }
   border-radius: 8px;
   background: rgba(20,18,30,.96);
   border: 1px solid rgba(var(--edge-acc-rgb, 139,123,255), .6);
-  box-shadow: 0 8px 24px -8px rgba(var(--edge-acc-rgb, 139,123,255), .9);
+  box-shadow: none;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 11.5px;
   white-space: nowrap;

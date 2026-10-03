@@ -7,6 +7,7 @@ import { notify } from '../../utils/notify';
 import useCloudState from '../../hooks/useCloudState';
 import { DEFAULT_GROUPS, KEYS, normalizeItems } from '../../lib/checklistData';
 import { reasonLabel } from './utils';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Правило з помилки.
@@ -31,9 +32,9 @@ const A = (a) => `rgba(${T.accRgb}, ${a})`;
    перебити: помилка ризику майже завжди лікується пунктом про ризик,
    а не про контекст ринку. */
 const GROUP_GUESS = [
-  [/risk|обʼєм|обсяг|стоп|лот/i, 'risk'],
-  [/fomo|revenge|tilt|страх|нудьг|терпін|впевнен/i, 'head'],
-  [/setup|система|підтвердж|рівень|тф|timeframe/i, 'setup'],
+  [/risk|обʼєм|обсяг|стоп|лот|size|stop/i, 'risk'],
+  [/fomo|revenge|tilt|страх|нудьг|терпін|впевнен|fear|bored|patien|complacent/i, 'head'],
+  [/setup|система|підтвердж|рівень|тф|timeframe|system|confirm|level/i, 'setup'],
 ];
 
 export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
@@ -55,7 +56,7 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
      хвіст і є правилом, тому підставляємо його, а не весь текст. */
   const seed = (() => {
     const desc = entry?.desc || '';
-    const m = desc.match(/(?:наступного разу|next time|правило)\s*[:—-]\s*([\s\S]+)$/i);
+    const m = desc.match(/(?:наступного разу|next time|правило|rule)\s*[:—-]\s*([\s\S]+)$/i);
     return (m ? m[1] : desc).trim().slice(0, 180);
   })();
 
@@ -78,7 +79,7 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
     const id = Math.max(0, ...items.map((i) => Number(i.id) || 0)) + 1;
     setItems([...items, { id, text: clean, group, critical }]);
 
-    notify.success('Правило створено', 'Зʼявиться в чеклісті перед входом.');
+    notify.success(tx('Правило створено', 'Rule created'), tx('Зʼявиться в чеклісті перед входом.', "It'll show up in your pre-entry checklist."));
     onClose();
   };
 
@@ -132,7 +133,7 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                   </span>
                   <div>
                     <div className="text-[14.5px] font-bold" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.3px' }}>
-                      Правило з цієї помилки
+                      {tx('Правило з цієї помилки', 'Rule from this mistake')}
                     </div>
                     {firstReason && (
                       <div className="mt-[3px] text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
@@ -156,14 +157,14 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                   className="text-[10.5px] font-bold uppercase"
                   style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: 'var(--edge-text2)' }}
                 >
-                  Що робити наступного разу
+                  {tx('Що робити наступного разу', 'What to do next time')}
                 </span>
 
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   rows={3}
-                  placeholder="Обʼєм рахую до входу, а не після того, як побачив рух."
+                  placeholder={tx('Обʼєм рахую до входу, а не після того, як побачив рух.', 'I size the position before entry, not after I see the move.')}
                   className="mt-2.5 w-full resize-none rounded-[13px] px-4 py-3 outline-none"
                   style={{
                     fontFamily: T.sans, fontSize: 14.5, lineHeight: 1.6, color: 'var(--edge-text)',
@@ -176,7 +177,7 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                     className="text-[10.5px] font-bold uppercase"
                     style={{ fontFamily: T.mono, letterSpacing: '1.8px', color: 'var(--edge-text2)' }}
                   >
-                    Куди покласти
+                    {tx('Куди покласти', 'Where to put it')}
                   </span>
 
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -227,10 +228,10 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
                       <Flame size={13} strokeWidth={2} style={{ color: critical ? 'var(--edge-bad)' : 'var(--edge-text3)' }} />
-                      Критичне
+                      {tx('Критичне', 'Critical')}
                     </span>
                     <span className="mt-1 block text-[12px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
-                      Без цього пункту чекліст не дасть зеленого вердикту
+                      {tx('Без цього пункту чекліст не дасть зеленого вердикту', "Without this item the checklist won't give a green verdict")}
                     </span>
                   </span>
                 </button>
@@ -241,7 +242,7 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                 style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)' }}
               >
                 <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
-                  Зʼявиться в «Перед входом»
+                  {tx('Зʼявиться в «Перед входом»', 'Will appear in “Before entry”')}
                 </span>
 
                 <div className="flex items-center gap-2.5">
@@ -250,7 +251,7 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                     className="flex h-10 items-center rounded-xl px-4 text-[13px] font-semibold"
                     style={{ fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)', color: 'var(--edge-text)' }}
                   >
-                    Скасувати
+                    {tx('Скасувати', 'Cancel')}
                   </button>
                   <button
                     onClick={save}
@@ -259,12 +260,12 @@ export default function RuleFromErrorModal({ isOpen, onClose, entry, color }) {
                       fontFamily: T.sans,
                       background: 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))',
                       color: 'var(--edge-text)',
-                      boxShadow: `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
+                      boxShadow: `inset 0 1px 0 rgba(var(--edge-text-rgb),0.2)`,
                       opacity: text.trim().length < 4 ? 0.6 : 1,
                     }}
                   >
                     <Check size={14} strokeWidth={2.6} />
-                    Створити правило
+                    {tx('Створити правило', 'Create rule')}
                   </button>
                 </div>
               </div>

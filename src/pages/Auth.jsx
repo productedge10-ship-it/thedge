@@ -12,6 +12,7 @@ import {
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { armReveal } from '../components/core/CandleReveal';
+import { t as tx } from '../lib/lang';
 
 /* ------------------------------------------------------------------ */
 /*  THE EDGE — theme tokens                                            */
@@ -42,24 +43,24 @@ const FEATURES = [
     icon: BarChart3,
     color: '#4f8bff',
     rgb: '79,139,255',
-    title: 'Нейропрофіль трейдера',
-    desc: 'Психологічний зліпок кожної сесії',
+    title: tx('Нейропрофіль трейдера', 'Trader neuro-profile'),
+    desc: tx('Психологічний зліпок кожної сесії', 'A psychological snapshot of every session'),
     stat: '62',
   },
   {
     icon: CircleDot,
     color: '#a78bfa',
     rgb: '167,139,250',
-    title: 'AI-психолог',
-    desc: 'Розбирає емоції та помилки в угодах',
+    title: tx('AI-психолог', 'AI psychologist'),
+    desc: tx('Розбирає емоції та помилки в угодах', 'Breaks down emotions and mistakes in your trades'),
     stat: '24/7',
   },
   {
     icon: Diamond,
     color: '#00e0a4',
     rgb: '0,224,164',
-    title: 'Вердикт по дисципліні',
-    desc: 'Бачиш, куди течуть твої R',
+    title: tx('Вердикт по дисципліні', 'Discipline verdict'),
+    desc: tx('Бачиш, куди течуть твої R', 'See where your R leaks'),
     stat: '+37.6R',
   },
 ];
@@ -479,7 +480,7 @@ function EdgeLogo({ large = false }) {
         WebkitBackgroundClip: 'text',
         backgroundClip: 'text',
         color: 'transparent',
-        filter: `drop-shadow(0 0 22px rgba(${ACCENT},0.4))`,
+        filter: 'none',
       }}
     >
       THE&nbsp;EDGE
@@ -544,14 +545,14 @@ function passwordRules(pw, email) {
   const p = String(pw || '');
   const local = String(email || '').split('@')[0].toLowerCase();
   return [
-    { id: 'len', ok: p.length >= 8, text: 'Щонайменше 8 символів' },
-    { id: 'mix', ok: /\p{L}/u.test(p) && /\d/.test(p), text: 'Літери й цифри' },
+    { id: 'len', ok: p.length >= 8, text: tx('Щонайменше 8 символів', 'At least 8 characters') },
+    { id: 'mix', ok: /\p{L}/u.test(p) && /\d/.test(p), text: tx('Літери й цифри', 'Letters and numbers') },
     {
       id: 'weak',
       ok: p.length > 0 && !COMMON_PASSWORDS.has(p.toLowerCase())
         && !(local.length >= 3 && p.toLowerCase().includes(local))
         && !/^(.)\1+$/.test(p),
-      text: 'Не збігається з поштою й не з популярних',
+      text: tx('Не збігається з поштою й не з популярних', 'Not your email and not a common password'),
     },
   ];
 }
@@ -669,7 +670,7 @@ function PrimaryButton({ children, loading, withArrow = false, disabled, ...prop
           y: lift,
           transformStyle: 'preserve-3d',
           background: `linear-gradient(140deg, #b9aeff 0%, ${ACCENT_HEX} 46%, #4a35c9 100%)`,
-          boxShadow: `0 18px 40px -16px rgba(${ACCENT},0.75), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -12px 20px -12px rgba(0,0,0,0.4)`,
+          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -12px 20px -12px rgba(0,0,0,0.4)`,
         }}
       >
         {/* clipped surface effects */}
@@ -891,16 +892,16 @@ export default function Auth() {
 
   const getErrorMessage = (error) => {
     const msg = error?.message || '';
-    if (msg.includes('Email not confirmed')) return 'Будь ласка, підтвердіть вашу пошту (перейдіть за посиланням у листі).';
-    if (msg.includes('Invalid login credentials')) return 'Неправильний email або пароль.';
-    if (msg.includes('User already registered') || msg.includes('already exists')) return 'Акаунт з таким email вже існує.';
-    if (msg.includes('Password should be at least')) return 'Пароль закороткий: щонайменше 8 символів.';
-    if (msg.includes('Password should contain')) return 'Пароль має містити літери й цифри.';
-    if (msg.toLowerCase().includes('pwned') || msg.toLowerCase().includes('weak')) return 'Цей пароль засвічений у витоках — придумайте інший.';
-    if (msg.includes('rate limit')) return 'Забагато спроб. Спробуйте пізніше.';
-    if (msg.includes('invalid email')) return 'Некоректний формат email адреси.';
-    if (msg.includes('Signups not allowed')) return 'Реєстрація нових користувачів вимкнена в базі.';
-    return `Системна помилка: ${msg}`;
+    if (msg.includes('Email not confirmed')) return tx('Будь ласка, підтвердіть вашу пошту (перейдіть за посиланням у листі).', 'Please verify your email (follow the link in the message).');
+    if (msg.includes('Invalid login credentials')) return tx('Неправильний email або пароль.', 'Wrong email or password.');
+    if (msg.includes('User already registered') || msg.includes('already exists')) return tx('Акаунт з таким email вже існує.', 'An account with this email already exists.');
+    if (msg.includes('Password should be at least')) return tx('Пароль закороткий: щонайменше 8 символів.', 'Password is too short: at least 8 characters.');
+    if (msg.includes('Password should contain')) return tx('Пароль має містити літери й цифри.', 'Password must contain letters and numbers.');
+    if (msg.toLowerCase().includes('pwned') || msg.toLowerCase().includes('weak')) return tx('Цей пароль засвічений у витоках — придумайте інший.', 'This password has appeared in data breaches — choose another one.');
+    if (msg.includes('rate limit')) return tx('Забагато спроб. Спробуйте пізніше.', 'Too many attempts. Try again later.');
+    if (msg.includes('invalid email')) return tx('Некоректний формат email адреси.', 'Invalid email address format.');
+    if (msg.includes('Signups not allowed')) return tx('Реєстрація нових користувачів вимкнена в базі.', 'New sign-ups are currently disabled.');
+    return tx(`Системна помилка: ${msg}`, `System error: ${msg}`);
   };
 
   const switchMode = useCallback((next) => {
@@ -931,7 +932,7 @@ export default function Auth() {
         navigate(from, { replace: true });
       } else if (mode === 'register') {
         if (!passwordRules(password, email).every((r) => r.ok)) {
-          setMessage({ type: 'error', text: 'Пароль не відповідає вимогам під полем.' });
+          setMessage({ type: 'error', text: tx('Пароль не відповідає вимогам під полем.', 'Password doesn\'t meet the requirements below the field.') });
           setLoading(false);
           return;
         }
@@ -939,7 +940,7 @@ export default function Auth() {
         if (error) throw error;
 
         if (data?.user && data.user.identities && data.user.identities.length === 0) {
-          setMessage({ type: 'error', text: 'Акаунт з таким email вже існує.' });
+          setMessage({ type: 'error', text: tx('Акаунт з таким email вже існує.', 'An account with this email already exists.') });
           setLoading(false);
           return;
         }
@@ -976,7 +977,7 @@ export default function Auth() {
            потрапити, і людина має знати, де шукати. */
         setMessage({
           type: 'success',
-          text: 'Посилання надіслано. Якщо листа немає — перевірте теку «Спам».',
+          text: tx('Посилання надіслано. Якщо листа немає — перевірте теку «Спам».', 'Link sent. If you don\'t see the email, check your spam folder.'),
         });
         setMode('login');
         setPassword('');
@@ -984,12 +985,12 @@ export default function Auth() {
         /* Перевіряємо збіг тут, а не покладаємось на required у полях:
            браузер стежить лише за тим, що вони не порожні. */
         if (password !== password2) {
-          setMessage({ type: 'error', text: 'Паролі не збігаються.' });
+          setMessage({ type: 'error', text: tx('Паролі не збігаються.', 'Passwords don\'t match.') });
           setLoading(false);
           return;
         }
         if (!passwordRules(password, email).every((r) => r.ok)) {
-          setMessage({ type: 'error', text: 'Пароль не відповідає вимогам під полем.' });
+          setMessage({ type: 'error', text: tx('Пароль не відповідає вимогам під полем.', 'Password doesn\'t meet the requirements below the field.') });
           setLoading(false);
           return;
         }
@@ -1018,7 +1019,7 @@ export default function Auth() {
     try {
       const { error } = await supabase.auth.resend({ type: 'signup', email });
       if (error) throw error;
-      setMessage({ type: 'success', text: 'Лист надіслано повторно.' });
+      setMessage({ type: 'success', text: tx('Лист надіслано повторно.', 'Email sent again.') });
     } catch (error) {
       setMessage({ type: 'error', text: getErrorMessage(error) });
     } finally {
@@ -1142,19 +1143,19 @@ export default function Auth() {
               className="text-[11px] uppercase mb-[22px]"
               style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 4, color: ACCENT_HEX }}
             >
-              Trading Terminal Access
+              {tx('Доступ до торгового терміналу', 'Trading Terminal Access')}
             </div>
             <div
               className="font-semibold text-[32px] leading-[1.08] text-[#f6f8fa] sm:text-[46px]"
               style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif", letterSpacing: '-0.5px' }}
             >
-              Торгуй з перевагою,<br />яку можна виміряти.
+              {tx('Торгуй з перевагою,', 'Trade with an edge')}<br />{tx('яку можна виміряти.', 'you can measure.')}
             </div>
             <div
               className="mt-6 text-[10.5px] uppercase text-[#e8eaed]/35"
               style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2.5 }}
             >
-              Клікни по графіку — розжени ринок ↗
+              {tx('Клікни по графіку — розжени ринок ↗', 'Click the chart — pump the market ↗')}
             </div>
           </div>
 
@@ -1166,7 +1167,7 @@ export default function Auth() {
               className="flex items-center gap-[10px] text-[10.5px] uppercase text-[#e8eaed]/40"
               style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2.5 }}
             >
-              SOC 2 · 256-BIT ENCRYPTION
+              {tx('SOC 2 · 256-БІТНЕ ШИФРУВАННЯ', 'SOC 2 · 256-BIT ENCRYPTION')}
             </div>
           </div>
         </div>
@@ -1206,11 +1207,11 @@ export default function Auth() {
               <span
                 className="w-[7px] h-[7px] rounded-full"
                 style={{
-                  background: '#00e0a4', boxShadow: '0 0 10px rgba(0,224,164,0.8)',
+                  background: '#00e0a4', boxShadow: 'none',
                   animation: 'edgePulse 2.4s ease-in-out infinite',
                 }}
               />
-              Ринок відкрито
+              {tx('Ринок відкрито', 'Market open')}
             </div>
             <div className="text-[#e8eaed]/60" style={{ letterSpacing: 1.5 }}>{clock}</div>
           </motion.div>
@@ -1247,15 +1248,6 @@ export default function Auth() {
                 }}
               />
             </div>
-            {/* top hairline + glow */}
-            <div
-              className="absolute -top-px left-1/2 -translate-x-1/2 w-[64%] h-px pointer-events-none"
-              style={{ background: `linear-gradient(90deg, transparent, rgba(${ACCENT},0.95), transparent)` }}
-            />
-            <div
-              className="absolute -top-6 left-1/2 -translate-x-1/2 w-[70%] h-6 pointer-events-none"
-              style={{ background: `radial-gradient(ellipse at center, rgba(${ACCENT},0.32), transparent 70%)`, filter: 'blur(6px)' }}
-            />
 
             <div className="relative">
               {/* brand mark */}
@@ -1295,32 +1287,32 @@ export default function Auth() {
                   <motion.div key="login" {...screenMotion}>
                     <div className="text-center mb-7">
                       <div className="font-bold text-[28px] tracking-[1px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
-                        ВХІД
+                        {tx('ВХІД', 'SIGN IN')}
                       </div>
                       <div className="text-[10px] tracking-[3.5px] text-[#e8eaed]/40 mt-2" style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace" }}>
-                        TRADING TERMINAL ACCESS
+                        {tx('ДОСТУП ДО ТЕРМІНАЛУ', 'TRADING TERMINAL ACCESS')}
                       </div>
                     </div>
 
                     <form onSubmit={handleAuth} className="flex flex-col gap-3.5">
-                      <FieldInput icon={Mail} type="email" placeholder="Електронна пошта" required
+                      <FieldInput icon={Mail} type="email" placeholder={tx('Електронна пошта', 'Email')} required
                         value={email} onChange={handleInputChange(setEmail)} autoComplete="email" />
-                      <FieldInput icon={Lock} type="password" placeholder="Пароль" required
+                      <FieldInput icon={Lock} type="password" placeholder={tx('Пароль', 'Password')} required
                         value={password} onChange={handleInputChange(setPassword)} autoComplete="current-password" />
                       <div className="flex justify-end">
                         <button type="button" onClick={() => switchMode('reset')}
                           className="text-[11px] font-bold uppercase tracking-[1px] text-[#e8eaed]/50 hover:text-white transition-colors">
-                          Забули пароль?
+                          {tx('Забули пароль?', 'Forgot password?')}
                         </button>
                       </div>
-                      <PrimaryButton type="submit" loading={loading} withArrow>Увійти</PrimaryButton>
+                      <PrimaryButton type="submit" loading={loading} withArrow>{tx('Увійти', 'Sign in')}</PrimaryButton>
                     </form>
 
                     <Divider />
                     <div className="text-center">
                       <button type="button" onClick={() => switchMode('register')}
                         className="text-[12.5px] text-[#e8eaed]/48 hover:text-white transition-colors">
-                        Немає акаунту? Зареєструватися
+                        {tx('Немає акаунту? Зареєструватися', 'No account? Sign up')}
                       </button>
                     </div>
                   </motion.div>
@@ -1331,17 +1323,17 @@ export default function Auth() {
                   <motion.div key="register" {...screenMotion}>
                     <div className="text-center mb-7">
                       <div className="font-bold text-[28px] tracking-[1px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
-                        РЕЄСТРАЦІЯ
+                        {tx('РЕЄСТРАЦІЯ', 'SIGN UP')}
                       </div>
                       <div className="text-[10px] tracking-[3.5px] text-[#e8eaed]/40 mt-2" style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace" }}>
-                        TRADING TERMINAL ACCESS
+                        {tx('ДОСТУП ДО ТЕРМІНАЛУ', 'TRADING TERMINAL ACCESS')}
                       </div>
                     </div>
 
                     <form onSubmit={handleAuth} className="flex flex-col gap-3.5">
-                      <FieldInput icon={Mail} type="email" placeholder="Електронна пошта" required
+                      <FieldInput icon={Mail} type="email" placeholder={tx('Електронна пошта', 'Email')} required
                         value={email} onChange={handleInputChange(setEmail)} autoComplete="email" />
-                      <FieldInput icon={Lock} type="password" placeholder="Пароль" required
+                      <FieldInput icon={Lock} type="password" placeholder={tx('Пароль', 'Password')} required
                         value={password} onChange={handleInputChange(setPassword)} autoComplete="new-password" />
                       {password && <PasswordRules password={password} email={email} />}
 
@@ -1357,7 +1349,7 @@ export default function Auth() {
                           className="mt-[3px] h-[15px] w-[15px] shrink-0 cursor-pointer accent-[#8b7bff]"
                         />
                         <span className="text-[12.5px] leading-[1.5] text-[#e8eaed]/55">
-                          Я прочитав(ла) і приймаю{' '}
+                          {tx('Я прочитав(ла) і приймаю', 'I have read and accept the')}{' '}
                           <a
                             href="/terms"
                             target="_blank"
@@ -1365,20 +1357,20 @@ export default function Auth() {
                             onClick={(e) => e.stopPropagation()}
                             className="text-[#8b7bff] underline decoration-[#8b7bff]/40 underline-offset-2 transition-colors hover:text-white"
                           >
-                            Умови користування
+                            {tx('Умови користування', 'Terms of Use')}
                           </a>
-                          . Розумію, що сервіс не надає фінансових порад і не відповідає за мої торгові рішення.
+                          {tx('. Розумію, що сервіс не надає фінансових порад і не відповідає за мої торгові рішення.', '. I understand the service doesn\'t provide financial advice and isn\'t responsible for my trading decisions.')}
                         </span>
                       </label>
 
-                      <PrimaryButton type="submit" loading={loading} disabled={!agreed} withArrow>Створити акаунт</PrimaryButton>
+                      <PrimaryButton type="submit" loading={loading} disabled={!agreed} withArrow>{tx('Створити акаунт', 'Create account')}</PrimaryButton>
                     </form>
 
                     <Divider />
                     <div className="text-center">
                       <button type="button" onClick={() => switchMode('login')}
                         className="text-[12.5px] text-[#e8eaed]/48 hover:text-white transition-colors">
-                        Вже є акаунт? Увійти
+                        {tx('Вже є акаунт? Увійти', 'Already have an account? Sign in')}
                       </button>
                     </div>
                   </motion.div>
@@ -1395,23 +1387,23 @@ export default function Auth() {
                         <Key size={22} color={ACCENT_HEX} strokeWidth={1.7} />
                       </div>
                       <div className="font-bold text-[25px] tracking-[0.5px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
-                        Відновлення
+                        {tx('Відновлення', 'Recovery')}
                       </div>
                       <div className="text-[13px] leading-[1.5] text-[#e8eaed]/50 mt-[11px]">
-                        Введіть свою пошту — ми надішлемо посилання для відновлення доступу.
+                        {tx('Введіть свою пошту — ми надішлемо посилання для відновлення доступу.', 'Enter your email — we\'ll send you a link to regain access.')}
                       </div>
                     </div>
 
                     <form onSubmit={handleAuth} className="flex flex-col gap-3.5">
-                      <FieldInput icon={Mail} type="email" placeholder="Електронна пошта" required
+                      <FieldInput icon={Mail} type="email" placeholder={tx('Електронна пошта', 'Email')} required
                         value={email} onChange={handleInputChange(setEmail)} autoComplete="email" />
-                      <PrimaryButton type="submit" loading={loading}>Надіслати посилання</PrimaryButton>
+                      <PrimaryButton type="submit" loading={loading}>{tx('Надіслати посилання', 'Send link')}</PrimaryButton>
                     </form>
 
                     <div className="text-center mt-6">
                       <button type="button" onClick={() => switchMode('login')}
                         className="inline-flex items-center gap-2 text-[12.5px] text-[#e8eaed]/48 hover:text-white transition-colors">
-                        <ArrowLeft size={14} strokeWidth={2} /> Повернутися до входу
+                        <ArrowLeft size={14} strokeWidth={2} /> {tx('Повернутися до входу', 'Back to sign in')}
                       </button>
                     </div>
                   </motion.div>
@@ -1428,20 +1420,20 @@ export default function Auth() {
                         <Lock size={22} color={ACCENT_HEX} strokeWidth={1.7} />
                       </div>
                       <div className="font-bold text-[25px] tracking-[0.5px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
-                        Новий пароль
+                        {tx('Новий пароль', 'New password')}
                       </div>
                       <div className="text-[13px] leading-[1.5] text-[#e8eaed]/50 mt-[11px]">
-                        Придумайте новий пароль — і одразу зайдете з ним у застосунок.
+                        {tx('Придумайте новий пароль — і одразу зайдете з ним у застосунок.', 'Choose a new password — you\'ll go straight into the app with it.')}
                       </div>
                     </div>
 
                     <form onSubmit={handleAuth} className="flex flex-col gap-3.5">
-                      <FieldInput icon={Lock} type="password" placeholder="Новий пароль" required
+                      <FieldInput icon={Lock} type="password" placeholder={tx('Новий пароль', 'New password')} required
                         value={password} onChange={handleInputChange(setPassword)} autoComplete="new-password" />
                       {password && <PasswordRules password={password} email={email} />}
-                      <FieldInput icon={Lock} type="password" placeholder="Повторіть пароль" required
+                      <FieldInput icon={Lock} type="password" placeholder={tx('Повторіть пароль', 'Repeat password')} required
                         value={password2} onChange={handleInputChange(setPassword2)} autoComplete="new-password" />
-                      <PrimaryButton type="submit" loading={loading}>Зберегти пароль</PrimaryButton>
+                      <PrimaryButton type="submit" loading={loading}>{tx('Зберегти пароль', 'Save password')}</PrimaryButton>
                     </form>
                   </motion.div>
                 )}
@@ -1459,23 +1451,23 @@ export default function Auth() {
                       <MailCheck size={28} color={ACCENT_HEX} strokeWidth={1.6} />
                     </div>
                     <div className="font-bold text-[24px] tracking-[0.5px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
-                      Перевірте пошту
+                      {tx('Перевірте пошту', 'Check your email')}
                     </div>
                     <div className="text-[13.5px] leading-[1.6] text-[#e8eaed]/55 mt-3 mb-[26px] max-w-[320px] mx-auto">
-                      Ми надіслали лист із підтвердженням на адресу{' '}
+                      {tx('Ми надіслали лист із підтвердженням на адресу', 'We sent a confirmation email to')}{' '}
                       <span className="text-[#e8eaed]/85 font-semibold break-all">{email || 'your@email.com'}</span>.
-                      {' '}Перейдіть за посиланням, щоб активувати акаунт.
-                      {' '}Якщо листа немає — перевірте теку «Спам».
+                      {' '}{tx('Перейдіть за посиланням, щоб активувати акаунт.', 'Follow the link to activate your account.')}
+                      {' '}{tx('Якщо листа немає — перевірте теку «Спам».', 'If you don\'t see it, check your spam folder.')}
                     </div>
 
                     <PrimaryButton type="button" loading={resending} onClick={handleResend}>
-                      Надіслати лист повторно
+                      {tx('Надіслати лист повторно', 'Resend email')}
                     </PrimaryButton>
 
                     <div className="mt-5">
                       <button type="button" onClick={() => switchMode('login')}
                         className="text-[12.5px] text-[#e8eaed]/35 hover:text-white transition-colors">
-                        Повернутися до входу
+                        {tx('Повернутися до входу', 'Back to sign in')}
                       </button>
                     </div>
                   </motion.div>

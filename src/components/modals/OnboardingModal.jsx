@@ -14,6 +14,7 @@ import useCloudState from '../../hooks/useCloudState';
 import {
   KEY, QUESTIONS, TOTAL, DIMS, LEVEL, EMPTY, OPEN_EVENT, normalize, portrait,
 } from '../../lib/onboarding';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Знайомство з новим користувачем.
@@ -189,11 +190,11 @@ export default function OnboardingModal() {
                 <div className="min-w-0">
                   <EdgeWordmark size={13} />
                   <div className="mt-1 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-                    {stage === 'ask' && 'Розкажи про себе — і поради стануть про тебе'}
-                    {stage === 'portrait' && 'Ось що я про тебе зрозумів'}
-                    {stage === 'pick' && 'Зберемо меню під тебе'}
-                    {stage === 'mt5' && 'Лишилось привезти сюди твої угоди'}
-                    {stage === 'offer' && 'Останнє — і відпускаю'}
+                    {stage === 'ask' && tx('Розкажи про себе — і поради стануть про тебе', 'Tell me about yourself — and the tips will be about you')}
+                    {stage === 'portrait' && tx('Ось що я про тебе зрозумів', 'Here\'s what I learned about you')}
+                    {stage === 'pick' && tx('Зберемо меню під тебе', 'Let\'s tailor the menu to you')}
+                    {stage === 'mt5' && tx('Лишилось привезти сюди твої угоди', 'Now let\'s bring your trades in')}
+                    {stage === 'offer' && tx('Останнє — і відпускаю', 'One last thing and you\'re free')}
                   </div>
                 </div>
 
@@ -203,7 +204,7 @@ export default function OnboardingModal() {
                   style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text3 }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
-                  title="Відповім пізніше"
+                  title={tx('Відповім пізніше', 'I\'ll answer later')}
                 >
                   <X size={16} strokeWidth={2.4} />
                 </button>
@@ -292,8 +293,8 @@ function Question({ q, index, onAnswer, onBack, onLater, canBack }) {
       </AnimatePresence>
 
       <div className="flex gap-3">
-        <Answer label="Так" tone={T.ok} rgb={T.okRgb} onClick={() => onAnswer(true)} />
-        <Answer label="Ні" tone={T.text2} rgb="180,180,189" onClick={() => onAnswer(false)} />
+        <Answer label={tx('Так', 'Yes')} tone={T.ok} rgb={T.okRgb} onClick={() => onAnswer(true)} />
+        <Answer label={tx('Ні', 'No')} tone={T.text2} rgb="180,180,189" onClick={() => onAnswer(false)} />
       </div>
 
       <div className="mt-5 flex items-center gap-4">
@@ -305,7 +306,7 @@ function Question({ q, index, onAnswer, onBack, onLater, canBack }) {
             onMouseEnter={(e) => { e.currentTarget.style.color = T.text2; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
           >
-            <ArrowLeft size={14} strokeWidth={2.4} /> Назад
+            <ArrowLeft size={14} strokeWidth={2.4} /> {tx('Назад', 'Back')}
           </button>
         )}
 
@@ -316,7 +317,7 @@ function Question({ q, index, onAnswer, onBack, onLater, canBack }) {
           onMouseEnter={(e) => { e.currentTarget.style.color = T.text2; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
         >
-          <Clock size={14} strokeWidth={2.4} /> Відповім пізніше
+          <Clock size={14} strokeWidth={2.4} /> {tx('Відповім пізніше', 'I\'ll answer later')}
         </button>
       </div>
     </div>
@@ -401,7 +402,7 @@ function Portrait({ p, onNext, onRestart }) {
             className="text-[11.5px] font-bold uppercase tracking-[0.16em]"
             style={{ fontFamily: T.sans, color: T.acc }}
           >
-            З чого почати
+            {tx('З чого почати', 'Where to start')}
           </span>
         </div>
 
@@ -451,10 +452,10 @@ function Portrait({ p, onNext, onRestart }) {
             fontFamily: T.sans,
             background: T.acc,
             color: 'var(--edge-on-acc, #0A0A0C)',
-            boxShadow: `0 16px 40px -16px rgba(${T.accRgb},0.9)`,
+            boxShadow: 'none',
           }}
         >
-          <Check size={16} strokeWidth={3} /> Далі
+          <Check size={16} strokeWidth={3} /> {tx('Далі', 'Next')}
         </button>
 
         <button
@@ -464,7 +465,7 @@ function Portrait({ p, onNext, onRestart }) {
           onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
         >
-          <RotateCcw size={14} strokeWidth={2.4} /> Пройти знову
+          <RotateCcw size={14} strokeWidth={2.4} /> {tx('Пройти знову', 'Start over')}
         </button>
       </div>
     </div>
@@ -520,9 +521,7 @@ function PickStep({ onDone }) {
       className="px-6 pb-6 sm:px-8 sm:pb-8"
     >
       <p className="mb-5 text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
-        Розділів тут багато — це нормально, але одразу всі не потрібні.
-        Познач те, з чого почнеш. Решта сховається з меню й
-        повернеться в один клік із налаштувань.
+        {tx('Розділів тут багато — це нормально, але одразу всі не потрібні. Познач те, з чого почнеш. Решта сховається з меню й повернеться в один клік із налаштувань.', 'There are lots of sections here — that\'s fine, but you don\'t need them all at once. Pick what you\'ll start with. The rest will hide from the menu and come back in one click from settings.')}
       </p>
 
       <div className="mb-6 flex max-h-[320px] flex-col gap-4 overflow-y-auto custom-scrollbar pr-1">
@@ -571,7 +570,7 @@ function PickStep({ onDone }) {
           className="h-12 flex-1 rounded-xl text-[14px] font-bold transition-transform active:scale-[0.99]"
           style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
         >
-          Почати з цього ({picked.size})
+          {tx('Почати з цього', 'Start with these')} ({picked.size})
         </button>
         <button
           onClick={() => apply(true)}
@@ -580,7 +579,7 @@ function PickStep({ onDone }) {
           onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
           onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
         >
-          Показати все
+          {tx('Показати все', 'Show everything')}
         </button>
       </div>
     </motion.div>
@@ -615,12 +614,10 @@ function OfferStep({ onYes, onNo }) {
             className="mb-2 text-[19px] font-bold leading-[1.25]"
             style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
           >
-            Показати, що де лежить?
+            {tx('Показати, що де лежить?', 'Want a quick tour?')}
           </h3>
           <p className="text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
-            Пролечу з тобою по розділах і розповім, навіщо кожен потрібен —
-            це хвилина. Відмовишся — нічого страшного: тур завжди можна
-            запустити з FAQ, він нікуди не дінеться.
+            {tx('Пролечу з тобою по розділах і розповім, навіщо кожен потрібен — це хвилина. Відмовишся — нічого страшного: тур завжди можна запустити з FAQ, він нікуди не дінеться.', 'I\'ll fly you through the sections and explain what each one is for — it takes a minute. If you skip it, no worries: you can always start the tour from the FAQ.')}
           </p>
         </div>
       </div>
@@ -631,7 +628,7 @@ function OfferStep({ onYes, onNo }) {
           className="h-12 flex-1 rounded-xl text-[14px] font-bold transition-transform active:scale-[0.99]"
           style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
         >
-          Давай, показуй
+          {tx('Давай, показуй', 'Sure, show me')}
         </button>
         <button
           onClick={onNo}
@@ -640,7 +637,7 @@ function OfferStep({ onYes, onNo }) {
           onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
           onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
         >
-          Розберусь сам
+          {tx('Розберусь сам', 'I\'ll figure it out')}
         </button>
       </div>
     </motion.div>
@@ -685,10 +682,10 @@ function Mt5Step({ onDone }) {
             className="text-[19px] font-bold leading-tight"
             style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
           >
-            Хай угоди приїдуть самі
+            {tx('Хай угоди приїдуть самі', 'Let your trades import themselves')}
           </h3>
           <p className="mt-1 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            MetaTrader 5 віддасть історію — тобі лишиться людська половина
+            {tx('MetaTrader 5 віддасть історію — тобі лишиться людська половина', 'MetaTrader 5 hands over the history — you just add the human half')}
           </p>
         </div>
       </div>
@@ -697,14 +694,14 @@ function Mt5Step({ onDone }) {
         <input
           value={server}
           onChange={(e) => setServer(e.target.value)}
-          placeholder="Сервер — напр. FTMO-Server або ICMarkets-Live12"
+          placeholder={tx('Сервер — напр. FTMO-Server або ICMarkets-Live12', 'Server — e.g. FTMO-Server or ICMarkets-Live12')}
           className="h-12 w-full rounded-xl px-4 text-[14px] outline-none"
           style={field}
         />
         <input
           value={login}
           onChange={(e) => setLogin(e.target.value)}
-          placeholder="Логін (номер рахунку)"
+          placeholder={tx('Логін (номер рахунку)', 'Login (account number)')}
           inputMode="numeric"
           className="h-12 w-full rounded-xl px-4 text-[14px] outline-none"
           style={field}
@@ -715,7 +712,7 @@ function Mt5Step({ onDone }) {
             value={pass}
             onChange={(e) => setPass(e.target.value)}
             type="password"
-            placeholder="Пароль інвестора"
+            placeholder={tx('Пароль інвестора', 'Investor password')}
             className="h-12 w-full rounded-xl pl-4 pr-12 text-[14px] outline-none"
             style={field}
           />
@@ -726,7 +723,7 @@ function Mt5Step({ onDone }) {
               background: help ? `rgba(${T.accRgb},0.14)` : 'transparent',
               color: help ? T.acc : T.text4,
             }}
-            title="Де взяти пароль інвестора"
+            title={tx('Де взяти пароль інвестора', 'Where to find the investor password')}
           >
             <HelpCircle size={16} strokeWidth={2.4} />
           </button>
@@ -750,21 +747,19 @@ function Mt5Step({ onDone }) {
                 className="mb-2 text-[11.5px] font-bold uppercase tracking-[0.16em]"
                 style={{ fontFamily: T.sans, color: T.acc }}
               >
-                Де взяти пароль інвестора
+                {tx('Де взяти пароль інвестора', 'Where to find the investor password')}
               </div>
               <ol
                 className="flex list-decimal flex-col gap-1.5 pl-4 text-[13px]"
                 style={{ fontFamily: T.sans, color: T.text2, lineHeight: 1.55 }}
               >
-                <li>Зайди в кабінет пропа або брокера, де лежить твій рахунок.</li>
-                <li>Знайди картку рахунку — там зазвичай є вкладка «Credentials» або «Дані для входу».</li>
-                <li>Скопіюй звідти імʼя сервера, номер рахунку й саме <b style={{ color: T.text }}>Investor password</b>.</li>
-                <li>У самому терміналі його теж можна задати: Сервіс → Налаштування → Сервер → Змінити пароль → Investor.</li>
+                <li>{tx('Зайди в кабінет пропа або брокера, де лежить твій рахунок.', 'Log in to your prop firm or broker dashboard where your account lives.')}</li>
+                <li>{tx('Знайди картку рахунку — там зазвичай є вкладка «Credentials» або «Дані для входу».', 'Open the account card — there\'s usually a "Credentials" or "Login details" tab.')}</li>
+                <li>{tx('Скопіюй звідти імʼя сервера, номер рахунку й саме', 'Copy the server name, account number and the')} <b style={{ color: T.text }}>Investor password</b>.</li>
+                <li>{tx('У самому терміналі його теж можна задати: Сервіс → Налаштування → Сервер → Змінити пароль → Investor.', 'You can also set it in the terminal: Tools → Options → Server → Change password → Investor.')}</li>
               </ol>
               <p className="mt-3 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.55 }}>
-                Пароль інвестора дозволяє лише дивитись історію. Торгувати
-                чи виводити гроші з ним неможливо — тому саме його й просимо
-                замість основного.
+                {tx('Пароль інвестора дозволяє лише дивитись історію. Торгувати чи виводити гроші з ним неможливо — тому саме його й просимо замість основного.', 'The investor password only lets you view history. You can\'t trade or withdraw with it — that\'s why we ask for it instead of the main one.')}
               </p>
             </div>
           </motion.div>
@@ -781,11 +776,11 @@ function Mt5Step({ onDone }) {
             background: ready ? T.acc : T.sunken,
             border: `1px solid ${ready ? 'transparent' : T.line}`,
             color: ready ? 'var(--edge-on-acc, #0A0A0C)' : T.text4,
-            boxShadow: ready ? `0 16px 40px -16px rgba(${T.accRgb},0.9)` : 'none',
+            boxShadow: 'none',
             cursor: ready ? 'pointer' : 'default',
           }}
         >
-          <Download size={16} strokeWidth={2.8} /> Підключити
+          <Download size={16} strokeWidth={2.8} /> {tx('Підключити', 'Connect')}
         </button>
 
         <button
@@ -795,7 +790,7 @@ function Mt5Step({ onDone }) {
           onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = T.line; }}
         >
-          Пропустити
+          {tx('Пропустити', 'Skip')}
         </button>
       </div>
     </div>

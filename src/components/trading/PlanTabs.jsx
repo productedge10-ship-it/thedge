@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Crosshair, Radio, ClipboardList, ArrowUp, ChevronDown } from 'lucide-react';
 import { T, EASE, SPRING } from './planTheme';
 import AssetIcon from '../ui/AssetIcon';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Ліва вертикальна рейка-якір. Прилипає до екрану і йде разом
@@ -241,7 +242,7 @@ export function BackToTop({ visible, onClick }) {
           whileHover={{ y: -3 }}
           whileTap={{ scale: 0.92 }}
           transition={SPRING}
-          title="Нагору"
+          title={tx('Нагору', 'Back to top')}
           className="no-print group grid h-11 w-11 place-items-center rounded-full"
           style={{
             background: 'var(--edge-panel, rgba(19,19,22,0.92))',

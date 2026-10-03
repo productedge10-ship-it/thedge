@@ -25,6 +25,8 @@
 
    `plate` — колір підкладки. Темні знаки просять світлу, світлі
    (як у FTMO, де мітка біла на темному квадраті) — темну. */
+import { t as tx } from './lang';
+
 export const BROKERS = [
   {
     id: 'ftmo',
@@ -140,7 +142,7 @@ const unknown = (id) => ({
   id: id || 'other',
   name: id
     ? id.charAt(0).toUpperCase() + id.slice(1)
-    : 'Інша фірма',
+    : tx('Інша фірма', 'Other firm'),
   domain: null,
   tint: '#6b6b78',
   icon: null,

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Підключення Telegram.
@@ -72,7 +73,7 @@ export async function readTelegram() {
 export async function createLinkCode() {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth?.user?.id;
-  if (!uid) throw new Error('Сесія закінчилась — увійди ще раз.');
+  if (!uid) throw new Error(tx('Сесія закінчилась — увійди ще раз.', 'Your session expired — please sign in again.'));
 
   /* Прибираємо свої старі коди перед видачею нового.
 
@@ -99,7 +100,7 @@ export async function createLinkCode() {
 export async function unlinkTelegram() {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth?.user?.id;
-  if (!uid) throw new Error('Сесія закінчилась — увійди ще раз.');
+  if (!uid) throw new Error(tx('Сесія закінчилась — увійди ще раз.', 'Your session expired — please sign in again.'));
 
   const { error } = await supabase
     .from('user_settings')
@@ -123,7 +124,7 @@ export async function setTelegramPref(key, value) {
 
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth?.user?.id;
-  if (!uid) throw new Error('Сесія закінчилась — увійди ще раз.');
+  if (!uid) throw new Error(tx('Сесія закінчилась — увійди ще раз.', 'Your session expired — please sign in again.'));
 
   /* upsert, а не update: рядка в user_settings може ще не бути, і
      тихий update не створив би його, а просто нічого не змінив. */

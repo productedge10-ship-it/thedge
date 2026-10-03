@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Діагностика перед сесією.
@@ -14,10 +15,10 @@ export const DIAG_KEYS = ['sleep', 'mood', 'revenge', 'risk'];
 
 /* Для 'revenge' здорова відповідь — «ні», для решти — «так» */
 export const DIAG_QUESTIONS = [
-  { key: 'sleep',   label: 'Чи добре ти виспався (7+ годин)?',   goodIsYes: true  },
-  { key: 'mood',    label: 'Чи спокійний твій емоційний стан?',  goodIsYes: true  },
-  { key: 'revenge', label: 'Чи є бажання відігратись?',          goodIsYes: false },
-  { key: 'risk',    label: 'Чи прийняв ти ризик на сьогодні?',   goodIsYes: true  },
+  { key: 'sleep',   label: tx('Чи добре ти виспався (7+ годин)?', 'Did you sleep well (7+ hours)?'),   goodIsYes: true  },
+  { key: 'mood',    label: tx('Чи спокійний твій емоційний стан?', 'Are you emotionally calm?'),  goodIsYes: true  },
+  { key: 'revenge', label: tx('Чи є бажання відігратись?', 'Do you feel the urge to win it back?'),          goodIsYes: false },
+  { key: 'risk',    label: tx('Чи прийняв ти ризик на сьогодні?', 'Have you accepted today’s risk?'),   goodIsYes: true  },
 ];
 
 export const emptyDiagnostics = () => ({
@@ -58,7 +59,7 @@ export async function loadDiagnostics(userId, date = todayKey()) {
 
 /* upsert по (user_id, date) — унікальний індекс не дасть дублікатів */
 export async function saveDiagnostics(userId, date, values) {
-  if (!userId) return { error: new Error('Немає користувача') };
+  if (!userId) return { error: new Error(tx('Немає користувача', 'No user')) };
   const payload = {
     user_id: userId,
     date,

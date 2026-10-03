@@ -1,4 +1,5 @@
 import { startOfWeek, endOfWeek, format } from 'date-fns';
+import { t as tx, isEn } from './lang';
 
 /* ==================================================================
    Тижневий план.
@@ -75,6 +76,7 @@ export const weekOffsetFromNow = (mondayStr, todayStr) =>
 const weekWord = (n) => {
   const t = n % 10;
   const h = n % 100;
+  if (isEn) return n === 1 ? 'week' : 'weeks';
   if (t === 1 && h !== 11) return 'тиждень';
   if (t >= 2 && t <= 4 && (h < 12 || h > 14)) return 'тижні';
   return 'тижнів';
@@ -83,11 +85,11 @@ const weekWord = (n) => {
 /* Підпис поруч із датами: сама по собі «6 – 12 October» не каже, це
    попереду чи позаду. Дату людина читає як число, а не як відстань. */
 export const weekRelLabel = (offset) => {
-  if (offset === 0) return 'Цей тиждень';
-  if (offset === 1) return 'Наступний тиждень';
-  if (offset === -1) return 'Минулий тиждень';
+  if (offset === 0) return tx('Цей тиждень', 'This week');
+  if (offset === 1) return tx('Наступний тиждень', 'Next week');
+  if (offset === -1) return tx('Минулий тиждень', 'Last week');
   const n = Math.abs(offset);
-  return offset > 0 ? `Через ${n} ${weekWord(n)}` : `${n} ${weekWord(n)} тому`;
+  return offset > 0 ? tx(`Через ${n} ${weekWord(n)}`, `In ${n} ${weekWord(n)}`) : tx(`${n} ${weekWord(n)} тому`, `${n} ${weekWord(n)} ago`);
 };
 
 /* ---------- порожні заготовки ---------- */

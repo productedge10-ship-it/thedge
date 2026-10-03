@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Check, Plus, LayoutGrid, ChevronDown } from 'lucide-react';
 import { T, SPRING, EASE } from './planTheme';
 import { usePlanBlocks, PHASE_LABEL } from '../../lib/planBlocks';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Панель «Блоки плану» угорі, під метаданими плану — єдине місце, де видно всі
@@ -51,10 +52,10 @@ export default function PlanBlocksDock({ mode }) {
           <LayoutGrid size={14} strokeWidth={2.3} />
         </span>
         <span className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
-          Блоки плану
+          {tx('Блоки плану', 'Plan blocks')}
         </span>
         <span className="ml-auto flex items-center gap-2 text-[12.5px] tabular-nums" style={{ fontFamily: T.sans, color: T.text4 }}>
-          {shown} з {blocks.length}
+          {shown} {tx('з', 'of')} {blocks.length}
           <motion.span className="inline-grid" animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25, ease: EASE }}>
             <ChevronDown size={15} strokeWidth={2.4} />
           </motion.span>
@@ -73,8 +74,7 @@ export default function PlanBlocksDock({ mode }) {
       >
 
       <p className="px-4 pb-3 text-[12.5px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text4 }}>
-        Залиш тільки те, чим користуєшся. Натисни на блок, щоб прибрати або
-        повернути його — записи не зникнуть.
+        {tx('Залиш тільки те, чим користуєшся. Натисни на блок, щоб прибрати або повернути його — записи не зникнуть.', 'Keep only what you use. Click a block to hide or restore it — your notes won’t be lost.')}
       </p>
 
       <div className="flex flex-col gap-4 px-4 pb-4">
@@ -97,7 +97,7 @@ export default function PlanBlocksDock({ mode }) {
                       whileTap={{ scale: 0.96 }}
                       transition={SPRING}
                       onClick={() => toggle(b.id)}
-                      title={on ? 'Прибрати зі сторінки' : 'Додати на сторінку'}
+                      title={on ? tx('Прибрати зі сторінки', 'Remove from page') : tx('Додати на сторінку', 'Add to page')}
                       className="plan-block-chip group flex h-12 items-center gap-2.5 rounded-xl pl-2.5 pr-4 text-[15.5px] font-medium"
                       style={{
                         fontFamily: T.sans,

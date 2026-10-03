@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { X, Trash2, Check, Share2, Globe, Link2Off } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 import ImageSlider from '../ui/ImageSlider';
 import { PROMPTS, EMOTIONS, SCORE_LABELS, fmtRange, fmtR } from '../../lib/reviewsData';
 
@@ -158,7 +159,7 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
         >
           <div className="min-w-0 sm:pl-3">
             <Eyebrow color={T.acc} size={11} tracking={2.2}>
-              Розбір
+              {tx('Розбір', 'Review')}
             </Eyebrow>
             {/* Без обрізання: на телефоні кнопки зʼїдають половину рядка,
                 і «13 лип. — 1…» не каже нічого. Хай переноситься. */}
@@ -180,7 +181,7 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
             {onShare && (
               <button
                 onClick={() => onShare(review)}
-                title={review.isPublic ? 'Скопіювати посилання' : 'Поділитись розбором'}
+                title={review.isPublic ? tx('Скопіювати посилання', 'Copy link') : tx('Поділитись розбором', 'Share review')}
                 className="flex items-center transition-all duration-200 active:scale-95"
                 style={{
                   gap: 8,
@@ -198,23 +199,23 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
                 onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.13)`; }}
               >
                 {review.isPublic ? <Globe size={15} strokeWidth={2.2} /> : <Share2 size={15} strokeWidth={2.2} />}
-                <span className="hidden sm:inline">{review.isPublic ? 'Лінк' : 'Поділитись'}</span>
+                <span className="hidden sm:inline">{review.isPublic ? tx('Лінк', 'Link') : tx('Поділитись', 'Share')}</span>
               </button>
             )}
 
             {onUnshare && review.isPublic && (
-              <IconButton onClick={() => onUnshare(review)} title="Закрити публічний доступ">
+              <IconButton onClick={() => onUnshare(review)} title={tx('Закрити публічний доступ', 'Turn off public access')}>
                 <Link2Off size={16} strokeWidth={1.9} />
               </IconButton>
             )}
 
             {onDelete && (
-              <IconButton onClick={() => onDelete(review.id)} title="Видалити" danger>
+              <IconButton onClick={() => onDelete(review.id)} title={tx('Видалити', 'Delete')} danger>
                 <Trash2 size={16} strokeWidth={1.9} />
               </IconButton>
             )}
 
-            <IconButton onClick={onClose} title="Закрити (Esc)">
+            <IconButton onClick={onClose} title={tx('Закрити (Esc)', 'Close (Esc)')}>
               <X size={16} strokeWidth={2} />
             </IconButton>
           </div>
@@ -229,28 +230,28 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
               className="px-6 pb-8 pt-7 sm:px-8 lg:sticky lg:top-0 lg:pb-10 lg:pl-8 lg:pr-6"
               style={{ borderBottom: `1px solid ${T.line}` }}
             >
-              <Eyebrow>Цифри тижня</Eyebrow>
+              <Eyebrow>{tx('Цифри тижня', 'The week in numbers')}</Eyebrow>
 
               <div className="flex flex-col" style={{ marginTop: 18 }}>
-                <Row label="Угод" value={s.trades ?? 0} />
+                <Row label={tx('Угод', 'Trades')} value={s.trades ?? 0} />
                 <Row label="Net R" value={fmtR(s.netR ?? 0)} tone={(s.netR ?? 0) >= 0 ? T.ok : T.bad} />
                 <Row label="Win rate" value={`${Math.round(s.winrate ?? 0)}%`} />
                 <Row
-                  label="За планом"
+                  label={tx('За планом', 'By plan')}
                   value={`${Math.round(s.planRate ?? 0)}%`}
                   tone={(s.planRate ?? 0) >= 70 ? T.ok : T.warn}
                 />
-                <Row label="Помилок" value={s.mistakes ?? 0} tone={(s.mistakes ?? 0) > 0 ? T.warn : T.text} />
+                <Row label={tx('Помилок', 'Mistakes')} value={s.mistakes ?? 0} tone={(s.mistakes ?? 0) > 0 ? T.warn : T.text} />
                 {/* Оцінка тижня. У макеті її не було, але це єдине число,
                     яке ставить людина, а не рахує застосунок — губити
                     його не можна. */}
-                <Row label="Оцінка" value={SCORE_LABELS[review.score]} tone={c} last />
+                <Row label={tx('Оцінка', 'Score')} value={SCORE_LABELS[review.score]} tone={c} last />
               </div>
 
               {(review.emotions || []).length > 0 && (
                 <>
                   <div style={{ marginTop: 28 }}>
-                    <Eyebrow>Стан</Eyebrow>
+                    <Eyebrow>{tx('Стан', 'State')}</Eyebrow>
                   </div>
                   <div className="flex flex-col" style={{ marginTop: 14, gap: 11 }}>
                     {review.emotions.map((id) => {
@@ -280,7 +281,7 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
             >
               <div style={{ paddingLeft: 22, borderLeft: `2px solid ${T.acc}` }}>
                 <Eyebrow color={T.acc} size={10} tracking={2.2}>
-                  Зміна на наступний період
+                  {tx('Зміна на наступний період', 'Change for next period')}
                 </Eyebrow>
                 <p
                   style={{
@@ -350,13 +351,13 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
                         це заголовок блоку, який читають, а не мітка
                         колонки з цифрами. */}
                     <span style={{ fontFamily: T.sans, fontSize: 16, fontWeight: 600, color: T.text }}>
-                      Домовленості з собою
+                      {tx('Домовленості з собою', 'Promises to yourself')}
                     </span>
                     <span
                       className="shrink-0 tabular-nums"
                       style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 600, color: kept === promises.length ? T.ok : T.text2 }}
                     >
-                      {kept}/{promises.length} виконано
+                      {kept}/{promises.length} {tx('виконано', 'done')}
                     </span>
                   </div>
 
@@ -397,7 +398,7 @@ export default function ReviewReader({ review, onClose, onDelete, onShare, onUns
                           className="shrink-0"
                           style={{ fontFamily: T.mono, fontSize: 12.5, fontWeight: 600, letterSpacing: '.4px', color: p.done ? T.ok : T.text2 }}
                         >
-                          {p.done ? 'виконано' : 'не виконано'}
+                          {p.done ? tx('виконано', 'done') : tx('не виконано', 'not done')}
                         </span>
                       </div>
                     ))}

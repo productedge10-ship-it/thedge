@@ -1,3 +1,4 @@
+import { t as tx } from '../lib/lang';
 export const fetchWithRetry = async (prompt, apiKey, retries = 3) => {
   for (let i = 0; i < retries; i++) {
     try {
@@ -12,7 +13,7 @@ export const fetchWithRetry = async (prompt, apiKey, retries = 3) => {
           await new Promise(resolve => setTimeout(resolve, 2000));
           continue;
         }
-        throw new Error(data.error?.message || 'Помилка API');
+        throw new Error(data.error?.message || tx('Помилка API', 'API error'));
       }
       return data.candidates?.[0]?.content?.parts?.[0]?.text;
     } catch (error) {

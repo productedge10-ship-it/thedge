@@ -1,3 +1,4 @@
+import { t as tx } from './lang';
 /* ==================================================================
    Чекліст перед входом.
    Пункти згруповані по тому, в якому порядку трейдер реально
@@ -7,30 +8,37 @@
 ================================================================== */
 
 export const DEFAULT_GROUPS = [
-  { id: 'context', label: 'Контекст',  hint: 'Що зараз на ринку' },
-  { id: 'setup',   label: 'Сетап',     hint: 'Чи є за що заходити' },
-  { id: 'risk',    label: 'Ризик',     hint: 'Скільки це коштує' },
-  { id: 'head',    label: 'Голова',    hint: 'В якому ти стані' },
+  { id: 'context', label: tx('Контекст', 'Context'),  hint: tx('Що зараз на ринку', 'What’s happening in the market') },
+  { id: 'setup',   label: tx('Сетап', 'Setup'),     hint: tx('Чи є за що заходити', 'Is there a reason to enter') },
+  { id: 'risk',    label: tx('Ризик', 'Risk'),     hint: tx('Скільки це коштує', 'What it costs') },
+  { id: 'head',    label: tx('Голова', 'Mindset'),    hint: tx('В якому ти стані', 'What state you’re in') },
 ];
 
-export const DEFAULT_ITEMS = [
-  { id: 1,  group: 'context', critical: false, text: 'Подивився економічний календар — важливих новин найближчу годину немає' },
-  { id: 2,  group: 'context', critical: false, text: 'Визначив тренд на старших ТФ (D1, H4)' },
-  { id: 3,  group: 'context', critical: false, text: 'Це моя сесія, а не «просто зараз відкритий термінал»' },
+/* Приклад: [id, група, критичний, укр, англ]. Українська лишається
+   окремо — нею колись записувався стандартний набір у сховище, і по ній
+   розпізнаємо незмінений старий набір. */
+const SEED = [
+  { id: 1,  group: 'context', critical: false, text: 'Подивився економічний календар — важливих новин найближчу годину немає', en: 'Checked the economic calendar — no major news in the next hour' },
+  { id: 2,  group: 'context', critical: false, text: 'Визначив тренд на старших ТФ (D1, H4)', en: 'Identified the trend on higher TFs (D1, H4)' },
+  { id: 3,  group: 'context', critical: false, text: 'Це моя сесія, а не «просто зараз відкритий термінал»', en: 'This is my session, not “the terminal just happens to be open”' },
 
-  { id: 4,  group: 'setup',   critical: true,  text: 'Ціна в моїй зоні — рівень розмічений заздалегідь' },
-  { id: 5,  group: 'setup',   critical: true,  text: 'Є підтвердження на молодшому ТФ, свічка закрилась' },
-  { id: 6,  group: 'setup',   critical: false, text: 'Потенціал до цілі мінімум 2R' },
-  { id: 7,  group: 'setup',   critical: false, text: 'Цей сетап є в моїй системі, а не «схоже на щось»' },
+  { id: 4,  group: 'setup',   critical: true,  text: 'Ціна в моїй зоні — рівень розмічений заздалегідь', en: 'Price is in my zone — the level was marked in advance' },
+  { id: 5,  group: 'setup',   critical: true,  text: 'Є підтвердження на молодшому ТФ, свічка закрилась', en: 'Confirmation on the lower TF, the candle has closed' },
+  { id: 6,  group: 'setup',   critical: false, text: 'Потенціал до цілі мінімум 2R', en: 'At least 2R potential to target' },
+  { id: 7,  group: 'setup',   critical: false, text: 'Цей сетап є в моїй системі, а не «схоже на щось»', en: 'This setup is in my system, not “looks like something”' },
 
-  { id: 8,  group: 'risk',    critical: true,  text: 'Ризик на угоду не більший за 1%' },
-  { id: 9,  group: 'risk',    critical: true,  text: 'Стоп стоїть за структурою, а не «на око»' },
-  { id: 10, group: 'risk',    critical: false, text: 'Порахував розмір позиції, а не поставив «як звичайно»' },
+  { id: 8,  group: 'risk',    critical: true,  text: 'Ризик на угоду не більший за 1%', en: 'Risk per trade is no more than 1%' },
+  { id: 9,  group: 'risk',    critical: true,  text: 'Стоп стоїть за структурою, а не «на око»', en: 'Stop is behind structure, not “eyeballed”' },
+  { id: 10, group: 'risk',    critical: false, text: 'Порахував розмір позиції, а не поставив «як звичайно»', en: 'Calculated position size instead of going “as usual”' },
 
-  { id: 11, group: 'head',    critical: true,  text: 'Це не відігравання після попереднього стопу' },
-  { id: 12, group: 'head',    critical: false, text: 'Не поспішаю — якщо пропущу, буде наступна' },
-  { id: 13, group: 'head',    critical: false, text: 'Готовий спокійно прийняти мінус по цій угоді' },
+  { id: 11, group: 'head',    critical: true,  text: 'Це не відігравання після попереднього стопу', en: 'This isn’t revenge after the last stop' },
+  { id: 12, group: 'head',    critical: false, text: 'Не поспішаю — якщо пропущу, буде наступна', en: 'I’m not rushing — if I miss it, there’ll be another' },
+  { id: 13, group: 'head',    critical: false, text: 'Готовий спокійно прийняти мінус по цій угоді', en: 'Ready to calmly accept a loss on this trade' },
 ];
+
+export const DEFAULT_ITEMS = SEED.map(({ id, group, critical, text, en }) => ({
+  id, group, critical, text: tx(text, en),
+}));
 
 export const KEYS = {
   items: 'edge_checklist_items_v2',
@@ -65,7 +73,7 @@ export function normalizeItems(parsed) {
      не обирала. Такий вважаємо порожнім. Кнопка «Взяти приклад» дає
      пунктам нові id, тож свідомо взятий приклад сюди не потрапляє. */
   const untouchedSeed = parsed.length === DEFAULT_ITEMS.length
-    && parsed.every((i, n) => i && i.id === DEFAULT_ITEMS[n].id && i.text === DEFAULT_ITEMS[n].text);
+    && parsed.every((i, n) => i && i.id === SEED[n].id && (i.text === SEED[n].text || i.text === DEFAULT_ITEMS[n].text));
   if (untouchedSeed) return [];
   return parsed.map((i) => ({
     id: i.id,

@@ -143,8 +143,8 @@ export default function BlogPost() {
       <BlogStyles />
 
       <BlogHeader lang={lang} nav={false}>
-        <Seg items={themeItems} value={prefs.theme} onPick={(v) => setPref('theme', v)} label="Тема" />
-        <Seg items={langItems} value={lang} onPick={switchLang} label="Мова" />
+        <Seg items={themeItems} value={prefs.theme} onPick={(v) => setPref('theme', v)} label={lang === 'en' ? 'Theme' : 'Тема'} />
+        <Seg items={langItems} value={lang} onPick={switchLang} label={lang === 'en' ? 'Language' : 'Мова'} />
       </BlogHeader>
 
       <ReadingTools

@@ -783,7 +783,7 @@ function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick
           {!collapsed && (
             <div
               className="absolute left-0 top-[9px] bottom-[9px] w-[3px] rounded-r-[4px]"
-              style={{ background: ACCENT_HEX, boxShadow: `0 0 12px rgba(${ACCENT},0.8)` }}
+              style={{ background: ACCENT_HEX, boxShadow: 'none' }}
             />
           )}
         </motion.div>
@@ -802,13 +802,13 @@ function NavItem({ to, icon: Icon, label, badge, collapsed, end = false, onClick
         {soon && collapsed && (
           <span
             className="absolute -right-1 -top-1 h-[7px] w-[7px] rounded-full"
-            style={{ background: ACCENT_HEX, boxShadow: `0 0 8px rgba(${ACCENT},0.9)` }}
+            style={{ background: ACCENT_HEX, boxShadow: 'none' }}
           />
         )}
         {badge && (
           <span className="absolute -top-1 -right-1 w-[7px] h-[7px] pointer-events-none">
             <span className="absolute inset-0 rounded-full bg-[var(--edge-bad)] opacity-60 animate-ping" />
-            <span className="absolute inset-[1px] rounded-full bg-[var(--edge-bad)] shadow-[0_0_8px_rgba(248,113,113,0.8)]" />
+            <span className="absolute inset-[1px] rounded-full bg-[var(--edge-bad)]" />
           </span>
         )}
       </div>
@@ -1176,19 +1176,9 @@ export default function Layout() {
             }}
           />
 
-          {/* Світлова лінія зверху (Hairline) */}
-          <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px pointer-events-none"
-            style={{ background: `linear-gradient(90deg, transparent, rgba(${ACCENT},0.55), transparent)` }}
-          />
-          
-          {/* Ambient Glow (внутрішнє світіння) */}
-          <div className="absolute top-0 left-0 w-full h-[120px] pointer-events-none rounded-t-[20px] overflow-hidden">
-            <div
-              className="absolute -top-10 left-1/2 -translate-x-1/2 w-[120%] h-24"
-              style={{ background: `radial-gradient(ellipse at top, rgba(${ACCENT},0.12), transparent 70%)`, filter: 'blur(12px)' }}
-            />
-          </div>
+          {/* Тут були фіолетова риска згори й розмите світіння під верхом панелі.
+             Прибрано: панель тримають власний фон і волосяна межа, а ореол
+             робив її схожою на шаблонний дашборд. */}
 
           {/* Кнопка згортання / розгортання */}
           <button

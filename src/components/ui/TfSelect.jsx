@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Plus, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { t as tx } from '../../lib/lang';
 
 // Згруповано за одиницею часу — так око одразу бачить логіку,
 // і зникає плутанина між 1m (хвилина) та 1M (місяць).
 const TF_GROUPS = [
-  { label: 'Minutes', cols: 'grid-cols-3', items: ['1m', '5m', '15m'] },
-  { label: 'Hours',   cols: 'grid-cols-3', items: ['1H', '4H', '12H'] },
-  { label: 'Higher',  cols: 'grid-cols-4', items: ['1D', '1W', '1M', '3M'] },
+  { label: tx('Хвилини', 'Minutes'), cols: 'grid-cols-3', items: ['1m', '5m', '15m'] },
+  { label: tx('Години', 'Hours'), cols: 'grid-cols-3', items: ['1H', '4H', '12H'] },
+  { label: tx('Старші', 'Higher'), cols: 'grid-cols-4', items: ['1D', '1W', '1M', '3M'] },
 ];
 
 export default function TfSelect({ value, onChange, iconColor = 'text-[var(--edge-acc)]' }) {
@@ -72,7 +73,7 @@ export default function TfSelect({ value, onChange, iconColor = 'text-[var(--edg
                         onClick={() => { onChange(tf); setIsOpen(false); }}
                         className={`h-9 rounded-lg text-xs font-bold tracking-wide transition-all duration-200 ${
                           active
-                            ? 'border border-[rgba(var(--edge-acc-rgb),0.4)] bg-[rgba(var(--edge-acc-rgb),0.15)] text-[var(--edge-acc)] shadow-[0_0_14px_-2px_rgba(139,123,255,0.55)]'
+                            ? 'border border-[rgba(var(--edge-acc-rgb),0.4)] bg-[rgba(var(--edge-acc-rgb),0.15)] text-[var(--edge-acc)]'
                             : 'border border-[var(--edge-hair)] text-[var(--edge-text3)] hover:border-[var(--edge-hair-strong)] hover:bg-[var(--edge-hair)] hover:text-[var(--edge-text)]'
                         }`}
                       >
@@ -89,7 +90,7 @@ export default function TfSelect({ value, onChange, iconColor = 'text-[var(--edg
               type="button"
               className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[var(--edge-hair-strong)] text-[11px] font-semibold uppercase tracking-widest text-[var(--edge-text3)] transition-colors duration-200 hover:border-white/20 hover:bg-[var(--edge-hair)] hover:text-[var(--edge-text)]"
             >
-              <Plus size={13} /> Custom
+              <Plus size={13} /> {tx('Свій', 'Custom')}
             </button>
           </motion.div>
         )}

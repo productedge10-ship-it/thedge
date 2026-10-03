@@ -3,6 +3,7 @@ import useCloudState from '../../hooks/useCloudState';
 import { useStats } from './data';
 import Board from './overview/Board';
 import { PERF_DEFAULT, PERF_WIDGETS } from './perf/widgets';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Перформанс.
@@ -75,7 +76,7 @@ export default function Performance({ s, rows = [] }) {
       saving={saving}
       registry={PERF_WIDGETS}
       defaults={PERF_DEFAULT}
-      hint="Тягни за ручку — панелі поміняються місцями"
+      hint={tx('Тягни за ручку — панелі поміняються місцями', 'Drag the handle to swap panels')}
     />
   );
 }

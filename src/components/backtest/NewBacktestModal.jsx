@@ -6,6 +6,7 @@ import { X, Loader2, ArrowRight } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { ACT } from './accent';
 import AssetPicker from './AssetPicker';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Створення бектесту.
@@ -183,9 +184,9 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
   const submit = () => { if (canSave && !saving) onCreate({ ...f, initial_balance: dep }); };
 
   const rows = [
-    { k: 'Ризик на угоду', v: '1%', acc: true },
-    { k: '1R у грошах', v: money(dep / 100), acc: true },
-    { k: 'Депозит', v: money(dep) },
+    { k: tx('Ризик на угоду', 'Risk per trade'), v: '1%', acc: true },
+    { k: tx('1R у грошах', '1R in cash'), v: money(dep / 100), acc: true },
+    { k: tx('Депозит', 'Deposit'), v: money(dep) },
   ];
 
   /* Портал у body, а не рендер на місці: <main> сторінки має свій
@@ -234,13 +235,13 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
             <div
               style={{ fontFamily: T.display, fontSize: 20, fontWeight: 600, letterSpacing: '-0.4px', color: T.text }}
             >
-              Новий бектест
+              {tx('Новий бектест', 'New backtest')}
             </div>
           </div>
 
           <button
             onClick={onClose}
-            aria-label="Закрити"
+            aria-label={tx('Закрити', 'Close')}
             className="grid shrink-0 place-items-center"
             style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(255,255,255,0.03)', color: T.text2, transition: 'background .18s' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; }}
@@ -257,7 +258,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
             style={{ borderColor: T.line }}
           >
             <FloatField
-              label="Назва бектесту"
+              label={tx('Назва бектесту', 'Backtest name')}
               value={f.name}
               onChange={(v) => set({ name: v })}
               onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
@@ -271,7 +272,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
             <AssetPicker value={f.pair} onChange={(v) => set({ pair: v })} height={56} />
 
             <FloatField
-              label="Стратегія · не обовʼязково"
+              label={tx('Стратегія · не обовʼязково', 'Strategy · optional')}
               value={f.strategy_name}
               onChange={(v) => set({ strategy_name: v })}
               placeholder="SFP, ORB, Silver Bullet…"
@@ -279,7 +280,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
 
             <div>
               <FloatField
-                label="Стартовий депозит"
+                label={tx('Стартовий депозит', 'Starting deposit')}
                 value={f.initial_balance}
                 onChange={(v) => set({ initial_balance: v.replace(/[^\d]/g, '') })}
                 prefix="$"
@@ -325,7 +326,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
               className="uppercase"
               style={mono(9.5, { letterSpacing: '1.9px', fontWeight: 600, color: T.text3 })}
             >
-              Підсумок
+              {tx('Підсумок', 'Summary')}
             </div>
 
             <div
@@ -373,7 +374,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
                   color: f.name.trim() ? T.text : T.text4,
                 }}
               >
-                {f.name.trim() || 'Без назви'}
+                {f.name.trim() || tx('Без назви', 'Untitled')}
               </div>
 
               <div className="flex items-end justify-between" style={{ gap: 10, marginTop: 14 }}>
@@ -406,7 +407,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
             </div>
 
             <p className="hidden sm:block" style={{ fontFamily: T.sans, marginTop: 'auto', fontSize: 12.5, lineHeight: 1.5, color: T.text3 }}>
-              Ризик фіксований, тому кожна угода рахується в R — результати різних депозитів можна порівнювати.
+              {tx('Ризик фіксований, тому кожна угода рахується в R — результати різних депозитів можна порівнювати.', 'Risk is fixed, so every trade counts in R — results across different deposits stay comparable.')}
             </p>
           </div>
         </div>
@@ -416,7 +417,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
           style={{ borderTop: `1px solid ${T.line}`, '--sb': 'max(16px, env(safe-area-inset-bottom))' }}
         >
           <span className="hidden sm:inline" style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text3 }}>
-            Назву й актив можна змінити пізніше
+            {tx('Назву й актив можна змінити пізніше', 'You can change the name and asset later')}
           </span>
 
           {/* На телефоні дві кнопки на всю ширину, «Створити» ширша —
@@ -432,7 +433,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = T.text; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
             >
-              Скасувати
+              {tx('Скасувати', 'Cancel')}
             </button>
 
             <button
@@ -443,7 +444,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
                 fontFamily: T.sans, gap: 9, height: 46, padding: '0 22px', borderRadius: 12,
                 background: `linear-gradient(180deg, ${ACT.from}, ${ACT.to})`,
                 fontSize: 14.5, fontWeight: 600, color: '#fff',
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 30px -12px rgba(${ACT.rgb},0.9)`,
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25)`,
                 opacity: canSave && !saving ? 1 : 0.45,
                 cursor: canSave && !saving ? 'pointer' : 'not-allowed',
                 transition: 'all .18s',
@@ -459,7 +460,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
               }}
             >
               {saving ? <Loader2 size={15} className="animate-spin" /> : null}
-              Створити
+              {tx('Створити', 'Create')}
               {!saving && <ArrowRight size={15} strokeWidth={2.2} />}
             </button>
           </div>

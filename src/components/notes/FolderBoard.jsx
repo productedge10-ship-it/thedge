@@ -200,7 +200,7 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
           border: `1px solid ${hov ? `${c}70` : 'var(--edge-line)'}`,
           cursor: 'pointer',
           transition: SPRING,
-          boxShadow: hov ? `0 28px 54px -24px ${c}80, 0 0 0 1px ${c}1f` : '0 14px 30px -22px var(--edge-panel-glow, rgba(0,0,0,0.80))',
+          boxShadow: hov ? `0 0 0 1px ${c}1f` : `0 14px 30px -22px var(--edge-panel-glow, rgba(0,0,0,0.80))`,
           transform: dragging ? 'scale(.96) rotate(-1.4deg)' : hov ? 'translateY(-6px)' : 'none',
           opacity: dragging ? 0.5 : 1,
         }}
@@ -215,7 +215,7 @@ function Card({ folder, count, preview, updated, color, dragging, plain, onOpen,
             height: 4,
             borderRadius: '0 0 5px 5px',
             background: c,
-            boxShadow: `0 0 16px 2px ${c}${hov ? 'aa' : '44'}`,
+            boxShadow: 'none',
             opacity: hov ? 1 : 0.7,
             transition: 'all .24s',
           }}
@@ -388,7 +388,7 @@ function Row({ folder, count, preview, updated, color, dragging, plain, onOpen, 
         border: `1px solid ${hov ? `${c}5e` : 'var(--edge-line)'}`,
         cursor: 'pointer',
         transition: SPRING,
-        boxShadow: hov ? `0 16px 34px -22px ${c}99` : 'none',
+        boxShadow: 'none',
         transform: dragging ? 'scale(.995)' : hov ? 'translateX(4px)' : 'none',
         opacity: dragging ? 0.5 : 1,
       }}
@@ -779,7 +779,7 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                       style={{
                         background: `linear-gradient(160deg, ${col}, ${col}b3)`,
                         border: `2px solid ${on ? 'var(--edge-text)' : 'transparent'}`,
-                        boxShadow: on ? `0 0 0 3px ${col}44, 0 6px 16px -6px ${col}cc` : 'none',
+                        boxShadow: on ? `0 0 0 3px ${col}44` : 'none', /* кільце — позначка вибраного кольору, не ореол */
                         transform: `scale(${on ? 1 : 0.88})`,
                         transition: 'all .18s',
                       }}
@@ -842,7 +842,7 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                       style={{
                         background: on ? `${color}24` : 'rgba(var(--edge-hair-rgb),0.03)',
                         border: `1px solid ${on ? `${color}80` : 'var(--edge-line)'}`,
-                        boxShadow: on ? `0 0 18px -8px ${color}cc` : 'none',
+                        boxShadow: 'none',
                         transition: 'all .16s',
                       }}
                     >
@@ -931,19 +931,16 @@ export function FolderDialog({ folder, fresh, onSave, onClose }) {
                 style={{
                   background: 'linear-gradient(165deg,var(--edge-surface),var(--edge-sunken))',
                   border: `1px solid ${color}5e`,
-                  boxShadow: `0 24px 48px -24px ${color}80`,
+                  boxShadow: 'none',
                   transition: 'all .24s',
                 }}
               >
                 <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: `linear-gradient(180deg, ${color}, ${color}33)` }} />
                 <span
                   className="absolute left-5 top-0 h-1 w-[52px]"
-                  style={{ borderRadius: '0 0 5px 5px', background: color, boxShadow: `0 0 16px 2px ${color}aa` }}
+                  style={{ borderRadius: '0 0 5px 5px', background: color, boxShadow: 'none' }}
                 />
-                <span
-                  className="pointer-events-none absolute rounded-full"
-                  style={{ left: -50, top: -80, width: 240, height: 200, background: color, filter: 'blur(62px)', opacity: 0.18 }}
-                />
+                {/* Розмиту кольорову пляму прибрано: світіння за блоком — прикмета шаблону, глибину дають поверхні. */}
 
                 <div className="relative flex items-start justify-between gap-2.5">
                   <span
@@ -1061,9 +1058,7 @@ function DialogCta({ onClick, disabled, label, fresh }) {
       className="relative flex h-[42px] items-center gap-[9px] overflow-hidden rounded-xl px-5"
       style={{
         background: `linear-gradient(180deg, ${on ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
-        boxShadow: on
-          ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)`
-          : `0 12px 30px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
+        boxShadow: on ? `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)` : `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
         transform: `translateY(${on ? '-2px' : '0'})`,
         opacity: disabled ? 0.45 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',

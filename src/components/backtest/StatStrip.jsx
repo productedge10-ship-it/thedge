@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { T, EASE } from '../../lib/theme';
 import { fmtPF, fmtR, money } from '../../lib/backtestStats';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Смуга ключових цифр.
@@ -26,19 +27,19 @@ export default function StatStrip({ stats }) {
     {
       label: 'Win rate',
       value: `${stats.winrate.toFixed(1)}%`,
-      sub: `${stats.wins} виграшних із ${stats.decisive || 0}`,
+      sub: tx(`${stats.wins} виграшних із ${stats.decisive || 0}`, `${stats.wins} wins of ${stats.decisive || 0}`),
       color: T.text,
     },
     {
       label: 'Profit factor',
       value: fmtPF(stats.profitFactor),
-      sub: `+${stats.grossWin.toFixed(1)}R проти −${stats.grossLoss.toFixed(1)}R`,
+      sub: tx(`+${stats.grossWin.toFixed(1)}R проти −${stats.grossLoss.toFixed(1)}R`, `+${stats.grossWin.toFixed(1)}R vs −${stats.grossLoss.toFixed(1)}R`),
       color: stats.profitFactor >= 1.5 ? T.ok : stats.profitFactor < 1 && stats.total ? T.bad : T.text,
     },
     {
-      label: 'Просадка',
+      label: tx('Просадка', 'Drawdown'),
       value: `−${stats.maxDrawdownR.toFixed(2)}R`,
-      sub: stats.currentDDR > 0 ? `зараз −${stats.currentDDR.toFixed(2)}R від піку` : 'зараз на піку',
+      sub: stats.currentDDR > 0 ? tx(`зараз −${stats.currentDDR.toFixed(2)}R від піку`, `now −${stats.currentDDR.toFixed(2)}R from peak`) : tx('зараз на піку', 'at the peak now'),
       color: stats.maxDrawdownR > 0 ? T.warn : T.text3,
     },
   ];
@@ -64,11 +65,11 @@ export default function StatStrip({ stats }) {
           {fmtR(stats.netR)}
         </div>
         <div className="mt-[11px] text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-          {stats.total} угод · {stats.wins}W / {stats.losses}L · {stats.bes} BE
+          {stats.total} {tx('угод', stats.total === 1 ? 'trade' : 'trades')} · {stats.wins}W / {stats.losses}L · {stats.bes} BE
         </div>
         <div className="mt-1 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          Баланс {money(Math.round(stats.balance))} · {stats.returnPct >= 0 ? '+' : ''}{stats.returnPct.toFixed(1)}%
-          {' · '}очікування {fmtR(stats.expectancy)}
+          {tx('Баланс', 'Balance')} {money(Math.round(stats.balance))} · {stats.returnPct >= 0 ? '+' : ''}{stats.returnPct.toFixed(1)}%
+          {' · '}{tx('очікування', 'expectancy')} {fmtR(stats.expectancy)}
         </div>
       </div>
 

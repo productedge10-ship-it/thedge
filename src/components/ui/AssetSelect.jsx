@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Search, Activity, CircleDot, Plus, Loader2, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase'; //
 import { onlyMine } from '../../lib/myId';
+import { t as tx } from '../../lib/lang';
 
 const getIcon = (pair) => {
   const p = pair.toUpperCase();
@@ -83,7 +84,7 @@ export default function AssetSelect({ value, onChange }) {
         className="flex items-center justify-between bg-transparent hover:bg-[#262626] px-2 py-1 -ml-2 rounded-md transition-colors cursor-pointer h-[32px]"
       >
         <div className="flex items-center text-sm text-textMain font-bold truncate pr-1">
-          {value ? <>{getIcon(value)} {value}</> : <span className="text-textMuted font-normal">Select pair...</span>}
+          {value ? <>{getIcon(value)} {value}</> : <span className="text-textMuted font-normal">{tx('Обери пару...', 'Select pair...')}</span>}
         </div>
         <ChevronDown size={14} className={`text-textMuted shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
@@ -101,7 +102,7 @@ export default function AssetSelect({ value, onChange }) {
                 value={search} 
                 onChange={(e) => setSearch(e.target.value)} 
                 className="bg-transparent text-xs outline-none w-full text-[var(--edge-text)]" 
-                placeholder="Search or add new..." 
+                placeholder={tx('Пошук або додати нову...', 'Search or add new...')} 
               />
             </div>
 
@@ -129,7 +130,7 @@ export default function AssetSelect({ value, onChange }) {
 
               {filtered.length === 0 && !showAddButton && (
                 <div className="p-4 text-center text-[10px] text-gray-500 uppercase font-bold">
-                  No assets found
+                  {tx('Нічого не знайдено', 'No assets found')}
                 </div>
               )}
             </div>
@@ -141,7 +142,7 @@ export default function AssetSelect({ value, onChange }) {
                 className="w-full flex items-center gap-2 p-3 bg-blue-600/10 border-t border-[#333] text-blue-400 hover:bg-blue-600/20 transition-all text-xs font-bold"
               >
                 {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                Add "{search.toUpperCase()}"
+                {tx(`Додати "${search.toUpperCase()}"`, `Add "${search.toUpperCase()}"`)}
               </button>
             )}
           </motion.div>

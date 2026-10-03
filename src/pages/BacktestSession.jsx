@@ -17,6 +17,7 @@ import StatStrip from '../components/backtest/StatStrip';
 import EquityCurve from '../components/backtest/EquityCurve';
 import BreakdownPanels from '../components/backtest/BreakdownPanels';
 import { ACT, act } from '../components/backtest/accent';
+import { t as tx, LOCALE } from '../lib/lang';
 import ErrorComposerModal from '../components/errors/ErrorComposerModal';
 import { fetchBacktestErrors, saveError, uid, todayISO } from '../lib/errorsStore';
 import { catsFromReasons } from '../components/errors/utils';
@@ -61,7 +62,7 @@ export default function BacktestSession() {
 
   const openMistake = (t) => {
     if (demo) {
-      notify.error('Це демо', 'Помилки можна записувати у власному бектесті.');
+      notify.error(tx('Це демо', 'This is a demo'), tx('Помилки можна записувати у власному бектесті.', 'You can log mistakes in your own backtest.'));
       return;
     }
     const found = mistakes[t.id];
@@ -96,9 +97,9 @@ export default function BacktestSession() {
     try {
       const saved = await saveError(user.id, entry);
       setMistakes((m) => ({ ...m, [t.id]: saved }));
-      notify.success('Помилку записано', 'Вона вже в Журналі помилок з позначкою «Бектест».');
+      notify.success(tx('Помилку записано', 'Mistake logged'), tx('Вона вже в Журналі помилок з позначкою «Бектест».', 'It’s now in your Mistakes journal, tagged “Backtest”.'));
     } catch (e) {
-      notify.error('Не вдалось зберегти помилку', e.message);
+      notify.error(tx('Не вдалось зберегти помилку', 'Couldn’t save the mistake'), e.message);
     }
   };
 
@@ -133,16 +134,16 @@ export default function BacktestSession() {
 
   const share = async () => {
     if (demo) {
-      notify.error('Це демо', 'Створи власний бектест, щоб ним ділитись.');
+      notify.error(tx('Це демо', 'This is a demo'), tx('Створи власний бектест, щоб ним ділитись.', 'Create your own backtest to share it.'));
       return;
     }
     try {
       const next = session.is_public ? session : await setBacktestPublic(user.id, sessionId, true);
       setSession(next);
       await navigator.clipboard.writeText(`${window.location.origin}/shared/backtest/${sessionId}`);
-      notify.success('Лінк скопійовано', 'Бектест відкритий для перегляду за посиланням.');
+      notify.success(tx('Лінк скопійовано', 'Link copied'), tx('Бектест відкритий для перегляду за посиланням.', 'Anyone with the link can now view this backtest.'));
     } catch (e) {
-      notify.error('Не вдалось поділитись', e.message);
+      notify.error(tx('Не вдалось поділитись', 'Couldn’t share'), e.message);
     }
   };
 
@@ -150,9 +151,9 @@ export default function BacktestSession() {
     try {
       const next = await setBacktestPublic(user.id, sessionId, false);
       setSession(next);
-      notify.success('Доступ закрито', 'Посилання більше не працює.');
+      notify.success(tx('Доступ закрито', 'Access closed'), tx('Посилання більше не працює.', 'The link no longer works.'));
     } catch (e) {
-      notify.error('Не вдалось закрити доступ', e.message);
+      notify.error(tx('Не вдалось закрити доступ', 'Couldn’t close access'), e.message);
     }
   };
 
@@ -217,7 +218,7 @@ export default function BacktestSession() {
       }
     } catch (e) {
       console.error(e);
-      alert(e.message || 'Не вдалось зберегти угоду');
+      alert(e.message || tx('Не вдалось зберегти угоду', 'Couldn’t save the trade'));
     } finally {
       setSaving(false);
     }
@@ -242,7 +243,7 @@ export default function BacktestSession() {
       setSheet(null);
     } catch (e) {
       console.error(e);
-      alert(e.message || 'Не вдалось зберегти угоду');
+      alert(e.message || tx('Не вдалось зберегти угоду', 'Couldn’t save the trade'));
     } finally {
       setSaving(false);
     }
@@ -284,7 +285,7 @@ export default function BacktestSession() {
           <div className="flex min-w-0 items-start gap-[18px]">
             <button
               onClick={() => navigate('/backtest')}
-              title="До списку бектестів"
+              title={tx('До списку бектестів', 'Back to backtests')}
               className="group mt-4 grid h-11 w-11 shrink-0 place-items-center rounded-[13px] transition-all duration-200 active:scale-95"
               style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text2 }}
               onMouseEnter={(e) => { e.currentTarget.style.background = act(0.15); e.currentTarget.style.borderColor = act(0.45); e.currentTarget.style.color = T.text; }}
@@ -296,14 +297,14 @@ export default function BacktestSession() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-[0.26em]" style={{ fontFamily: T.mono, color: ACT.tint }}>
-                  Бектест
+                  {tx('Бектест', 'Backtest')}
                 </span>
                 {demo && (
                   <span
                     className="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em]"
                     style={{ fontFamily: T.mono, color: T.warn, background: `rgba(${T.warnRgb},0.10)`, border: `1px solid rgba(${T.warnRgb},0.25)` }}
                   >
-                    демо
+                    {tx('демо', 'demo')}
                   </span>
                 )}
               </div>
@@ -331,7 +332,7 @@ export default function BacktestSession() {
                     {session.pair}
                   </span>
                 )}
-                {[session.strategy_name, `Старт $${Number(session.initial_balance).toLocaleString('uk-UA')}`, 'Ризик 1%']
+                {[session.strategy_name, tx(`Старт $${Number(session.initial_balance).toLocaleString(LOCALE)}`, `Start $${Number(session.initial_balance).toLocaleString(LOCALE)}`), tx('Ризик 1%', 'Risk 1%')]
                   .filter(Boolean)
                   .map((chip) => (
                     <span
@@ -368,13 +369,13 @@ export default function BacktestSession() {
                 }}
               >
                 {session.is_public ? <Globe size={16} strokeWidth={2.1} /> : <Share2 size={16} strokeWidth={2.1} />}
-                {session.is_public ? 'Скопіювати лінк' : 'Поділитись'}
+                {session.is_public ? tx('Скопіювати лінк', 'Copy link') : tx('Поділитись', 'Share')}
               </button>
 
               {session.is_public && (
                 <button
                   onClick={unshare}
-                  title="Закрити публічний доступ"
+                  title={tx('Закрити публічний доступ', 'Close public access')}
                   className="grid h-11 w-11 place-items-center rounded-xl transition-all duration-200 active:scale-95"
                   style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = T.warn; e.currentTarget.style.borderColor = `rgba(${T.warnRgb},0.35)`; }}
@@ -401,10 +402,10 @@ export default function BacktestSession() {
         {/* ─────────── Робоча зона: запис і список ─────────── */}
         <div className="mb-4 mt-[34px]">
           <h2 className="text-[20px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.025em' }}>
-            Угоди
+            {tx('Угоди', 'Trades')}
           </h2>
           <p className="mt-1.5 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            {stats.total} {stats.total === 1 ? 'запис' : 'записів'} · клік по рядку відкриє картку угоди
+            {tx(`${stats.total} ${stats.total === 1 ? 'запис' : 'записів'} · клік по рядку відкриє картку угоди`, `${stats.total} ${stats.total === 1 ? 'entry' : 'entries'} · click a row to open the trade`)}
           </p>
         </div>
 
@@ -487,9 +488,9 @@ export default function BacktestSession() {
               >
                 <Trash2 size={22} strokeWidth={1.9} style={{ color: T.bad }} />
               </div>
-              <div className="mb-2.5 text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text }}>Видалити угоду?</div>
+              <div className="mb-2.5 text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text }}>{tx('Видалити угоду?', 'Delete trade?')}</div>
               <p className="mb-6 text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
-                Статистика перерахується одразу.
+                {tx('Статистика перерахується одразу.', 'Stats will update right away.')}
               </p>
               <div className="flex gap-2.5">
                 <button
@@ -497,14 +498,14 @@ export default function BacktestSession() {
                   className="h-11 flex-1 rounded-xl text-[14px] font-semibold"
                   style={{ background: T.surfaceHi, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
                 >
-                  Залишити
+                  {tx('Залишити', 'Keep')}
                 </button>
                 <button
                   onClick={() => removeTrade(confirm.id)}
                   className="h-11 flex-1 rounded-xl text-[14px] font-bold"
                   style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
-                  Видалити
+                  {tx('Видалити', 'Delete')}
                 </button>
               </div>
             </motion.div>

@@ -327,7 +327,7 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
       <span
         key={i}
         className="h-[5px] w-[5px] rounded-full"
-        style={{ background: "var(--edge-bad)", boxShadow: "0 0 7px 1px rgba(var(--edge-bad-rgb),0.50)" }}
+        style={{ background: "var(--edge-bad)", boxShadow: "none" }}
       />,
     );
   }
@@ -368,7 +368,7 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
             ? "var(--edge-surface)"
             : "var(--edge-sunken)",
         border: `1px solid ${solo ? A(1) : active ? A(0.5) : hov ? "var(--edge-line-hi)" : "var(--edge-line)"}`,
-        boxShadow: active ? `0 18px 40px -22px ${A(0.8)}` : "none",
+        boxShadow: 'none',
         transform: `translateY(${active ? "-3px" : hov ? "-1px" : "0"})`,
         opacity: empty ? 0.62 : 1,
         cursor: empty ? "default" : "pointer",
@@ -497,7 +497,7 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
           color: watched ? (label ? "var(--edge-acc)" : T.acc) : open || hovered ? "var(--edge-text2)" : "var(--edge-text4)",
           background: watched ? A(label ? 0.18 : 0.12) : open ? "var(--edge-hair)" : label ? "var(--edge-hair)" : "transparent",
           border: label ? `1px solid ${watched ? A(0.6) : "var(--edge-line-hi)"}` : "none",
-          boxShadow: label && watched ? `0 0 22px -8px ${A(0.8)}` : "none",
+          boxShadow: 'none',
           transition: "all .16s",
         }}
       >
@@ -574,7 +574,7 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
                   className="h-[6px] w-[6px] shrink-0 rounded-full"
                   style={{
                     background: on ? T.acc : "var(--edge-line-hi)",
-                    boxShadow: on ? `0 0 8px 1px ${A(0.8)}` : "none",
+                    boxShadow: 'none',
                   }}
                 />
                 {o.label}
@@ -722,9 +722,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
               height: 9,
               background: high ? imp.color : "var(--edge-sunken)",
               border: `2px solid ${high ? imp.color : hov || open ? `${imp.color}99` : "var(--edge-line-hi)"}`,
-              boxShadow: high
-                ? `0 0 0 3px ${imp.color}24, 0 0 12px 2px ${imp.color}80`
-                : "none",
+              boxShadow: 'none',
               transition: "all .18s",
             }}
           />
@@ -1231,7 +1229,7 @@ function AlertToasts() {
           style={{
             background: "linear-gradient(120deg, var(--edge-surface-hi), var(--edge-surface) 60%, var(--edge-surface))",
             border: "1px solid rgba(var(--edge-bad-rgb),0.24)",
-            boxShadow: "0 26px 60px -22px var(--edge-panel-glow, rgba(0,0,0,0.5)), 0 0 40px -26px var(--edge-bad)",
+            boxShadow: "0 26px 60px -22px var(--edge-panel-glow, rgba(0,0,0,0.5))",
             animation: "edgeAlertIn .28s cubic-bezier(.22,1.2,.36,1)",
           }}
         >
@@ -1737,19 +1735,14 @@ export default function News() {
         >
           <div className="min-w-0">
             <div className="flex items-center gap-[9px]">
-              <span
-                className="h-[5px] w-[5px] rounded-full"
-                style={{
-                  background: "var(--edge-acc)",
-                  boxShadow: `0 0 12px 2px ${A(0.67)}`,
-                }}
-              />
+              {/* Без світної крапки й не акцентом: крапка з ореолом над
+                  назвою — прикмета шаблону, а акцент належить головній дії. */}
               <span
                 className="text-[10px] font-bold uppercase"
                 style={{
                   fontFamily: T.mono,
                   letterSpacing: "2.6px",
-                  color: "var(--edge-acc)",
+                  color: "var(--edge-text3)",
                 }}
               >
                 {tx("Економічний календар", "Economic calendar")}
@@ -1801,7 +1794,7 @@ export default function News() {
                   className="h-[7px] w-[7px] shrink-0 rounded-full"
                   style={{
                     background: impCur.color,
-                    boxShadow: `0 0 9px 1px ${impCur.color}aa`,
+                    boxShadow: 'none',
                   }}
                 />
                 <span
@@ -1836,7 +1829,7 @@ export default function News() {
                           className="h-[7px] w-[7px] shrink-0 rounded-full"
                           style={{
                             background: i.color,
-                            boxShadow: on ? `0 0 9px 1px ${i.color}cc` : "none",
+                            boxShadow: 'none',
                           }}
                         />
                         <span className="flex-1 text-left">{i.label}</span>
@@ -2040,7 +2033,7 @@ export default function News() {
             style={{
               background: "linear-gradient(120deg, var(--edge-surface-hi), var(--edge-surface) 52%, var(--edge-surface))",
               border: "1px solid rgba(var(--edge-bad-rgb),0.20)",
-              boxShadow: "0 16px 40px -26px rgba(var(--edge-bad-rgb),0.35)",
+              boxShadow: "none",
             }}
           >
             <span
@@ -2062,7 +2055,7 @@ export default function News() {
                   className="h-1.5 w-1.5 rounded-full"
                   style={{
                     background: "var(--edge-bad)",
-                    boxShadow: "0 0 10px 2px rgba(var(--edge-bad-rgb),0.80)",
+                    boxShadow: "none",
                   }}
                 />
                 <div>
@@ -2439,7 +2432,7 @@ export default function News() {
                     style={{
                       background: now ? A(0.12) : "var(--edge-hair)",
                       border: `1px solid ${now ? A(0.37) : "var(--edge-line)"}`,
-                      boxShadow: now ? `0 0 24px -10px ${A(0.8)}` : "none",
+                      boxShadow: 'none',
                     }}
                   >
                     <div
@@ -2493,7 +2486,7 @@ export default function News() {
                             className="h-[5px] w-[5px] rounded-full"
                             style={{
                               background: "var(--edge-acc)",
-                              boxShadow: `0 0 8px 1px ${A(0.8)}`,
+                              boxShadow: 'none',
                             }}
                           />
                           <span
@@ -2715,7 +2708,7 @@ function NowLine() {
           className="h-2.5 w-2.5 rounded-full"
           style={{
             background: T.acc,
-            boxShadow: `0 0 0 4px ${A(0.18)}, 0 0 16px 3px ${A(0.8)}`,
+            boxShadow: 'none',
           }}
         />
       </div>

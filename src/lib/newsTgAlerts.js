@@ -24,14 +24,15 @@
 ================================================================== */
 
 import { supabase } from './supabase';
+import { t as tx } from './lang';
 
 const SOURCE = 'news';
 
 /* Текст пишемо тут, а не в боті: бот не знає ні назви події, ні
    валюти — він лише кур'єр для того, що лежить у черзі. */
 function alertMessage(ev, lead) {
-  const when = lead > 0 ? `через ${lead} хв` : 'зараз';
-  return `${ev.title || 'Новина'} — ${when}.`;
+  const when = lead > 0 ? tx(`через ${lead} хв`, `in ${lead} min`) : tx('зараз', 'now');
+  return `${ev.title || tx('Новина', 'News')} — ${when}.`;
 }
 
 async function uid() {

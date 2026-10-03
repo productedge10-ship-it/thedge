@@ -1,3 +1,4 @@
+import { t as tx } from './lang';
 /* ==================================================================
    Монте-Карло: що буде з рахунком.
 
@@ -256,17 +257,17 @@ export function verdict(s, cfg) {
   if (s.edge <= 0) {
     return {
       tone: 'bad',
-      text: `З вінрейтом ${cfg.winRate}% і RR ${cfg.rr} кожна угода в середньому втрачає гроші: беззбитковий вінрейт тут ${s.breakEvenWR}%. Межі вже не мають значення — питання лише в тому, коли саме.`,
+      text: tx(`З вінрейтом ${cfg.winRate}% і RR ${cfg.rr} кожна угода в середньому втрачає гроші: беззбитковий вінрейт тут ${s.breakEvenWR}%. Межі вже не мають значення — питання лише в тому, коли саме.`, `With a ${cfg.winRate}% win rate and ${cfg.rr} RR, the average trade loses money: breakeven win rate here is ${s.breakEvenWR}%. The limits don't matter anymore — the only question is when.`),
     };
   }
   if (s.bust >= 50) {
-    return { tone: 'bad', text: 'Більш ніж у половині сценаріїв рахунок не доживає до цілі. Перевага є, але ризик на угоду завеликий для таких меж.' };
+    return { tone: 'bad', text: tx('Більш ніж у половині сценаріїв рахунок не доживає до цілі. Перевага є, але ризик на угоду завеликий для таких меж.', "In more than half of the scenarios the account doesn't make it to the target. You have an edge, but the risk per trade is too big for these limits.") };
   }
   if (s.bust >= 25) {
-    return { tone: 'warn', text: 'Кожен четвертий сценарій закінчується зливом. Найпростіше, що це виправляє, — менший ризик на угоду.' };
+    return { tone: 'warn', text: tx('Кожен четвертий сценарій закінчується зливом. Найпростіше, що це виправляє, — менший ризик на угоду.', 'One in four scenarios ends in a blown account. The simplest fix is lower risk per trade.') };
   }
   if (s.target >= 60) {
-    return { tone: 'ok', text: 'Здебільшого рахунок доходить до цілі раніше, ніж до межі. Це не гарантія, але запас є.' };
+    return { tone: 'ok', text: tx('Здебільшого рахунок доходить до цілі раніше, ніж до межі. Це не гарантія, але запас є.', "Most of the time the account hits the target before the limit. It's not a guarantee, but you have room.") };
   }
-  return { tone: 'ok', text: 'Межі не тиснуть, але й ціль за горизонтом дістається не завжди — більшість сценаріїв просто триває далі.' };
+  return { tone: 'ok', text: tx('Межі не тиснуть, але й ціль за горизонтом дістається не завжди — більшість сценаріїв просто триває далі.', "The limits aren't tight, but the target isn't always reached within the horizon — most scenarios just keep going.") };
 }

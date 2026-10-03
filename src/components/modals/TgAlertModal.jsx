@@ -12,9 +12,10 @@ import { useAuth } from '../../context/AuthContext';
 // 4. Утиліти
 import { notify } from '../../utils/notify';
 import { openSettings } from '../../lib/settings';
+import { t as tx } from '../../lib/lang';
 
 const PRESETS = [
-  { label: '10s (Тест)', ms: 10 * 1000 },
+  { label: tx('10s (Тест)', '10s (Test)'), ms: 10 * 1000 },
   { label: '15m', ms: 15 * 60 * 1000 },
   { label: '30m', ms: 30 * 60 * 1000 },
   { label: '1h', ms: 60 * 60 * 1000 },
@@ -65,17 +66,17 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
       const { error } = await supabase.from('tg_alerts').insert([{
         user_id: user.id,
         pair: pair || 'Unknown',
-        message: message || 'Час перевірити графік!',
+        message: message || tx('Час перевірити графік!', 'Time to check the chart!'),
         alert_time: alertTime,
         is_sent: false
       }]);
 
       if (error) throw error;
-      notify.success('Таймер встановлено');
+      notify.success(tx('Таймер встановлено', 'Timer set'));
       onClose();
       setMessage('');
     } catch (err) {
-      notify.error('Помилка', err.message);
+      notify.error(tx('Помилка', 'Error'), err.message);
     } finally {
       setLoading(false);
     }
@@ -97,7 +98,7 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
           {checking ? (
             <div className="py-12 flex flex-col items-center gap-4">
               <Loader2 className="animate-spin text-blue-500" size={32} />
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center">Синхронізація з базою...</span>
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center">{tx('Синхронізація з базою...', 'Syncing with the database...')}</span>
             </div>
           ) : !hasChatId ? (
             /* Підключення переїхало в налаштування.
@@ -114,11 +115,10 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
 
               <div>
                 <h3 className="mb-2 text-xl font-black uppercase tracking-tight text-[var(--edge-text)]">
-                  Telegram не підключений
+                  {tx('Telegram не підключений', 'Telegram isn\'t connected')}
                 </h3>
                 <p className="text-sm font-medium leading-relaxed text-gray-400">
-                  Нагадування приходять у чат — спершу треба привʼязати бота
-                  до акаунта. Це робиться один раз і займає пів хвилини.
+                  {tx('Нагадування приходять у чат — спершу треба привʼязати бота до акаунта. Це робиться один раз і займає пів хвилини.', 'Reminders arrive in the chat — first link the bot to your account. It\'s a one-time step that takes half a minute.')}
                 </p>
               </div>
 
@@ -126,7 +126,7 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
                 onClick={() => { onClose(); openSettings('telegram'); }}
                 className="w-full rounded-xl bg-blue-600 py-4 text-xs font-black uppercase text-[var(--edge-text)] shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 active:scale-95"
               >
-                Відкрити налаштування
+                {tx('Відкрити налаштування', 'Open settings')}
               </button>
             </div>
           ) : (
@@ -140,8 +140,8 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
                     <Send size={20} className="-ml-0.5 mt-0.5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-[var(--edge-text)] uppercase tracking-wider leading-none mb-1.5">TG Alert</h3>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{pair || 'ПАРА НЕ ВИБРАНА'}</p>
+                    <h3 className="text-lg font-black text-[var(--edge-text)] uppercase tracking-wider leading-none mb-1.5">{tx('TG-нагадування', 'TG Alert')}</h3>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{pair || tx('ПАРА НЕ ВИБРАНА', 'NO PAIR SELECTED')}</p>
                   </div>
                 </div>
                 <button type="button" onClick={onClose} className="p-2 text-gray-500 hover:text-[var(--edge-text)] transition-colors"><X size={16} /></button>
@@ -149,7 +149,7 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
 
               <div className="space-y-4">
                 <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-                  <Clock size={12}/> Час сповіщення
+                  <Clock size={12}/> {tx('Час сповіщення', 'Alert time')}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {PRESETS.map(p => (
@@ -166,7 +166,7 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
                     onClick={() => setIsCustom(true)}
                     className={`py-2.5 rounded-xl text-xs font-black transition-all border ${isCustom ? 'bg-blue-600 text-[var(--edge-text)] border-blue-500 shadow-lg shadow-blue-500/20' : 'bg-[var(--edge-surface-hi)] text-gray-400 border-[#333] hover:bg-[#222]'}`}
                   >
-                    СВІЙ ЧАС
+                    {tx('СВІЙ ЧАС', 'CUSTOM')}
                   </button>
                 </div>
 
@@ -179,7 +179,7 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
                           type="number"
                           value={customMinutes}
                           onChange={(e) => setCustomMinutes(e.target.value)}
-                          placeholder="Хвилини..."
+                          placeholder={tx('Хвилини...', 'Minutes...')}
                           className="w-full bg-transparent outline-none text-[var(--edge-text)] text-sm font-black"
                         />
                       </div>
@@ -190,12 +190,12 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
 
               <div className="space-y-3">
                 <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-                  <AlertCircle size={12}/> Коментар
+                  <AlertCircle size={12}/> {tx('Коментар', 'Comment')}
                 </label>
                 <textarea
                   value={message}
                   onChange={e => setMessage(e.target.value)}
-                  placeholder="Добавте свій опис"
+                  placeholder={tx('Додай свій опис', 'Add your note')}
                   className="w-full bg-[var(--edge-surface-hi)] border border-[#333] rounded-2xl p-4 text-sm text-gray-300 outline-none focus:border-[#555] transition-colors resize-none h-24 placeholder:text-gray-600"
                 />
               </div>
@@ -203,9 +203,9 @@ export default function TgAlertModal({ isOpen, onClose, pair }) {
               <button 
                 type="submit" 
                 disabled={loading || (isCustom && !customMinutes)} 
-                className="w-full bg-[var(--edge-info)] hover:bg-blue-500 text-[var(--edge-text)] font-black uppercase tracking-widest py-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(59,130,246,0.3)] active:scale-[0.98] disabled:opacity-50"
+                className="w-full bg-[var(--edge-info)] hover:bg-blue-500 text-[var(--edge-text)] font-black uppercase tracking-widest py-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
               >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Поставити Таймер
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} {tx('Поставити таймер', 'Set timer')}
               </button>
             </form>
           )}

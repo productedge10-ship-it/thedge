@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import { inline } from '../../lib/blogMd';
 import { resolveSrc } from '../../lib/blogImages';
 import ImageSlider from '../ui/ImageSlider';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    БЛОГ — малювання розібраного тексту.
@@ -69,7 +70,7 @@ function Figure({ caption, srcs = [], vars }) {
       {(caption || images.length > 1) && (
         <figcaption>
           {images.length > 1 && (
-            <span className="bl-fig-badge">СЛАЙДЕР · {images.length}</span>
+            <span className="bl-fig-badge">{tx('СЛАЙДЕР', 'SLIDER')} · {images.length}</span>
           )}
           {caption}
         </figcaption>

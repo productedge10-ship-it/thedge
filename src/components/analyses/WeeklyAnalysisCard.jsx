@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Trash2, CalendarRange, TrendingUp, TrendingDown, Minus, Coffee } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { weekRangeLabel, mondayOf } from '../../lib/weekPlan';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Картка тижневого плану.
@@ -104,7 +105,7 @@ export default function WeeklyAnalysisCard({ plan, onClick, onDelete }) {
             className="shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-bold uppercase tracking-[0.06em]"
             style={{ fontFamily: T.sans, color: T.acc, background: `rgba(${T.accRgb},0.14)`, border: `1px solid rgba(${T.accRgb},0.3)` }}
           >
-            Зараз
+            {tx('Зараз', 'Now')}
           </span>
         )}
       </div>
@@ -117,7 +118,7 @@ export default function WeeklyAnalysisCard({ plan, onClick, onDelete }) {
           </div>
         ) : (
           <p className="text-[13.5px] italic" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.6 }}>
-            Активів на цей тиждень не заплановано
+            {tx('Активів на цей тиждень не заплановано', 'No assets planned for this week')}
           </p>
         )}
       </div>
@@ -128,14 +129,14 @@ export default function WeeklyAnalysisCard({ plan, onClick, onDelete }) {
           <span
             className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-bold"
             style={{ fontFamily: T.sans, color: reviewed ? T.ok : T.text4, background: reviewed ? `rgba(${T.okRgb},0.10)` : 'transparent' }}
-            title="Скільки активів уже розібрано"
+            title={tx('Скільки активів уже розібрано', 'How many assets are already reviewed')}
           >
-            {reviewed}/{named.length} розібрано
+            {reviewed}/{named.length} {tx('розібрано', 'reviewed')}
           </span>
         )}
 
         {rating > 0 && (
-          <span className="ml-auto flex items-center gap-[3px]" title={`Оцінка тижня ${rating}/5`}>
+          <span className="ml-auto flex items-center gap-[3px]" title={tx(`Оцінка тижня ${rating}/5`, `Week rating ${rating}/5`)}>
             {[1, 2, 3, 4, 5].map((n) => (
               <span
                 key={n}
@@ -149,7 +150,7 @@ export default function WeeklyAnalysisCard({ plan, onClick, onDelete }) {
         <span className={`flex items-center ${rating > 0 ? '' : 'ml-auto'} gap-1`}>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(e, plan); }}
-            title="Видалити тижневий план"
+            title={tx('Видалити тижневий план', 'Delete weekly plan')}
             className="grid h-7 w-7 place-items-center rounded-lg opacity-0 transition-all duration-200 group-hover:opacity-100"
             style={{ color: T.text4 }}
             onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}

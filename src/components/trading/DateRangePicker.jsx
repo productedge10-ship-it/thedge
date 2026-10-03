@@ -5,11 +5,14 @@ import { CalendarDays, ChevronDown } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css'; 
 import { format } from 'date-fns';
-import { uk } from 'date-fns/locale';
+import { uk, enUS } from 'date-fns/locale';
 import { 
   formatDate, getToday, getThisWeek, 
   getThisMonth, getLast3Months, parseDateString 
 } from '../../utils/journalUtils';
+import { t as tx, isEn } from '../../lib/lang';
+
+const DF_LOCALE = isEn ? enUS : uk;
 
 export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,13 +51,13 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
   };
 
   const getDisplayText = () => {
-    if (!dateFrom && !dateTo) return "За весь час";
+    if (!dateFrom && !dateTo) return tx('За весь час', 'All time');
     if (dateFrom && dateTo) {
-      return `${format(parseDateString(dateFrom), 'dd MMM', { locale: uk })} — ${format(parseDateString(dateTo), 'dd MMM', { locale: uk })}`;
+      return `${format(parseDateString(dateFrom), 'dd MMM', { locale: DF_LOCALE })} — ${format(parseDateString(dateTo), 'dd MMM', { locale: DF_LOCALE })}`;
     }
-    if (dateFrom) return `Від ${format(parseDateString(dateFrom), 'dd MMM yy', { locale: uk })}`;
-    if (dateTo) return `До ${format(parseDateString(dateTo), 'dd MMM yy', { locale: uk })}`;
-    return "Період не вибрано";
+    if (dateFrom) return tx(`Від ${format(parseDateString(dateFrom), 'dd MMM yy', { locale: DF_LOCALE })}`, `From ${format(parseDateString(dateFrom), 'dd MMM yy', { locale: DF_LOCALE })}`);
+    if (dateTo) return tx(`До ${format(parseDateString(dateTo), 'dd MMM yy', { locale: DF_LOCALE })}`, `Until ${format(parseDateString(dateTo), 'dd MMM yy', { locale: DF_LOCALE })}`);
+    return tx('Період не вибрано', 'No period selected');
   };
 
   return (
@@ -83,19 +86,19 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
             className="absolute top-full left-0 sm:left-auto sm:right-0 mt-2 bg-[var(--edge-bg)]/95 backdrop-blur-2xl border border-[var(--edge-hair-strong)] rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.9)] z-[100] flex flex-col md:flex-row overflow-hidden w-[95vw] sm:w-auto"
           >
             <div className="w-full md:w-[160px] bg-black/40 border-b md:border-b-0 md:border-r border-[var(--edge-hair)] flex flex-col p-3 gap-1.5 shrink-0">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 px-3 mb-2 mt-1">Швидкий вибір</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 px-3 mb-2 mt-1">{tx('Швидкий вибір', 'Quick select')}</span>
               {[
-                { label: 'Сьогодні', from: getToday(), to: getToday() },
-                { label: 'Цей тиждень', from: getThisWeek().from, to: getThisWeek().to },
-                { label: 'Цей місяць', from: getThisMonth().from, to: getThisMonth().to },
-                { label: 'Останні 3 міс.', from: getLast3Months().from, to: getLast3Months().to }
+                { label: tx('Сьогодні', 'Today'), from: getToday(), to: getToday() },
+                { label: tx('Цей тиждень', 'This week'), from: getThisWeek().from, to: getThisWeek().to },
+                { label: tx('Цей місяць', 'This month'), from: getThisMonth().from, to: getThisMonth().to },
+                { label: tx('Останні 3 міс.', 'Last 3 months'), from: getLast3Months().from, to: getLast3Months().to }
               ].map((preset, idx) => (
                 <button key={idx} onClick={() => setPreset(preset.from, preset.to)} className="text-left px-3 py-2.5 text-xs font-bold text-zinc-400 hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)] rounded-lg transition-colors">
                   {preset.label}
                 </button>
               ))}
               <div className="h-px bg-[var(--edge-hair)] my-2"></div>
-              <button onClick={() => setPreset('', '')} className="text-left px-3 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">Весь час</button>
+              <button onClick={() => setPreset('', '')} className="text-left px-3 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">{tx('Весь час', 'All time')}</button>
             </div>
 
             <div className="p-5 flex flex-col items-center bg-transparent w-full">
@@ -103,13 +106,13 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
                 mode="range" 
                 selected={range} 
                 onSelect={setRange} 
-                locale={uk} 
+                locale={DF_LOCALE} weekStartsOn={1} 
                 showOutsideDays 
                 className="trade-calendar m-0 w-full" 
               />
               <div className="flex justify-end gap-3 pt-5 border-t border-[var(--edge-hair)] mt-4 w-full">
-                <button onClick={() => setIsOpen(false)} className="px-5 py-2 text-xs font-bold text-zinc-400 hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] rounded-xl border border-[var(--edge-hair)] hover:bg-[var(--edge-hair-strong)]">Скасувати</button>
-                <button onClick={handleApply} className="px-6 py-2 bg-blue-600/90 hover:bg-blue-500 text-[var(--edge-text)] text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(59,130,246,0.4)] active:scale-95">Застосувати</button>
+                <button onClick={() => setIsOpen(false)} className="px-5 py-2 text-xs font-bold text-zinc-400 hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] rounded-xl border border-[var(--edge-hair)] hover:bg-[var(--edge-hair-strong)]">{tx('Скасувати', 'Cancel')}</button>
+                <button onClick={handleApply} className="px-6 py-2 bg-blue-600/90 hover:bg-blue-500 text-[var(--edge-text)] text-xs font-black uppercase tracking-widest rounded-xl transition-all active:scale-95">{tx('Застосувати', 'Apply')}</button>
               </div>
             </div>
 
@@ -149,7 +152,7 @@ export default function DateRangePicker({ dateFrom, dateTo, onChange }) {
                 background-color: var(--edge-info) !important; 
                 color: white !important; 
                 font-weight: 800; 
-                box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+                box-shadow: none;
               }
               
               /* Середина діапазону (між початком і кінцем) */

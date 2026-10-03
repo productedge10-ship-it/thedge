@@ -59,7 +59,7 @@ export default function Steps() {
         .ln-steps-rail-fill{
           display: block; height: 100%; width: var(--p, 0%);
           background: linear-gradient(90deg,${C.accDeep},${C.acc});
-          box-shadow: 0 0 16px ${A(0.6)}; transition: width .3s ease;
+          transition: width .3s ease;
         }
         .ln-steps-grid{
           display: grid; grid-template-columns: repeat(auto-fit,minmax(min(240px,100%),1fr));
@@ -86,7 +86,7 @@ export default function Steps() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 30 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('ТРИ КРОКИ', 'THREE STEPS')}</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.text3 }}>{tx('ТРИ КРОКИ', 'THREE STEPS')}</span>
       </div>
 
       <div className="ln-steps-outer">
@@ -103,7 +103,6 @@ export default function Steps() {
                   className="ln-steps-num"
                   style={{
                     border: `1px solid ${reached ? A(0.55) : 'rgba(255,255,255,.1)'}`,
-                    boxShadow: reached ? `0 0 28px ${A(0.3)}` : 'none',
                   }}
                 >
                   <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16.5, color: reached ? '#fff' : C.text5 }}>{s.n}</span>

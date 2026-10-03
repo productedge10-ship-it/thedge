@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Підтвердження незворотної дії.
@@ -26,8 +27,8 @@ export default function ConfirmModal({
   title,
   text,
   detail,
-  confirmLabel = 'Видалити',
-  cancelLabel = 'Скасувати',
+  confirmLabel = tx('Видалити', 'Delete'),
+  cancelLabel = tx('Скасувати', 'Cancel'),
   busy = false,
   danger = true,
   onConfirm,
@@ -148,7 +149,7 @@ export default function ConfirmModal({
               fontSize: 15, fontWeight: 600, transition: 'all .18s',
               opacity: busy ? 0.6 : 1,
               cursor: busy ? 'default' : 'pointer',
-              boxShadow: `0 14px 32px -16px rgba(${toneRgb},0.9)`,
+              boxShadow: 'none',
             }}
           >
             {busy && <Loader2 size={16} className="animate-spin" />}

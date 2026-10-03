@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
 import { format } from 'date-fns';
-import { uk } from 'date-fns/locale';
+import { uk, enUS } from 'date-fns/locale';
 import 'react-day-picker/dist/style.css';
 import {
   X, ImagePlus, Loader2, AlertCircle, AlertTriangle,
@@ -15,6 +15,7 @@ import { onlyMine } from '../../lib/myId';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 import { notify } from '../../utils/notify';
+import { t as tx, isEn } from '../../lib/lang';
 import { T, EASE, SPRING, useEdgeFonts } from '../../lib/theme';
 import { syncErrorFromTrade, fetchErrorForTrade, catsFromTrade } from '../../lib/errorsStore';
 import { logTradeMovement, accountSize } from '../../lib/accountsStore';
@@ -119,13 +120,13 @@ const DEFAULT_PAIRS = ['GER40', 'EURUSD', 'NQ100', 'S&P500', 'GOLD', 'NZD/USD', 
 /* Сім питань розбору — той самий порядок і той самий «good», що й у
    макеті, зіставлений з реальними полями психоблоку. */
 const QUESTIONS = [
-  { key: 'followedPlan', q: 'Чи дотримувався торгового плану?', short: 'План', good: true },
-  { key: 'rushed', q: 'Чи поспішав зі входом (FOMO)?', short: 'FOMO', good: false },
-  { key: 'hasMistake', q: 'Чи була очевидна помилка?', short: 'Помилка', good: false },
-  { key: 'psyConfident', q: 'Чи був впевнений у своїх рішеннях?', short: 'Впевненість', good: true },
-  { key: 'psyFear', q: 'Чи був присутній страх?', short: 'Страх', good: false },
-  { key: 'psyRepeat', q: 'Чи повторив би цю угоду?', short: 'Повторив би', good: true },
-  { key: 'psyRevenge', q: 'Чи було бажання відігратися?', short: 'Відігратися', good: false },
+  { key: 'followedPlan', q: tx('Чи дотримувався торгового плану?', 'Did you follow your trading plan?'), short: tx('План', 'Plan'), good: true },
+  { key: 'rushed', q: tx('Чи поспішав зі входом (FOMO)?', 'Did you rush the entry (FOMO)?'), short: 'FOMO', good: false },
+  { key: 'hasMistake', q: tx('Чи була очевидна помилка?', 'Was there an obvious mistake?'), short: tx('Помилка', 'Mistake'), good: false },
+  { key: 'psyConfident', q: tx('Чи був впевнений у своїх рішеннях?', 'Were you confident in your decisions?'), short: tx('Впевненість', 'Confidence'), good: true },
+  { key: 'psyFear', q: tx('Чи був присутній страх?', 'Was there fear?'), short: tx('Страх', 'Fear'), good: false },
+  { key: 'psyRepeat', q: tx('Чи повторив би цю угоду?', 'Would you take this trade again?'), short: tx('Повторив би', 'Would repeat'), good: true },
+  { key: 'psyRevenge', q: tx('Чи було бажання відігратися?', 'Did you want to win it back?'), short: tx('Відігратися', 'Revenge'), good: false },
 ];
 
 /* Локальна дата: toISOString() зсуває день на UTC і о другій ночі
@@ -238,13 +239,13 @@ function Row({ label, children, hint }) {
 function StatusPicker({ value, onChange, bare }) {
   return (
     <MenuPicker
-      title="Result"
+      title={tx('Результат', 'Result')}
       value={value}
       options={RESULT_CHIPS}
       onChange={onChange}
       labelOf={(v) => RESULT_LABEL[v] || v}
       colorOf={(o) => RESULT_COLORS[o]}
-      placeholder="Result"
+      placeholder={tx('Результат', 'Result')}
       isEmpty={(v) => !v || v === 'Not Selected'}
       toggleOff="Not Selected"
       bare={bare}
@@ -257,11 +258,11 @@ const RISK_OPTIONS = ['0.25%', '0.5%', '1%', '1.5%', '2%', '3%'];
 function RiskPicker({ value, onChange, bare }) {
   return (
     <MenuPicker
-      title="Risk"
+      title={tx('Ризик', 'Risk')}
       value={value}
       options={RISK_OPTIONS}
       onChange={onChange}
-      placeholder="Risk"
+      placeholder={tx('Ризик', 'Risk')}
       isEmpty={(v) => !v}
       allowCustom
       bare={bare}
@@ -328,7 +329,7 @@ function AssetPicker({ value, onChange, compact }) {
             </span>
           ) : (
             <span className="text-[14.5px] font-medium" style={{ letterSpacing: '-0.005em', color: txt(0.45) }}>
-              Актив
+              {tx('Актив', 'Asset')}
             </span>
           )}
           <Caret color={value ? ACCENT : txt(0.4)} open={o} />
@@ -337,14 +338,14 @@ function AssetPicker({ value, onChange, compact }) {
     >
       {({ close }) => (
         <div className="w-[320px] overflow-hidden rounded-2xl" style={{ background: CARD_BG, border: `1px solid ${line(0.1)}`, boxShadow: '0 28px 64px -20px var(--edge-panel-glow, rgba(0,0,0,0.5))' }}>
-          <div className="px-3 pb-1 pt-2.5 text-[9px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.26em', color: txt(0.4) }}>Актив</div>
+          <div className="px-3 pb-1 pt-2.5 text-[9px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.26em', color: txt(0.4) }}>{tx('Актив', 'Asset')}</div>
           <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: `1px solid ${line(0.08)}` }}>
             <Search size={12} style={{ color: txt(0.5) }} />
             <input
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Пошук або новий актив…"
+              placeholder={tx('Пошук або новий актив…', 'Search or add a new asset…')}
               className="w-full min-w-0 bg-transparent text-[14.5px] outline-none placeholder:opacity-50"
               style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
             />
@@ -381,7 +382,7 @@ function AssetPicker({ value, onChange, compact }) {
             })}
             {filtered.length === 0 && !showAdd && (
               <div className="px-3 py-5 text-center text-[13.5px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>
-                Нічого не знайдено
+                {tx('Нічого не знайдено', 'Nothing found')}
               </div>
             )}
           </div>
@@ -393,7 +394,7 @@ function AssetPicker({ value, onChange, compact }) {
               style={{ borderTop: `1px solid ${line(0.08)}`, fontFamily: T.sans, color: ACCENT }}
             >
               <Plus size={13} strokeWidth={2.6} />
-              Додати "{search.trim().toUpperCase()}"
+              {tx('Додати', 'Add')} "{search.trim().toUpperCase()}"
             </button>
           )}
         </div>
@@ -438,7 +439,7 @@ function MenuPicker({
           >
             <span className="flex min-w-0 items-center gap-2.5">
               {dot && (
-                <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: dot.c, boxShadow: `0 0 7px rgba(${dot.rgb},0.75)` }} />
+                <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: dot.c, boxShadow: 'none' }} />
               )}
               <span
                 className="truncate text-[14.5px]"
@@ -470,7 +471,7 @@ function MenuPicker({
                 onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = line(0.06); }}
                 onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}
               >
-                {c && <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: c.c, boxShadow: `0 0 7px rgba(${c.rgb},${on ? 1 : 0.55})` }} />}
+                {c && <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: c.c, boxShadow: 'none' }} />}
                 <span className="truncate">{labelOf(o)}</span>
                 {on && <Check size={11} strokeWidth={3} className="ml-auto shrink-0" style={{ color: c?.c || ACCENT }} />}
               </button>
@@ -483,7 +484,7 @@ function MenuPicker({
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { submitDraft(); close(); } }}
-                placeholder="Свій варіант"
+                placeholder={tx('Свій варіант', 'Custom')}
                 className="h-[34px] min-w-0 flex-1 bg-transparent text-[14px] font-medium outline-none"
                 style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
               />
@@ -509,12 +510,12 @@ function SessionPicker({ value, onChange, bare }) {
   const colorOf = (name) => SESSION_COLORS[name] || { c: ACCENT, rgb: ACCENT_RGB };
   return (
     <MenuPicker
-      title="Session"
+      title={tx('Сесія', 'Session')}
       value={value}
       options={DEFAULT_SESSIONS}
       onChange={onChange}
             colorOf={colorOf}
-      placeholder="Session"
+      placeholder={tx('Сесія', 'Session')}
       isEmpty={(v) => !v}
       bare={bare}
     />
@@ -585,7 +586,7 @@ function TradeDate({ value, onChange, compact }) {
           style={{ fontFamily: T.sans, background: FIELD_BG, border: `1px solid ${open ? line(0.16) : line(0.08)}`, color: txt(0.8) }}
         >
           <CalendarDays size={13} strokeWidth={2.3} style={{ color: open ? ACCENT : txt(0.5) }} />
-          {format(selected, 'd MMM yyyy', { locale: uk })}
+          {format(selected, 'd MMM yyyy', { locale: isEn ? enUS : uk })}
         </button>
       )}
     >
@@ -598,7 +599,7 @@ function TradeDate({ value, onChange, compact }) {
             mode="single"
             selected={selected}
             onSelect={(d) => { if (d) { onChange(set(d)); close(); } }}
-            locale={uk}
+            locale={isEn ? enUS : uk}
             weekStartsOn={1}
             showOutsideDays
             className="edge-daypicker"
@@ -659,12 +660,12 @@ function AccountPicker({ value, options, onChange, bare }) {
             : { borderRadius: 12, background: FIELD_BG, border: `1px solid ${value ? line(0.11) : (open ? line(0.16) : line(0.07))}` }}
         >
           <span className="flex min-w-0 items-center gap-2.5">
-            <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: value ? ACCENT : line(0.14), boxShadow: value ? `0 0 7px rgba(${ACCENT_RGB},0.75)` : 'none' }} />
+            <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: value ? ACCENT : line(0.14), boxShadow: 'none' }} />
             <span
               className="truncate text-[14.5px]"
               style={{ fontFamily: T.sans, fontWeight: value ? 500 : 400, letterSpacing: '-0.005em', color: value ? 'var(--edge-text)' : txt(0.45) }}
             >
-              {value || 'Акаунт'}
+              {value || tx('Акаунт', 'Account')}
             </span>
           </span>
           <Caret color={value ? ACCENT : txt(0.4)} open={open} />
@@ -678,7 +679,7 @@ function AccountPicker({ value, options, onChange, bare }) {
         >
           {options.length === 0 && (
             <div className="px-3 py-5 text-center text-[14.5px]" style={{ fontFamily: T.sans, color: txt(0.5) }}>
-              Спочатку додай акаунт
+              {tx('Спочатку додай акаунт', 'Add an account first')}
             </div>
           )}
           {options.map((o) => {
@@ -776,7 +777,7 @@ function ShotZone({ image, onPaste, onClear, label, tone, compact }) {
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-[15.5px] font-medium" style={{ fontFamily: T.sans, color: txt(0.72) }}>{label}</span>
-            <span className="text-[13.5px]" style={{ fontFamily: MONO, color: txt(0.5) }}>перетягни або обери · PNG / JPG</span>
+            <span className="text-[13.5px]" style={{ fontFamily: MONO, color: txt(0.5) }}>{tx('перетягни або обери · PNG / JPG', 'drag or choose · PNG / JPG')}</span>
           </div>
         </motion.div>
       )}
@@ -797,6 +798,7 @@ const toneOf = (q, v) => (v === null || v === undefined ? null : v === q.good ? 
 
 function plural(n) {
   const m10 = n % 10, m100 = n % 100;
+  if (isEn) return `${n} answer${n === 1 ? '' : 's'}`;
   if (m10 === 1 && m100 !== 11) return `${n} відповідь`;
   if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return `${n} відповіді`;
   return `${n} відповідей`;
@@ -820,10 +822,10 @@ function ReviewList({ values, setters }) {
   const full = done === QUESTIONS.length;
 
   const verdict = !full
-    ? { text: `Лишилось ${QUESTIONS.length - done}`, c: '#b3a6ff', rgb: ACCENT_RGB }
-    : clean === QUESTIONS.length ? { text: 'Чисте виконання', c: GREEN, rgb: GREEN_RGB, glow: true }
-      : clean >= 5 ? { text: 'Дрібні зриви', c: AMBER, rgb: AMBER_RGB }
-        : { text: 'Емоції керували', c: '#ff7d88', rgb: BAD_RGB };
+    ? { text: tx(`Лишилось ${QUESTIONS.length - done}`, `${QUESTIONS.length - done} left`), c: '#b3a6ff', rgb: ACCENT_RGB }
+    : clean === QUESTIONS.length ? { text: tx('Чисте виконання', 'Clean execution'), c: GREEN, rgb: GREEN_RGB, glow: true }
+      : clean >= 5 ? { text: tx('Дрібні зриви', 'Minor slips'), c: AMBER, rgb: AMBER_RGB }
+        : { text: tx('Емоції керували', 'Emotions took over'), c: '#ff7d88', rgb: BAD_RGB };
 
   const scoreColor = !done ? txt(0.3) : clean >= done - 1 ? GREEN : clean * 2 >= done ? AMBER : BAD;
 
@@ -840,7 +842,7 @@ function ReviewList({ values, setters }) {
         style={{ borderBottom: `1px solid ${line(0.06)}`, background: `rgba(${ACCENT_RGB},0.05)` }}
       >
         <span className="text-[10px] font-medium uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: '#9b8cfa' }}>
-          Дисципліна
+          {tx('Дисципліна', 'Discipline')}
         </span>
         <span className="text-[19px] font-semibold leading-none" style={{ fontFamily: T.sans, letterSpacing: '-0.01em', color: scoreColor }}>
           {done ? `${clean}/${done}` : '—'}
@@ -867,7 +869,7 @@ function ReviewList({ values, setters }) {
             background: `rgba(${verdict.rgb},0.14)`,
             border: `1px solid rgba(${verdict.rgb},0.34)`,
             color: verdict.c,
-            boxShadow: verdict.glow ? `0 0 26px rgba(${verdict.rgb},0.18)` : 'none',
+            boxShadow: 'none',
           }}
         >
           {verdict.text}
@@ -927,7 +929,7 @@ function ReviewList({ values, setters }) {
                       color: active ? tn.c : txt(0.55),
                     }}
                   >
-                    {opt ? 'Так' : 'Ні'}
+                    {opt ? tx('Так', 'Yes') : tx('Ні', 'No')}
                   </button>
                 );
               })}
@@ -1266,7 +1268,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
     if (files.length) { attach.addToList(files, setTradeImages); return; }
     const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text');
     if (url && url.startsWith('http')) setTradeImages((p) => [...p, url]);
-    else notify.error('Не вийшло', 'Перетягни картинку або посилання.');
+    else notify.error(tx('Не вийшло', 'Didn\'t work'), tx('Перетягни картинку або посилання.', 'Drag an image or a link.'));
   };
 
   /* ---------- перевірки ---------- */
@@ -1302,8 +1304,8 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
     return diff;
   })();
   const tradeDuration = tradeMinutes == null ? null
-    : tradeMinutes < 60 ? `${tradeMinutes}хв`
-      : `${Math.floor(tradeMinutes / 60)}г${tradeMinutes % 60 ? ` ${tradeMinutes % 60}хв` : ''}`;
+    : tradeMinutes < 60 ? tx(`${tradeMinutes}хв`, `${tradeMinutes}m`)
+      : tx(`${Math.floor(tradeMinutes / 60)}г${tradeMinutes % 60 ? ` ${tradeMinutes % 60}хв` : ''}`, `${Math.floor(tradeMinutes / 60)}h${tradeMinutes % 60 ? ` ${tradeMinutes % 60}m` : ''}`);
 
   /* Значення семи питань розбору, в порядку QUESTIONS */
   const psyValues = { followedPlan, rushed, hasMistake, psyConfident, psyFear, psyRepeat, psyRevenge };
@@ -1324,7 +1326,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
   const goNext = () => {
     setTouched(true);
     if (step1Missing) {
-      setErrorMsg('Заповни актив, дату, акаунт і ризик.');
+      setErrorMsg(tx('Заповни актив, дату, акаунт і ризик.', 'Fill in the asset, date, account and risk.'));
       return;
     }
     setErrorMsg('');
@@ -1345,14 +1347,14 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
 
     if (step1Missing) {
       setStep(0);
-      return setErrorMsg('Заповни актив, дату, акаунт і ризик.');
+      return setErrorMsg(tx('Заповни актив, дату, акаунт і ризик.', 'Fill in the asset, date, account and risk.'));
     }
-    if (psyMissing) return setErrorMsg('Дай відповідь на всі питання розбору — саме вони роблять журнал корисним.');
-    if (hasMistake && !mistakeText.trim()) return setErrorMsg('Опиши помилку — інакше за місяць не згадаєш.');
+    if (psyMissing) return setErrorMsg(tx('Дай відповідь на всі питання розбору — саме вони роблять журнал корисним.', 'Answer all the review questions — they\'re what make the journal useful.'));
+    if (hasMistake && !mistakeText.trim()) return setErrorMsg(tx('Опиши помилку — інакше за місяць не згадаєш.', 'Describe the mistake — otherwise you won\'t remember it in a month.'));
     /* Поки скрін летить у сховище, у стані лежить blob-посилання. Воно
        живе лише в цій вкладці, і в базі перетворилось би на порожню
        рамку після перезавантаження. */
-    if (attach.busy) return setErrorMsg('Скрін ще вантажиться — секунду.');
+    if (attach.busy) return setErrorMsg(tx('Скрін ще вантажиться — секунду.', 'The screenshot is still uploading — one sec.'));
 
     setErrorMsg('');
     setLoading(true);
@@ -1387,7 +1389,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       if (existingTrade) {
         const { error } = await supabase.from('trades').update(payload).eq('id', existingTrade.id);
         if (error) throw error;
-        notify.success('Оновлено', 'Угоду успішно оновлено.');
+        notify.success(tx('Оновлено', 'Updated'), tx('Угоду успішно оновлено.', 'Trade updated.'));
       } else {
         /* id потрібен одразу: за ним помилка знайде дорогу назад до
            угоди, з якої вона взялась */
@@ -1395,8 +1397,8 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
         if (error) throw error;
         tradeId = data?.id || null;
 
-        if (hasMistake) notify.error('Помилку записано', 'Вона вже чекає в Журналі помилок — там її можна розібрати.');
-        else notify.success('Угоду збережено', 'Угоду додано в журнал.');
+        if (hasMistake) notify.error(tx('Помилку записано', 'Mistake logged'), tx('Вона вже чекає в Журналі помилок — там її можна розібрати.', 'It\'s waiting in the Mistakes journal — you can review it there.'));
+        else notify.success(tx('Угоду збережено', 'Trade saved'), tx('Угоду додано в журнал.', 'Trade added to the journal.'));
 
         /* Авто-рух балансу проп-акаунта — тільки для нових угод, щоб
            не порахувати той самий трейд двічі й не чіпати заднім
@@ -1490,7 +1492,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
             <div className="flex shrink-0 items-start justify-between gap-4 px-6 pb-4 pt-5">
               <div className="min-w-0">
                 <span className="block text-[10px] font-semibold uppercase" style={{ fontFamily: MONO, letterSpacing: '0.2em', color: txt(0.4) }}>
-                  {existingTrade ? 'Угода' : 'Нова угода'}
+                  {existingTrade ? tx('Угода', 'Trade') : tx('Нова угода', 'New trade')}
                 </span>
                 <div className="mt-1.5 flex items-center gap-2">
                   <AssetPicker compact value={selectedPair} onChange={setSelectedPair} />
@@ -1547,7 +1549,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                             style={{ fontFamily: MONO, letterSpacing: '0.14em', color: ACCENT, background: 'var(--edge-panel, rgba(10,10,14,0.85))', border: `1px solid ${line(0.1)}` }}
                           >
                             {attach.busy && <Loader2 size={11} strokeWidth={3} className="animate-spin" />}
-                            {attach.busy ? 'Вантажу' : `Скрін ${tradeImages.length}`}
+                            {attach.busy ? tx('Вантажу', 'Uploading') : tx(`Скрін ${tradeImages.length}`, `Screenshot ${tradeImages.length}`)}
                           </span>
                         )}
 
@@ -1568,7 +1570,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                   </button>
                                 </div>
                               ))}
-                              <span className="text-[13px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>Ctrl+V або перетягни — додати ще</span>
+                              <span className="text-[13px]" style={{ fontFamily: T.sans, color: txt(0.4) }}>{tx('Ctrl+V або перетягни — додати ще', 'Ctrl+V or drag — add more')}</span>
                             </div>
                           </div>
                         ) : (
@@ -1579,10 +1581,10 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                             <div className="flex flex-col items-center gap-[9px]">
                               <ImagePlus size={20} strokeWidth={1.5} style={{ color: setupDropHot ? ACCENT : txt(0.5) }} />
                               <span className="text-[14px] font-medium" style={{ fontFamily: T.sans, color: setupDropHot ? ACCENT : txt(0.58) }}>
-                                {setupDropHot ? 'Відпускай' : 'Встав або перетягни скріншот'}
+                                {setupDropHot ? tx('Відпускай', 'Drop it') : tx('Встав або перетягни скріншот', 'Paste or drag a screenshot')}
                               </span>
                               <span className="text-[10px] uppercase" style={{ fontFamily: MONO, letterSpacing: '0.16em', color: txt(0.45) }}>
-                                Ctrl+V · або посилання TradingView
+                                {tx('Ctrl+V · або посилання TradingView', 'Ctrl+V · or a TradingView link')}
                               </span>
                             </div>
                           </motion.div>
@@ -1597,19 +1599,19 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         <DirectionToggle value={tradeType} onChange={setTradeType} />
                       </div>
 
-                      <Row label="Результат">
+                      <Row label={tx('Результат', 'Result')}>
                         <StatusPicker bare value={result} onChange={setResult} />
                       </Row>
 
-                      <Row label="Сесія">
+                      <Row label={tx('Сесія', 'Session')}>
                         <SessionPicker bare value={session} onChange={setSession} />
                       </Row>
 
-                      <Row label="Рахунок">
+                      <Row label={tx('Рахунок', 'Account')}>
                         <AccountPicker bare value={account} options={accountOptions} onChange={setAccount} />
                       </Row>
 
-                      <Row label="Ризик">
+                      <Row label={tx('Ризик', 'Risk')}>
                         <RiskPicker bare value={risk} onChange={setRisk} />
                       </Row>
 
@@ -1620,7 +1622,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                           Тому $ стоїть підказкою поруч, а не окремою
                           смугою цифр: це те саме число, сказане двічі
                           різними мовами. */}
-                      <Row label="Ціль" hint={oneR != null ? `≈ $${oneR.toLocaleString('en-US')} / 1R` : null}>
+                      <Row label={tx('Ціль', 'Target')} hint={oneR != null ? `≈ $${oneR.toLocaleString('en-US')} / 1R` : null}>
                         <span className="flex items-center gap-1">
                           <input
                             value={rr}
@@ -1633,7 +1635,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         </span>
                       </Row>
 
-                      <Row label="Час" hint={tradeDuration || null}>
+                      <Row label={tx('Час', 'Time')} hint={tradeDuration || null}>
                         <span className="flex items-center gap-1.5">
                           <TimePop value={entryTime || null} onChange={(v) => setEntryTime(v || '')} align="right" z={600} />
                           <span className="text-[12px]" style={{ fontFamily: MONO, color: txt(0.3) }}>→</span>
@@ -1649,13 +1651,13 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                           вкладається в рядок. */}
                       <div className="pt-4">
                         <span className="mb-2 block text-[13.5px]" style={{ fontFamily: T.sans, color: txt(0.45) }}>
-                          Нотатка
+                          {tx('Нотатка', 'Note')}
                         </span>
                         <textarea
                           value={tradeDescription}
                           onChange={(e) => setTradeDescription(e.target.value)}
                           rows={4}
-                          placeholder="Логіка входу, підтвердження, емоції…"
+                          placeholder={tx('Логіка входу, підтвердження, емоції…', 'Entry logic, confirmations, emotions…')}
                           className="w-full resize-none bg-transparent text-[14.5px] leading-[22px] outline-none placeholder:opacity-45"
                           style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}
                         />
@@ -1688,7 +1690,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                               <div className="flex flex-wrap items-center gap-2.5">
                                 <AlertTriangle size={14} strokeWidth={2.4} style={{ color: BAD }} />
                                 <span className="text-[13.5px] font-semibold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: BAD }}>
-                                  Розбір помилки
+                                  {tx('Розбір помилки', 'Mistake review')}
                                 </span>
 
                                 {errDraft?.cats?.length > 0 && (
@@ -1729,12 +1731,12 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                   className="ml-auto flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[14px] font-semibold transition-colors duration-200"
                                   style={{ fontFamily: T.sans, background: 'transparent', border: `1px solid rgba(${BAD_RGB},0.3)`, color: BAD }}
                                 >
-                                  {errDraft ? 'Редагувати розбір' : 'Розібрати'}
+                                  {errDraft ? tx('Редагувати розбір', 'Edit review') : tx('Розібрати', 'Review')}
                                 </button>
                               </div>
 
                               {mistakeImages.length === 0 ? (
-                                <ShotZone image={null} onPaste={pasteMistake} label="Встав скріншоти помилки" tone={BAD} />
+                                <ShotZone image={null} onPaste={pasteMistake} label={tx('Встав скріншоти помилки', 'Paste mistake screenshots')} tone={BAD} />
                               ) : (
                                 <div onPaste={pasteMistake} tabIndex={0} className="grid grid-cols-2 gap-2.5 outline-none">
                                   {mistakeImages.map((img, i) => (
@@ -1751,7 +1753,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                                     </div>
                                   ))}
                                   <div className="grid aspect-video place-items-center rounded-xl text-center text-[13.5px] font-medium" style={{ border: `1px dashed rgba(${BAD_RGB},0.25)`, background: FIELD_BG, color: txt(0.5), fontFamily: T.sans }}>
-                                    ще один<br />Ctrl+V
+                                    {tx('ще один', 'one more')}<br />Ctrl+V
                                   </div>
                                 </div>
                               )}
@@ -1759,7 +1761,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                               <textarea
                                 value={mistakeText}
                                 onChange={(e) => setMistakeText(e.target.value)}
-                                placeholder="Детально опиши помилку, щоб не повторити її…"
+                                placeholder={tx('Детально опиши помилку, щоб не повторити її…', 'Describe the mistake in detail so you don\'t repeat it…')}
                                 className="min-h-[80px] w-full resize-y rounded-xl p-4 text-[15.5px] outline-none"
                                 style={{ background: FIELD_BG, border: `1px solid ${touched && !mistakeText.trim() ? `rgba(${BAD_RGB},0.4)` : 'var(--edge-line)'}`, color: txt(0.85), fontFamily: T.sans, lineHeight: 1.55 }}
                               />
@@ -1778,7 +1780,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                           value={psyNotes}
                           onChange={(e) => setPsyNotes(e.target.value)}
                           rows={1}
-                          placeholder="Що зіпсувало або зберегло цю угоду?"
+                          placeholder={tx('Що зіпсувало або зберегло цю угоду?', 'What ruined or saved this trade?')}
                           className="min-w-0 flex-1 resize-none bg-transparent py-4 text-[15px] leading-[1.4] outline-none placeholder:opacity-60"
                           style={{ fontFamily: T.sans, color: txt(0.85), fieldSizing: 'content' }}
                         />
@@ -1813,11 +1815,11 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                       className="h-[5px] w-[5px] shrink-0 rounded-full"
                       style={{
                         background: draftSaved ? GREEN : line(0.18),
-                        boxShadow: draftSaved ? `0 0 8px 1px rgba(${GREEN_RGB},0.5)` : 'none',
+                        boxShadow: 'none',
                       }}
                     />
                     <span className="hidden sm:inline">
-                      {existingTrade ? 'Редагування' : draftSaved ? 'Чернетку збережено' : 'Чернетка порожня'}
+                      {existingTrade ? tx('Редагування', 'Editing') : draftSaved ? tx('Чернетку збережено', 'Draft saved') : tx('Чернетка порожня', 'Draft empty')}
                     </span>
                   </div>
 
@@ -1830,8 +1832,8 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                   <div className="flex flex-wrap shrink-0 items-center justify-end gap-2 sm:gap-3">
                     <span className="hidden whitespace-nowrap text-[13.5px] font-medium sm:block" style={{ fontFamily: T.sans, color: step === 0 ? (step1LeftCount === 0 ? GREEN : txt(0.5)) : (submitReady ? GREEN : txt(0.5)) }}>
                       {step === 0
-                        ? (step1LeftCount === 0 ? 'Можна продовжувати' : `Залишилось полів: ${step1LeftCount}`)
-                        : (submitReady ? 'Можна записувати' : `Лишилось ${plural(7 - psyDoneAll)}`)}
+                        ? (step1LeftCount === 0 ? tx('Можна продовжувати', 'Ready to continue') : tx(`Залишилось полів: ${step1LeftCount}`, `Fields left: ${step1LeftCount}`))
+                        : (submitReady ? tx('Можна записувати', 'Ready to save') : tx(`Лишилось ${plural(7 - psyDoneAll)}`, `${plural(7 - psyDoneAll)} left`))}
                     </span>
 
                     {step === 1 && (
@@ -1844,7 +1846,7 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         onMouseLeave={(e) => { e.currentTarget.style.color = txt(0.65); e.currentTarget.style.borderColor = line(0.1); }}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H6M11 6l-6 6 6 6" /></svg>
-                        Назад
+                        {tx('Назад', 'Back')}
                       </button>
                     )}
 
@@ -1854,10 +1856,10 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                         onClick={goNext}
                         className="flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[12px] px-3 text-[13.5px] font-semibold transition-all duration-200 active:scale-[0.98] sm:gap-2 sm:px-5 sm:text-[14.5px]"
                         style={{ fontFamily: T.sans, background: ACCENT, color: 'var(--edge-on-acc)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.boxShadow = `0 10px 30px -6px rgba(${ACCENT_RGB},0.55)`; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
                       >
-                        Далі
+                        {tx('Далі', 'Next')}
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
                       </button>
                     ) : (
@@ -1871,12 +1873,12 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                           background: submitReady ? ACCENT : line(0.05),
                           color: submitReady ? 'var(--edge-on-acc)' : txt(0.42),
                           border: `1px solid ${submitReady ? ACCENT : line(0.07)}`,
-                          boxShadow: submitReady ? `0 0 36px rgba(${ACCENT_RGB},0.35)` : 'none',
+                          boxShadow: 'none',
                           opacity: loading ? 0.7 : 1,
                         }}
                       >
                         {loading ? <Loader2 size={14} strokeWidth={3} className="animate-spin" /> : null}
-                        {existingTrade ? 'Оновити угоду' : 'Записати угоду'}
+                        {existingTrade ? tx('Оновити угоду', 'Update trade') : tx('Записати угоду', 'Save trade')}
                         {!loading && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h13M13 6l6 6-6 6" /></svg>}
                       </button>
                     )}

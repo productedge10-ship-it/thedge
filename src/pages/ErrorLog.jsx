@@ -391,7 +391,7 @@ export default function ErrorLog() {
         .error-btn-action:hover { border-color: ${T.lineHi} !important; color: ${T.text} !important; }
         .error-btn-action-danger:hover { border-color: rgba(248,113,113,.5) !important; color: ${T.bad} !important; background: rgba(248,113,113,.08) !important; }
         .error-chip:hover { border-color: ${T.lineHi} !important; }
-        .error-btn-save:hover { box-shadow: 0 10px 34px rgba(139,123,255,.3) !important; }
+        .error-btn-save:hover { box-shadow: none !important; }
         .error-tv-link:hover { color: ${T.acc} !important; }
         .pulse-dot { animation: pulseDot 2.4s ease infinite; }
         @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
@@ -415,13 +415,11 @@ export default function ErrorLog() {
         >
           <div className="min-w-0 max-w-[640px]">
             <div className="flex items-center gap-[9px]">
-              <span
-                className="h-[5px] w-[5px] rounded-full"
-                style={{ background: 'var(--edge-acc)', boxShadow: `0 0 12px 2px rgba(${T.accRgb},0.67)` }}
-              />
+              {/* Без світної крапки й не акцентом: крапка з ореолом над
+                  назвою — прикмета шаблону, а акцент належить головній дії. */}
               <span
                 className="text-[11px] font-bold uppercase"
-                style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-acc)' }}
+                style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-text3)' }}
               >
                 {tx('Дисципліна', 'Discipline')}
               </span>
@@ -464,7 +462,7 @@ export default function ErrorLog() {
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full"
-                  style={{ background: 'var(--edge-warn)', boxShadow: '0 0 10px 2px rgba(var(--edge-warn-rgb),0.80)' }}
+                  style={{ background: 'var(--edge-warn)', boxShadow: 'none' }}
                 />
                 {tx(`${openCount} ${openCount === 1 ? 'запис чекає' : 'записів чекають'} на розбір`, `${openCount} ${openCount === 1 ? 'entry awaits' : 'entries await'} review`)}
               </button>
@@ -505,17 +503,10 @@ export default function ErrorLog() {
             style={{
               background: `linear-gradient(160deg, rgba(${T.accRgb},0.14), var(--edge-sunken) 52%, var(--edge-sunken))`,
               border: `1px solid rgba(${T.accRgb},0.32)`,
-              boxShadow: `0 28px 60px -34px rgba(${T.accRgb},0.6)`,
+              boxShadow: 'none',
             }}
           >
-            <span
-              className="pointer-events-none absolute rounded-full"
-              style={{ left: '50%', top: -120, width: 420, height: 260, marginLeft: -210, background: T.acc, filter: 'blur(80px)', opacity: 0.18 }}
-            />
-            <span
-              className="pointer-events-none absolute inset-x-0 top-0 h-px"
-              style={{ background: `linear-gradient(90deg,transparent,rgba(${T.accRgb},0.8),transparent)` }}
-            />
+            {/* Без розмитої плями й фіолетової риски згори — рамки картки досить. */}
 
             <span
               className="relative grid h-14 w-14 place-items-center rounded-[18px]"

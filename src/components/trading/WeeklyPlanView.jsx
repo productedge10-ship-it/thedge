@@ -9,6 +9,7 @@ import { Section, SectionAnchor, FieldLabel, WriteBlock } from './PlanPrimitives
 import { TdaAnalysisFields, AddTdaButton } from './TdaAnalysisCard';
 import { T } from './planTheme';
 import { weekPlanProgress, emptyTdaAnalysis } from '../../lib/weekPlan';
+import { t as tx, LOCALE } from '../../lib/lang';
 
 /* ==================================================================
    Тижневий план.
@@ -23,11 +24,11 @@ import { weekPlanProgress, emptyTdaAnalysis } from '../../lib/weekPlan';
 ================================================================== */
 
 const RATING = [
-  { label: 'Погано', color: T.bad, rgb: T.badRgb },
-  { label: 'Слабко', color: '#fb923c', rgb: '251,146,60' },
-  { label: 'Середньо', color: T.warn, rgb: T.warnRgb },
-  { label: 'Добре', color: '#a3e635', rgb: '163,230,53' },
-  { label: 'Відмінно', color: T.ok, rgb: T.okRgb },
+  { label: tx('Погано', 'Poor'), color: T.bad, rgb: T.badRgb },
+  { label: tx('Слабко', 'Weak'), color: '#fb923c', rgb: '251,146,60' },
+  { label: tx('Середньо', 'Fair'), color: T.warn, rgb: T.warnRgb },
+  { label: tx('Добре', 'Good'), color: '#a3e635', rgb: '163,230,53' },
+  { label: tx('Відмінно', 'Excellent'), color: T.ok, rgb: T.okRgb },
 ];
 
 /* ---------- один актив у розборі "Що вийшло" ---------- */
@@ -55,7 +56,7 @@ function AssetRow({ analysis, onChange }) {
       <input
         value={analysis.outcome}
         onChange={(e) => patch({ outcome: e.target.value })}
-        placeholder="Що вийшло по факту?"
+        placeholder={tx('Що вийшло по факту?', 'What actually happened?')}
         className={FIELD}
         style={{ border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans, padding: '10px 12px' }}
         onFocus={(e) => (e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.4)`)}
@@ -76,10 +77,10 @@ function AssetsBoard({ analyses, onSave }) {
         style={{ background: T.sunken, border: `1px dashed ${T.line}` }}
       >
         <span className="text-[14.5px] font-semibold" style={{ color: T.text2, fontFamily: T.sans }}>
-          Активів на цей тиждень ще немає
+          {tx('Активів на цей тиждень ще немає', 'No assets for this week yet')}
         </span>
         <span className="max-w-[320px] text-[13.5px]" style={{ color: T.text4 }}>
-          Обери актив у Top-down аналізі вище — він з'явиться і тут, коли настане час звірити факт.
+          {tx("Обери актив у Top-down аналізі вище — він з'явиться і тут, коли настане час звірити факт.", 'Pick an asset in the Top-down analysis above — it’ll show up here when it’s time to check the outcome.')}
         </span>
       </div>
     );
@@ -98,7 +99,7 @@ function AssetsBoard({ analyses, onSave }) {
 function WeekRating({ value, onChange }) {
   return (
     <div className="flex flex-col gap-3">
-      <FieldLabel>Наскільки дотримався тижневої тези?</FieldLabel>
+      <FieldLabel>{tx('Наскільки дотримався тижневої тези?', 'How well did you stick to the weekly thesis?')}</FieldLabel>
       <div className="flex flex-wrap gap-2">
         {RATING.map((r, i) => {
           const n = i + 1;
@@ -153,8 +154,8 @@ export default function WeeklyPlanView({
   const overall = wTotal ? phases.reduce((a, ph) => a + progress[ph] * W[ph], 0) / wTotal : 0;
 
   const addUpdate = () => {
-    const weekday = new Date().toLocaleDateString('uk-UA', { weekday: 'short' });
-    const time = new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    const weekday = new Date().toLocaleDateString(LOCALE, { weekday: 'short' });
+    const time = new Date().toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
     patch({
       updates: [...data.updates, { id: Date.now(), date: `${weekday}, ${time}`, tf: '', image: null, text: '' }],
     });
@@ -203,8 +204,8 @@ export default function WeeklyPlanView({
                 storageKey={`tda-${t.id}`}
                 onHide={() => blocks.hide('week-tda')}
                 group="plan"
-                title={t.pair || 'Top-down аналіз'}
-                hint={t.pair ? 'Top-down аналіз' : 'Актив, плановий bias і сітка ТФ'}
+                title={t.pair || tx('Top-down аналіз', 'Top-down analysis')}
+                hint={t.pair ? tx('Top-down аналіз', 'Top-down analysis') : tx('Актив, плановий bias і сітка ТФ', 'Asset, planned bias and TF grid')}
                 done={filled >= 2}
                 right={
                   <div className="flex items-center gap-3">
@@ -216,7 +217,7 @@ export default function WeeklyPlanView({
                       <span
                         role="button"
                         tabIndex={0}
-                        title="Прибрати цей розбір"
+                        title={tx('Прибрати цей розбір', 'Remove this analysis')}
                         onClick={(e) => { e.stopPropagation(); removeTdaAnalysis(t.id); }}
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); removeTdaAnalysis(t.id); } }}
                         className="grid h-6 w-6 shrink-0 place-items-center rounded-lg transition-colors duration-150"
@@ -251,15 +252,15 @@ export default function WeeklyPlanView({
             storageKey="week-thesis"
             onHide={() => blocks.hide('week-thesis')}
             group="plan"
-            title="Теза тижня"
-            hint="Загальна картина ринку і що її заперечить"
+            title={tx('Теза тижня', 'Weekly thesis')}
+            hint={tx('Загальна картина ринку і що її заперечить', 'The big picture and what would invalidate it')}
             done={!!data.planText?.trim()}
           >
             <WriteBlock
               value={data.planText}
               onChange={(v) => patch({ planText: v })}
-              placeholder="Що очікуєш від ринку цього тижня і за яких умов ідея не спрацює?"
-              hint="Один абзац логіки вартий десяти індикаторів"
+              placeholder={tx('Що очікуєш від ринку цього тижня і за яких умов ідея не спрацює?', 'What do you expect from the market this week, and when would the idea fail?')}
+              hint={tx('Один абзац логіки вартий десяти індикаторів', 'One paragraph of logic beats ten indicators')}
               minRows={6}
             />
           </Section>
@@ -275,8 +276,8 @@ export default function WeeklyPlanView({
           storageKey="week-updates"
           onHide={() => blocks.hide('week-updates')}
           group="live"
-          title="Проміжні перевірки"
-          hint="Середа — гарний день звірити тезу з реальністю"
+          title={tx('Проміжні перевірки', 'Mid-week check-ins')}
+          hint={tx('Середа — гарний день звірити тезу з реальністю', 'Wednesday is a good day to check the thesis against reality')}
           done={progress.live >= 1 && data.updates.length > 0}
         >
           <div className="p-5 sm:p-6">
@@ -295,8 +296,8 @@ export default function WeeklyPlanView({
             storageKey="week-outcome"
             onHide={() => blocks.hide('week-outcome')}
             group="review"
-            title="Що вийшло по активах"
-            hint="Порівняй плановий bias з фактом по кожному розбору"
+            title={tx('Що вийшло по активах', 'Outcome by asset')}
+            hint={tx('Порівняй плановий bias з фактом по кожному розбору', 'Compare planned bias with the outcome for each analysis')}
             done={reviewedCount > 0}
             right={
               namedAnalyses.length > 0 && (
@@ -318,8 +319,8 @@ export default function WeeklyPlanView({
             storageKey="week-conclusions"
             onHide={() => blocks.hide('week-conclusions')}
             group="review"
-            title="Висновки тижня"
-            hint="Що забереш у наступний тиждень"
+            title={tx('Висновки тижня', 'Weekly takeaways')}
+            hint={tx('Що забереш у наступний тиждень', 'What you’ll carry into next week')}
             done={!!data.conclusionsText?.trim() && data.weekRating > 0}
           >
             <div className="px-5 pt-5 sm:px-6 sm:pt-6">
@@ -328,8 +329,8 @@ export default function WeeklyPlanView({
             <WriteBlock
               value={data.conclusionsText}
               onChange={(v) => patch({ conclusionsText: v })}
-              placeholder="Що спрацювало, що зламалось, що зробити інакше наступного тижня?"
-              hint="Один чіткий висновок вартий десяти розмитих"
+              placeholder={tx('Що спрацювало, що зламалось, що зробити інакше наступного тижня?', 'What worked, what broke, what will you do differently next week?')}
+              hint={tx('Один чіткий висновок вартий десяти розмитих', 'One clear takeaway beats ten vague ones')}
               minRows={6}
             />
           </Section>

@@ -61,7 +61,7 @@ const fmtShort = (iso) => {
 
 
 
-/* Єдина яскрава кнопка в рядку. Тінь навмисно слабша за колишню:
+/* Єдина яскрава кнопка в рядку. Тіні під нею більше немає зовсім:
    на темному тлі акцент і так видно першим, а фіолетова заграва
    під кнопкою — рівно той тип ефекту, який тестер назвав зайвим
    («більш стриманий стиль більш підходить»). */
@@ -75,10 +75,8 @@ const CtaBtn = ({ onClick, children }) => (
       fontFamily: T.sans,
       paddingLeft: 18,
       paddingRight: 18,
-      boxShadow: `0 4px 14px -6px rgba(${T.accRgb},0.5)`,
-    }}
-    onMouseEnter={(e) => (e.currentTarget.style.boxShadow = `0 8px 20px -6px rgba(${T.accRgb},0.6)`)}
-    onMouseLeave={(e) => (e.currentTarget.style.boxShadow = `0 4px 14px -6px rgba(${T.accRgb},0.5)`)}
+      boxShadow: 'none',
+    }}
   >
     <Plus size={16} strokeWidth={3} className="shrink-0 transition-transform duration-300 group-hover:rotate-90" />
     {children}
@@ -143,9 +141,7 @@ function GradientCta({ onClick, children }) {
       className="relative flex h-11 shrink-0 items-center gap-[9px] overflow-hidden rounded-[13px] px-[21px]"
       style={{
         background: `linear-gradient(180deg, ${hov ? 'var(--edge-acc), var(--edge-acc)' : 'var(--edge-acc), var(--edge-acc)'})`,
-        boxShadow: hov
-          ? `0 18px 40px -12px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)`
-          : `0 12px 30px -12px ${A(0.70)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
+        boxShadow: hov ? `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)` : `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
         transform: `translateY(${hov ? '-2px' : '0'})`,
         transition: 'transform .34s cubic-bezier(.22,1.2,.36,1), box-shadow .28s, background .2s',
       }}
@@ -242,7 +238,7 @@ function NewFolderCta({ onClick, children }) {
         border: '1px solid rgba(139,123,255,0.5)',
         color: '#fff',
         fontFamily: T.sans,
-        boxShadow: '0 10px 28px -12px rgba(139,123,255,0.4)',
+        boxShadow: 'none',
       }}
     >
       <span className="folder-cta-arc" aria-hidden="true">
@@ -421,7 +417,7 @@ function NoteTile({ note, color, date, pills, images, voices, icon, cover, tall,
         ...cardBackground(bg, c, hov),
         border: `1px solid ${hov ? `${c}66` : 'var(--edge-line)'}`,
         transition: SPRING,
-        boxShadow: hov ? `0 24px 48px -24px ${c}80` : '0 10px 24px -20px var(--edge-panel-glow, rgba(0,0,0,0.80))',
+        boxShadow: hov ? 'none' : `0 10px 24px -20px var(--edge-panel-glow, rgba(0,0,0,0.80))`,
         transform: hov ? 'translateY(-4px)' : 'none',
       }}
     >
@@ -540,7 +536,7 @@ function NoteLine({ note, color, date, pills, icon, pinned, onOpen, onEdit, onAr
         background: `linear-gradient(90deg, ${hov ? 'var(--edge-surface)' : 'var(--edge-panel)'}, var(--edge-sunken))`,
         border: `1px solid ${hov ? `${c}5e` : 'var(--edge-line)'}`,
         transition: SPRING,
-        boxShadow: hov ? `0 16px 34px -22px ${c}99` : 'none',
+        boxShadow: 'none',
         transform: hov ? 'translateX(4px)' : 'none',
       }}
     >
@@ -660,7 +656,7 @@ function FilterPill({ name, count, color, active, onClick }) {
         background: active ? tint({ hex: '2b', rgb: 0.17 }) : hov ? 'rgba(var(--edge-hair-rgb),0.07)' : 'rgba(var(--edge-hair-rgb),0.03)',
         border: `1px solid ${active ? tint({ hex: '80', rgb: 0.5 }) : hov ? 'var(--edge-line-hi)' : 'var(--edge-line)'}`,
         color: active ? 'var(--edge-text)' : hov ? 'var(--edge-text)' : 'var(--edge-text2)',
-        boxShadow: active ? `0 0 20px -8px ${color || A(0.8)}` : 'none',
+        boxShadow: 'none',
         transition: 'background .16s, border-color .16s, color .16s, box-shadow .2s',
       }}
     >
@@ -1204,8 +1200,9 @@ export default function Notes() {
           >
             <div className="min-w-0">
               <div className="flex items-center gap-[9px]">
-                <span className="h-[5px] w-[5px] rounded-full" style={{ background: 'var(--edge-acc)', boxShadow: `0 0 12px 2px ${A(0.67)}` }} />
-                <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-acc)' }}>
+                {/* Без світної крапки й не акцентом: крапка з ореолом над назвою —
+                    прикмета шаблону, а акцент належить головній дії. */}
+                <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-text3)' }}>
                   {tx('Нотатки', 'Notes')}
                 </span>
               </div>
@@ -1371,7 +1368,7 @@ export default function Notes() {
                     style={{
                       background: `${headColor}1f`,
                       border: `1px solid ${headColor}4d`,
-                      boxShadow: `inset 0 1px 0 ${headColor}55, 0 12px 30px -14px ${headColor}99`,
+                      boxShadow: `inset 0 1px 0 ${headColor}55`,
                       color: headColor,
                     }}
                   >
@@ -1386,8 +1383,7 @@ export default function Notes() {
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-[9px]">
-                      <span className="h-[5px] w-[5px] rounded-full" style={{ background: 'var(--edge-acc)', boxShadow: `0 0 12px 2px ${A(0.67)}` }} />
-                      <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.4px', color: 'var(--edge-acc)' }}>
+                      <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.4px', color: 'var(--edge-text3)' }}>
                         {scope === 'archive' ? tx('Архів', 'Archive') : tx('Папка', 'Folder')}
                       </span>
                     </div>

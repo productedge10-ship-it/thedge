@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Search, CornerDownLeft } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { searchPages, pathTo } from '../../lib/systemDoc';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Пошук по всій системі.
@@ -61,7 +62,7 @@ export default function SearchModal({ pages, onOpen, onClose }) {
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Шукати по всій системі…"
+            placeholder={tx('Шукати по всій системі…', 'Search the whole system…')}
             className="w-full bg-transparent text-[15px] outline-none"
             style={{ fontFamily: T.sans, color: T.text }}
           />
@@ -73,13 +74,13 @@ export default function SearchModal({ pages, onOpen, onClose }) {
         <div className="max-h-[52vh] overflow-y-auto p-2">
           {!q && (
             <p className="px-3 py-6 text-center text-[13.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              Введи слово — знайду і в назвах, і всередині сторінок.
+              {tx('Введи слово — знайду і в назвах, і всередині сторінок.', 'Type a word — I’ll search titles and page contents.')}
             </p>
           )}
 
           {q && results.length === 0 && (
             <p className="px-3 py-6 text-center text-[13.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              Нічого не знайшлось.
+              {tx('Нічого не знайшлось.', 'Nothing found.')}
             </p>
           )}
 
@@ -97,7 +98,7 @@ export default function SearchModal({ pages, onOpen, onClose }) {
                 <span className="mt-0.5 shrink-0 text-[16px]">{r.page.icon || '📄'}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14.5px] font-semibold" style={{ fontFamily: T.sans, color: on ? T.text : T.text2 }}>
-                    {r.page.title || 'Без назви'}
+                    {r.page.title || tx('Без назви', 'Untitled')}
                   </span>
                   {crumbs && (
                     <span className="block truncate text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>{crumbs}</span>

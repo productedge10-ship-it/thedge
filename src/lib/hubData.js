@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { todayKey } from './diagnostics';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Дані для стартової сторінки.
@@ -128,8 +129,8 @@ export const daysSince = (iso) => {
 
 export const greeting = () => {
   const h = new Date().getHours();
-  if (h < 5) return 'Ще не спиш';
-  if (h < 12) return 'Доброго ранку';
-  if (h < 18) return 'Доброго дня';
-  return 'Доброго вечора';
+  if (h < 5) return tx('Ще не спиш', 'Still up');
+  if (h < 12) return tx('Доброго ранку', 'Good morning');
+  if (h < 18) return tx('Доброго дня', 'Good afternoon');
+  return tx('Доброго вечора', 'Good evening');
 };

@@ -6,32 +6,34 @@
    1R = 1% депозиту, як і в бектестах.
 ================================================================== */
 
+import { t as tx, LOCALE } from './lang';
+
 export const MISTAKE_TYPES = {
-  early_entry:  { label: 'Ранній вхід',      hint: 'Не дочекався підтвердження' },
-  no_plan:      { label: 'Вхід без плану',   hint: 'Угоди не було в плані на день' },
-  micromanage:  { label: 'Мікроменеджмент',  hint: 'Руками чіпав позицію без причини' },
-  revenge:      { label: 'Відігравання',     hint: 'Вхід одразу після стопу' },
-  oversize:     { label: 'Завеликий ризик',  hint: 'Розмір більший за домовлений' },
-  late_exit:    { label: 'Пізній вихід',     hint: 'Тримав після сигналу на вихід' },
+  early_entry:  { label: tx('Ранній вхід', 'Early entry'),      hint: tx('Не дочекався підтвердження', "Didn't wait for confirmation") },
+  no_plan:      { label: tx('Вхід без плану', 'Unplanned entry'),   hint: tx('Угоди не було в плані на день', "The trade wasn't in the day's plan") },
+  micromanage:  { label: tx('Мікроменеджмент', 'Micromanaging'),  hint: tx('Руками чіпав позицію без причини', 'Messed with the position for no reason') },
+  revenge:      { label: tx('Відігравання', 'Revenge trade'),     hint: tx('Вхід одразу після стопу', 'Entry right after a stop-out') },
+  oversize:     { label: tx('Завеликий ризик', 'Oversized risk'),  hint: tx('Розмір більший за домовлений', 'Size bigger than agreed') },
+  late_exit:    { label: tx('Пізній вихід', 'Late exit'),     hint: tx('Тримав після сигналу на вихід', 'Held after the exit signal') },
 };
 
 export const EMOTIONS = [
-  { id: 'calm',       label: 'Спокій',      good: true },
-  { id: 'focus',      label: 'Фокус',       good: true },
-  { id: 'patience',   label: 'Терпіння',    good: true },
+  { id: 'calm',       label: tx('Спокій', 'Calm'),      good: true },
+  { id: 'focus',      label: tx('Фокус', 'Focus'),       good: true },
+  { id: 'patience',   label: tx('Терпіння', 'Patience'),    good: true },
   { id: 'fomo',       label: 'FOMO',        good: false },
-  { id: 'tilt',       label: 'Тільт',       good: false },
-  { id: 'fear',       label: 'Страх',       good: false },
-  { id: 'greed',      label: 'Жадібність',  good: false },
+  { id: 'tilt',       label: tx('Тільт', 'Tilt'),       good: false },
+  { id: 'fear',       label: tx('Страх', 'Fear'),       good: false },
+  { id: 'greed',      label: tx('Жадібність', 'Greed'),  good: false },
 ];
 
 /* Питання, з яких народжується нормальний висновок.
    Порожнє поле «опиши тиждень» люди заповнюють водою — конкретні
    питання дають конкретні відповіді. */
 export const PROMPTS = [
-  { id: 'worked',  label: 'Що спрацювало', question: 'Які рішення хочеш повторити наступного разу?', placeholder: 'Наприклад: чекав закриття 15m перед входом — жодного раннього стопу.' },
-  { id: 'broke',   label: 'Що зламалось',  question: 'Де саме ти вийшов за межі плану і чому?',     placeholder: 'Наприклад: після другого стопу поліз відігравати — мінус ще 1R.' },
-  { id: 'pattern', label: 'Закономірність', question: 'Що повторюється з тижня в тиждень?',          placeholder: 'Наприклад: усі мінуси — в азійську сесію.' },
+  { id: 'worked',  label: tx('Що спрацювало', 'What worked'), question: tx('Які рішення хочеш повторити наступного разу?', 'Which decisions do you want to repeat next time?'), placeholder: tx('Наприклад: чекав закриття 15m перед входом — жодного раннього стопу.', 'E.g.: waited for the 15m close before entering — no early stops.') },
+  { id: 'broke',   label: tx('Що зламалось', 'What broke'),  question: tx('Де саме ти вийшов за межі плану і чому?', 'Where exactly did you step outside the plan, and why?'),     placeholder: tx('Наприклад: після другого стопу поліз відігравати — мінус ще 1R.', 'E.g.: after the second stop I tried to win it back — another −1R.') },
+  { id: 'pattern', label: tx('Закономірність', 'Pattern'), question: tx('Що повторюється з тижня в тиждень?', 'What keeps repeating week after week?'),          placeholder: tx('Наприклад: усі мінуси — в азійську сесію.', 'E.g.: all the losses come in the Asian session.') },
 ];
 
 const d = (iso) => iso;
@@ -113,7 +115,7 @@ export const fmtDate = (iso) => {
   if (!iso) return '—';
   const dt = new Date(`${iso}T12:00:00`);
   if (isNaN(dt)) return iso;
-  return dt.toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' }).replace(/\sр\./, '');
+  return dt.toLocaleDateString(LOCALE, { day: '2-digit', month: 'short' }).replace(/\sр\./, '');
 };
 
 export const fmtRange = (from, to) => `${fmtDate(from)} — ${fmtDate(to)}`;
@@ -169,4 +171,14 @@ export function previousReview(reviews, from) {
     .sort((a, b) => (a.to < b.to ? 1 : -1))[0] || null;
 }
 
-export const SCORE_LABELS = ['', 'Провальний', 'Слабкий', 'Нормальний', 'Добрий', 'Еталонний'];
+/* Статус плану лежить у даних українським рядком і з ним порівнюють —
+   перекладаємо тільки при показі. */
+const PLAN_STATUS = {
+  'Розібрано': tx('Розібрано', 'Reviewed'),
+  'Без розбору': tx('Без розбору', 'Not reviewed'),
+  'Відпрацьовано': tx('Відпрацьовано', 'Played out'),
+  'Пропущено': tx('Пропущено', 'Skipped'),
+};
+export const planStatusLabel = (s) => PLAN_STATUS[s] || s;
+
+export const SCORE_LABELS = tx(['', 'Провальний', 'Слабкий', 'Нормальний', 'Добрий', 'Еталонний'], ['', 'Failed', 'Weak', 'Okay', 'Good', 'Textbook']);

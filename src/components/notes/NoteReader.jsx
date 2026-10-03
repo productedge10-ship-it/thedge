@@ -294,7 +294,7 @@ export default function NoteReader({
                     className="flex items-center gap-[7px] rounded-full px-2.5 py-1 text-[11.5px] font-bold"
                     style={{ background: `${c}1c`, border: `1px solid ${c}42`, color: `${c}f2`, fontFamily: T.sans }}
                   >
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: c, boxShadow: `0 0 8px 1px ${c}cc` }} />
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: c, boxShadow: 'none' }} />
                     {folder?.name || 'Без папки'}
                   </span>
                   <span className="text-[10.5px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '1.2px', color: 'var(--edge-text3)' }}>
@@ -313,11 +313,11 @@ export default function NoteReader({
                 className="relative flex h-9 items-center gap-2 overflow-hidden rounded-[11px] px-4"
                 style={{
                   background: 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))',
-                  boxShadow: `0 10px 24px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
+                  boxShadow: `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`,
                   transition: 'all .2s',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))'; e.currentTarget.style.boxShadow = `0 14px 32px -12px ${A(0.85)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)`; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))'; e.currentTarget.style.boxShadow = `0 10px 24px -12px ${A(0.7)}, inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))'; e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.30)`; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(180deg,var(--edge-acc),var(--edge-acc))'; e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.20)`; }}
               >
                 <Pencil size={14} strokeWidth={1.9} style={{ color: '#fff' }} />
                 <span className="text-[12.5px] font-bold" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>Редагувати</span>

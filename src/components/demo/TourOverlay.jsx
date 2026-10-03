@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ArrowRight } from 'lucide-react';
 import { C, F, A, Cat } from '../landing/v3/base';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Підказки в демо.
@@ -180,7 +181,7 @@ export default function TourOverlay({ step, index, total, onNext, onSkip }) {
               <button
                 type="button"
                 onClick={onSkip}
-                title="Вимкнути підказки"
+                title={tx('Вимкнути підказки', 'Turn off hints')}
                 style={{ display: 'grid', placeItems: 'center', width: 24, height: 24, borderRadius: 8, background: 'transparent', border: 0, color: C.text5, cursor: 'pointer' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = C.text5; }}
@@ -219,10 +220,10 @@ export default function TourOverlay({ step, index, total, onNext, onSkip }) {
               display: 'flex', alignItems: 'center', gap: 8,
               background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff',
               fontFamily: F.sans, fontSize: 13, fontWeight: 700, padding: '9px 16px', borderRadius: 11,
-              cursor: 'pointer', boxShadow: '0 10px 26px rgba(74,59,245,.34)',
+              cursor: 'pointer',
             }}
           >
-            {index + 1 === total ? 'Готово' : 'Далі'}
+            {index + 1 === total ? tx('Готово', 'Done') : tx('Далі', 'Next')}
             <ArrowRight size={13} strokeWidth={2.6} />
           </button>
         </div>

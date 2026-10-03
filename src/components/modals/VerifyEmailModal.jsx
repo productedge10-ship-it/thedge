@@ -8,6 +8,7 @@ import { T, SPRING } from '../../lib/theme';
 import { useAuth } from '../../context/AuthContext';
 import { notify } from '../../utils/notify';
 import { OPEN_EVENT } from '../../lib/emailGate';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Підтвердження пошти.
@@ -85,10 +86,10 @@ export default function VerifyEmailModal() {
           if (user?.id) sessionStorage.removeItem(dismissKey(user.id));
           setDone(true);
         } else {
-          notify.error('Не вдалось підтвердити', 'Спробуйте ще раз — надішліть новий лист.');
+          notify.error(tx('Не вдалось підтвердити', 'Couldn\'t verify'), tx('Спробуйте ще раз — надішліть новий лист.', 'Try again — send a new email.'));
         }
       } else {
-        notify.error('Не вдалось підтвердити', 'Посилання застаріле або вже використане. Надішліть нове.');
+        notify.error(tx('Не вдалось підтвердити', 'Couldn\'t verify'), tx('Посилання застаріле або вже використане. Надішліть нове.', 'The link has expired or was already used. Send a new one.'));
       }
     })();
 
@@ -148,9 +149,9 @@ export default function VerifyEmailModal() {
            цифрою тільки дублює її — і розходиться з нею, щойно одне
            з двох оновиться на секунду пізніше. Лишаємо коротке «чому». */
         startCooldown(Number(seconds));
-        notify.error('Зачекайте трохи', 'Лист уже надсилали нещодавно. Кнопка стане активною, щойно мине пауза.');
+        notify.error(tx('Зачекайте трохи', 'Hold on a moment'), tx('Лист уже надсилали нещодавно. Кнопка стане активною, щойно мине пауза.', 'An email was sent recently. The button will unlock once the pause is over.'));
       } else {
-        notify.error('Не вдалось надіслати', raw || 'Спробуйте ще раз за хвилину.');
+        notify.error(tx('Не вдалось надіслати', 'Couldn\'t send'), raw || tx('Спробуйте ще раз за хвилину.', 'Try again in a minute.'));
       }
     } finally {
       setSending(false);
@@ -189,16 +190,10 @@ export default function VerifyEmailModal() {
               boxShadow: '0 50px 120px -40px rgba(0,0,0,0.98)',
             }}
           >
-            {/* Акцентна риска згори — той самий прийом, що в решті вікон */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-px"
-              style={{ background: `linear-gradient(90deg, transparent, rgba(${T.accRgb},0.7), transparent)` }}
-            />
 
             <button
               onClick={dismiss}
-              aria-label="Закрити"
+              aria-label={tx('Закрити', 'Close')}
               className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-xl transition-colors"
               style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
               onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.background = T.surfaceHi; }}
@@ -223,11 +218,11 @@ export default function VerifyEmailModal() {
                 className="mt-5 text-[22px] font-bold"
                 style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
               >
-                Пошту підтверджено
+                {tx('Пошту підтверджено', 'Email verified')}
               </h2>
 
               <p className="mt-2.5 text-[14px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text2 }}>
-                Усе готово. Тепер можна оформити підписку Pro.
+                {tx('Усе готово. Тепер можна оформити підписку Pro.', 'All set. You can now subscribe to Pro.')}
               </p>
 
               <button
@@ -237,10 +232,10 @@ export default function VerifyEmailModal() {
                   fontFamily: T.sans,
                   background: T.acc,
                   color: 'var(--edge-on-acc, #0A0A0C)',
-                  boxShadow: `0 12px 30px -12px rgba(${T.accRgb},0.8)`,
+                  boxShadow: 'none',
                 }}
               >
-                Почати
+                {tx('Почати', 'Get started')}
               </button>
             </div>
             ) : (
@@ -261,19 +256,18 @@ export default function VerifyEmailModal() {
                 className="mt-5 text-[22px] font-bold"
                 style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
               >
-                {sent ? 'Лист надіслано' : 'Підтвердіть пошту'}
+                {sent ? tx('Лист надіслано', 'Email sent') : tx('Підтвердіть пошту', 'Verify your email')}
               </h2>
 
               <p className="mt-2.5 text-[14px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text2 }}>
                 {sent ? (
                   <>
-                    Перевірте <b style={{ color: T.text }}>{user.email}</b> — усередині посилання
-                    на підтвердження. Якщо листа немає, зазирніть у теку «Спам».
+                    {tx('Перевірте', 'Check')} <b style={{ color: T.text }}>{user.email}</b> {tx('— усередині посилання на підтвердження. Якщо листа немає, зазирніть у теку «Спам».', '— there\'s a verification link inside. If you don\'t see it, check your spam folder.')}
                   </>
                 ) : (
                   <>
-                    Надішлемо посилання на <b style={{ color: T.text }}>{user.email}</b>.
-                    Один клік — і все готово.
+                    {tx('Надішлемо посилання на', 'We\'ll send a link to')} <b style={{ color: T.text }}>{user.email}</b>.
+                    {' '}{tx('Один клік — і все готово.', 'One click and you\'re done.')}
                   </>
                 )}
               </p>
@@ -285,8 +279,7 @@ export default function VerifyEmailModal() {
                 >
                   <ShieldAlert size={16} strokeWidth={2.2} className="mt-0.5 shrink-0" style={{ color: T.acc }} />
                   <p className="text-[13px] leading-relaxed" style={{ fontFamily: T.sans, color: T.text2 }}>
-                    Підтвердження потрібне лише для оплати підписки — щоб чеки й листи
-                    про списання приходили саме тобі. Решта застосунку працює як зазвичай.
+                    {tx('Підтвердження потрібне лише для оплати підписки — щоб чеки й листи про списання приходили саме тобі. Решта застосунку працює як зазвичай.', 'Verification is only needed to pay for a subscription — so receipts and billing emails reach you. Everything else works as usual.')}
                   </p>
                 </div>
               )}
@@ -299,15 +292,15 @@ export default function VerifyEmailModal() {
                   fontFamily: T.sans,
                   background: left > 0 ? T.surfaceHi : T.acc,
                   color: left > 0 ? T.text3 : 'var(--edge-on-acc, #0A0A0C)',
-                  boxShadow: left > 0 ? 'none' : `0 12px 30px -12px rgba(${T.accRgb},0.8)`,
+                  boxShadow: 'none',
                 }}
               >
                 {sending && <Loader2 size={16} className="animate-spin" />}
                 {left > 0
-                  ? `Надіслати ще раз — ${left} с`
+                  ? tx(`Надіслати ще раз — ${left} с`, `Resend — ${left}s`)
                   : sending
-                    ? 'Надсилаємо…'
-                    : sent ? 'Надіслати ще раз' : 'Надіслати посилання'}
+                    ? tx('Надсилаємо…', 'Sending…')
+                    : sent ? tx('Надіслати ще раз', 'Resend') : tx('Надіслати посилання', 'Send link')}
               </button>
 
               <button
@@ -317,7 +310,7 @@ export default function VerifyEmailModal() {
                 onMouseEnter={(e) => { e.currentTarget.style.color = T.text2; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; }}
               >
-                Пізніше
+                {tx('Пізніше', 'Later')}
               </button>
             </div>
             )}

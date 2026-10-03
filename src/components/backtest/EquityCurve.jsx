@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { T, EASE } from '../../lib/theme';
 import { fmtR } from '../../lib/backtestStats';
 import { ACT, act, actGradient } from './accent';
+import { t as tx, LOCALE } from '../../lib/lang';
 
 /* ==================================================================
    Крива еквіті.
@@ -27,9 +28,9 @@ const DRAW = 1.1;
 const FS_AXIS = 11.5, FS_TICK = 11.5, FS_LAST = 14, FS_BADGE = 11.5;
 
 const RANGES = [
-  { label: 'Усі', keep: Infinity },
-  { label: 'Останні 10', keep: 10 },
-  { label: 'Останні 5', keep: 5 },
+  { label: tx('Усі', 'All'), keep: Infinity },
+  { label: tx('Останні 10', 'Last 10'), keep: 10 },
+  { label: tx('Останні 5', 'Last 5'), keep: 5 },
 ];
 
 /* Приємні для ока рівні сітки навколо наявного діапазону */
@@ -42,7 +43,7 @@ function domainOf(values) {
 }
 
 export default function EquityCurve({ stats }) {
-  const [range, setRange] = useState('Усі');
+  const [range, setRange] = useState(tx('Усі', 'All'));
   const [hover, setHover] = useState(null);
   const plot = useRef(null);
   const [W, setW] = useState(1240);
@@ -145,10 +146,10 @@ export default function EquityCurve({ stats }) {
       <div className="flex flex-wrap items-center justify-between gap-4 px-6 pb-4 pt-5">
         <div>
           <div className="text-[16.5px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}>
-            Крива еквіті
+            {tx('Крива еквіті', 'Equity curve')}
           </div>
           <div className="mt-1.5 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            Наростаючий R · просадка −{stats.maxDrawdownR.toFixed(2)}R
+            {tx('Наростаючий R · просадка', 'Cumulative R · drawdown')} −{stats.maxDrawdownR.toFixed(2)}R
           </div>
         </div>
 
@@ -182,7 +183,7 @@ export default function EquityCurve({ stats }) {
       <div className="relative px-5 pb-[18px]">
         {!enough ? (
           <div ref={plot} className="grid h-[220px] place-items-center text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            Крива зʼявиться після першої угоди.
+            {tx('Крива зʼявиться після першої угоди.', 'The curve appears after your first trade.')}
           </div>
         ) : (
           <>
@@ -382,15 +383,15 @@ export default function EquityCurve({ stats }) {
                   className="px-4 py-3 text-[14px] font-bold"
                   style={{ fontFamily: T.sans, color: T.text, borderBottom: `1px solid ${T.line}` }}
                 >
-                  Угода {tip.label}
+                  {tx('Угода', 'Trade')} {tip.label}
                 </div>
                 <div className="flex flex-col gap-[9px] px-4 pb-3.5 pt-3">
                   {[
-                    tip.date && { k: 'Дата', v: tip.date, c: T.text },
-                    tip.tradeR != null && { k: 'Ця угода', v: fmtR(tip.tradeR), c: tip.tradeR > 0 ? T.ok : tip.tradeR < 0 ? T.bad : T.text3 },
-                    { k: 'Накопичено', v: fmtR(tip.r), c: tip.r >= 0 ? T.ok : T.bad },
-                    { k: 'Баланс', v: `$${tip.balance.toLocaleString('uk-UA')}`, c: T.text },
-                    tip.dd < 0 && { k: 'Просадка', v: `${tip.dd.toFixed(2)}R`, c: T.warn },
+                    tip.date && { k: tx('Дата', 'Date'), v: tip.date, c: T.text },
+                    tip.tradeR != null && { k: tx('Ця угода', 'This trade'), v: fmtR(tip.tradeR), c: tip.tradeR > 0 ? T.ok : tip.tradeR < 0 ? T.bad : T.text3 },
+                    { k: tx('Накопичено', 'Cumulative'), v: fmtR(tip.r), c: tip.r >= 0 ? T.ok : T.bad },
+                    { k: tx('Баланс', 'Balance'), v: `$${tip.balance.toLocaleString(LOCALE)}`, c: T.text },
+                    tip.dd < 0 && { k: tx('Просадка', 'Drawdown'), v: `${tip.dd.toFixed(2)}R`, c: T.warn },
                   ].filter(Boolean).map((row) => (
                     <div key={row.k} className="flex items-center justify-between gap-6">
                       <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>{row.k}</span>

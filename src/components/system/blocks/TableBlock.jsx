@@ -1,4 +1,5 @@
 import { T } from '../../../lib/theme';
+import { t as tx } from '../../../lib/lang';
 
 /* ==================================================================
    Таблиця (макет «System Section v2»).
@@ -48,7 +49,7 @@ export default function TableBlock({ block, onChange }) {
                     {r === 0 && cols > 1 && (
                       <button
                         onClick={() => delCol(c)}
-                        title="Прибрати колонку"
+                        title={tx('Прибрати колонку', 'Remove column')}
                         className="absolute -top-[9px] right-1 z-10 opacity-0 transition-opacity duration-150 group-hover/cell:opacity-100"
                         style={delBtn}
                         onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
@@ -60,7 +61,7 @@ export default function TableBlock({ block, onChange }) {
                     {r > 0 && c === cols - 1 && rows.length > 2 && (
                       <button
                         onClick={() => delRow(r)}
-                        title="Прибрати рядок"
+                        title={tx('Прибрати рядок', 'Remove row')}
                         className="absolute right-[-30px] top-1/2 z-10 -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover/row:opacity-100"
                         style={{ ...delBtn, width: 19, height: 19 }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
@@ -73,7 +74,7 @@ export default function TableBlock({ block, onChange }) {
                     <input
                       value={cell}
                       onChange={(e) => setCell(r, c, e.target.value)}
-                      placeholder={r === 0 ? 'Колонка' : '—'}
+                      placeholder={r === 0 ? tx('Колонка', 'Column') : '—'}
                       className="w-full bg-transparent outline-none transition-colors duration-150 placeholder:opacity-40"
                       style={
                         r === 0
@@ -113,7 +114,7 @@ export default function TableBlock({ block, onChange }) {
           onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.16)`; e.currentTarget.style.color = '#b3a8ff'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.08)`; e.currentTarget.style.color = T.acc; }}
         >
-          + рядок
+          {tx('+ рядок', '+ row')}
         </button>
         <button
           onClick={addCol}
@@ -122,7 +123,7 @@ export default function TableBlock({ block, onChange }) {
           onMouseEnter={(e) => { e.currentTarget.style.color = T.text2; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
         >
-          + колонку
+          {tx('+ колонку', '+ column')}
         </button>
       </div>
     </div>

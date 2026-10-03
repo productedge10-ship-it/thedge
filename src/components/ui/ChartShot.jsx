@@ -11,6 +11,7 @@ import { tvImage } from '../../lib/imageStore';
    прочитати чужу картинку попіксельно, обійшовши брак CORS-заголовка
    в TradingView. Другої копії тієї обхідної логіки бути не повинно. */
 import { loadForPixels } from '../../lib/tfDetect';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Скрін графіка — той самий, що в блоках плану.
@@ -143,17 +144,17 @@ export default function ChartShot({
           <div className="flex flex-col items-center gap-2.5 px-6 text-center">
             <ImageOff size={24} strokeWidth={1.6} style={{ color: T.bad }} />
             <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
-              Картинка не відкрилась
+              {tx('Картинка не відкрилась', 'Image failed to load')}
             </span>
             <span className="text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              Посилання не на зображення або знімок уже видалено
+              {tx('Посилання не на зображення або знімок уже видалено', 'The link isn’t an image, or the screenshot was deleted')}
             </span>
           </div>
         ) : (
           <motion.img
             key={src}
             src={src}
-            alt="Графік"
+            alt={tx('Графік', 'Chart')}
             draggable={false}
             onClick={() => setFull(true)}
             onError={() => setBroken(true)}
@@ -173,10 +174,10 @@ export default function ChartShot({
         <div className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2 opacity-0 transition-opacity duration-200 group-hover/shot:opacity-100">
           {!broken && (
             <>
-              <OverlayBtn icon={Maximize2} label="На весь екран" onClick={() => setFull(true)} />
+              <OverlayBtn icon={Maximize2} label={tx('На весь екран', 'Fullscreen')} onClick={() => setFull(true)} />
               <OverlayBtn
                 icon={dim ? Moon : Sun}
-                label={dim ? 'Повернути яскравість' : 'Приглушити'}
+                label={dim ? tx('Повернути яскравість', 'Restore brightness') : tx('Приглушити', 'Dim')}
                 active={dim}
                 onClick={() => setDim((v) => !v)}
               />
@@ -185,7 +186,7 @@ export default function ChartShot({
           {onRemove && (
             <OverlayBtn
               icon={X}
-              label="Прибрати скрін"
+              label={tx('Прибрати скрін', 'Remove screenshot')}
               danger
               onClick={() => onRemove(images[Math.min(i, count - 1)])}
             />
@@ -197,7 +198,7 @@ export default function ChartShot({
           <>
             <button
               type="button"
-              aria-label="Попередній скрін"
+              aria-label={tx('Попередній скрін', 'Previous screenshot')}
               onClick={() => setI((n) => (n - 1 + count) % count)}
               className="absolute left-2 top-1/2 z-20 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full opacity-0 transition-opacity group-hover/shot:opacity-100"
               style={{ background: 'rgba(10,10,12,0.78)', border: `1px solid ${T.line}`, color: T.text2 }}
@@ -206,7 +207,7 @@ export default function ChartShot({
             </button>
             <button
               type="button"
-              aria-label="Наступний скрін"
+              aria-label={tx('Наступний скрін', 'Next screenshot')}
               onClick={() => setI((n) => (n + 1) % count)}
               className="absolute right-2 top-1/2 z-20 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full opacity-0 transition-opacity group-hover/shot:opacity-100"
               style={{ background: 'rgba(10,10,12,0.78)', border: `1px solid ${T.line}`, color: T.text2 }}
@@ -219,7 +220,7 @@ export default function ChartShot({
                 <button
                   key={url}
                   type="button"
-                  aria-label={`Скрін ${n + 1}`}
+                  aria-label={tx(`Скрін ${n + 1}`, `Screenshot ${n + 1}`)}
                   onClick={() => setI(n)}
                   className="h-1.5 rounded-full transition-all duration-200"
                   style={{
@@ -251,7 +252,7 @@ export default function ChartShot({
               <motion.img
                 key={src}
                 src={src}
-                alt="Графік"
+                alt={tx('Графік', 'Chart')}
                 draggable={false}
                 initial={{ scale: 0.97, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}

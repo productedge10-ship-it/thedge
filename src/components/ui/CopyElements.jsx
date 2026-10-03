@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
+import { t as tx } from '../../lib/lang';
 
 export function CopyButton({ textToCopy, size = 16, className = "text-zinc-500 hover:text-[var(--edge-text)] transition-colors p-1.5", style }) {
   const [copied, setCopied] = useState(false);
@@ -13,7 +14,7 @@ export function CopyButton({ textToCopy, size = 16, className = "text-zinc-500 h
   };
 
   return (
-    <button onClick={handleCopy} className={className} style={style} title="Скопіювати">
+    <button onClick={handleCopy} className={className} style={style} title={tx('Скопіювати', 'Copy')}>
       {copied ? <Check size={size} className="text-emerald-500" /> : <Copy size={size} />}
     </button>
   );
@@ -24,7 +25,7 @@ export function InputWithCopy({ label, value, setValue, dotColor, textColor }) {
   
   return (
     <div className="relative flex items-center bg-black/40 border border-[#333] rounded-xl overflow-hidden focus-within:border-blue-500/50 transition-all">
-      <div className={`absolute left-4 w-2 h-2 rounded-full ${dotColor} shadow-[0_0_10px_currentColor]`}></div>
+      <div className={`absolute left-4 w-2 h-2 rounded-full ${dotColor}`}></div>
       <input 
         type="number" 
         value={value} 

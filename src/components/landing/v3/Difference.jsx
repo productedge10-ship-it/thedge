@@ -142,7 +142,7 @@ export default function Difference() {
     <section ref={wrapRef} style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.acc }}>{tx('РІЗНИЦЯ', 'THE DIFFERENCE')}</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.text3 }}>{tx('РІЗНИЦЯ', 'THE DIFFERENCE')}</span>
       </div>
 
       <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(28px,2.7vw,52px)', letterSpacing: '-1.9px', lineHeight: 1.08, margin: '0 0 28px', color: '#fff' }}>
@@ -169,23 +169,6 @@ export default function Difference() {
           cursor: 'ew-resize', outline: 'none', touchAction: 'pan-y',
         }}
       >
-        <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,transparent,${A(0.55)},transparent)` }} />
-        <span
-          aria-hidden
-          style={{
-            position: 'absolute', top: -90, left: -60, width: 360, height: 360, filter: 'blur(70px)', pointerEvents: 'none',
-            transition: 'background .4s ease',
-            background: t < 0.5 ? 'radial-gradient(circle,rgba(255,123,123,.14),transparent 70%)' : 'radial-gradient(circle,rgba(74,59,245,.16),transparent 70%)',
-          }}
-        />
-        <span
-          aria-hidden
-          style={{
-            position: 'absolute', bottom: -110, right: -40, width: 340, height: 340, filter: 'blur(70px)', pointerEvents: 'none',
-            transition: 'background .4s ease',
-            background: t < 0.5 ? 'radial-gradient(circle,rgba(245,163,59,.1),transparent 70%)' : 'radial-gradient(circle,rgba(47,191,143,.14),transparent 70%)',
-          }}
-        />
 
         <div style={{ position: 'relative', display: 'flex', gap: 36, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* ---------- індикатор ---------- */}
@@ -196,7 +179,7 @@ export default function Difference() {
                 <circle
                   cx="104" cy="104" r="88" fill="none" strokeWidth="10" strokeLinecap="round"
                   strokeDasharray="552.9" stroke={accent} strokeDashoffset={(552.9 * (1 - t)).toFixed(1)}
-                  style={{ filter: `drop-shadow(0 0 12px ${accent})` }}
+                  style={{ filter: 'none' }}
                 />
               </svg>
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>

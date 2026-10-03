@@ -5,6 +5,7 @@ import { T } from '../../lib/theme';
 import { fromTrades } from '../../lib/monteCarlo';
 import WhatIf from './WhatIf';
 import Risk from './Risk';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Симулятор.
@@ -33,17 +34,17 @@ const STEPS = [
     id: 'past',
     n: 1,
     icon: FlaskConical,
-    label: 'Твої угоди',
-    title: 'Скільки коштували звички',
-    hint: 'Знімаєш правило — крива перераховується на твоїй же історії.',
+    label: tx('Твої угоди', 'Your trades'),
+    title: tx('Скільки коштували звички', 'What your habits cost'),
+    hint: tx('Знімаєш правило — крива перераховується на твоїй же історії.', 'Toggle a rule and the curve is recalculated on your own history.'),
   },
   {
     id: 'future',
     n: 2,
     icon: ShieldAlert,
-    label: 'Тисяча майбутніх',
-    title: 'Що буде далі',
-    hint: 'Та сама система, прогнана вперед 1200 разів: межі, просадка, ціль.',
+    label: tx('Тисяча майбутніх', 'A thousand futures'),
+    title: tx('Що буде далі', 'What happens next'),
+    hint: tx('Та сама система, прогнана вперед 1200 разів: межі, просадка, ціль.', 'The same system run forward 1,200 times: limits, drawdown, target.'),
   },
 ];
 
@@ -86,7 +87,7 @@ function Rail({ step, setStep, carried }) {
                   background: on ? `rgba(${T.accRgb},0.16)` : done ? `rgba(${T.okRgb},0.14)` : T.surface,
                   border: `1px solid ${on ? T.lineAcc : done ? `rgba(${T.okRgb},0.4)` : T.line}`,
                   color,
-                  boxShadow: on ? `0 0 22px -6px rgba(${T.accRgb},0.9)` : 'none',
+                  boxShadow: 'none',
                 }}
               >
                 {done ? <Check size={13} strokeWidth={2.6} /> : s.n}
@@ -128,13 +129,13 @@ function Rail({ step, setStep, carried }) {
             >
               {carried.applied ? (
                 <>
-                  Параметри взяті з першого кроку: <b style={{ color: T.text }}>{carried.label}</b>.
-                  Далі їх можна крутити повзунками — журнал від цього не зміниться.
+                  {tx('Параметри взяті з першого кроку:', 'Parameters taken from step one:')} <b style={{ color: T.text }}>{carried.label}</b>.
+                  {' '}{tx('Далі їх можна крутити повзунками — журнал від цього не зміниться.', "You can tweak them with the sliders — your journal won't change.")}
                 </>
               ) : (
                 <>
-                  Після фільтра лишилось <b style={{ color: T.text }}>{carried.label}</b> — замало,
-                  щоб рахувати з цього вінрейт. Прогноз стартував із базових значень, постав свої повзунками.
+                  {tx('Після фільтра лишилось', 'After the filter only')} <b style={{ color: T.text }}>{carried.label}</b>{' '}
+                  {tx('— замало, щоб рахувати з цього вінрейт. Прогноз стартував із базових значень, постав свої повзунками.', "left — too few to calculate a win rate. The forecast started from default values; set your own with the sliders.")}
                 </>
               )}
             </div>

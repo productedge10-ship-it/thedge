@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Star, Search, Check, Sunrise, Repeat, Layers, Loader2 } from 'lucide-react';
 import AssetIcon from '../ui/AssetIcon';
 import { useAuth } from '../../context/AuthContext';
-import { loadTodayPairs, loadFrequentPairs, localDay } from '../../lib/planAssets';
+import { loadTodayPairs, loadFrequentPairs, localDay, pairLabel } from '../../lib/planAssets';
 import { T, EASE, SPRING } from './planTheme';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Перемикач активів на лівій рейці.
@@ -155,7 +156,7 @@ export default function AssetSwitcher({
   const todayList = useMemo(
     () => todayPairs
       .filter((p) => p !== currentPair)
-      .map((p) => ({ ...(byName.get(p) || { symbol: p }), note: 'план на сьогодні' })),
+      .map((p) => ({ ...(byName.get(p) || { symbol: p }), note: tx('план на сьогодні', 'today’s plan') })),
     [todayPairs, byName, currentPair],
   );
 
@@ -166,7 +167,7 @@ export default function AssetSwitcher({
       .slice(0, 6)
       .map((f) => ({
         ...(byName.get(f.symbol) || { symbol: f.symbol }),
-        note: `${f.count} ${f.count === 1 ? 'план' : f.count < 5 ? 'плани' : 'планів'}`,
+        note: tx(`${f.count} ${f.count === 1 ? 'план' : f.count < 5 ? 'плани' : 'планів'}`, `${f.count} ${f.count === 1 ? 'plan' : 'plans'}`),
       })),
     [frequent, byName, currentPair, todayPairs],
   );
@@ -194,7 +195,7 @@ export default function AssetSwitcher({
       <button
         onClick={() => setOpen(!open)}
         className="group relative flex items-center"
-        title="Перемкнути актив"
+        title={tx('Перемкнути актив', 'Switch asset')}
       >
         <span
           className="relative grid h-11 w-11 place-items-center rounded-xl transition-all duration-200"
@@ -227,7 +228,7 @@ export default function AssetSwitcher({
             style={{ background: T.surface, border: `1px solid ${T.lineHi}`, boxShadow: '0 12px 30px -8px var(--edge-panel-glow, rgba(0,0,0,0.6))' }}
           >
             <span className="text-[14px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
-              {currentPair || 'Вибрати актив'}
+              {pairLabel(currentPair) || tx('Вибрати актив', 'Choose asset')}
             </span>
           </span>
         )}
@@ -256,7 +257,7 @@ export default function AssetSwitcher({
                 ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Пошук активу..."
+                placeholder={tx('Пошук активу...', 'Search assets...')}
                 spellCheck={false}
                 className="w-full border-none bg-transparent outline-none"
                 style={{ fontFamily: T.sans, fontSize: 13, color: T.text }}
@@ -271,7 +272,7 @@ export default function AssetSwitcher({
             <div className="max-h-[420px] overflow-y-auto p-1.5 custom-scrollbar">
               {query ? (
                 results.length ? (
-                  <Group icon={Search} label={`Знайдено ${results.length}`}>
+                  <Group icon={Search} label={tx(`Знайдено ${results.length}`, `Found ${results.length}`)}>
                     {results.map((a) => (
                       <AssetRow
                         key={a.symbol}
@@ -286,20 +287,20 @@ export default function AssetSwitcher({
                 ) : (
                   <div className="px-3 py-8 text-center">
                     <span className="text-[14px] font-medium" style={{ color: T.text4 }}>
-                      Нічого не знайшлось
+                      {tx('Нічого не знайшлось', 'Nothing found')}
                     </span>
                   </div>
                 )
               ) : (
                 <>
                   {current && (
-                    <Group icon={Check} label="Зараз">
+                    <Group icon={Check} label={tx('Зараз', 'Current')}>
                       <AssetRow asset={current} active onPick={() => setOpen(false)} />
                     </Group>
                   )}
 
                   {todayList.length > 0 && (
-                    <Group icon={Sunrise} label="Сьогодні" hint={`${todayList.length + (current ? 1 : 0)} плани`}>
+                    <Group icon={Sunrise} label={tx('Сьогодні', 'Today')} hint={tx(`${todayList.length + (current ? 1 : 0)} плани`, `${todayList.length + (current ? 1 : 0)} plans`)}>
                       {todayList.map((a) => (
                         <AssetRow
                           key={a.symbol}
@@ -313,7 +314,7 @@ export default function AssetSwitcher({
                   )}
 
                   {frequentList.length > 0 && (
-                    <Group icon={Repeat} label="Часто пишеш">
+                    <Group icon={Repeat} label={tx('Часто пишеш', 'Frequent')}>
                       {frequentList.map((a) => (
                         <AssetRow
                           key={a.symbol}
@@ -330,7 +331,7 @@ export default function AssetSwitcher({
                     <div className="flex items-center justify-center gap-2 px-3 py-8">
                       <Loader2 size={14} className="animate-spin" style={{ color: T.text4 }} />
                       <span className="text-[13.5px]" style={{ color: T.text4, fontFamily: T.sans }}>
-                        дивлюсь історію планів…
+                        {tx('дивлюсь історію планів…', 'checking your plan history…')}
                       </span>
                     </div>
                   )}
@@ -338,8 +339,8 @@ export default function AssetSwitcher({
                   {!loading && !current && !todayList.length && !frequentList.length && (
                     <div className="px-3 py-8 text-center">
                       <span className="text-[14px] font-medium leading-relaxed" style={{ color: T.text4 }}>
-                        Тут зʼявляться активи, по яких ти пишеш плани.<br />
-                        Почни вводити символ або відкрий каталог.
+                        {tx('Тут зʼявляться активи, по яких ти пишеш плани.', 'Assets you write plans for will show up here.')}<br />
+                        {tx('Почни вводити символ або відкрий каталог.', 'Start typing a symbol or open the catalog.')}
                       </span>
                     </div>
                   )}
@@ -356,7 +357,7 @@ export default function AssetSwitcher({
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; }}
             >
               <Layers size={12} strokeWidth={2.4} />
-              Повний каталог активів
+              {tx('Повний каталог активів', 'Full asset catalog')}
             </button>
           </motion.div>
         )}

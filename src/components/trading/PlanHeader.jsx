@@ -6,6 +6,8 @@ import AsciiDecode from '../ui/AsciiDecode';
 import { T, SPRING, EASE } from './planTheme';
 import { usePlanBlocks, PHASE_LABEL } from '../../lib/planBlocks';
 import { weekRelLabel } from '../../lib/weekPlan';
+import { t as tx } from '../../lib/lang';
+import { pairLabel } from '../../lib/planAssets';
 
 /* ==================================================================
    Хедер плану. Раніше 6 різнокольорових кнопок кричали однаково
@@ -25,13 +27,13 @@ const CTA_STYLE = {
   color: T.text,
   background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.sunken})`,
   border: `1px solid ${T.lineAcc}`,
-  boxShadow: `0 10px 26px -14px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`,
+  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
 };
 
 /* Ховер світлом, без зсуву: кнопка стоїть крайньою в тісному рядку,
    і будь-який рух тягне сусідів за собою. */
 const ctaIn = (e) => {
-  e.currentTarget.style.boxShadow = `0 16px 36px -14px rgba(${T.accRgb},0.8), 0 0 0 3px rgba(${T.accRgb},0.13)`;
+  e.currentTarget.style.boxShadow = 'none';
   e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
 };
 
@@ -103,7 +105,7 @@ function ShareBtn({ onShare }) {
     <button
       type="button"
       onClick={click}
-      title="Відкрити доступ і скопіювати посилання"
+      title={tx('Відкрити доступ і скопіювати посилання', 'Share and copy link')}
       className="flex h-[38px] items-center gap-2 rounded-xl px-3.5 text-[14px] font-semibold transition-all duration-200 active:scale-[0.97]"
       style={{
         background: copied ? `rgba(${T.okRgb},0.12)` : `rgba(${T.accRgb},0.08)`,
@@ -115,7 +117,7 @@ function ShareBtn({ onShare }) {
       onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
     >
       {busy ? <Loader2 size={14} className="animate-spin" /> : copied ? <Check size={14} strokeWidth={2.8} /> : <Share2 size={14} strokeWidth={2.3} />}
-      {copied ? 'Скопійовано' : 'Поділитись'}
+      {copied ? tx('Скопійовано', 'Copied') : tx('Поділитись', 'Share')}
     </button>
   );
 }
@@ -156,8 +158,8 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
            стоїть лише назва активу, і здогадатись, що по ній
            перемикаються, можна тільки клікнувши. */
         title={plans.length > 1
-          ? 'Перемкнутись між планами на сьогодні'
-          : 'Плани на сьогодні'}
+          ? tx('Перемкнутись між планами на сьогодні', 'Switch between today’s plans')
+          : tx('Плани на сьогодні', 'Today’s plans')}
         className="flex h-[38px] items-center gap-2 rounded-xl pl-2 pr-3 transition-all duration-200"
         style={{
           fontFamily: T.sans,
@@ -179,7 +181,7 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
           {/* Множина навмисно. «План» читається як назва розділу —
               тобто як кнопка, що кудись веде. «Плани» одразу каже,
               що їх декілька і що тут між ними вибирають. */}
-          {current || 'Плани'}
+          {pairLabel(current) || tx('Плани', 'Plans')}
         </span>
         {plans.length > 1 && (
           <span
@@ -209,7 +211,7 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
             }}
           >
             <div className="px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              {plans.length > 1 ? 'Перемкнутись на план' : 'Плани на сьогодні'}
+              {plans.length > 1 ? tx('Перемкнутись на план', 'Switch plan') : tx('Плани на сьогодні', 'Today’s plans')}
             </div>
 
             {plans.map((p) => {
@@ -228,7 +230,7 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
                     <AssetIcon symbol={p.symbol} category={p.category} />
                   </span>
                   <span className="flex-1 truncate text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: on ? T.acc : T.text2 }}>
-                    {p.symbol}
+                    {pairLabel(p.symbol)}
                   </span>
                   {on && <Check size={13} strokeWidth={3} style={{ color: T.acc }} />}
                 </button>
@@ -237,7 +239,7 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
 
             {!plans.length && (
               <div className="px-2.5 py-2 text-[13px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                Планів на сьогодні ще немає
+                {tx('Планів на сьогодні ще немає', 'No plans for today yet')}
               </div>
             )}
 
@@ -254,7 +256,7 @@ function PlanSwitcher({ plans = [], current, onPick, onAdd }) {
                 <Plus size={12} strokeWidth={2.6} style={{ color: T.text4 }} />
               </span>
               <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>
-                {plans.length ? 'Ще один актив…' : 'Створити план…'}
+                {plans.length ? tx('Ще один актив…', 'Another asset…') : tx('Створити план…', 'Create plan…')}
               </span>
             </button>
           </motion.div>
@@ -312,8 +314,8 @@ function BlocksMenu({ mode }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label="Блоки плану"
-        title="Блоки плану"
+        aria-label={tx('Блоки плану', 'Plan blocks')}
+        title={tx('Блоки плану', 'Plan blocks')}
         className="group relative flex h-[38px] items-center gap-2 rounded-xl px-3 transition-all duration-200 active:scale-[0.97]"
         style={{
           fontFamily: T.sans,
@@ -355,7 +357,7 @@ function BlocksMenu({ mode }) {
               className="px-2.5 pb-2 pt-1.5 text-[12px] leading-[17px]"
               style={{ fontFamily: T.sans, color: T.text3 }}
             >
-              Залиш тільки те, чим користуєшся. Записи прихованих блоків не зникають.
+              {tx('Залиш тільки те, чим користуєшся. Записи прихованих блоків не зникають.', 'Keep only what you use. Notes in hidden blocks aren’t lost.')}
             </div>
 
             <div className="max-h-[52vh] overflow-y-auto">
@@ -443,8 +445,8 @@ function WeekArrow({ dir, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      title={dir === 'prev' ? 'Попередній тиждень' : 'Наступний тиждень'}
-      aria-label={dir === 'prev' ? 'Попередній тиждень' : 'Наступний тиждень'}
+      title={dir === 'prev' ? tx('Попередній тиждень', 'Previous week') : tx('Наступний тиждень', 'Next week')}
+      aria-label={dir === 'prev' ? tx('Попередній тиждень', 'Previous week') : tx('Наступний тиждень', 'Next week')}
       className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl transition-all duration-200 active:scale-95"
       style={{ background: T.surface, border: `1px solid ${T.line}` }}
       onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.background = T.surfaceHi; }}
@@ -482,7 +484,7 @@ function WeekChip({ offset, canReturn, onReturn }) {
     <button
       type="button"
       onClick={onReturn}
-      title="Повернутись до тижня, який плануєш"
+      title={tx('Повернутись до тижня, який плануєш', 'Back to the week you’re planning')}
       className="flex h-[30px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-semibold transition-all duration-200 active:scale-[0.97]"
       style={style}
       onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.35)')}
@@ -633,7 +635,7 @@ export default function PlanHeader({
               Назва теж змінилась: «Telegram» називало канал доставки, а
               людина в цю мить думає не про канал, а про те, що хоче, аби
               їй нагадали. */}
-          <IconBtn icon={Send} label="Нагадування" onClick={onOpenTgAlert} tone={T.info} />
+          <IconBtn icon={Send} label={tx('Нагадування', 'Reminders')} onClick={onOpenTgAlert} tone={T.info} />
           <ShareBtn onShare={onShare} />
 
           {/* Головна дія хедера. */}

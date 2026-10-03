@@ -71,7 +71,7 @@ function FieldTrigger({ label, value, icon, active, open, onClick, minWidth = 16
   const hover = (e) => {
     if (open || active) return;
     e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
-    e.currentTarget.style.boxShadow = `0 12px 30px -14px rgba(${T.accRgb},0.5), 0 0 0 3px rgba(${T.accRgb},0.10)`;
+    e.currentTarget.style.boxShadow = 'none';
   };
   const unhover = (e) => {
     if (open || active) return;
@@ -94,7 +94,7 @@ function FieldTrigger({ label, value, icon, active, open, onClick, minWidth = 16
         minWidth,
         background: active ? `rgba(${T.accRgb},0.10)` : T.surface,
         border: `1px solid ${open || active ? T.lineAcc : T.line}`,
-        boxShadow: open ? `0 10px 26px -10px rgba(${T.accRgb},0.5)` : "none",
+        boxShadow: 'none',
       }}
     >
       {/* Іконка в своєму квадраті: без нього прапорець пари й значок
@@ -425,9 +425,7 @@ function QuickTile({ f, on, n, onToggle }) {
         background: on ? `linear-gradient(165deg, rgba(${f.rgb},0.16), rgba(${f.rgb},0.03))` : T.sunken,
         border: `1px solid ${on ? `rgba(${f.rgb},0.45)` : `rgba(${f.rgb},0.16)`}`,
         opacity: dim ? 0.45 : 1,
-        boxShadow: on
-          ? `inset 0 1px 0 rgba(255,255,255,0.07), 0 10px 24px -12px rgba(${f.rgb},0.6)`
-          : "inset 0 1px 0 rgba(255,255,255,0.025)",
+        boxShadow: on ? `inset 0 1px 0 rgba(255,255,255,0.07)` : `inset 0 1px 0 rgba(255,255,255,0.025)`,
         cursor: dim ? "default" : "pointer",
       }}
       onMouseEnter={(e) => {
@@ -1211,18 +1209,18 @@ export default function TradingJournal() {
                 border: `1px solid ${T.lineAcc}`,
                 color: T.text,
                 fontFamily: T.sans,
-                boxShadow: `0 10px 28px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`,
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
               }}
               /* Ховер — світлом, а не рухом: кнопка стоїть у рядку з
                  фільтрами, і будь-який зсув тягнув рядок за собою.
                  Ореол розростається й трохи яскравішає сама заливка —
                  цього достатньо, щоб було ясно, що під курсором. */
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = `0 16px 40px -14px rgba(${T.accRgb},0.8), 0 0 0 3px rgba(${T.accRgb},0.14)`;
+                e.currentTarget.style.boxShadow = 'none';
                 e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.55)`;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = `0 10px 28px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`;
+                e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.05)`;
                 e.currentTarget.style.borderColor = T.lineAcc;
               }}
             >

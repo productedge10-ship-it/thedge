@@ -572,7 +572,6 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
           background: rgba(${T.accRgb},0.18);
           color: #fff;
           border-color: rgba(${T.accRgb},0.8);
-          box-shadow: 0 0 20px rgba(${T.accRgb},0.3);
           transform: translateY(-2px);
         }
         .ad-payout-cta:active:not(:disabled) { transform: translateY(0); }
@@ -706,7 +705,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               />
             </span>
             <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold sm:text-[12.5px]" style={{ fontFamily: T.sans, color: isClosed ? T.text3 : T.ok }}>
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: isClosed ? T.text3 : T.ok, boxShadow: isClosed ? 'none' : `0 0 8px ${T.ok}` }} />
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: isClosed ? T.text3 : T.ok, boxShadow: 'none' }} />
               <span className="shrink-0">{isClosed ? 'Closed' : 'Active'}</span>
               <span className="truncate" style={{ color: T.text3 }}>· {money(initial)}<span className="hidden sm:inline"> account</span></span>
               {!isClosed && currentPhase && (
@@ -727,7 +726,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                   border: `1px solid rgba(${T.badRgb},0.4)`,
                   color: T.bad,
                   fontFamily: T.sans,
-                  boxShadow: closePanel ? `0 0 18px -6px rgba(${T.badRgb},0.6)` : 'none',
+                  boxShadow: 'none',
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.16)`; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${T.badRgb},0.1)`; }}
@@ -885,7 +884,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
           <div className="px-4 py-4 sm:px-6" style={{ borderBottom: `1px solid ${T.line}` }}>
             <div
               className="ad-payout-frame relative rounded-[20px] p-px"
-              style={{ boxShadow: '0 26px 60px -34px rgba(139,123,255,0.5)', opacity: isClosed ? 0.5 : 1, pointerEvents: isClosed ? 'none' : 'auto' }}
+              style={{ boxShadow: 'none', opacity: isClosed ? 0.5 : 1, pointerEvents: isClosed ? 'none' : 'auto' }}
             >
               <div
                 className="ad-payout relative overflow-hidden rounded-[19px] p-5"

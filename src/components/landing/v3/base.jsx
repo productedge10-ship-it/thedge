@@ -244,7 +244,11 @@ export function PriceRoll({ value, size = 46, style }) {
   );
 }
 
-export const Eyebrow = ({ children, color = C.accSoft }) => (
+/* Підпис над заголовком секції — без світної крапки й не акцентом.
+   Крапка з ореолом над кожним заголовком — найупізнаваніша прикмета
+   згенерованого лендінга, а фіолетовий підпис забирав акцент у
+   кнопок, яким він і належить. */
+export const Eyebrow = ({ children, color = C.text3 }) => (
   <div
     style={{
       display: 'inline-flex', alignItems: 'center', gap: 9,
@@ -252,7 +256,6 @@ export const Eyebrow = ({ children, color = C.accSoft }) => (
       letterSpacing: '2.4px', textTransform: 'uppercase', color,
     }}
   >
-    <span style={{ width: 5, height: 5, borderRadius: 999, background: C.acc, display: 'block', boxShadow: `0 0 12px 2px ${A(0.6)}` }} />
     {children}
   </div>
 );
@@ -305,13 +308,5 @@ export const Cat = ({ size = 36 }) => (
   </span>
 );
 
-export const Glow = ({ x, y, size = 420, color = 'rgba(74,59,245,.17)', blur = 70 }) => (
-  <div
-    aria-hidden
-    style={{
-      position: 'absolute', left: x, top: y, width: size, height: size,
-      background: `radial-gradient(circle, ${color}, transparent 70%)`,
-      filter: `blur(${blur}px)`, pointerEvents: 'none',
-    }}
-  />
-);
+/* Glow (розмита фіолетова пляма за блоком) прибрано: глибину на сторінці
+   тепер дають сходинки поверхонь, а не ореоли. */

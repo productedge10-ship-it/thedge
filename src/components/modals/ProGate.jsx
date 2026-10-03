@@ -55,14 +55,14 @@ function TrialButton({ onStart, className = '' }) {
         border: `1px solid ${T.lineAcc}`,
         color: T.text,
         fontFamily: T.sans,
-        boxShadow: `0 10px 28px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`,
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`,
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = `0 16px 40px -12px rgba(${T.accRgb},0.85), inset 0 1px 0 rgba(255,255,255,0.07)`;
+        e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.07)`;
         e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.6)`;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = `0 10px 28px -12px rgba(${T.accRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.05)`;
+        e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.05)`;
         e.currentTarget.style.borderColor = T.lineAcc;
       }}
     >

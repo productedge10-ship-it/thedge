@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { T } from '../../lib/theme';
 import { EMOJI_GROUPS, searchEmoji } from '../../lib/emoji';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Вибір емодзі.
@@ -57,7 +58,7 @@ export default function EmojiPicker({ value, onPick, onClear, color = T.acc, onC
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Пошук: графік, ідея, борщ…"
+            placeholder={tx('Пошук: графік, ідея, борщ…', 'Search: chart, idea, coffee…')}
             className="w-full border-none bg-transparent text-[12.5px] outline-none"
             style={{ fontFamily: T.sans, color: T.text }}
           />
@@ -96,7 +97,7 @@ export default function EmojiPicker({ value, onPick, onClear, color = T.acc, onC
       <div className="max-h-[196px] overflow-auto p-2.5">
         {items.length === 0 ? (
           <div className="px-1 py-6 text-center text-[12px]" style={{ fontFamily: T.sans, color: '#6f6d7d' }}>
-            Нічого не знайшлось
+            {tx('Нічого не знайшлось', 'Nothing found')}
           </div>
         ) : (
           <div className="grid grid-cols-8 gap-1">
@@ -129,7 +130,7 @@ export default function EmojiPicker({ value, onPick, onClear, color = T.acc, onC
           className="w-full py-2.5 text-[12px] font-semibold"
           style={{ fontFamily: T.sans, borderTop: '1px solid #22222c', color: value ? '#b3b1c0' : '#6f6d7d' }}
         >
-          Без емодзі — звичайна іконка
+          {tx('Без емодзі — звичайна іконка', 'No emoji — use the default icon')}
         </button>
       )}
     </div>

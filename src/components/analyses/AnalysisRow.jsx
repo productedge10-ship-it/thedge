@@ -2,6 +2,7 @@ import { ArrowRight, Trash2, Check, X, RefreshCw, AlertTriangle, Star, ArrowRigh
 import { T } from '../../lib/theme';
 import AssetIcon from '../ui/AssetIcon';
 import { biasOf, biasResult } from './AnalysisCard';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Аналіз рядком — другий вигляд списку.
@@ -107,7 +108,7 @@ export default function AnalysisRow({ plan, onClick, onDelete }) {
             className="truncate text-[15px] font-bold"
             style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}
           >
-            {plan.pair || 'Без активу'}
+            {plan.pair || tx('Без активу', 'No asset')}
           </div>
           <div className="text-[12px] tabular-nums" style={{ fontFamily: T.mono, color: T.text3 }}>
             {plan.date}
@@ -116,7 +117,7 @@ export default function AnalysisRow({ plan, onClick, onDelete }) {
       </div>
 
       {/* задум → факт → вердикт */}
-      <Cell label="План → факт" className="w-[290px] shrink-0">
+      <Cell label={tx('План → факт', 'Plan → actual')} className="w-[290px] shrink-0">
         <div className="flex items-center gap-2">
           <BiasPill value={plan.narrative || plan.plan_data?.narrative} />
           <ArrowRightLeft size={12} strokeWidth={2.4} style={{ color: T.text4 }} className="shrink-0" />
@@ -128,7 +129,7 @@ export default function AnalysisRow({ plan, onClick, onDelete }) {
                 background: `rgba(${hit ? T.okRgb : T.badRgb},0.14)`,
                 color: hit ? T.ok : T.bad,
               }}
-              title={hit ? 'План справдився' : 'Ринок пішов інакше'}
+              title={hit ? tx('План справдився', 'The plan played out') : tx('Ринок пішов інакше', 'The market went the other way')}
             >
               {hit ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
             </span>
@@ -137,17 +138,17 @@ export default function AnalysisRow({ plan, onClick, onDelete }) {
       </Cell>
 
       {/* текст плану — займає все вільне місце */}
-      <Cell label="Опис" className="flex-1">
+      <Cell label={tx('Опис', 'Description')} className="flex-1">
         <p
           className="line-clamp-2 text-[13.5px]"
           style={{ fontFamily: T.sans, color: text ? T.text2 : T.text4, lineHeight: 1.5 }}
         >
-          {text || 'Опис плану не заповнений'}
+          {text || tx('Опис плану не заповнений', 'No plan description yet')}
         </p>
       </Cell>
 
       {/* оцінка */}
-      <Cell label="Оцінка" className="w-[86px] shrink-0">
+      <Cell label={tx('Оцінка', 'Rating')} className="w-[86px] shrink-0">
         <span className="flex items-baseline gap-1 tabular-nums">
           <Star
             size={12}
@@ -166,7 +167,7 @@ export default function AnalysisRow({ plan, onClick, onDelete }) {
       </Cell>
 
       {/* оновлення */}
-      <Cell label="Апдейтів" className="w-[86px] shrink-0">
+      <Cell label={tx('Апдейтів', 'Updates')} className="w-[86px] shrink-0">
         <span className="flex items-center gap-1.5">
           <RefreshCw size={12} strokeWidth={2.4} style={{ color: updates ? T.info : T.text4 }} />
           <span
@@ -179,13 +180,13 @@ export default function AnalysisRow({ plan, onClick, onDelete }) {
       </Cell>
 
       {/* помилка в аналізі */}
-      <Cell label="Помилка" className="w-[96px] shrink-0">
+      <Cell label={tx('Помилка', 'Mistake')} className="w-[96px] shrink-0">
         <span
           className="flex items-center gap-1.5 text-[13px] font-semibold"
           style={{ fontFamily: T.sans, color: mistake ? T.warn : T.ok }}
         >
           {mistake ? <AlertTriangle size={12} strokeWidth={2.4} /> : <Check size={12} strokeWidth={3} />}
-          {mistake ? 'є' : 'чисто'}
+          {mistake ? tx('є', 'yes') : tx('чисто', 'clean')}
         </span>
       </Cell>
 
@@ -193,7 +194,7 @@ export default function AnalysisRow({ plan, onClick, onDelete }) {
       <div className="flex shrink-0 items-center gap-1">
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(plan); }}
-          title="Видалити"
+          title={tx('Видалити', 'Delete')}
             /* Кнопка видима ЗАВЖДИ, просто приглушена.
 
              Була `opacity-0` до наведення — тобто існувала тільки

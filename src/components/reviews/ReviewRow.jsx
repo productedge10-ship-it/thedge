@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { X, Share2, Globe } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 import { EMOTIONS, fmtRange, fmtR } from '../../lib/reviewsData';
 
 /* ==================================================================
@@ -101,7 +102,7 @@ export default function ReviewRow({ review, index, onOpen, onDelete, onShare }) 
             >
               {s.trades ?? 0}
             </span>
-            <span style={{ fontFamily: T.sans, fontSize: 13, color: T.text3 }}>угод</span>
+            <span style={{ fontFamily: T.sans, fontSize: 13, color: T.text3 }}>{tx('угод', 'trades')}</span>
           </span>
         </div>
 
@@ -129,7 +130,7 @@ export default function ReviewRow({ review, index, onOpen, onDelete, onShare }) 
           <span className="flex shrink-0 items-center" style={{ gap: 6 }}>
             {review.isPublic && (
               <span
-                title="Відкритий за посиланням"
+                title={tx('Відкритий за посиланням', 'Shared via link')}
                 className="grid place-items-center"
                 style={{
                   width: 26, height: 26, borderRadius: 8,
@@ -143,7 +144,7 @@ export default function ReviewRow({ review, index, onOpen, onDelete, onShare }) 
             {onShare && (
               <button
                 onClick={(e) => { e.stopPropagation(); onShare(review); }}
-                title={review.isPublic ? 'Скопіювати посилання' : 'Поділитись розбором'}
+                title={review.isPublic ? tx('Скопіювати посилання', 'Copy link') : tx('Поділитись розбором', 'Share review')}
                 className="grid place-items-center opacity-0 transition-all duration-200 group-hover:opacity-100"
                 style={{ width: 26, height: 26, borderRadius: 8, color: T.text4 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = T.acc; e.currentTarget.style.background = `rgba(${T.accRgb},0.10)`; }}
@@ -155,7 +156,7 @@ export default function ReviewRow({ review, index, onOpen, onDelete, onShare }) 
 
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(review.id); }}
-              title="Видалити розбір"
+              title={tx('Видалити розбір', 'Delete review')}
               className="grid place-items-center opacity-0 transition-all duration-200 group-hover:opacity-100"
               style={{ width: 26, height: 26, borderRadius: 8, color: T.text4 }}
               onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.background = `rgba(${T.badRgb},0.10)`; }}
@@ -211,11 +212,11 @@ export default function ReviewRow({ review, index, onOpen, onDelete, onShare }) 
         />
         <Cell label="Win rate" value={`${Math.round(s.winrate ?? 0)}%`} />
         <Cell
-          label="За планом"
+          label={tx('За планом', 'By plan')}
           value={`${Math.round(s.planRate ?? 0)}%`}
           tone={(s.planRate ?? 0) >= 70 ? T.ok : T.warn}
         />
-        <Cell label="Помилок" value={s.mistakes ?? 0} last />
+        <Cell label={tx('Помилок', 'Mistakes')} value={s.mistakes ?? 0} last />
       </div>
     </motion.article>
   );

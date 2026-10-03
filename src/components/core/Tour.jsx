@@ -9,6 +9,7 @@ import { EdgeMonogram } from './Layout';
 import { useSettings } from '../../context/SettingsContext';
 import useCloudState from '../../hooks/useCloudState';
 import { KEY, STEPS, EMPTY, OPEN_EVENT, normalize } from '../../lib/tour';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Тур застосунком.
@@ -235,7 +236,7 @@ export default function Tour() {
           transition={still ? { duration: 0 } : SPRING}
           style={{
             pointerEvents: 'none',
-            boxShadow: `0 0 34px rgba(${T.accRgb},0.32)`,
+            boxShadow: 'none',
           }}
         />
 
@@ -293,7 +294,7 @@ export default function Tour() {
                 height: CAT,
                 background: `radial-gradient(circle at 50% 30%, rgba(${T.accRgb},0.26), var(--edge-panel, #131316) 78%)`,
                 border: `1px solid rgba(${T.accRgb},0.45)`,
-                boxShadow: `0 14px 34px -10px rgba(${T.accRgb},0.55)`,
+                boxShadow: 'none',
               }}
             >
               <EdgeMonogram />
@@ -313,7 +314,7 @@ export default function Tour() {
             <div className="mb-2.5 flex items-center gap-2">
               <Sparkles size={12} strokeWidth={2.6} style={{ color: T.acc }} />
               <span className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ fontFamily: T.sans, color: T.acc }}>
-                Знайомство
+                {tx('Знайомство', 'Quick tour')}
               </span>
               <button
                 onClick={() => finish('skipped')}
@@ -386,7 +387,7 @@ export default function Tour() {
                 className="flex h-8 items-center gap-1.5 rounded-lg px-3.5 text-[13px] font-bold transition-transform active:scale-[0.98]"
                 style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
               >
-                {last ? 'Зрозуміло' : 'Далі'}
+                {last ? tx('Зрозуміло', 'Got it') : tx('Далі', 'Next')}
                 {!last && <ArrowRight size={13} strokeWidth={2.8} />}
               </button>
             </div>

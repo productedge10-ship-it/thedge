@@ -207,8 +207,8 @@ export default function BlogList() {
       <BlogStyles />
 
       <BlogHeader lang={lang}>
-        <Seg items={themeItems} value={prefs.theme} onPick={(v) => setPref('theme', v)} label="Тема" />
-        <Seg items={langItems} value={lang} onPick={(l) => navigate(blogPath(l))} label="Мова" />
+        <Seg items={themeItems} value={prefs.theme} onPick={(v) => setPref('theme', v)} label={lang === 'en' ? 'Theme' : 'Тема'} />
+        <Seg items={langItems} value={lang} onPick={(l) => navigate(blogPath(l))} label={lang === 'en' ? 'Language' : 'Мова'} />
       </BlogHeader>
 
       <div className="bl-wrap">
@@ -260,7 +260,7 @@ export default function BlogList() {
                 aria-label={t.search}
               />
               {q && (
-                <button type="button" className="bl-search-clear" onClick={() => setQ('')} aria-label="×">
+                <button type="button" className="bl-search-clear" onClick={() => setQ('')} aria-label={lang === 'en' ? 'Clear search' : 'Очистити пошук'}>
                   <X size={15} />
                 </button>
               )}

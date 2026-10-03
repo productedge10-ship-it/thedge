@@ -4,8 +4,9 @@ import { motion } from 'framer-motion';
 import { X, Check, Plus, AlertTriangle } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 import ImageSlider from '../ui/ImageSlider';
-import { MISTAKE_TYPES, fmtDate, fmtR, rOf } from '../../lib/reviewsData';
+import { MISTAKE_TYPES, fmtDate, fmtR, rOf, planStatusLabel } from '../../lib/reviewsData';
 
 /* ==================================================================
    Картка матеріалу зблизька.
@@ -22,7 +23,7 @@ import { MISTAKE_TYPES, fmtDate, fmtR, rOf } from '../../lib/reviewsData';
    всередині <main> лежить власний контекст накладання.
 ================================================================== */
 
-const SEVERITY = { high: 'висока', mid: 'середня', low: 'низька' };
+const SEVERITY = { high: tx('висока', 'high'), mid: tx('середня', 'medium'), low: tx('низька', 'low') };
 
 /* Ті самі підписи й кольори, що в таблиці журналу та в картці угоди:
    Take / Stop / BE. WIN/LOSS — це внутрішнє представлення в базі, і
@@ -37,10 +38,10 @@ const RESULT = {
 /* Психологія в журналі — чотири прапорці. Перекладаємо в підписи й
    показуємо лише підняті: список із чотирьох «ні» нічого не додає. */
 const PSY = [
-  { key: 'confident', label: 'Був упевнений', good: true },
-  { key: 'fear', label: 'Був страх', good: false },
-  { key: 'repeat', label: 'Повторив би', good: true },
-  { key: 'revenge', label: 'Відігравався', good: false },
+  { key: 'confident', label: tx('Був упевнений', 'Felt confident'), good: true },
+  { key: 'fear', label: tx('Був страх', 'Felt fear'), good: false },
+  { key: 'repeat', label: tx('Повторив би', 'Would repeat'), good: true },
+  { key: 'revenge', label: tx('Відігравався', 'Revenge trading'), good: false },
 ];
 
 /* «09:30:00» → «09:30». Секунди в журналі ніхто не вводить руками,
@@ -64,9 +65,9 @@ function YesNo({ yes }) {
 }
 
 const KIND = {
-  trades: 'Угода',
-  plans: 'План',
-  mistakes: 'Помилка',
+  trades: tx('Угода', 'Trade'),
+  plans: tx('План', 'Plan'),
+  mistakes: tx('Помилка', 'Mistake'),
 };
 
 /* Рядок фактів. Підпис моноширинним і в розрядку — так само, як
@@ -132,7 +133,7 @@ function Shots({ images }) {
         className="uppercase"
         style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, letterSpacing: '1.3px', color: T.text3 }}
       >
-        {images.length === 1 ? 'Скрін' : `Скріни · ${images.length}`}
+        {images.length === 1 ? tx('Скрін', 'Screenshot') : tx(`Скріни · ${images.length}`, `Screenshots · ${images.length}`)}
       </div>
       <div style={{ marginTop: 10 }}>
         <ImageSlider images={images} containerClassName="h-[520px] w-full" />
@@ -206,10 +207,10 @@ function Blocks({ label, rows }) {
    бувають null — питання просто не ставили, і показувати його як «ні»
    було б наклепом. */
 const QUIZ = [
-  { key: 'sleep', label: 'Виспався' },
-  { key: 'mood', label: 'Настрій' },
-  { key: 'risk', label: 'Ризик за планом' },
-  { key: 'plan', label: 'План готовий' },
+  { key: 'sleep', label: tx('Виспався', 'Slept well') },
+  { key: 'mood', label: tx('Настрій', 'Mood') },
+  { key: 'risk', label: tx('Ризик за планом', 'Risk per plan') },
+  { key: 'plan', label: tx('План готовий', 'Plan ready') },
 ];
 
 function Quiz({ quiz }) {
@@ -218,7 +219,7 @@ function Quiz({ quiz }) {
   if (!rows.length) return null;
   return (
     <div style={{ marginTop: 20 }}>
-      <Cap>Перед торгівлею</Cap>
+      <Cap>{tx('Перед торгівлею', 'Before trading')}</Cap>
       <div className="flex flex-wrap" style={{ marginTop: 10, gap: 8 }}>
         {rows.map((q) => {
           const ok = !!quiz[q.key];
@@ -249,7 +250,7 @@ function Psy({ psy }) {
   if (!flags.length) return null;
   return (
     <div style={{ marginTop: 20 }}>
-      <Cap>Стан</Cap>
+      <Cap>{tx('Стан', 'State')}</Cap>
       <div className="flex flex-wrap" style={{ marginTop: 10, gap: 8 }}>
         {flags.map((f) => {
           const c = f.good ? T.ok : T.warn;
@@ -288,7 +289,7 @@ function MistakeBlock({ type, text, images }) {
       <div className="flex items-center" style={{ gap: 10 }}>
         <AlertTriangle size={15} strokeWidth={2} style={{ color: T.bad, flex: 'none' }} />
         <span style={{ fontFamily: T.sans, fontSize: 15, fontWeight: 600, color: T.bad }}>
-          {meta ? meta.label : 'Помилка в угоді'}
+          {meta ? meta.label : tx('Помилка в угоді', 'Mistake in the trade')}
         </span>
       </div>
       {text && (
@@ -341,78 +342,78 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
       const diff = (m(b1) - m(a1) + 1440) % 1440;
       if (!diff) return '';
       const h = Math.floor(diff / 60);
-      return h ? `${h} год ${diff % 60} хв` : `${diff} хв`;
+      return h ? tx(`${h} год ${diff % 60} хв`, `${h} h ${diff % 60} min`) : tx(`${diff} хв`, `${diff} min`);
     })();
 
     facts = [
-      { label: 'Дата', value: fmtDate(item.date) },
-      { label: 'Сесія', value: item.session },
+      { label: tx('Дата', 'Date'), value: fmtDate(item.date) },
+      { label: tx('Сесія', 'Session'), value: item.session },
       /* Лонг зелений, шорт червоний — так само, як напрям читається
          на самому графіку. */
-      { label: 'Напрям', value: item.type, tone: long ? T.ok : T.bad },
-      { label: 'Результат', value: res.label, tone: res.tone },
+      { label: tx('Напрям', 'Direction'), value: item.type, tone: long ? T.ok : T.bad },
+      { label: tx('Результат', 'Result'), value: res.label, tone: res.tone },
       { label: 'R', value: fmtR(r), tone: accent },
-      { label: 'Ризик', value: Number.isFinite(item.risk) ? `${item.risk}%` : '' },
-      { label: 'Сетап', value: item.setup },
-      { label: 'Рахунок', value: item.account },
-      { label: 'Вхід', value: hhmm(item.entryTime) },
-      { label: 'У позиції', value: held },
-      { label: 'За планом', value: <YesNo yes={item.followedPlan} /> },
+      { label: tx('Ризик', 'Risk'), value: Number.isFinite(item.risk) ? `${item.risk}%` : '' },
+      { label: tx('Сетап', 'Setup'), value: item.setup },
+      { label: tx('Рахунок', 'Account'), value: item.account },
+      { label: tx('Вхід', 'Entry'), value: hhmm(item.entryTime) },
+      { label: tx('У позиції', 'Time in trade'), value: held },
+      { label: tx('За планом', 'By the plan'), value: <YesNo yes={item.followedPlan} /> },
       /* Питаємо навпаки — «без поспіху?» — щоб значок читався так
          само, як усюди: галочка добре, хрестик погано. З підписом
          «Поспіх» хрестик означав би «поспіху не було», хоч насправді
          він саме був. */
-      { label: 'Без поспіху', value: <YesNo yes={!item.rushed} /> },
+      { label: tx('Без поспіху', 'No rush'), value: <YesNo yes={!item.rushed} /> },
     ];
 
     texts = [
-      { label: 'Нотатка', value: item.note },
-      { label: 'Нотатки про стан', value: item.psyNotes },
+      { label: tx('Нотатка', 'Note'), value: item.note },
+      { label: tx('Нотатки про стан', 'Notes on state'), value: item.psyNotes },
     ];
   } else if (kind === 'plans') {
     const done = item.status === 'Розібрано' || item.status === 'Відпрацьовано';
     accent = done ? T.ok : T.warn;
     facts = [
-      { label: 'Дата', value: fmtDate(item.date) },
-      { label: 'День', value: item.title },
-      { label: 'Настрій', value: item.narrative },
-      { label: 'Насправді', value: item.actualNarrative },
-      { label: 'Категорія', value: item.category },
-      { label: 'Стан', value: item.status, tone: accent },
-      { label: 'Оцінка сесії', value: item.rating ? `${item.rating} / 5` : '' },
-      item.updates?.length ? { label: 'Правок', value: String(item.updates.length) } : null,
-      item.isPublic ? { label: 'Доступ', value: 'за посиланням', tone: T.acc } : null,
+      { label: tx('Дата', 'Date'), value: fmtDate(item.date) },
+      { label: tx('День', 'Day'), value: item.title },
+      { label: tx('Настрій', 'Bias'), value: item.narrative },
+      { label: tx('Насправді', 'Actually'), value: item.actualNarrative },
+      { label: tx('Категорія', 'Category'), value: item.category },
+      { label: tx('Стан', 'Status'), value: planStatusLabel(item.status), tone: accent },
+      { label: tx('Оцінка сесії', 'Session rating'), value: item.rating ? `${item.rating} / 5` : '' },
+      item.updates?.length ? { label: tx('Правок', 'Edits'), value: String(item.updates.length) } : null,
+      item.isPublic ? { label: tx('Доступ', 'Access'), value: tx('за посиланням', 'via link'), tone: T.acc } : null,
     ].filter(Boolean);
     texts = [
-      { label: 'План', value: item.text },
+      { label: tx('План', 'Plan'), value: item.text },
       /* Висновки показуємо окремо й лише якщо це не той самий текст:
          у старих записах план і висновки писали в одне поле. */
-      { label: 'Висновки', value: item.conclusions === item.text ? '' : item.conclusions },
-      { label: 'Помилка аналізу', value: item.analysisMistake },
-      { label: 'Нотатки про стан', value: item.psyNotes },
+      { label: tx('Висновки', 'Conclusions'), value: item.conclusions === item.text ? '' : item.conclusions },
+      { label: tx('Помилка аналізу', 'Analysis mistake'), value: item.analysisMistake },
+      { label: tx('Нотатки про стан', 'Notes on state'), value: item.psyNotes },
     ];
   } else {
     const meta = MISTAKE_TYPES[item.type] || { label: item.type };
     title = meta.label;
     accent = T.warn;
     facts = [
-      { label: 'Дата', value: fmtDate(item.date) },
-      { label: 'Інструмент', value: item.pair },
-      { label: 'Сесія', value: item.session },
-      { label: 'Вагомість', value: SEVERITY[item.severity] || item.severity },
+      { label: tx('Дата', 'Date'), value: fmtDate(item.date) },
+      { label: tx('Інструмент', 'Instrument'), value: item.pair },
+      { label: tx('Сесія', 'Session'), value: item.session },
+      { label: tx('Вагомість', 'Severity'), value: SEVERITY[item.severity] || item.severity },
       {
-        label: 'Ціна',
+        label: tx('Ціна', 'Cost'),
         value: item.cost ? fmtR(item.cost) : '—',
         tone: item.cost < 0 ? T.bad : T.text3,
       },
-      { label: 'За планом', value: <YesNo yes={item.followedPlan} /> },
+      { label: tx('За планом', 'By the plan'), value: <YesNo yes={item.followedPlan} /> },
     ];
     texts = [
       /* Підказка з довідника краща за порожнє місце: у журналі опис
          помилки часто лишають незаповненим. */
-      { label: 'Що сталось', value: item.description || meta.hint || '' },
-      { label: 'Нотатка до угоди', value: item.note },
-      { label: 'Нотатки про стан', value: item.psyNotes },
+      { label: tx('Що сталось', 'What happened'), value: item.description || meta.hint || '' },
+      { label: tx('Нотатка до угоди', 'Trade note'), value: item.note },
+      { label: tx('Нотатки про стан', 'Notes on state'), value: item.psyNotes },
     ];
   }
 
@@ -465,7 +466,7 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
 
           <button
             onClick={onClose}
-            aria-label="Закрити"
+            aria-label={tx('Закрити', 'Close')}
             className="grid shrink-0 place-items-center"
             style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${T.line}`, color: T.text2, transition: 'all .18s' }}
             onMouseEnter={(e) => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.lineHi; }}
@@ -485,8 +486,8 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
 
           {texts.map((t) => <Text key={t.label} {...t} />)}
 
-          <Blocks label="Розбір по таймфреймах" rows={item.tda} />
-          <Blocks label="Після сесії" rows={item.review} />
+          <Blocks label={tx('Розбір по таймфреймах', 'Timeframe breakdown')} rows={item.tda} />
+          <Blocks label={tx('Після сесії', 'After the session')} rows={item.review} />
 
           {kind === 'trades' && item.hasMistake && (
             <MistakeBlock type={item.mistakeType} text={item.mistakeText} images={item.mistakeImages} />
@@ -516,8 +517,8 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
             }}
           >
             {selected
-              ? <><X size={15} strokeWidth={2.4} /> Прибрати з розбору</>
-              : <><Plus size={15} strokeWidth={2.6} /> Додати в розбір</>}
+              ? <><X size={15} strokeWidth={2.4} /> {tx('Прибрати з розбору', 'Remove from review')}</>
+              : <><Plus size={15} strokeWidth={2.6} /> {tx('Додати в розбір', 'Add to review')}</>}
           </button>
 
           {selected && (
@@ -525,7 +526,7 @@ export default function MaterialPreview({ kind, item, selected, onToggle, onClos
               className="flex items-center justify-center"
               style={{ fontFamily: T.sans, gap: 6, marginTop: 10, fontSize: 12.5, color: T.ok }}
             >
-              <Check size={12} strokeWidth={3} /> вже в розборі
+              <Check size={12} strokeWidth={3} /> {tx('вже в розборі', 'already in review')}
             </p>
           )}
         </div>

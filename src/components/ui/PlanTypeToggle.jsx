@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarDays, CalendarRange } from 'lucide-react';
 import { T, SPRING } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Перемикач Daily / Weekly — той самий контрол на сторінці плану й
@@ -16,8 +17,8 @@ import { T, SPRING } from '../../lib/theme';
 ================================================================== */
 
 const OPTIONS = [
-  { id: 'daily', label: 'Daily', icon: CalendarDays, tone: T.acc, rgb: T.accRgb },
-  { id: 'weekly', label: 'Weekly', icon: CalendarRange, tone: T.info, rgb: T.infoRgb },
+  { id: 'daily', label: tx('Денний', 'Daily'), icon: CalendarDays, tone: T.acc, rgb: T.accRgb },
+  { id: 'weekly', label: tx('Тижневий', 'Weekly'), icon: CalendarRange, tone: T.info, rgb: T.infoRgb },
 ];
 
 export default function PlanTypeToggle({ mode, onChange, layoutId = 'plan-type-toggle' }) {

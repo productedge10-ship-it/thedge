@@ -4,6 +4,7 @@ import { ArrowUp, ArrowDown, Image as ImageIcon, Trash2, AlertTriangle } from 'l
 import { T, EASE } from '../../lib/theme';
 import { rOf, sessionOf, qualityOf, tagsOf, pairOf } from '../../lib/backtestStats';
 import { ACT, act } from './accent';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Таблиця угод бектесту. Той самий компонент працює і в публічному
@@ -18,11 +19,11 @@ const qualColor = (q) => ({ 'A+': T.ok, A: T.ok, B: T.warn, C: T.bad }[q] || T.t
 
 const COLS = [
   { key: 'num',     label: '#',               w: '40px',             align: 'left' },
-  { key: 'date',    label: 'Дата',            w: '96px',             align: 'left' },
-  { key: 'type',    label: 'Напрям',          w: '86px',             align: 'left' },
-  { key: 'setup',   label: 'Сетап і нотатка', w: 'minmax(150px,1fr)', align: 'left', noSort: true },
-  { key: 'session', label: 'Сесія',           w: '90px',             align: 'left' },
-  { key: 'quality', label: 'Якість',          w: '58px',             align: 'left' },
+  { key: 'date',    label: tx('Дата', 'Date'),            w: '96px',             align: 'left' },
+  { key: 'type',    label: tx('Напрям', 'Side'),          w: '86px',             align: 'left' },
+  { key: 'setup',   label: tx('Сетап і нотатка', 'Setup & note'), w: 'minmax(150px,1fr)', align: 'left', noSort: true },
+  { key: 'session', label: tx('Сесія', 'Session'),           w: '90px',             align: 'left' },
+  { key: 'quality', label: tx('Якість', 'Quality'),          w: '58px',             align: 'left' },
   { key: 'r',       label: 'R',               w: '78px',             align: 'right' },
   { key: 'mis',     label: '',                w: '36px',             align: 'center', noSort: true },
   { key: 'del',     label: '',                w: '36px',             align: 'center', noSort: true },
@@ -95,8 +96,8 @@ export default function BacktestTable({ trades, onOpen, onDelete, onShot, onMist
         <div className="px-5 py-16 text-center">
           <p className="text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
             {readOnly
-              ? 'У цьому прогоні ще немає угод.'
-              : 'Ще немає угод. Запиши першу рядком угорі — це займе 5 секунд.'}
+              ? tx('У цьому прогоні ще немає угод.', 'No trades in this run yet.')
+              : tx('Ще немає угод. Запиши першу рядком угорі — це займе 5 секунд.', 'No trades yet. Log your first one in the row above — it takes 5 seconds.')}
           </p>
         </div>
       ) : (
@@ -153,7 +154,7 @@ export default function BacktestTable({ trades, onOpen, onDelete, onShot, onMist
                       </span>
                     )}
                     <span className="truncate text-[13.5px]" style={{ fontFamily: T.sans, color: T.text2 }}>
-                      {tags[0] || t.notes || 'Без сетапу'}
+                      {tags[0] || t.notes || tx('Без сетапу', 'No setup')}
                     </span>
                     {tags.length > 1 && (
                       <span className="shrink-0 text-[12px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
@@ -164,7 +165,7 @@ export default function BacktestTable({ trades, onOpen, onDelete, onShot, onMist
                       onShot ? (
                         <button
                           onClick={(e) => { e.stopPropagation(); onShot(t.screenshot_url); }}
-                          title="Показати графік"
+                          title={tx('Показати графік', 'Show chart')}
                           className="shrink-0 transition-colors"
                           style={{ color: T.text3 }}
                           onMouseEnter={(e) => { e.currentTarget.style.color = T.text; }}
@@ -198,7 +199,7 @@ export default function BacktestTable({ trades, onOpen, onDelete, onShot, onMist
                   {!readOnly && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onMistake?.(t); }}
-                    title={mistakes[t.id] ? 'Помилка записана — відкрити' : 'Зафіксувати помилку'}
+                    title={mistakes[t.id] ? tx('Помилка записана — відкрити', 'Mistake logged — open') : tx('Зафіксувати помилку', 'Log a mistake')}
                     className={`grid h-8 w-8 place-items-center justify-self-center rounded-lg transition-all duration-200 ${
                       mistakes[t.id] ? '' : 'opacity-60 lg:opacity-0 lg:group-hover:opacity-100'
                     }`}
@@ -215,7 +216,7 @@ export default function BacktestTable({ trades, onOpen, onDelete, onShot, onMist
                   {!readOnly && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onDelete(t); }}
-                    title="Видалити угоду"
+                    title={tx('Видалити угоду', 'Delete trade')}
                     className="grid h-8 w-8 place-items-center justify-self-center rounded-lg opacity-60 transition-all duration-200 lg:opacity-0 lg:group-hover:opacity-100"
                     style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text3 }}
                     onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; e.currentTarget.style.borderColor = `rgba(${T.badRgb},0.4)`; }}
@@ -231,10 +232,10 @@ export default function BacktestTable({ trades, onOpen, onDelete, onShot, onMist
 
           <div className="flex flex-wrap items-center justify-between gap-4 px-[22px] py-4">
             <span className="text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              Показано {rows.length} з {trades.length}
+              {tx(`Показано ${rows.length} з ${trades.length}`, `Showing ${rows.length} of ${trades.length}`)}
             </span>
             <span className="text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>
-              Сумарно{' '}
+              {tx('Сумарно', 'Total')}{' '}
               <span style={{ fontWeight: 700, color: sum > 0 ? T.ok : sum < 0 ? T.bad : T.text2 }}>
                 {sum > 0 ? '+' : ''}{sum.toFixed(2)}R
               </span>

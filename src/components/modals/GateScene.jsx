@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { T } from '../trading/planTheme';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Сцени на замкнених розділах.
@@ -172,7 +173,7 @@ function Mt5Scene() {
   return (
     <div className="gate-scene" aria-hidden>
       <div className="gate-box">
-        <span className="gate-box-title">MT5 · термінал</span>
+        <span className="gate-box-title">{tx('MT5 · термінал', 'MT5 · terminal')}</span>
         <span className="gate-rows">
           {queue.map((t, i) => <TradeRow key={t.id} trade={t} index={i} />)}
         </span>
@@ -183,7 +184,7 @@ function Mt5Scene() {
       </span>
 
       <div className="gate-box">
-        <span className="gate-box-title">Journal</span>
+        <span className="gate-box-title">{tx('Журнал', 'Journal')}</span>
         <span className="gate-rows">
           {journal.map((t, i) => <TradeRow key={t.id} trade={t} index={i} />)}
         </span>
@@ -220,16 +221,16 @@ function makeMessage() {
   const t = makeTrade();
   const pick = Math.random();
 
-  if (pick < 0.3) return { id: ++seq, text: `📥 Нова угода: ${t.pair} · ${t.side}` };
-  if (pick < 0.58) return { id: ++seq, text: `${t.up ? '🟢' : '🔴'} ${t.pair} закрито · ${t.r}` };
-  if (pick < 0.74) return { id: ++seq, text: `⏰ ${t.pair} — час перевірити рівень` };
+  if (pick < 0.3) return { id: ++seq, text: tx(`📥 Нова угода: ${t.pair} · ${t.side}`, `📥 New trade: ${t.pair} · ${t.side}`) };
+  if (pick < 0.58) return { id: ++seq, text: tx(`${t.up ? '🟢' : '🔴'} ${t.pair} закрито · ${t.r}`, `${t.up ? '🟢' : '🔴'} ${t.pair} closed · ${t.r}`) };
+  if (pick < 0.74) return { id: ++seq, text: tx(`⏰ ${t.pair} — час перевірити рівень`, `⏰ ${t.pair} — time to check the level`) };
   if (pick < 0.87) {
     const used = (Math.random() * 1.6 + 1.2).toFixed(1);
-    return { id: ++seq, warn: true, text: `⚠️ Ризик дня ${used}% з 3% — лишилась одна угода` };
+    return { id: ++seq, warn: true, text: tx(`⚠️ Ризик дня ${used}% з 3% — лишилась одна угода`, `⚠️ Daily risk ${used}% of 3% — one trade left`) };
   }
 
   const n = Math.floor(Math.random() * 4) + 2;
-  return { id: ++seq, text: `📊 День закрито: ${n} угод · ${t.r}` };
+  return { id: ++seq, text: tx(`📊 День закрито: ${n} угод · ${t.r}`, `📊 Day closed: ${n} trades · ${t.r}`) };
 }
 
 function TelegramScene() {

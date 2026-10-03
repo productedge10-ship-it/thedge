@@ -5,6 +5,7 @@ import { Wallet, ArrowUpRight, ArrowDownRight, TrendingUp, Layers, Crosshair, Cl
 import { motion, useMotionValue, useMotionTemplate, AnimatePresence } from 'framer-motion';
 import { Panel, Delta, axis } from './ui';
 import { ASSETS, signed, sum, r2 } from './data';
+import { t as tx } from '../../lib/lang';
 
 // ==========================================
 // АНІМАЦІЇ ТА ЕФЕКТИ
@@ -99,7 +100,7 @@ function StaticAssetPie({ data }) {
         <div className="absolute flex flex-col items-center justify-center pointer-events-none w-[90px] h-[90px] rounded-full border border-[var(--edge-hair)] bg-[#08080A]/60 backdrop-blur-md">
           <Activity size={18} className="text-[var(--edge-text3)] mb-0.5 opacity-60" />
           <span className="text-[16px] font-black text-[var(--edge-text)]">{data.length}</span>
-          <span className="text-[8px] tracking-[0.2em] text-[var(--edge-text3)] uppercase font-bold mt-1">Активів</span>
+          <span className="text-[8px] tracking-[0.2em] text-[var(--edge-text3)] uppercase font-bold mt-1">{tx('Активів', 'Assets')}</span>
         </div>
       </div>
     </div>
@@ -116,8 +117,8 @@ const AssetTooltip = ({ active, payload }) => {
       >
         <p className="text-[11px] text-[var(--edge-text3)] uppercase font-bold tracking-wider mb-2 border-b border-[var(--edge-hair)] pb-2">{data.asset || data.name}</p>
         <div className="flex flex-col gap-1 text-[12.5px]">
-          <div className="flex justify-between items-center gap-4"><span className="text-[var(--edge-text2)]">Чистий R:</span><b className={isProfit ? 'text-[#34d399]' : 'text-[#f87171]'}>{signed(data.net, 2)}R</b></div>
-          {data.trades && <div className="flex justify-between items-center gap-4"><span className="text-[var(--edge-text2)]">Угод:</span><b className="text-[var(--edge-text)]">{data.trades}</b></div>}
+          <div className="flex justify-between items-center gap-4"><span className="text-[var(--edge-text2)]">{tx('Чистий R:', 'Net R:')}</span><b className={isProfit ? 'text-[#34d399]' : 'text-[#f87171]'}>{signed(data.net, 2)}R</b></div>
+          {data.trades && <div className="flex justify-between items-center gap-4"><span className="text-[var(--edge-text2)]">{tx('Угод:', 'Trades:')}</span><b className="text-[var(--edge-text)]">{data.trades}</b></div>}
         </div>
       </motion.div>
     );
@@ -152,7 +153,7 @@ function SingleSetupModal({ setup, s, onClose }) {
 
   const assetMap = {};
   trades.forEach(t => {
-    const a = t.asset || t.pair || 'Unknown';
+    const a = t.asset || t.pair || tx('Невідомо', 'Unknown');
     if(!assetMap[a]) assetMap[a] = { net: 0, trades: 0 };
     assetMap[a].net += t.rr;
     assetMap[a].trades += 1;
@@ -185,10 +186,10 @@ function SingleSetupModal({ setup, s, onClose }) {
     .forEach((k) => { const v = sessMap[k]; delete sessMap[k]; sessMap[k] = v; });
 
   const verdict = setup.net >= 5 
-    ? "Флагманський сетап. Дає стабільний прибуток, можна плавно збільшувати об'єм або частоту торгівлі."
+    ? tx("Флагманський сетап. Дає стабільний прибуток, можна плавно збільшувати об'єм або частоту торгівлі.", "Flagship setup. It makes steady profit — you can gradually increase size or frequency.")
     : setup.net > 0 
-    ? "Робочий сетап. Тримається в плюсі, але потребує оптимізації (можливо, ріже вінрейт на певних сесіях)."
-    : "Тягне депозит на дно. Потрібно переглянути правила входу, бектест або тимчасово призупинити торгівлю цим патерном.";
+    ? tx("Робочий сетап. Тримається в плюсі, але потребує оптимізації (можливо, ріже вінрейт на певних сесіях).", "Working setup. It stays in profit but needs tuning (it may be hurting your win rate in certain sessions).")
+    : tx("Тягне депозит на дно. Потрібно переглянути правила входу, бектест або тимчасово призупинити торгівлю цим патерном.", "It's dragging your account down. Review the entry rules, backtest it, or pause trading this pattern for now.");
 
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8">
@@ -200,13 +201,13 @@ function SingleSetupModal({ setup, s, onClose }) {
       >
         <div className="shrink-0 relative px-6 md:px-8 py-6 border-b border-[var(--edge-hair)] bg-[var(--edge-hair)]">
           <div className="absolute inset-0 opacity-[0.15] pointer-events-none" style={{ background: `radial-gradient(600px circle at 0% 0%, ${color}, transparent 70%)` }} />
-          <button onClick={onClose} className="absolute top-6 right-6 z-20 text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]"><X size={18} /></button>
+          <button onClick={onClose} aria-label={tx('Закрити', 'Close')} className="absolute top-6 right-6 z-20 text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]"><X size={18} /></button>
           <div className="relative z-10 flex items-center gap-4">
             <div className="w-14 h-14 rounded-[18px] flex items-center justify-center border shrink-0" style={{ background: `${color}14`, borderColor: `${color}33` }}>
               <Layers size={28} style={{ color }} />
             </div>
             <div>
-              <span className="block text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black mb-1">Аналітика сетапу</span>
+              <span className="block text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black mb-1">{tx('Аналітика сетапу', 'Setup analytics')}</span>
               <div className="flex items-baseline gap-3">
                 <h3 className="text-[var(--edge-text)] text-[22px] leading-none font-semibold m-0 font-[family-name:var(--edge-display,'Unbounded')] tracking-[-0.3px]">{setup.key}</h3>
                 <b className="text-[20px] font-black" style={{ color: isProfit ? '#34d399' : '#f87171' }}>{signed(setup.net, 2)}R</b>
@@ -218,20 +219,20 @@ function SingleSetupModal({ setup, s, onClose }) {
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 flex flex-col gap-6">
           <div className="p-4 rounded-[16px] border border-[var(--edge-acc)]/20 bg-[var(--edge-acc)]/[0.07] flex items-start gap-3">
             <Sparkles size={18} className="text-[var(--edge-acc)] mt-0.5 shrink-0" />
-            <p className="text-[13px] text-[var(--edge-text)] leading-[1.6] m-0"><b className="text-[var(--edge-acc)]">Вердикт системи:</b> {verdict}</p>
+            <p className="text-[13px] text-[var(--edge-text)] leading-[1.6] m-0"><b className="text-[var(--edge-acc)]">{tx('Вердикт системи:', 'System verdict:')}</b> {verdict}</p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-4 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[14px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-1">Угод</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-1">{tx('Угод', 'Trades')}</span>
               <b className="text-[20px] text-[var(--edge-text)] font-black">{setup.trades}</b>
             </div>
             <div className="p-4 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[14px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-1">Вінрейт</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-1">{tx('Вінрейт', 'Win rate')}</span>
               <b className="text-[20px] text-[var(--edge-text)] font-black">{setup.wr}%</b>
             </div>
             <div className="p-4 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[14px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-1">Сер. R</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-1">{tx('Сер. R', 'Avg R')}</span>
               <b className="text-[20px] font-black" style={{ color: setup.avg >= 0 ? '#34d399' : '#f87171' }}>{signed(setup.avg, 2)}</b>
             </div>
             <div className="p-4 bg-[var(--edge-surface-hi)]/60 border border-[var(--edge-hair)] rounded-[14px]">
@@ -246,7 +247,7 @@ function SingleSetupModal({ setup, s, onClose }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-5 bg-[var(--edge-hair)] border border-[var(--edge-hair)] rounded-[16px]">
-              <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-4 flex items-center gap-2"><Crosshair size={14}/> Напрямок</h4>
+              <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-4 flex items-center gap-2"><Crosshair size={14}/> {tx('Напрямок', 'Direction')}</h4>
               <div className="flex flex-col gap-3">
                 <div>
                   <div className="flex justify-between items-center mb-1 text-[12.5px]"><span className="text-[var(--edge-text2)]">LONG ({lTrades})</span><b className={lNet>=0?'text-[#34d399]':'text-[#f87171]'}>{signed(lNet,2)}R</b></div>
@@ -260,7 +261,7 @@ function SingleSetupModal({ setup, s, onClose }) {
             </div>
 
             <div className="p-5 bg-[var(--edge-hair)] border border-[var(--edge-hair)] rounded-[16px]">
-              <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-4 flex items-center gap-2"><Clock size={14}/> Сесії (PnL)</h4>
+              <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-4 flex items-center gap-2"><Clock size={14}/> {tx('Сесії (PnL)', 'Sessions (PnL)')}</h4>
               <div className="flex justify-between items-center h-[40px] px-2">
                 {Object.entries(sessMap).map(([k, v]) => (
                   <div key={k} className="flex flex-col items-center gap-1">
@@ -274,29 +275,29 @@ function SingleSetupModal({ setup, s, onClose }) {
 
           {sortedAssets.length > 0 && (
             <div>
-              <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-3">Де працює найкраще</h4>
+              <h4 className="text-[10.5px] text-[var(--edge-text3)] font-black uppercase tracking-[0.16em] mb-3">{tx('Де працює найкраще', 'Where it works best')}</h4>
               <div className="flex gap-3 flex-wrap">
                 {bestAsset && (
                   <div className="flex-1 p-3.5 bg-[#34d399]/5 border border-[#34d399]/20 rounded-[12px] flex justify-between items-center">
                     <div>
-                      <span className="text-[9.5px] text-[#34d399] uppercase font-bold block mb-0.5">Топ актив</span>
+                      <span className="text-[9.5px] text-[#34d399] uppercase font-bold block mb-0.5">{tx('Топ актив', 'Top asset')}</span>
                       <b className="text-[15px] text-[var(--edge-text)]">{bestAsset.asset}</b>
                     </div>
                     <div className="text-right">
                       <b className="text-[15px] text-[#34d399] block">{signed(bestAsset.net, 2)}R</b>
-                      <span className="text-[10px] text-[var(--edge-text3)]">{bestAsset.trades} угод</span>
+                      <span className="text-[10px] text-[var(--edge-text3)]">{bestAsset.trades} {tx('угод', bestAsset.trades === 1 ? 'trade' : 'trades')}</span>
                     </div>
                   </div>
                 )}
                 {worstAsset && worstAsset.net < 0 && (
                   <div className="flex-1 p-3.5 bg-[#f87171]/5 border border-[#f87171]/20 rounded-[12px] flex justify-between items-center">
                     <div>
-                      <span className="text-[9.5px] text-[#f87171] uppercase font-bold block mb-0.5">Тягне вниз</span>
+                      <span className="text-[9.5px] text-[#f87171] uppercase font-bold block mb-0.5">{tx('Тягне вниз', 'Dragging down')}</span>
                       <b className="text-[15px] text-[var(--edge-text)]">{worstAsset.asset}</b>
                     </div>
                     <div className="text-right">
                       <b className="text-[15px] text-[#f87171] block">{signed(worstAsset.net, 2)}R</b>
-                      <span className="text-[10px] text-[var(--edge-text3)]">{worstAsset.trades} угод</span>
+                      <span className="text-[10px] text-[var(--edge-text3)]">{worstAsset.trades} {tx('угод', worstAsset.trades === 1 ? 'trade' : 'trades')}</span>
                     </div>
                   </div>
                 )}
@@ -336,19 +337,19 @@ function AllSetupsModal({ s, onClose }) {
         className="relative z-10 w-full max-w-[1000px] max-h-[90vh] flex flex-col rounded-[24px] border border-[var(--edge-hair-strong)] bg-[var(--edge-sunken)]/95 backdrop-blur-3xl shadow-[0_40px_120px_rgba(0,0,0,0.8)] overflow-hidden"
       >
         <div className="shrink-0 relative px-6 md:px-8 py-6 border-b border-[var(--edge-hair)] bg-[var(--edge-hair)]">
-          <button onClick={onClose} className="absolute top-6 right-6 z-20 text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]"><X size={18} /></button>
+          <button onClick={onClose} aria-label={tx('Закрити', 'Close')} className="absolute top-6 right-6 z-20 text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors bg-[var(--edge-hair)] hover:bg-white/10 p-2 rounded-full border border-[var(--edge-hair)]"><X size={18} /></button>
           <div className="relative z-10">
             <h3 className="text-[var(--edge-text)] text-[22px] leading-none font-semibold m-0 font-[family-name:var(--edge-display,'Unbounded')] tracking-[-0.3px] flex items-center gap-3">
-              <Layers className="text-[var(--edge-acc)]" size={28}/> Усі сетапи (Детальна аналітика)
+              <Layers className="text-[var(--edge-acc)]" size={28}/> {tx('Усі сетапи (Детальна аналітика)', 'All setups (detailed analytics)')}
             </h3>
-            <p className="text-[13px] text-[var(--edge-text3)] mt-2 m-0">Порівняння ефективності всіх патернів, які ти торгуєш.</p>
+            <p className="text-[13px] text-[var(--edge-text3)] mt-2 m-0">{tx('Порівняння ефективності всіх патернів, які ти торгуєш.', 'How every pattern you trade compares.')}</p>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="p-5 bg-[var(--edge-hair)] border border-[var(--edge-hair)] rounded-[16px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-4">PnL за сетапами</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-4">{tx('PnL за сетапами', 'PnL by setup')}</span>
               <div className="flex flex-col gap-3">
                 {s.bySetup.map(x => {
                   const isProfit = x.net >= 0;
@@ -361,7 +362,7 @@ function AllSetupsModal({ s, onClose }) {
                         <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/10 z-0" />
                         <motion.div className="absolute top-0 bottom-0 rounded-md z-10"
                           style={{ background: `linear-gradient(to ${isProfit ? 'right' : 'left'}, ${c}80, ${c})`, [isProfit ? 'left' : 'right']: '50%' }}
-                          initial={{ width: 0 }} animate={{ width: `${w / 2}%`, boxShadow: `0 0 10px ${c}40` }} transition={{ duration: 1, ease: premiumEasing }}
+                          initial={{ width: 0 }} animate={{ width: `${w / 2}%`, boxShadow: 'none' }} transition={{ duration: 1, ease: premiumEasing }}
                         />
                       </div>
                       <b className={`text-[12.5px] w-[50px] text-right ${isProfit?'text-[var(--edge-acc)]':'text-[#f87171]'}`}>{signed(x.net,1)}R</b>
@@ -372,13 +373,13 @@ function AllSetupsModal({ s, onClose }) {
             </div>
             
             <div className="p-5 bg-[var(--edge-hair)] border border-[var(--edge-hair)] rounded-[16px]">
-              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-4">Вінрейт vs Кількість угод</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black mb-4">{tx('Вінрейт vs Кількість угод', 'Win rate vs number of trades')}</span>
               <div className="flex flex-col gap-3">
                 {s.bySetup.map(x => (
                   <div key={x.key} className="flex items-center justify-between gap-3">
                     <span className="text-[11.5px] font-bold text-[var(--edge-text)] w-[60px] truncate">{x.key}</span>
                     <div className="flex-1 flex items-center gap-2">
-                      <div className="w-[40px] text-[11.5px] text-[var(--edge-text3)] text-right">{x.trades} уг.</div>
+                      <div className="w-[40px] text-[11.5px] text-[var(--edge-text3)] text-right">{x.trades} {tx('уг.', x.trades === 1 ? 'trade' : 'trades')}</div>
                       <div className="flex-1 bg-[var(--edge-line)] h-[6px] rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all" style={{width: `${x.wr}%`, background: x.wr >= 50 ? '#34d399' : '#fbbf24'}}/>
                       </div>
@@ -394,11 +395,11 @@ function AllSetupsModal({ s, onClose }) {
             <table className="w-full border-collapse text-[13px] whitespace-nowrap min-w-[700px]">
               <thead>
                 <tr>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-left p-[0_12px_12px] border-b border-[var(--edge-hair)]">Сетап</th>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_12px_12px] border-b border-[var(--edge-hair)]">Угод</th>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_12px_12px] border-b border-[var(--edge-hair)]">Вінрейт</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-left p-[0_12px_12px] border-b border-[var(--edge-hair)]">{tx('Сетап', 'Setup')}</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_12px_12px] border-b border-[var(--edge-hair)]">{tx('Угод', 'Trades')}</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_12px_12px] border-b border-[var(--edge-hair)]">{tx('Вінрейт', 'Win rate')}</th>
                   <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-right p-[0_12px_12px] border-b border-[var(--edge-hair)]">Net PnL</th>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-right p-[0_12px_12px] border-b border-[var(--edge-hair)]">Сер. R</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-right p-[0_12px_12px] border-b border-[var(--edge-hair)]">{tx('Сер. R', 'Avg R')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -446,14 +447,14 @@ export default function Assets({ s }) {
   const pieData = useMemo(() => rankedAssets.map(a => ({ name: a.key, value: Math.max(0.5, Math.abs(a.net)), net: a.net, trades: a.trades })), [rankedAssets]);
 
   const verdict = useMemo(() => {
-    if (!rankedAssets.length) return "Немає достатньо даних для аналізу.";
+    if (!rankedAssets.length) return tx("Немає достатньо даних для аналізу.", "Not enough data to analyze yet.");
     const top = rankedAssets.filter(a => a.net >= 1).map(a => a.key);
     const bad = rankedAssets.filter(a => a.net <= -1).map(a => a.key);
     return (
       <div className="text-[12.5px] text-[var(--edge-text2)] leading-[1.6]">
-        <b className="text-[var(--edge-text)] block mb-1">Вердикт системи:</b>
-        {top.length > 0 ? <span>Найкраще зараз торгувати <b className="text-[#34d399]">{top.join(', ')}</b> — вони дають основний профіт. </span> : "Поки що немає стабільно прибуткових активів з великим R. "}
-        {bad.length > 0 && <span>Від активів <b className="text-[#f87171]">{bad.join(', ')}</b> краще переключитись на інші або тимчасово призупинити торгівлю ними — зараз вони тягнуть депозит вниз.</span>}
+        <b className="text-[var(--edge-text)] block mb-1">{tx('Вердикт системи:', 'System verdict:')}</b>
+        {top.length > 0 ? <span>{tx('Найкраще зараз торгувати', 'Right now your best markets are')} <b className="text-[#34d399]">{top.join(', ')}</b> {tx('— вони дають основний профіт.', '— they bring most of your profit.')} </span> : tx("Поки що немає стабільно прибуткових активів з великим R. ", "No consistently profitable assets with a large R yet. ")}
+        {bad.length > 0 && <span>{tx('Від активів', 'Consider switching away from')} <b className="text-[#f87171]">{bad.join(', ')}</b> {tx('краще переключитись на інші або тимчасово призупинити торгівлю ними — зараз вони тягнуть депозит вниз.', 'or pausing them for now — they\'re dragging your account down.')}</span>}
       </div>
     );
   }, [rankedAssets]);
@@ -487,20 +488,20 @@ export default function Assets({ s }) {
       </AnimatePresence>
 
       <motion.div variants={fadeUpVariant} className="flex items-baseline gap-4 relative z-10 mb-2">
-        <h2 className="font-[family-name:var(--edge-display,'Unbounded')] text-[24px] font-semibold m-0 tracking-[-0.3px] text-[var(--edge-text)]">Активи та Сетапи</h2>
+        <h2 className="font-[family-name:var(--edge-display,'Unbounded')] text-[24px] font-semibold m-0 tracking-[-0.3px] text-[var(--edge-text)]">{tx('Активи та Сетапи', 'Assets & Setups')}</h2>
         <span className="inline-flex items-center gap-[6px] text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-bold">
-          {s.byAsset.length} активів в роботі · {s.bySetup.length} сетапів
+          {tx(`${s.byAsset.length} активів в роботі · ${s.bySetup.length} сетапів`, `${s.byAsset.length} ${s.byAsset.length === 1 ? 'asset' : 'assets'} traded · ${s.bySetup.length} ${s.bySetup.length === 1 ? 'setup' : 'setups'}`)}
         </span>
       </motion.div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-4 items-start relative z-10">
         <div className="flex flex-col gap-4">
           <motion.div variants={fadeUpVariant}>
-            <Panel title={<><TrendingUp size={13} /> Ефективність активів</>} 
+            <Panel title={<><TrendingUp size={13} /> {tx('Ефективність активів', 'Asset performance')}</>} 
               right={
                 <div className="flex bg-[var(--edge-surface-hi)] border border-[var(--edge-hair-strong)] rounded-lg p-0.5">
-                  <button onClick={() => setViewMode('chart')} className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold flex items-center gap-1.5 ${viewMode === 'chart' ? 'bg-[var(--edge-line-hi)] text-[var(--edge-text)] shadow-sm' : 'text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}><BarChart2 size={13} /> Графік</button>
-                  <button onClick={() => setViewMode('pie')} className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold flex items-center gap-1.5 ${viewMode === 'pie' ? 'bg-[var(--edge-line-hi)] text-[var(--edge-text)] shadow-sm' : 'text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}><PieIcon size={13} /> Діаграма</button>
+                  <button onClick={() => setViewMode('chart')} className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold flex items-center gap-1.5 ${viewMode === 'chart' ? 'bg-[var(--edge-line-hi)] text-[var(--edge-text)] shadow-sm' : 'text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}><BarChart2 size={13} /> {tx('Графік', 'Chart')}</button>
+                  <button onClick={() => setViewMode('pie')} className={`px-3 py-1.5 rounded-md transition-all text-[11px] font-bold flex items-center gap-1.5 ${viewMode === 'pie' ? 'bg-[var(--edge-line-hi)] text-[var(--edge-text)] shadow-sm' : 'text-[var(--edge-text3)] hover:text-[var(--edge-text)] hover:bg-[var(--edge-hair)]'}`}><PieIcon size={13} /> {tx('Діаграма', 'Pie')}</button>
                 </div>
               }
             >
@@ -510,7 +511,7 @@ export default function Assets({ s }) {
                     <div className="p-3.5 bg-[var(--edge-surface-hi)]/60 border border-[#34d399]/10 rounded-[12px] transition-colors hover:border-[#34d399]/30 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#34d399]/10 flex items-center justify-center border border-[#34d399]/20 shrink-0"><Trophy size={18} className="text-[#34d399]" /></div>
                       <div>
-                        <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Топ актив</span>
+                        <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">{tx('Топ актив', 'Top asset')}</span>
                         <b className="block text-[16px] font-extrabold mt-0.5 text-[var(--edge-text)]">{bestAsset.key} <span className="text-[#34d399] ml-1">{signed(bestAsset.net)}R</span></b>
                       </div>
                     </div>
@@ -521,7 +522,7 @@ export default function Assets({ s }) {
                     <div className="p-3.5 bg-[var(--edge-surface-hi)]/60 border border-[#f87171]/10 rounded-[12px] transition-colors hover:border-[#f87171]/30 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#f87171]/10 flex items-center justify-center border border-[#f87171]/20 shrink-0"><AlertTriangle size={18} className="text-[#f87171]" /></div>
                       <div>
-                        <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Тягне вниз</span>
+                        <span className="block text-[9.5px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">{tx('Тягне вниз', 'Dragging down')}</span>
                         <b className="block text-[16px] font-extrabold mt-0.5 text-[var(--edge-text)]">{worstAsset.key} <span className="text-[#f87171] ml-1">{signed(worstAsset.net)}R</span></b>
                       </div>
                     </div>
@@ -567,7 +568,7 @@ export default function Assets({ s }) {
         </div>
 
         <motion.div variants={fadeUpVariant} className="h-full">
-          <Panel title={<><Wallet size={13} /> Статистика акаунтів</>} className="h-full">
+          <Panel title={<><Wallet size={13} /> {tx('Статистика акаунтів', 'Account stats')}</>} className="h-full">
             <div className="flex flex-col gap-3 mt-2">
               {s.byAccount.map((a) => {
                 const isProfit = a.net >= 0;
@@ -580,12 +581,12 @@ export default function Assets({ s }) {
                         <b className={`text-[15px] ${isProfit ? 'text-[#34d399]' : 'text-[#f87171]'}`}>{signed(a.net, 2)}R</b>
                       </div>
                       <div className="w-full bg-[var(--edge-line)] h-[6px] rounded-full overflow-hidden mb-3 relative">
-                        <motion.div className="absolute left-0 top-0 h-full rounded-full" style={{ background: color, boxShadow: `0 0 10px ${color}80` }} initial={{ width: 0 }} animate={{ width: `${a.wr}%` }} transition={{ duration: 1, ease: premiumEasing }} />
+                        <motion.div className="absolute left-0 top-0 h-full rounded-full" style={{ background: color, boxShadow: 'none' }} initial={{ width: 0 }} animate={{ width: `${a.wr}%` }} transition={{ duration: 1, ease: premiumEasing }} />
                       </div>
                       <div className="flex justify-between items-end text-[11px] text-[var(--edge-text3)] tracking-wide">
-                        <span className="flex flex-col gap-0.5"><span className="text-[9px] uppercase font-black">Вінрейт</span><b className="text-[var(--edge-text)] text-[13px]">{a.wr}%</b></span>
-                        <span className="flex flex-col gap-0.5 text-center"><span className="text-[9px] uppercase font-black">Угод</span><b className="text-[var(--edge-text)] text-[13px]">{a.trades}</b></span>
-                        <span className={`flex flex-col gap-0.5 text-right ${a.mistakes ? 'text-[#f87171]' : 'text-[#34d399]'}`}><span className="text-[9px] uppercase font-black">Помилок</span><b className="text-[13px]">{a.mistakes}</b></span>
+                        <span className="flex flex-col gap-0.5"><span className="text-[9px] uppercase font-black">{tx('Вінрейт', 'Win rate')}</span><b className="text-[var(--edge-text)] text-[13px]">{a.wr}%</b></span>
+                        <span className="flex flex-col gap-0.5 text-center"><span className="text-[9px] uppercase font-black">{tx('Угод', 'Trades')}</span><b className="text-[var(--edge-text)] text-[13px]">{a.trades}</b></span>
+                        <span className={`flex flex-col gap-0.5 text-right ${a.mistakes ? 'text-[#f87171]' : 'text-[#34d399]'}`}><span className="text-[9px] uppercase font-black">{tx('Помилок', 'Mistakes')}</span><b className="text-[13px]">{a.mistakes}</b></span>
                       </div>
                     </div>
                   </SpotlightCard>
@@ -597,7 +598,7 @@ export default function Assets({ s }) {
       </div>
 
       <motion.div variants={fadeUpVariant} className="relative z-10">
-        <Panel title={<><Crosshair size={13} /> Матриця напрямків (Long / Short)</>}>
+        <Panel title={<><Crosshair size={13} /> {tx('Матриця напрямків (Long / Short)', 'Direction matrix (Long / Short)')}</>}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 mt-2">
             <SpotlightCard glowColor="rgba(255,255,255,0.08)" className="rounded-[12px]">
               <div className="h-full p-4 bg-[var(--edge-surface-hi)]/40 border border-[var(--edge-hair)] rounded-[12px] flex items-center gap-5 relative overflow-hidden transition-colors hover:border-[var(--edge-hair-strong)]">
@@ -611,33 +612,32 @@ export default function Assets({ s }) {
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-transform group-hover:scale-105">
                     <span className="text-[17px] font-black text-[var(--edge-text)] drop-shadow-md">{lsStats.total}</span>
-                    <span className="text-[8px] tracking-[0.2em] text-[var(--edge-text3)] uppercase font-bold mt-0.5">Угод</span>
+                    <span className="text-[8px] tracking-[0.2em] text-[var(--edge-text3)] uppercase font-bold mt-0.5">{tx('Угод', 'Trades')}</span>
                   </div>
                 </div>
                 <div className="flex-1 flex flex-col gap-3 min-w-0">
                   <div className="group/item cursor-default">
                     <div className="flex justify-between items-center mb-1.5"><span className="text-[#34d399] font-black text-[11px] uppercase tracking-wider flex items-center gap-1 group-hover/item:brightness-125 transition-all"><ArrowUpRight size={13} /> Long</span><b className="text-[var(--edge-text)] text-[14px]">{lsStats.lPct}%</b></div>
-                    <div className="w-full h-[4px] bg-[var(--edge-line)] rounded-full overflow-hidden shadow-inner"><motion.div initial={{ width: 0 }} animate={{ width: `${lsStats.lPct}%` }} transition={{ duration: 1, ease: premiumEasing }} className="h-full bg-[#34d399] rounded-full shadow-[0_0_8px_#34d39980]" /></div>
-                    <span className="text-[10.5px] text-[var(--edge-text3)] mt-1.5 block group-hover/item:text-[var(--edge-text2)] transition-colors">{lsStats.lt} угод · WR {lsStats.lWr}%</span>
+                    <div className="w-full h-[4px] bg-[var(--edge-line)] rounded-full overflow-hidden shadow-inner"><motion.div initial={{ width: 0 }} animate={{ width: `${lsStats.lPct}%` }} transition={{ duration: 1, ease: premiumEasing }} className="h-full bg-[#34d399] rounded-full" /></div>
+                    <span className="text-[10.5px] text-[var(--edge-text3)] mt-1.5 block group-hover/item:text-[var(--edge-text2)] transition-colors">{lsStats.lt} {tx('угод', lsStats.lt === 1 ? 'trade' : 'trades')} · WR {lsStats.lWr}%</span>
                   </div>
                   <div className="group/item cursor-default">
                     <div className="flex justify-between items-center mb-1.5"><span className="text-[var(--edge-acc)] font-black text-[11px] uppercase tracking-wider flex items-center gap-1 group-hover/item:brightness-125 transition-all">Short <ArrowDownRight size={13} /></span><b className="text-[var(--edge-text)] text-[14px]">{lsStats.sPct}%</b></div>
-                    <div className="w-full h-[4px] bg-[var(--edge-line)] rounded-full overflow-hidden shadow-inner"><motion.div initial={{ width: 0 }} animate={{ width: `${lsStats.sPct}%` }} transition={{ duration: 1, ease: premiumEasing }} className="h-full bg-[var(--edge-acc)] rounded-full shadow-[0_0_8px_rgba(var(--edge-acc-rgb),0.50)]" /></div>
-                    <span className="text-[10.5px] text-[var(--edge-text3)] mt-1.5 block group-hover/item:text-[var(--edge-text2)] transition-colors">{lsStats.st} угод · WR {lsStats.sWr}%</span>
+                    <div className="w-full h-[4px] bg-[var(--edge-line)] rounded-full overflow-hidden shadow-inner"><motion.div initial={{ width: 0 }} animate={{ width: `${lsStats.sPct}%` }} transition={{ duration: 1, ease: premiumEasing }} className="h-full bg-[var(--edge-acc)] rounded-full" /></div>
+                    <span className="text-[10.5px] text-[var(--edge-text3)] mt-1.5 block group-hover/item:text-[var(--edge-text2)] transition-colors">{lsStats.st} {tx('угод', lsStats.st === 1 ? 'trade' : 'trades')} · WR {lsStats.sWr}%</span>
                   </div>
                 </div>
               </div>
             </SpotlightCard>
             <SpotlightCard glowColor="rgba(255,255,255,0.08)" className="rounded-[12px]">
               <div className="h-full p-5 bg-[var(--edge-surface-hi)]/40 border border-[var(--edge-hair)] rounded-[12px] flex flex-col justify-center gap-5 transition-colors hover:border-[var(--edge-hair-strong)]">
-                <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">Баланс PnL за напрямками</span>
+                <span className="block text-[10px] uppercase tracking-[0.14em] text-[var(--edge-text3)] font-black">{tx('Баланс PnL за напрямками', 'PnL balance by direction')}</span>
                 <div className="flex flex-col gap-4">
                   {lsBarData.map((d) => {
                     const maxNet = Math.max(0.1, Math.abs(lsStats.ln), Math.abs(lsStats.sn));
                     const isProfit = d.net >= 0;
                     const widthPct = Math.max(4, (Math.abs(d.net) / maxNet) * 100);
                     const displayColor = isProfit ? d.color : '#f87171';
-                    const glowColor = isProfit ? `rgba(52,211,153,0.3)` : `rgba(248,113,113,0.3)`;
                     return (
                       <div key={d.name} className="flex flex-col gap-1.5 group cursor-default">
                         <div className="flex justify-between items-end px-1">
@@ -645,10 +645,10 @@ export default function Assets({ s }) {
                             {d.name === 'LONG' ? <ArrowUpRight size={13} className={isProfit ? "text-[#34d399]" : "text-[#f87171]"}/> : <ArrowDownRight size={13} className={isProfit ? "text-[var(--edge-acc)]" : "text-[#f87171]"}/>}
                             {d.name}
                           </span>
-                          <span className={`text-[13.5px] font-black transition-all duration-300 ${isProfit ? 'text-[var(--edge-text)] group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'text-[#f87171] group-hover:drop-shadow-[0_0_8px_rgba(248,113,113,0.6)] group-hover:text-[#f87171]'}`}>{signed(d.net, 2)}R</span>
+                          <span className={`text-[13.5px] font-black transition-all duration-300 ${isProfit ? 'text-[var(--edge-text)] group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]' : 'text-[#f87171] group-hover:text-[#f87171]'}`}>{signed(d.net, 2)}R</span>
                         </div>
                         <div className="w-full h-[12px] bg-[var(--edge-bg)] rounded-full p-[2px] border border-[var(--edge-hair)] shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)]">
-                          <motion.div className="h-full rounded-full relative overflow-hidden" style={{ background: displayColor }} initial={{ width: 0 }} animate={{ width: `${widthPct}%`, boxShadow: `0 0 12px ${glowColor}` }} transition={{ duration: 1, ease: premiumEasing }}>
+                          <motion.div className="h-full rounded-full relative overflow-hidden" style={{ background: displayColor }} initial={{ width: 0 }} animate={{ width: `${widthPct}%`, boxShadow: 'none' }} transition={{ duration: 1, ease: premiumEasing }}>
                             <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent opacity-40" />
                             <motion.div className="absolute top-0 bottom-0 left-0 w-[150%] bg-gradient-to-r from-transparent via-white/25 to-transparent" animate={{ x: ['-100%', '100%'] }} transition={{ repeat: Infinity, duration: 2.5, ease: "linear", repeatDelay: 1 }} />
                           </motion.div>
@@ -665,18 +665,18 @@ export default function Assets({ s }) {
             <table className="w-full border-collapse text-[13px] whitespace-nowrap min-w-[700px]">
               <thead>
                 <tr>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-left p-[0_12px_12px]">Актив</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-left p-[0_12px_12px]">{tx('Актив', 'Asset')}</th>
                   <th className="text-[10px] tracking-[0.14em] uppercase text-[#34d399] font-black text-center p-[0_12px_12px]" colSpan={2}><div className="flex items-center justify-center gap-1.5"><ArrowUpRight size={13} /> LONG</div></th>
-                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_12px_12px] w-[120px]">Баланс PnL</th>
+                  <th className="text-[10px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_12px_12px] w-[120px]">{tx('Баланс PnL', 'PnL balance')}</th>
                   <th className="text-[10px] tracking-[0.14em] uppercase text-[#f87171] font-black text-center p-[0_12px_12px]" colSpan={2}><div className="flex items-center justify-center gap-1.5">SHORT <ArrowDownRight size={13} /></div></th>
                 </tr>
                 <tr>
                   <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)]" />
-                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[var(--edge-text3)] font-bold uppercase tracking-wider text-center">Угод (WR)</th>
+                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[var(--edge-text3)] font-bold uppercase tracking-wider text-center">{tx('Угод (WR)', 'Trades (WR)')}</th>
                   <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[var(--edge-text3)] font-bold uppercase tracking-wider text-right">PnL</th>
                   <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)]" />
                   <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[var(--edge-text3)] font-bold uppercase tracking-wider text-left pl-6">PnL</th>
-                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[var(--edge-text3)] font-bold uppercase tracking-wider text-center">Угод (WR)</th>
+                  <th className="p-[0_12px_12px] border-b border-[var(--edge-hair)] text-[9.5px] text-[var(--edge-text3)] font-bold uppercase tracking-wider text-center">{tx('Угод (WR)', 'Trades (WR)')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -698,16 +698,16 @@ export default function Assets({ s }) {
                         ) : <span className="text-[var(--edge-text4)]">—</span>}
                       </td>
                       <td className="text-right p-[14px_12px]">
-                        {row.l ? <b className={`transition-all ${lNet >= 0 ? 'text-[#34d399] group-hover:drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-[#f87171] group-hover:drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]'}`}>{signed(lNet, 2)}R</b> : <span className="text-[var(--edge-text4)]">—</span>}
+                        {row.l ? <b className={`transition-all ${lNet >= 0 ? 'text-[#34d399]' : 'text-[#f87171]'}`}>{signed(lNet, 2)}R</b> : <span className="text-[var(--edge-text4)]">—</span>}
                       </td>
                       <td className="text-center p-[14px_12px] w-[140px] align-middle">
                         <div className="w-full h-[6px] flex bg-[var(--edge-bg)] rounded-full overflow-hidden opacity-70 group-hover:opacity-100 transition-all duration-300 shadow-inner border border-[var(--edge-hair)]">
-                          {row.l && <div className="transition-all duration-500 group-hover:brightness-125 group-hover:shadow-[0_0_8px_currentColor]" style={{ width: `${lPct}%`, background: lNet >= 0 ? '#34d399' : '#f87171' }} />}
-                          {row.s && <div className="transition-all duration-500 group-hover:brightness-125 group-hover:shadow-[0_0_8px_currentColor]" style={{ width: `${sPct}%`, background: sNet >= 0 ? 'var(--edge-acc, var(--edge-acc))' : '#f87171' }} />}
+                          {row.l && <div className="transition-all duration-500 group-hover:brightness-125" style={{ width: `${lPct}%`, background: lNet >= 0 ? '#34d399' : '#f87171' }} />}
+                          {row.s && <div className="transition-all duration-500 group-hover:brightness-125" style={{ width: `${sPct}%`, background: sNet >= 0 ? 'var(--edge-acc, var(--edge-acc))' : '#f87171' }} />}
                         </div>
                       </td>
                       <td className="text-left p-[14px_12px] pl-6">
-                        {row.s ? <b className={`transition-all ${sNet >= 0 ? 'text-[var(--edge-acc)] group-hover:drop-shadow-[0_0_8px_rgba(139,123,255,0.5)]' : 'text-[#f87171] group-hover:drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]'}`}>{signed(sNet, 2)}R</b> : <span className="text-[var(--edge-text4)]">—</span>}
+                        {row.s ? <b className={`transition-all ${sNet >= 0 ? 'text-[var(--edge-acc)]' : 'text-[#f87171]'}`}>{signed(sNet, 2)}R</b> : <span className="text-[var(--edge-text4)]">—</span>}
                       </td>
                       <td className="text-center p-[14px_12px]">
                         {row.s ? (
@@ -725,7 +725,7 @@ export default function Assets({ s }) {
           </div>
           <div className="mt-4 p-3 bg-[var(--edge-surface-hi)]/50 border border-[var(--edge-hair)] rounded-[12px] flex items-start gap-3">
             <Activity size={16} className="text-[var(--edge-acc)] mt-0.5 shrink-0" />
-            <p className="text-[12px] text-[var(--edge-text2)] leading-[1.5] m-0">Асиметрія напрямків важливіша за загальний вінрейт. Якщо один бік (наприклад, Short) стабільно мінусує, поки Long в плюсі — це проблема не ринку, а твого фільтра входу в конкретних фазах.</p>
+            <p className="text-[12px] text-[var(--edge-text2)] leading-[1.5] m-0">{tx('Асиметрія напрямків важливіша за загальний вінрейт. Якщо один бік (наприклад, Short) стабільно мінусує, поки Long в плюсі — це проблема не ринку, а твого фільтра входу в конкретних фазах.', 'Direction asymmetry matters more than overall win rate. If one side (say, Short) keeps losing while Long is in profit, the problem isn\'t the market — it\'s your entry filter in specific phases.')}</p>
           </div>
         </Panel>
       </motion.div>
@@ -733,11 +733,11 @@ export default function Assets({ s }) {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 relative z-10">
         <motion.div variants={fadeUpVariant} className="h-full">
           <Panel 
-            title={<><Layers size={13} /> Ефективність сетапів</>} 
+            title={<><Layers size={13} /> {tx('Ефективність сетапів', 'Setup performance')}</>} 
             className="h-full"
             right={
               <button onClick={() => setIsAllSetupsOpen(true)} className="flex items-center gap-1.5 text-[10px] tracking-[0.14em] uppercase font-bold text-[var(--edge-text3)] hover:text-[var(--edge-text)] transition-colors group">
-                Всі сетапи
+                {tx('Всі сетапи', 'All setups')}
                 <div className="p-1 bg-[var(--edge-hair)] rounded-md group-hover:bg-white/10 transition-colors"><Maximize2 size={12} /></div>
               </button>
             }
@@ -768,8 +768,8 @@ export default function Assets({ s }) {
                   ))}
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-[13px] font-semibold text-[var(--edge-text3)]">Ще немає сетапів</span>
-                  <span className="text-[12px] text-[var(--edge-text4)]">Додай сетап у формі угоди — і тут з'явиться його ефективність</span>
+                  <span className="text-[13px] font-semibold text-[var(--edge-text3)]">{tx('Ще немає сетапів', 'No setups yet')}</span>
+                  <span className="text-[12px] text-[var(--edge-text4)]">{tx("Додай сетап у формі угоди — і тут з'явиться його ефективність", 'Add a setup in the trade form and its performance will show up here')}</span>
                 </div>
               </div>
             ) : (
@@ -797,9 +797,9 @@ export default function Assets({ s }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-4 text-[11px] text-[var(--edge-text3)]">
-                        <span>{x.trades} угод</span>
+                        <span>{x.trades} {tx('угод', x.trades === 1 ? 'trade' : 'trades')}</span>
                         <span className="flex items-center gap-1.5">WR <b className="text-[var(--edge-text)] group-hover:text-[var(--edge-text)]">{x.wr}%</b></span>
-                        <span>Сер. <b style={{ color: x.avg >= 0 ? '#34d399' : '#f87171' }}>{signed(x.avg, 2)}R</b></span>
+                        <span>{tx('Сер.', 'Avg')} <b style={{ color: x.avg >= 0 ? '#34d399' : '#f87171' }}>{signed(x.avg, 2)}R</b></span>
                       </div>
                     </button>
                   </SpotlightCard>
@@ -811,12 +811,12 @@ export default function Assets({ s }) {
         </motion.div>
 
     <motion.div variants={fadeUpVariant} className="h-full">
-          <Panel title={<><Clock size={13} /> Актив × Сесія</>} right="Теплова матриця" className="h-full">
+          <Panel title={<><Clock size={13} /> {tx('Актив × Сесія', 'Asset × Session')}</>} right={tx('Теплова матриця', 'Heat map')} className="h-full">
             <div className="overflow-x-auto custom-scrollbar mt-2 pb-2">
               <table className="w-full border-separate border-spacing-y-2 border-spacing-x-2 text-[13px] whitespace-nowrap min-w-[500px]">
                 <thead>
                   <tr>
-                    <th className="text-[9.5px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-left p-[0_4px_8px] w-[80px]">Актив</th>
+                    <th className="text-[9.5px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-left p-[0_4px_8px] w-[80px]">{tx('Актив', 'Asset')}</th>
                     {['Asia', 'London', 'New York'].map((x) => <th key={x} className="text-[9.5px] tracking-[0.14em] uppercase text-[var(--edge-text3)] font-black text-center p-[0_4px_8px]">{x}</th>)}
                   </tr>
                 </thead>
@@ -850,13 +850,13 @@ export default function Assets({ s }) {
                                 >
                                   {/* Текст з крутим ефектом світіння (drop-shadow) при наведенні */}
                                   <b 
-                                    className={`relative z-10 text-[16px] font-black tracking-tight transition-all duration-300 ${isProfit ? 'group-hover/cell:drop-shadow-[0_0_12px_rgba(52,211,153,1)]' : 'group-hover/cell:drop-shadow-[0_0_12px_rgba(248,113,113,1)]'}`} 
+                                    className={`relative z-10 text-[16px] font-black tracking-tight transition-all duration-300 ${isProfit ? '' : ''}`} 
                                     style={{ color }}
                                   >
                                     {signed(v, 1)}R
                                   </b>
                                   <div className="relative z-10 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-[var(--edge-text2)] group-hover/cell:text-[var(--edge-text)] transition-colors duration-300">
-                                    <span>{list.length} уг.</span>
+                                    <span>{list.length} {tx('уг.', list.length === 1 ? 'trade' : 'trades')}</span>
                                     <span className="w-1 h-1 rounded-full bg-white/20 group-hover/cell:bg-white/50 transition-colors" />
                                     <span>{wr}% WR</span>
                                   </div>
@@ -873,7 +873,7 @@ export default function Assets({ s }) {
                                   background: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.015) 4px, rgba(255,255,255,0.015) 8px)'
                                 }}
                               >
-                                <span className="text-[9.5px] text-[var(--edge-text4)] font-black tracking-[0.15em] uppercase group-hover/empty:text-[var(--edge-text3)] transition-colors relative z-10">0 угод</span>
+                                <span className="text-[9.5px] text-[var(--edge-text4)] font-black tracking-[0.15em] uppercase group-hover/empty:text-[var(--edge-text3)] transition-colors relative z-10">{tx('0 угод', '0 trades')}</span>
                               </div>
                             </td>
                           );
@@ -885,12 +885,12 @@ export default function Assets({ s }) {
               </table>
             </div>
             <div className="mt-5 flex items-center justify-center gap-6 text-[10.5px] text-[var(--edge-text3)] font-medium tracking-wide">
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-[4px] bg-[#f87171]/20 border border-[#f87171]/50" />Збиток</div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-[4px] bg-[#f87171]/20 border border-[#f87171]/50" />{tx('Збиток', 'Loss')}</div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-[4px] border border-dashed border-white/20" style={{ background: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)' }} />
-                Сліпа зона
+                {tx('Сліпа зона', 'Blind spot')}
               </div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-[4px] bg-[#34d399]/20 border border-[#34d399]/50" />Прибуток</div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-[4px] bg-[#34d399]/20 border border-[#34d399]/50" />{tx('Прибуток', 'Profit')}</div>
             </div>
           </Panel>
         </motion.div>

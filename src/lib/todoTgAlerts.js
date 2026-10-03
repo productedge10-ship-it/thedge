@@ -26,6 +26,7 @@
 ================================================================== */
 
 import { supabase } from './supabase';
+import { t as tx } from './lang';
 
 const SOURCE = 'todo';
 
@@ -45,8 +46,8 @@ export function remindAt(task) {
 /* Текст пишемо на фронті: бот — лише кур'єр для того, що лежить у
    черзі, і про завдання він не знає нічого. */
 function message(task) {
-  const text = String(task.text || '').trim() || 'Завдання';
-  return `${text} — час.`;
+  const text = String(task.text || '').trim() || tx('Завдання', 'Task');
+  return tx(`${text} — час.`, `${text} — it’s time.`);
 }
 
 async function uid() {

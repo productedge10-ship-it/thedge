@@ -136,9 +136,7 @@ const cardStyle = (on) => ({
   transition: 'border-color .2s ease, background .2s ease',
   border: `1px solid ${on ? `rgba(${T.accRgb},0.6)` : T.line}`,
   background: on ? `rgba(${T.accRgb},0.10)` : T.surfaceHi,
-  boxShadow: on
-    ? `0 0 0 1px rgba(${T.accRgb},0.12), 0 8px 24px -14px rgba(${T.accRgb},0.5)`
-    : 'none',
+  boxShadow: on ? `0 0 0 1px rgba(${T.accRgb},0.12)` : 'none',
 });
 
 const cardTitle = (on) => ({
@@ -1109,7 +1107,7 @@ export default function SettingsModal() {
                                     background: f.value ? T.acc : 'transparent',
                                     border: `1px solid ${f.value ? 'transparent' : T.lineHi}`,
                                     opacity: f.value || 1,
-                                    boxShadow: f.value >= 1 ? `0 0 10px rgba(${T.accRgb},0.7)` : 'none',
+                                    boxShadow: 'none',
                                   }}
                                 />
                                 <div style={cardTitle(on)}>{label('fx', f)}</div>
@@ -1660,12 +1658,11 @@ function ShareTab() {
 
 /* Головна кнопка вкладки «Share». Та сама мова, що в кнопки експорту
    на аналітиці: заливка акцентом зверху вниз, тонкий світлий кант
-   згори й ореол. Під курсором — світло, а не рух: ореол ширшає, заливка
-   яскравішає, кнопка лишається на місці. Після копіювання на мить
+   згори (ореол під кнопкою прибрано разом з усіма кольоровими тінями).
+   Під курсором заливка яскравішає, кнопка лишається на місці. Після копіювання на мить
    зеленіє — щоб «скопійовано» було видно краєм ока, без читання. */
 function ShareBtn({ children, onClick, disabled, done, style }) {
   const [hot, setHot] = useState(false);
-  const rgb = done ? T.okRgb : T.accRgb;
   const base = done ? T.ok : T.acc;
   return (
     <button
@@ -1689,9 +1686,7 @@ function ShareBtn({ children, onClick, disabled, done, style }) {
         color: 'var(--edge-on-acc, #fff)',
         background: `linear-gradient(180deg, ${base}, color-mix(in srgb, ${base} 72%, #000))`,
         border: '1px solid rgba(255,255,255,0.14)',
-        boxShadow: hot && !disabled
-          ? `0 16px 40px -12px rgba(${rgb},0.85), 0 0 0 3px rgba(${rgb},0.16), inset 0 1px 0 rgba(255,255,255,0.28)`
-          : `0 10px 28px -12px rgba(${rgb},0.6), inset 0 1px 0 rgba(255,255,255,0.22)`,
+        boxShadow: hot && !disabled ? `inset 0 1px 0 rgba(255,255,255,0.28)` : `inset 0 1px 0 rgba(255,255,255,0.22)`,
         filter: hot && !disabled ? 'brightness(1.08)' : 'none',
         opacity: disabled ? 0.7 : 1,
         cursor: disabled ? 'default' : 'pointer',
@@ -2950,7 +2945,7 @@ function TelegramTab() {
                                 inset: 0,
                                 borderRadius: 10,
                                 background: `linear-gradient(180deg, rgba(${T.accRgb},1), rgba(${T.accRgb},0.86))`,
-                                boxShadow: `0 5px 16px -4px rgba(${T.accRgb},0.75), 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 1px rgba(0,0,0,0.15)`,
+                                boxShadow: `0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 1px rgba(0,0,0,0.15)`,
                               }}
                             />
                           )}
@@ -3528,7 +3523,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
                     : T.sunken,
                   border: `1px solid ${ready ? 'transparent' : T.line}`,
                   color: ready ? 'var(--edge-on-acc, #0A0A0C)' : T.text4,
-                  boxShadow: ready ? `0 16px 34px -18px rgba(${T.accRgb},0.9)` : 'none',
+                  boxShadow: 'none',
                   cursor: ready && !busy ? 'pointer' : 'default',
                   transition: 'all .22s',
                 }}

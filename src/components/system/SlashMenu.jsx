@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { BLOCK_TYPES } from '../../lib/systemDoc';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Меню блоків.
@@ -68,7 +69,7 @@ export default function SlashMenu({ query = '', onPick, onClose, style }) {
     >
       <div className="px-3 py-2" style={{ borderBottom: `1px solid ${T.line}` }}>
         <span className="text-[11.5px] font-bold uppercase tracking-[0.12em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          {query ? `пошук: ${query}` : 'блоки'}
+          {query ? tx(`пошук: ${query}`, `search: ${query}`) : tx('блоки', 'blocks')}
         </span>
       </div>
 

@@ -49,7 +49,7 @@ function EdgeLogo({ large = false }) {
         WebkitBackgroundClip: 'text',
         backgroundClip: 'text',
         color: 'transparent',
-        filter: `drop-shadow(0 0 22px rgba(${ACCENT},0.4))`,
+        filter: 'none',
       }}
     >
       THE&nbsp;EDGE
@@ -79,6 +79,9 @@ function SectionTitle({ eyebrow, title, sub }) {
   );
 }
 
+/* glow лишається в сигнатурі лише щоб не потрапити в ...rest і далі в DOM:
+   світну пляму при наведенні прибрано, а виклики з glow не чіпаємо. */
+// eslint-disable-next-line no-unused-vars -- glow навмисно вилучаємо з rest
 function GlassCard({ children, className = '', glow = false, ...rest }) {
   return (
     <motion.div
@@ -88,12 +91,6 @@ function GlassCard({ children, className = '', glow = false, ...rest }) {
       style={{ background: 'linear-gradient(180deg, rgba(25,28,36,0.75), rgba(13,15,20,0.85))' }}
       {...rest}
     >
-      {glow && (
-        <div
-          className="absolute -top-24 -right-24 w-64 h-64 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-          style={{ background: `radial-gradient(circle, rgba(${ACCENT},0.16), transparent 65%)`, filter: 'blur(30px)' }}
-        />
-      )}
       <div className="relative">{children}</div>
     </motion.div>
   );
@@ -494,7 +491,7 @@ export default function FAQ() {
                       >
                         <span
                           className="w-[6px] h-[6px] rounded-full"
-                          style={{ background: '#00e0a4', boxShadow: '0 0 8px rgba(0,224,164,0.8)' }}
+                          style={{ background: '#00e0a4', boxShadow: 'none' }}
                         />
                         {tx("AI-психолог · на зв'язку", 'AI psychologist · online')}
                       </div>
@@ -555,7 +552,7 @@ export default function FAQ() {
                     </div>
                   ))}
                   <div className="flex items-center gap-2 text-[10.5px] text-[var(--edge-text)]/35 mt-1" style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: 1 }}>
-                    <span className="w-[6px] h-[6px] rounded-full" style={{ background: '#00e0a4', boxShadow: '0 0 8px rgba(0,224,164,0.8)' }} />
+                    <span className="w-[6px] h-[6px] rounded-full" style={{ background: '#00e0a4', boxShadow: 'none' }} />
                     {tx('LIVE · синхронізовано з MT5', 'LIVE · synced with MT5')}
                   </div>
                 </div>
@@ -642,7 +639,7 @@ export default function FAQ() {
                             >
                               <span
                                 className="mt-[7px] shrink-0 w-[7px] h-[7px] rounded-full"
-                                style={{ background: tab.color, boxShadow: `0 0 8px rgba(${tab.rgb},0.7)` }}
+                                style={{ background: tab.color, boxShadow: 'none' }}
                               />
                               <p className="text-[13px] text-[var(--edge-text)]/70 leading-relaxed">{p}</p>
                             </div>
@@ -703,7 +700,7 @@ export default function FAQ() {
                   className="shrink-0 text-[var(--edge-text)] px-7 py-3 rounded-[12px] text-[11.5px] font-bold uppercase tracking-[1.5px] flex items-center gap-2"
                   style={{
                     background: 'linear-gradient(140deg, #4db8f5 0%, #25A3E9 50%, #1273ab 100%)',
-                    boxShadow: '0 14px 30px -12px rgba(37,163,233,0.6), inset 0 1px 0 rgba(255,255,255,0.25)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25)',
                   }}
                 >
                   <Send size={14} /> {tx('Написати в Telegram', 'Message on Telegram')}
@@ -769,7 +766,7 @@ export default function FAQ() {
                               >
                                 <span
                                   className="mt-[6px] shrink-0 w-[7px] h-[7px] rounded-full"
-                                  style={{ background: item.color, boxShadow: `0 0 8px rgba(${item.rgb},0.7)` }}
+                                  style={{ background: item.color, boxShadow: 'none' }}
                                 />
                                 <div>
                                   <h5 className="text-[var(--edge-text)] font-semibold text-[13px] mb-0.5">{feature.title}</h5>

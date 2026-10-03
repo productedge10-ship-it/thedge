@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { getCat, reasonLabel, REASON_GROUPS } from './utils';
 import { T } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 import { notify } from '../../utils/notify';
 import ChartShot from '../ui/ChartShot';
 import RuleFromErrorModal from './RuleFromErrorModal';
@@ -37,7 +38,7 @@ const GROUP_COLOR = {
   Preparation: 'var(--edge-ok)',
 };
 
-const MON = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
+const MON = tx(['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'], ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
 
 const Cap = ({ children, hint }) => (
   <div className="flex items-baseline justify-between gap-2.5">
@@ -170,10 +171,10 @@ export default function ErrorDetailDrawer({
   };
 
   const facts = [
-    ['Записано', short],
-    ['Пара', selected.pair || '—'],
-    ['Причин', String(reasons.length)],
-    ['Стан', selected.resolved ? 'Розібрано' : 'Не розібрано'],
+    [tx('Записано', 'Logged'), short],
+    [tx('Пара', 'Pair'), selected.pair || '—'],
+    [tx('Причин', 'Reasons'), String(reasons.length)],
+    [tx('Стан', 'Status'), selected.resolved ? tx('Розібрано', 'Reviewed') : tx('Не розібрано', 'Not reviewed')],
   ];
 
   const copyAll = async () => {
@@ -186,7 +187,7 @@ export default function ErrorDetailDrawer({
 
     try {
       await navigator.clipboard.writeText(text);
-      notify.success('Скопійовано', 'Розбір у буфері.');
+      notify.success(tx('Скопійовано', 'Copied'), tx('Розбір у буфері.', 'Review copied to clipboard.'));
     } catch {
       /* Дозволу на буфер може не бути — тоді старий спосіб, він
          працює скрізь, де є фокус на сторінці. */
@@ -196,7 +197,7 @@ export default function ErrorDetailDrawer({
       ta.select();
       document.execCommand('copy');
       ta.remove();
-      notify.success('Скопійовано', 'Розбір у буфері.');
+      notify.success(tx('Скопійовано', 'Copied'), tx('Розбір у буфері.', 'Review copied to clipboard.'));
     }
   };
 
@@ -274,7 +275,7 @@ export default function ErrorDetailDrawer({
                           className="flex items-center gap-2 rounded-full px-3.5 py-[6px] text-[13px] font-bold xl:text-[14px]"
                           style={{ fontFamily: T.sans, background: `${catColor}1f`, border: `1px solid ${catColor}4d`, color: `${catColor}f2` }}
                         >
-                          <span className="h-1.5 w-1.5 rounded-full" style={{ background: catColor, boxShadow: `0 0 8px 1px ${catColor}cc` }} />
+                          <span className="h-1.5 w-1.5 rounded-full" style={{ background: catColor, boxShadow: 'none' }} />
                           {cat.label}
                         </span>
                       )}
@@ -289,10 +290,10 @@ export default function ErrorDetailDrawer({
                 </div>
 
                 <div className="flex flex-none items-center gap-2">
-                  {onEdit && <IconBtn icon={Pencil} title="Редагувати" onClick={() => onEdit(selected)} />}
-                  <IconBtn icon={Trash2} title="Видалити" danger onClick={() => onDelete(selected.id)} />
+                  {onEdit && <IconBtn icon={Pencil} title={tx('Редагувати', 'Edit')} onClick={() => onEdit(selected)} />}
+                  <IconBtn icon={Trash2} title={tx('Видалити', 'Delete')} danger onClick={() => onDelete(selected.id)} />
                   <span className="mx-0.5 h-6 w-px" style={{ background: 'var(--edge-line)' }} />
-                  <IconBtn icon={X} title="Закрити" onClick={onClose} />
+                  <IconBtn icon={X} title={tx('Закрити', 'Close')} onClick={onClose} />
                 </div>
               </div>
 
@@ -308,7 +309,7 @@ export default function ErrorDetailDrawer({
 
                   <div className="flex flex-wrap items-center gap-3.5">
                     <span style={{ fontFamily: T.display, fontSize: 'clamp(40px, 3vw, 52px)', fontWeight: 700, letterSpacing: '-1.6px', lineHeight: 1, color: 'var(--edge-text)' }}>
-                      {selected.pair || 'Без пари'}
+                      {selected.pair || tx('Без пари', 'No pair')}
                     </span>
                     <span
                       className="flex items-center gap-2 rounded-full px-4 py-[8px] text-[13.5px] font-bold xl:text-[14.5px]"
@@ -323,10 +324,10 @@ export default function ErrorDetailDrawer({
                         className="h-1.5 w-1.5 rounded-full"
                         style={{
                           background: selected.resolved ? 'var(--edge-ok)' : 'var(--edge-acc)',
-                          boxShadow: `0 0 9px 1px ${selected.resolved ? 'rgba(var(--edge-ok-rgb),0.80)' : A(0.8)}`,
+                          boxShadow: 'none',
                         }}
                       />
-                      {selected.resolved ? 'Розібрано' : 'Не розібрано'}
+                      {selected.resolved ? tx('Розібрано', 'Reviewed') : tx('Не розібрано', 'Not reviewed')}
                     </span>
                   </div>
 
@@ -334,7 +335,7 @@ export default function ErrorDetailDrawer({
 
                   {reasons.length > 0 && (
                     <>
-                      <Cap>Причини</Cap>
+                      <Cap>{tx('Причини', 'Reasons')}</Cap>
                       <div className="mt-3 flex flex-wrap items-center gap-2 xl:gap-2.5">
                         {reasons.map((id) => {
                           const rc = reasonColor(id);
@@ -344,7 +345,7 @@ export default function ErrorDetailDrawer({
                               className="flex items-center gap-2 rounded-full px-4 py-[8px] text-[13.5px] font-semibold xl:px-[18px] xl:py-[9px] xl:text-[14.5px]"
                               style={{ fontFamily: T.sans, background: `${rc}1c`, border: `1px solid ${rc}42`, color: `${rc}f2` }}
                             >
-                              <span className="h-[5px] w-[5px] rounded-full" style={{ background: rc, boxShadow: `0 0 8px 1px ${rc}99` }} />
+                              <span className="h-[5px] w-[5px] rounded-full" style={{ background: rc, boxShadow: 'none' }} />
                               {reasonLabel(id)}
                             </span>
                           );
@@ -358,7 +359,7 @@ export default function ErrorDetailDrawer({
                       висновку ще один інпут, який хочеться заповнити,
                       а не перечитати. */}
                   <div className="mt-6">
-                    <Cap>Розбір</Cap>
+                    <Cap>{tx('Розбір', 'Review')}</Cap>
                     <div
                       className="relative mt-3 overflow-hidden py-[18px] pl-6 pr-6 xl:py-6 xl:pl-7 xl:pr-7"
                       style={{
@@ -368,7 +369,7 @@ export default function ErrorDetailDrawer({
                     >
                       <span
                         className="absolute inset-y-0 left-0 w-[2px] rounded-sm"
-                        style={{ background: `linear-gradient(180deg, ${color}, ${color}1f)`, boxShadow: `0 0 14px 1px ${color}80` }}
+                        style={{ background: `linear-gradient(180deg, ${color}, ${color}1f)`, boxShadow: 'none' }}
                       />
                       <span
                         className="pointer-events-none absolute select-none"
@@ -387,7 +388,7 @@ export default function ErrorDetailDrawer({
                           className="whitespace-nowrap text-[11.5px] uppercase xl:text-[12.5px]"
                           style={{ fontFamily: T.mono, letterSpacing: '1.6px', color: 'var(--edge-text3)' }}
                         >
-                          мій висновок · {short}
+                          {tx('мій висновок', 'my takeaway')} · {short}
                         </span>
                       </div>
                     </div>
@@ -405,7 +406,7 @@ export default function ErrorDetailDrawer({
                       графік росте сам, у низькому — чесно стискається,
                       але не менше ніж до 320. */}
                   <div className="mt-6 flex min-h-0 flex-1 flex-col">
-                    <Cap hint={shots.length > 1 ? `${shots.length} кадри` : 'скрін на момент входу'}>Графік</Cap>
+                    <Cap hint={shots.length > 1 ? tx(`${shots.length} кадри`, `${shots.length} shots`) : tx('скрін на момент входу', 'screenshot at entry')}>{tx('Графік', 'Chart')}</Cap>
 
                     {shots.length ? (
                       <div className="mt-3 min-h-[320px] flex-1">
@@ -424,10 +425,10 @@ export default function ErrorDetailDrawer({
                         </span>
                         <span className="min-w-0">
                           <span className="block text-[14.5px] font-semibold xl:text-[15.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text)' }}>
-                            Скріна ще немає
+                            {tx('Скріна ще немає', 'No screenshot yet')}
                           </span>
                           <span className="mt-[3px] block text-[13px] xl:text-[14px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
-                            Додати можна через редагування запису
+                            {tx('Додати можна через редагування запису', 'You can add one by editing the entry')}
                           </span>
                         </span>
                       </div>
@@ -449,19 +450,17 @@ export default function ErrorDetailDrawer({
                         background: `linear-gradient(180deg, ${ctaHover ? 'var(--edge-ok), var(--edge-ok)' : 'var(--edge-ok), var(--edge-ok)'})`,
                         border: '1px solid transparent',
                         color: 'var(--edge-sunken)',
-                        boxShadow: ctaHover
-                          ? '0 16px 36px -14px rgba(var(--edge-ok-rgb),0.80), inset 0 1px 0 rgba(var(--edge-hair-rgb),0.35)'
-                          : '0 10px 26px -14px rgba(var(--edge-ok-rgb),0.60), inset 0 1px 0 rgba(var(--edge-hair-rgb),0.24)',
+                        boxShadow: ctaHover ? `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.35)` : `inset 0 1px 0 rgba(var(--edge-hair-rgb),0.24)`,
                         transform: `translateY(${ctaHover ? '-2px' : '0'})`,
                         transition: 'all .2s',
                       }}
                   >
                     {selected.resolved ? <Check size={15} strokeWidth={2.4} /> : <Clock size={15} strokeWidth={2} />}
-                    {selected.resolved ? 'Розібрано' : 'Позначити розібраною'}
+                    {selected.resolved ? tx('Розібрано', 'Reviewed') : tx('Позначити розібраною', 'Mark as reviewed')}
                   </button>
 
                   <div>
-                    <Cap>Про запис</Cap>
+                    <Cap>{tx('Про запис', 'About this entry')}</Cap>
                     <div className="mt-2.5 flex flex-col gap-px">
                       {facts.map(([k, v], i) => (
                         <div
@@ -478,7 +477,7 @@ export default function ErrorDetailDrawer({
 
                   {stats && (
                     <div>
-                      <Cap>Ця категорія</Cap>
+                      <Cap>{tx('Ця категорія', 'This category')}</Cap>
                       <div
                         className="relative mt-2.5 overflow-hidden rounded-[15px] px-4 py-4 xl:px-5 xl:py-5"
                         style={{ background: `linear-gradient(165deg, ${catColor}14, var(--edge-sunken))`, border: `1px solid ${catColor}3d` }}
@@ -493,7 +492,7 @@ export default function ErrorDetailDrawer({
                             {stats.count}
                           </span>
                           <span className="text-[13.5px] xl:text-[14.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
-                            {stats.count === 1 ? 'запис' : stats.count < 5 ? 'записи' : 'записів'}
+                            {tx(stats.count === 1 ? 'запис' : stats.count < 5 ? 'записи' : 'записів', stats.count === 1 ? 'entry' : 'entries')}
                           </span>
                         </div>
 
@@ -503,40 +502,40 @@ export default function ErrorDetailDrawer({
                             style={{
                               width: `${Math.max(4, stats.pct)}%`,
                               background: `linear-gradient(90deg, ${catColor}5e, ${catColor})`,
-                              boxShadow: `0 0 12px ${catColor}66`,
+                              boxShadow: 'none',
                             }}
                           />
                         </div>
 
                         <p className="relative mt-2.5 text-[13.5px] xl:text-[14.5px]" style={{ fontFamily: T.sans, lineHeight: 1.5, color: 'var(--edge-text2)' }}>
-                          {stats.pct}% усіх твоїх записів у журналі.
-                          {stats.count > 2 ? ' Це вже система, а не випадковість.' : ''}
+                          {tx(`${stats.pct}% усіх твоїх записів у журналі.`, `${stats.pct}% of all your journal entries.`)}
+                          {stats.count > 2 ? tx(' Це вже система, а не випадковість.', " That's a pattern, not a coincidence.") : ''}
                         </p>
                       </div>
                     </div>
                   )}
 
                   <div className="mt-auto">
-                    <Cap>Далі</Cap>
+                    <Cap>{tx('Далі', 'Next steps')}</Cap>
                     <div className="mt-2.5 flex flex-col gap-1.5">
                       <ActionRow
                         icon={ListChecks}
-                        label="Створити правило"
-                        hint="Перетворити висновок у пункт передторгового чеклиста"
+                        label={tx('Створити правило', 'Create a rule')}
+                        hint={tx('Перетворити висновок у пункт передторгового чеклиста', 'Turn the takeaway into a pre-trade checklist item')}
                         onClick={() => setRuleOpen(true)}
                       />
                       {onSimilar && (
                         <ActionRow
                           icon={Filter}
-                          label="Схожі помилки"
-                          hint="Показати всі записи цієї категорії"
+                          label={tx('Схожі помилки', 'Similar mistakes')}
+                          hint={tx('Показати всі записи цієї категорії', 'Show all entries in this category')}
                           onClick={() => onSimilar(cat?.id)}
                         />
                       )}
                       <ActionRow
                         icon={Copy}
-                        label="Копіювати розбір"
-                        hint="Скопіювати текст"
+                        label={tx('Копіювати розбір', 'Copy review')}
+                        hint={tx('Скопіювати текст', 'Copy the text')}
                         onClick={copyAll}
                       />
                     </div>
@@ -550,7 +549,7 @@ export default function ErrorDetailDrawer({
                 style={{ borderTop: '1px solid var(--edge-line)', background: 'var(--edge-sunken)' }}
               >
                 <span className="text-[13.5px] xl:text-[14px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
-                  {selected.resolved ? 'Розбір закритий — запис більше не в черзі' : 'Запис у черзі на розбір'}
+                  {selected.resolved ? tx('Розбір закритий — запис більше не в черзі', 'Review closed — the entry is out of the queue') : tx('Запис у черзі на розбір', 'Entry is in the review queue')}
                 </span>
 
                 {(onPrev || onNext) && (
@@ -558,7 +557,7 @@ export default function ErrorDetailDrawer({
                     <button
                       onClick={onPrev}
                       disabled={!onPrev}
-                      title="Попередня помилка"
+                      title={tx('Попередня помилка', 'Previous mistake')}
                       className="flex h-9 items-center gap-2 rounded-[10px] px-3.5 text-[13px] font-semibold xl:h-10 xl:px-4 xl:text-[14px]"
                       style={{
                         fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)',
@@ -566,19 +565,19 @@ export default function ErrorDetailDrawer({
                       }}
                     >
                       <ChevronLeft size={13} strokeWidth={2} />
-                      Назад
+                      {tx('Назад', 'Back')}
                     </button>
                     <button
                       onClick={onNext}
                       disabled={!onNext}
-                      title="Наступна помилка"
+                      title={tx('Наступна помилка', 'Next mistake')}
                       className="flex h-9 items-center gap-2 rounded-[10px] px-3.5 text-[13px] font-semibold xl:h-10 xl:px-4 xl:text-[14px]"
                       style={{
                         fontFamily: T.sans, background: 'rgba(var(--edge-hair-rgb),0.03)', border: '1px solid var(--edge-line)',
                         color: onNext ? 'var(--edge-text)' : 'var(--edge-text4)', opacity: onNext ? 1 : 0.5, transition: 'all .16s',
                       }}
                     >
-                      Далі
+                      {tx('Далі', 'Next')}
                       <ChevronRight size={13} strokeWidth={2} />
                     </button>
                   </div>

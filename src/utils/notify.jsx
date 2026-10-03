@@ -25,7 +25,7 @@ export const notify = {
         
         <div className="p-4 flex items-start gap-3 w-full relative z-10">
           {/* Іконка з круговим світінням */}
-          <div className="bg-blue-500/10 p-1.5 rounded-full border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.4)] shrink-0 mt-0.5">
+          <div className="bg-blue-500/10 p-1.5 rounded-full border border-blue-500/20 shrink-0 mt-0.5">
             <CheckCircle className="text-blue-400" size={18} strokeWidth={2.5} />
           </div>
           
@@ -64,7 +64,7 @@ export const notify = {
         
         <div className="p-4 flex items-start gap-3 w-full relative z-10">
           {/* Іконка з круговим світінням */}
-          <div className="bg-red-500/10 p-1.5 rounded-full border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.4)] shrink-0 mt-0.5">
+          <div className="bg-red-500/10 p-1.5 rounded-full border border-red-500/20 shrink-0 mt-0.5">
             <AlertTriangle className="text-red-400" size={18} strokeWidth={2.5} />
           </div>
           

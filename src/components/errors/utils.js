@@ -1,12 +1,14 @@
+import { t as tx } from '../../lib/lang';
+
 export const CATS = [
-  { id: 'fomo',    label: 'FOMO Entry',        color: '#ff7a6b' },
-  { id: 'haste',   label: 'Rushed',            color: '#f0b13c' },
-  { id: 'fear',    label: 'Fear',              color: '#9d8cff' },
-  { id: 'early',   label: 'Early Exit',        color: '#4da3ff' },
-  { id: 'revenge', label: 'Revenge Trading',   color: '#ff4d6d' },
-  { id: 'tilt',    label: 'Tilt',              color: '#ff9f43' },
-  { id: 'risk',    label: 'Risk Violation',    color: '#ff3b4f' },
-  { id: 'over',    label: 'Overtrading',       color: '#3ddc97' }
+  { id: 'fomo',    label: tx('Вхід на FOMO', 'FOMO Entry'),        color: '#ff7a6b' },
+  { id: 'haste',   label: tx('Поспіх', 'Rushed'),            color: '#f0b13c' },
+  { id: 'fear',    label: tx('Страх', 'Fear'),              color: '#9d8cff' },
+  { id: 'early',   label: tx('Ранній вихід', 'Early Exit'),        color: '#4da3ff' },
+  { id: 'revenge', label: tx('Відігравання', 'Revenge Trading'),   color: '#ff4d6d' },
+  { id: 'tilt',    label: tx('Тільт', 'Tilt'),              color: '#ff9f43' },
+  { id: 'risk',    label: tx('Порушення ризику', 'Risk Violation'),    color: '#ff3b4f' },
+  { id: 'over',    label: tx('Овертрейдинг', 'Overtrading'),       color: '#3ddc97' }
 ];
 
 /* ==================================================================
@@ -40,10 +42,10 @@ export const CATS = [
    колонки, бо по них рахується статистика, а не тільки читається
    текст. */
 export const MAIN_REASONS = [
-  { id: 'q-plan',   label: 'Угода не за планом', flag: 'followed_plan', value: false },
-  { id: 'q-fomo',   label: 'Зайшов на FOMO',        flag: 'rushed',        value: true  },
-  { id: 'q-system', label: 'Вхід не за системою',    flag: 'by_system',     value: false },
-  { id: 'q-risk',   label: 'Ризик більший за звичний', flag: 'risk_ok',   value: false },
+  { id: 'q-plan',   label: tx('Угода не за планом', 'Trade not by the plan'), flag: 'followed_plan', value: false },
+  { id: 'q-fomo',   label: tx('Зайшов на FOMO', 'Entered on FOMO'),        flag: 'rushed',        value: true  },
+  { id: 'q-system', label: tx('Вхід не за системою', 'Entry outside the system'),    flag: 'by_system',     value: false },
+  { id: 'q-risk',   label: tx('Ризик більший за звичний', 'Risk bigger than usual'), flag: 'risk_ok',   value: false },
 ];
 
 export const REASON_GROUPS = [
@@ -51,55 +53,55 @@ export const REASON_GROUPS = [
   {
     group: 'Entry',
     items: [
-      { id: 'no-confirm',   label: 'Не дочекався підтвердження' },
-      { id: 'chased',       label: 'Погнався за рухом, що вже пішов' },
-      { id: 'wrong-level',  label: 'Зайшов не з того рівня' },
-      { id: 'no-setup',     label: 'Сетапу не було взагалі' },
-      { id: 'counter-htf',  label: 'Проти старшого таймфрейму' },
-      { id: 'early-entry',  label: 'Зайшов зарано, до формування' },
+      { id: 'no-confirm',   label: tx('Не дочекався підтвердження', "Didn't wait for confirmation") },
+      { id: 'chased',       label: tx('Погнався за рухом, що вже пішов', 'Chased a move that had already gone') },
+      { id: 'wrong-level',  label: tx('Зайшов не з того рівня', 'Entered from the wrong level') },
+      { id: 'no-setup',     label: tx('Сетапу не було взагалі', 'There was no setup at all') },
+      { id: 'counter-htf',  label: tx('Проти старшого таймфрейму', 'Against the higher timeframe') },
+      { id: 'early-entry',  label: tx('Зайшов зарано, до формування', 'Entered too early, before it formed') },
     ],
   },
   {
     group: 'Management and exit',
     items: [
-      { id: 'early-exit',   label: 'Вийшов зарано, не дав відпрацювати' },
-      { id: 'held-too-long',label: 'Тримав до розвороту' },
-      { id: 'moved-stop',   label: 'Посунув стоп проти себе' },
-      { id: 'no-partial',   label: 'Не зафіксував частину' },
-      { id: 'no-be',        label: 'Не перевів у беззбиток' },
-      { id: 'manual-close', label: 'Закрив руками без причини' },
+      { id: 'early-exit',   label: tx('Вийшов зарано, не дав відпрацювати', "Exited early, didn't let it play out") },
+      { id: 'held-too-long',label: tx('Тримав до розвороту', 'Held into the reversal') },
+      { id: 'moved-stop',   label: tx('Посунув стоп проти себе', 'Moved the stop against myself') },
+      { id: 'no-partial',   label: tx('Не зафіксував частину', "Didn't take partials") },
+      { id: 'no-be',        label: tx('Не перевів у беззбиток', "Didn't move to breakeven") },
+      { id: 'manual-close', label: tx('Закрив руками без причини', 'Closed manually for no reason') },
     ],
   },
   {
     group: 'Risk',
     items: [
-      { id: 'oversized',    label: 'Завеликий обсяг позиції' },
-      { id: 'added-losing', label: 'Доливав до збиткової' },
-      { id: 'no-stop',      label: 'Зайшов без стопа' },
-      { id: 'correlated',   label: 'Кілька корельованих позицій' },
-      { id: 'daily-limit',  label: 'Торгував понад денний ліміт' },
+      { id: 'oversized',    label: tx('Завеликий обсяг позиції', 'Position size too big') },
+      { id: 'added-losing', label: tx('Доливав до збиткової', 'Added to a losing position') },
+      { id: 'no-stop',      label: tx('Зайшов без стопа', 'Entered without a stop') },
+      { id: 'correlated',   label: tx('Кілька корельованих позицій', 'Several correlated positions') },
+      { id: 'daily-limit',  label: tx('Торгував понад денний ліміт', 'Traded past the daily limit') },
     ],
   },
   {
     group: 'Mindset',
     items: [
-      { id: 'fear-miss',    label: 'Боявся впустити рух' },
-      { id: 'revenge',      label: 'Відігравав збиток' },
-      { id: 'overconfident',label: 'Розслабився після серії плюсів' },
-      { id: 'bored',        label: 'Нудьга — торгував, бо не було чим зайнятись' },
-      { id: 'proving',      label: 'Доводив щось собі чи ринку' },
-      { id: 'impatient',    label: 'Забракло терпіння чекати' },
+      { id: 'fear-miss',    label: tx('Боявся впустити рух', 'Afraid to miss the move') },
+      { id: 'revenge',      label: tx('Відігравав збиток', 'Tried to win back a loss') },
+      { id: 'overconfident',label: tx('Розслабився після серії плюсів', 'Got complacent after a winning streak') },
+      { id: 'bored',        label: tx('Нудьга — торгував, бо не було чим зайнятись', 'Boredom — traded for lack of anything to do') },
+      { id: 'proving',      label: tx('Доводив щось собі чи ринку', 'Trying to prove something to myself or the market') },
+      { id: 'impatient',    label: tx('Забракло терпіння чекати', 'Ran out of patience to wait') },
     ],
   },
   {
     group: 'Preparation',
     items: [
-      { id: 'no-plan',      label: 'Не було плану на день' },
-      { id: 'ignored-plan', label: 'План був, але не відкривав його' },
-      { id: 'no-rule',      label: 'Немає правила для цього сценарію' },
-      { id: 'news',         label: 'Не глянув календар новин' },
-      { id: 'tired',        label: 'Втома, недосип, поганий стан' },
-      { id: 'distracted',   label: 'Відволікався, торгував між справами' },
+      { id: 'no-plan',      label: tx('Не було плану на день', 'No plan for the day') },
+      { id: 'ignored-plan', label: tx('План був, але не відкривав його', "Had a plan but didn't open it") },
+      { id: 'no-rule',      label: tx('Немає правила для цього сценарію', 'No rule for this scenario') },
+      { id: 'news',         label: tx('Не глянув календар новин', "Didn't check the news calendar") },
+      { id: 'tired',        label: tx('Втома, недосип, поганий стан', 'Tired, sleep-deprived, off state') },
+      { id: 'distracted',   label: tx('Відволікався, торгував між справами', 'Distracted, trading between other things') },
     ],
   },
 ];
@@ -189,7 +191,7 @@ export const SAMPLES = [
   { id: 3, pair: 'EURUSD', date: '2026-05-14', cats: ['tilt'], followedPlan: false, rushed: false, desc: 'Traded on a day with no plan because "felt the market." That feeling cost 0.8R. No plan — no trading.' }
 ];
 
-export const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+export const MONTHS = tx(['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'], ['January','February','March','April','May','June','July','August','September','October','November','December']);
 
 export function hexA(hex, a) {
   const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);

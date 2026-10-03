@@ -15,6 +15,7 @@ import BlockEditor from '../components/system/BlockEditor';
 import SearchModal from '../components/system/SearchModal';
 import useImageAttach from '../hooks/useImageAttach';
 import useCloudState from '../hooks/useCloudState';
+import { t as tx, LOCALE } from '../lib/lang';
 
 /* Один раз на модуль: інакше щорендер новий обʼєкт і нові id сторінок. */
 const BLANK_DOC = buildBlank();
@@ -123,8 +124,8 @@ function SectionCard({ page, index, subCount, onOpen }) {
       <div className="relative z-10 mt-auto pt-5">
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-[11.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text4 }}>
-            {done === total ? 'заповнено' : `${done} з ${total}`}
-            {subCount > 0 && ` · ${subCount} ${subCount === 1 ? 'підрозділ' : 'підрозділи'}`}
+            {done === total ? tx('заповнено', 'complete') : tx(`${done} з ${total}`, `${done} of ${total}`)}
+            {subCount > 0 && tx(` · ${subCount} ${subCount === 1 ? 'підрозділ' : 'підрозділи'}`, ` · ${subCount} ${subCount === 1 ? 'subsection' : 'subsections'}`)}
           </span>
           {done === total && (
             <Check size={12} strokeWidth={3} style={{ color: `rgb(${hue})` }} />
@@ -205,7 +206,7 @@ function NewSection({ open, onClose, onCreate }) {
   }, [open, onClose]);
 
   const create = () => {
-    onCreate({ title: title.trim() || 'Новий розділ', icon, hue, preset });
+    onCreate({ title: title.trim() || tx('Новий розділ', 'New section'), icon, hue, preset });
     onClose();
   };
 
@@ -232,10 +233,10 @@ function NewSection({ open, onClose, onCreate }) {
               style={{ borderBottom: `1px solid ${T.line}`, background: `linear-gradient(180deg, ${T.surfaceHi}, ${T.surface})` }}
             >
               <div className="text-[11.5px] font-bold uppercase tracking-[0.2em]" style={{ fontFamily: T.sans, color: T.acc }}>
-                Свій розділ
+                {tx('Свій розділ', 'Custom section')}
               </div>
               <h3 className="mt-1 text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}>
-                Що ще має бути в системі?
+                {tx('Що ще має бути в системі?', 'What else belongs in your system?')}
               </h3>
               <button
                 onClick={onClose}
@@ -250,7 +251,7 @@ function NewSection({ open, onClose, onCreate }) {
               {/* назва + іконка */}
               <div>
                 <label className="mb-2 block text-[12px] font-bold uppercase tracking-[0.12em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  Назва
+                  {tx('Назва', 'Name')}
                 </label>
                 <div className="flex gap-2.5">
                   <span
@@ -264,7 +265,7 @@ function NewSection({ open, onClose, onCreate }) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && create()}
-                    placeholder="Наприклад: Психологія"
+                    placeholder={tx('Наприклад: Психологія', 'For example: Psychology')}
                     className="h-[46px] w-full rounded-xl px-3.5 text-[14.5px] outline-none"
                     style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text, fontFamily: T.sans }}
                   />
@@ -288,7 +289,7 @@ function NewSection({ open, onClose, onCreate }) {
               {/* колір */}
               <div>
                 <label className="mb-2 block text-[12px] font-bold uppercase tracking-[0.12em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  Колір розділу
+                  {tx('Колір розділу', 'Section color')}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(HUES).map(([key, rgb]) => (
@@ -299,7 +300,7 @@ function NewSection({ open, onClose, onCreate }) {
                       style={{
                         background: `rgba(${rgb},0.18)`,
                         border: `1.5px solid rgba(${rgb},${hue === key ? 0.95 : 0.28})`,
-                        boxShadow: hue === key ? `0 0 14px rgba(${rgb},0.45)` : 'none',
+                        boxShadow: 'none',
                       }}
                     />
                   ))}
@@ -309,7 +310,7 @@ function NewSection({ open, onClose, onCreate }) {
               {/* заготовка */}
               <div>
                 <label className="mb-2 block text-[12px] font-bold uppercase tracking-[0.12em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  З чого почати
+                  {tx('З чого почати', 'Start from')}
                 </label>
                 <div className="grid gap-1.5 sm:grid-cols-2">
                   {PRESETS.map((p) => {
@@ -343,7 +344,7 @@ function NewSection({ open, onClose, onCreate }) {
                 className="h-11 w-full rounded-xl text-[14px] font-bold transition-transform duration-200 active:scale-[0.99]"
                 style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
               >
-                Створити розділ
+                {tx('Створити розділ', 'Create section')}
               </button>
             </div>
           </motion.div>
@@ -391,7 +392,7 @@ export default function TradingSystem() {
   const secIdx = page ? sections.findIndex((s) => s.id === page.id) : -1;
   const secNum = secIdx >= 0 ? String(secIdx + 1).padStart(2, '0') : null;
   const updLabel = page?.updatedAt
-    ? new Date(page.updatedAt).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    ? new Date(page.updatedAt).toLocaleDateString(LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric' })
     : '—';
 
   /* Відтінок розділу — трійка rgb; ним світиться героя, номери, плитки. */
@@ -442,7 +443,7 @@ export default function TradingSystem() {
   };
 
   const addSubPage = (parentId) => {
-    const fresh = { ...newPage(parentId, 'Без назви'), icon: '📄', hue: page?.hue || 'violet' };
+    const fresh = { ...newPage(parentId, tx('Без назви', 'Untitled')), icon: '📄', hue: page?.hue || 'violet' };
     setDoc((d) => ({ ...d, pages: [...d.pages, fresh], openId: fresh.id }));
   };
 
@@ -505,7 +506,6 @@ export default function TradingSystem() {
           background-color: rgba(255,255,255,0.03);
           border-color: rgba(var(--hue), 0.16) !important;
           box-shadow:
-            0 26px 60px -38px rgba(var(--hue), 0.7),
             0 14px 32px -26px rgba(0,0,0,0.9);
         }
 
@@ -591,12 +591,12 @@ export default function TradingSystem() {
               <div className="mb-8 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
                 <div className="min-w-0">
                   <div className="mb-2 text-[12px] font-bold uppercase tracking-[0.22em]" style={{ fontFamily: T.sans, color: T.acc }}>
-                    Торгова система
+                    {tx('Торгова система', 'Trading system')}
                   </div>
                   <input
                     value={root.title}
                     onChange={(e) => patchPage(root.id, { title: e.target.value })}
-                    placeholder="Моя торгова система"
+                    placeholder={tx('Моя торгова система', 'My trading system')}
                     className="edge-page-title w-full max-w-[620px] bg-transparent outline-none placeholder:opacity-30"
                     style={{
                       fontFamily: T.display,
@@ -609,16 +609,16 @@ export default function TradingSystem() {
                   <input
                     value={root.hint || ''}
                     onChange={(e) => patchPage(root.id, { hint: e.target.value })}
-                    placeholder="Одним рядком: на чому ти заробляєш"
+                    placeholder={tx('Одним рядком: на чому ти заробляєш', 'In one line: how you make money')}
                     className="mt-3 w-full max-w-[620px] bg-transparent text-[15px] outline-none placeholder:opacity-30"
                     style={{ fontFamily: T.sans, color: T.text3 }}
                   />
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1">
-                  <IconBtn icon={Search} label="Пошук" onClick={() => setSearchOpen(true)} />
+                  <IconBtn icon={Search} label={tx('Пошук', 'Search')} onClick={() => setSearchOpen(true)} />
                   <IconBtn icon={Printer} label="PDF" onClick={() => window.print()} />
-                  <IconBtn icon={RotateCcw} label="Приклад" tone={T.warn} onClick={() => setConfirm({ reset: true })} />
+                  <IconBtn icon={RotateCcw} label={tx('Приклад', 'Example')} tone={T.warn} onClick={() => setConfirm({ reset: true })} />
                 </div>
               </div>
 
@@ -652,10 +652,10 @@ export default function TradingSystem() {
                     <Plus size={19} strokeWidth={2.4} style={{ color: T.acc }} />
                   </span>
                   <span className="relative z-10 text-[14.5px] font-bold" style={{ fontFamily: T.sans, color: T.text2 }}>
-                    Свій розділ
+                    {tx('Свій розділ', 'Custom section')}
                   </span>
                   <span className="relative z-10 max-w-[220px] text-center text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4, lineHeight: 1.5 }}>
-                    Обери заготовку — і одразу почнеш писати, а не вигадувати структуру
+                    {tx('Обери заготовку — і одразу почнеш писати, а не вигадувати структуру', 'Pick a template and start writing right away instead of inventing a structure')}
                   </span>
                 </motion.button>
               </div>
@@ -694,7 +694,7 @@ export default function TradingSystem() {
                     >
                       <span className="text-[14px] leading-none opacity-70">‹</span>
                       <span className="hidden min-[420px]:inline">
-                        {page.parentId === root.id ? 'Усі розділи' : 'Назад'}
+                        {page.parentId === root.id ? tx('Усі розділи', 'All sections') : tx('Назад', 'Back')}
                       </span>
                     </button>
                     <span className="hidden h-4 w-px lg:block" style={{ background: T.lineHi }} />
@@ -710,14 +710,14 @@ export default function TradingSystem() {
                       className="flex items-center gap-0.5 rounded-[13px] p-[3px]"
                       style={{ border: `1px solid ${T.line}`, background: 'rgba(var(--edge-text-rgb),0.025)', boxShadow: 'inset 0 1px 0 rgba(var(--edge-text-rgb),0.05)' }}
                     >
-                      <TBtn onClick={() => setSearchOpen(true)} label="Пошук">
+                      <TBtn onClick={() => setSearchOpen(true)} label={tx('Пошук', 'Search')}>
                         <Search size={13} strokeWidth={2} />
                         <span className="ml-0.5 hidden rounded-[5px] border px-[5px] py-[2px] text-[9.5px] tracking-[0.06em] lg:inline" style={{ fontFamily: T.mono, background: 'rgba(var(--edge-text-rgb),0.05)', borderColor: T.line, color: T.text4 }}>/</span>
                       </TBtn>
                       <span className="h-4 w-px" style={{ background: T.line }} />
                       {!page.cover && (
                         <>
-                          <TBtn onClick={() => coverRef.current?.click()} label="Обкладинка">
+                          <TBtn onClick={() => coverRef.current?.click()} label={tx('Обкладинка', 'Cover')}>
                             <ImageIcon size={13} strokeWidth={2} />
                           </TBtn>
                           <span className="h-4 w-px" style={{ background: T.line }} />
@@ -727,7 +727,7 @@ export default function TradingSystem() {
                         <Printer size={13} strokeWidth={2} />
                       </TBtn>
                       <span className="h-4 w-px" style={{ background: T.line }} />
-                      <TBtn onClick={() => setConfirm(page)} label="Видалити" danger>
+                      <TBtn onClick={() => setConfirm(page)} label={tx('Видалити', 'Delete')} danger>
                         <Trash2 size={13} strokeWidth={2} />
                       </TBtn>
                     </div>
@@ -740,13 +740,13 @@ export default function TradingSystem() {
                         letterSpacing: '0.005em',
                         border: `1px solid rgba(${tint},0.45)`,
                         background: `linear-gradient(180deg, rgba(${tint},0.9), rgb(${tint}))`,
-                        boxShadow: `0 6px 20px rgba(${tint},0.28), inset 0 1px 0 rgba(255,255,255,0.35)`,
+                        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35)`,
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 12px 30px rgba(${tint},0.4), inset 0 1px 0 rgba(255,255,255,0.35)`; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `0 6px 20px rgba(${tint},0.28), inset 0 1px 0 rgba(255,255,255,0.35)`; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.35)`; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.35)`; }}
                     >
                       <Plus size={13} strokeWidth={2.6} />
-                      <span className="hidden lg:inline">Підрозділ</span>
+                      <span className="hidden lg:inline">{tx('Підрозділ', 'Subsection')}</span>
                     </button>
                   </div>
                 </div>
@@ -779,7 +779,7 @@ export default function TradingSystem() {
                           className="rounded-lg px-2.5 py-1.5 text-[12px] font-semibold"
                           style={{ background: 'var(--edge-panel, rgba(10,10,12,0.8))', border: `1px solid ${T.lineHi}`, color: T.text2, backdropFilter: 'blur(8px)', fontFamily: T.sans }}
                         >
-                          Змінити
+                          {tx('Змінити', 'Change')}
                         </button>
                         <button
                           onClick={() => patchPage(page.id, { cover: '' })}
@@ -798,7 +798,7 @@ export default function TradingSystem() {
                       <div data-herorow className="flex flex-col items-start gap-5 lg:flex-row lg:items-end lg:gap-7">
                         <button
                           onClick={() => setEmojiOpen((v) => !v)}
-                          title="Змінити іконку"
+                          title={tx('Змінити іконку', 'Change icon')}
                           className="grid shrink-0 place-items-center transition-transform duration-200"
                           style={{
                             width: 112, height: 112, borderRadius: 28,
@@ -819,16 +819,16 @@ export default function TradingSystem() {
                               className="rounded-lg px-[11px] py-[6px] text-[10px] font-medium uppercase"
                               style={{ fontFamily: T.mono, letterSpacing: '0.2em', color: `rgb(${tint})`, background: `rgba(${tint},0.12)`, border: `1px solid rgba(${tint},0.28)` }}
                             >
-                              {secNum ? `Розділ ${secNum}` : 'Підрозділ'}
+                              {secNum ? tx(`Розділ ${secNum}`, `Section ${secNum}`) : tx('Підрозділ', 'Subsection')}
                             </span>
                             <span className="text-[10.5px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.16em', color: T.text4 }}>
-                              оновлено {updLabel}
+                              {tx('оновлено', 'updated')} {updLabel}
                             </span>
                           </div>
                           <input
                             value={page.title}
                             onChange={(e) => patchPage(page.id, { title: e.target.value })}
-                            placeholder="Назва розділу"
+                            placeholder={tx('Назва розділу', 'Section name')}
                             className="mt-2.5 w-full bg-transparent text-[28px] outline-none placeholder:opacity-25 sm:text-[42px] lg:text-[56px] xl:text-[68px]"
                             style={{
                               fontFamily: T.display, fontWeight: 900,
@@ -878,18 +878,18 @@ export default function TradingSystem() {
                       <input
                         value={page.hint || ''}
                         onChange={(e) => patchPage(page.id, { hint: e.target.value })}
-                        placeholder="Про що цей розділ — одним рядком"
+                        placeholder={tx('Про що цей розділ — одним рядком', 'What this section is about — in one line')}
                         className="mt-2.5 w-full max-w-[640px] bg-transparent text-[14px] outline-none placeholder:opacity-25 sm:text-[17px]"
                         style={{ fontFamily: T.sans, fontWeight: 400, color: T.text, lineHeight: 1.55 }}
                       />
 
                       <div className="mt-3 flex flex-wrap items-center gap-x-[26px] gap-y-2 pb-[18px]">
                         <span className="text-[12.5px]" style={{ fontFamily: T.mono, letterSpacing: '0.04em', color: T.text }}>
-                          <span style={{ color: `rgb(${tint})` }}>{String(page.blocks?.length || 0).padStart(2, '0')}</span> блоків
+                          <span style={{ color: `rgb(${tint})` }}>{String(page.blocks?.length || 0).padStart(2, '0')}</span> {tx('блоків', 'blocks')}
                         </span>
                         <span className="h-[3px] w-[3px] rounded-full" style={{ background: T.text3 }} />
                         <span className="text-[12.5px]" style={{ fontFamily: T.mono, letterSpacing: '0.04em', color: T.text }}>
-                          <span style={{ color: `rgb(${tint})` }}>{String(kids.length).padStart(2, '0')}</span> підрозділів
+                          <span style={{ color: `rgb(${tint})` }}>{String(kids.length).padStart(2, '0')}</span> {tx('підрозділів', 'subsections')}
                         </span>
                         <span className="h-[3px] w-[3px] rounded-full" style={{ background: T.text3 }} />
                         <span className="text-[12.5px]" style={{ fontFamily: T.mono, letterSpacing: '0.04em', color: T.text3 }}>
@@ -907,7 +907,7 @@ export default function TradingSystem() {
                   {headings.length > 0 && (
                     <div className="hidden shrink-0 xl:block" style={{ width: 168, padding: '28px 0 80px' }}>
                       <div className="sticky top-[92px]">
-                        <div className="mb-3 pl-3 text-[9.5px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.24em', color: T.text3 }}>Зміст</div>
+                        <div className="mb-3 pl-3 text-[9.5px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.24em', color: T.text3 }}>{tx('Зміст', 'Contents')}</div>
                         <div className="flex flex-col gap-px" style={{ borderLeft: `1px solid ${T.line}` }}>
                           {headings.map((h) => {
                             const on = tocActive === h.id;
@@ -949,10 +949,10 @@ export default function TradingSystem() {
                   <div className="mt-[34px] flex flex-wrap items-end justify-between gap-4">
                     <div>
                       <div className="text-[10px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.24em', color: T.text4 }}>
-                        Підрозділи · {String(kids.length).padStart(2, '0')}
+                        {tx('Підрозділи', 'Subsections')} · {String(kids.length).padStart(2, '0')}
                       </div>
                       <div className="mt-3 text-[26px] font-bold" style={{ fontFamily: T.display, letterSpacing: '-0.025em', color: T.text }}>
-                        Глибше по «{page.title || 'розділу'}»
+                        {tx(`Глибше по «${page.title || 'розділу'}»`, `Deeper into “${page.title || 'this section'}”`)}
                       </div>
                     </div>
                     <button
@@ -962,7 +962,7 @@ export default function TradingSystem() {
                       onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--edge-text-rgb),0.05)'; e.currentTarget.style.color = T.text; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
                     >
-                      <span className="text-[15px] leading-none">+</span> Додати
+                      <span className="text-[15px] leading-none">+</span> {tx('Додати', 'Add')}
                     </button>
                   </div>
 
@@ -986,17 +986,17 @@ export default function TradingSystem() {
                           <ArrowRight size={15} strokeWidth={2.2} className="transition-transform duration-200 group-hover:translate-x-[5px]" style={{ color: T.text4 }} />
                         </span>
                         <span className="mt-[38px] block text-[19px] font-bold" style={{ fontFamily: T.sans, letterSpacing: '-0.02em', color: T.text }}>
-                          {k.title || 'Без назви'}
+                          {k.title || tx('Без назви', 'Untitled')}
                         </span>
                         <span className="mt-2 block text-[11px] uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.1em', color: T.text4 }}>
-                          {String(k.blocks?.length || 0)} блоків
+                          {String(k.blocks?.length || 0)} {tx('блоків', 'blocks')}
                         </span>
                       </button>
                     ))}
                     <div className="flex flex-col justify-end gap-2 rounded-[16px] p-[22px]" style={{ minHeight: 158, border: `1px dashed ${T.line}` }}>
-                      <span className="text-[15px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>Розділ став завеликим?</span>
+                      <span className="text-[15px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>{tx('Розділ став завеликим?', 'Section getting too big?')}</span>
                       <span className="text-[13.5px]" style={{ fontFamily: T.sans, fontWeight: 400, lineHeight: 1.55, color: T.text4 }}>
-                        Розбий його — кожен сетап чи правило може жити окремою сторінкою.
+                        {tx('Розбий його — кожен сетап чи правило може жити окремою сторінкою.', 'Split it up — every setup or rule can live on its own page.')}
                       </span>
                     </div>
                   </div>
@@ -1075,12 +1075,12 @@ export default function TradingSystem() {
                 <Trash2 size={22} strokeWidth={1.9} style={{ color: T.bad }} />
               </div>
               <div className="mb-2.5 text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text, overflowWrap: 'anywhere' }}>
-                {confirm.reset ? 'Замінити на приклад?' : `Видалити «${confirm.title}»?`}
+                {confirm.reset ? tx('Замінити на приклад?', 'Replace with the example?') : tx(`Видалити «${confirm.title}»?`, `Delete “${confirm.title}”?`)}
               </div>
               <p className="mb-6 text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
                 {confirm.reset
-                  ? 'Усі розділи й весь текст будуть замінені нашим прикладом системи.'
-                  : 'Разом із розділом зникнуть усі його підрозділи.'}
+                  ? tx('Усі розділи й весь текст будуть замінені нашим прикладом системи.', 'All sections and text will be replaced with our example system.')
+                  : tx('Разом із розділом зникнуть усі його підрозділи.', 'All its subsections will be deleted along with it.')}
               </p>
               <div className="flex gap-2.5">
                 <button
@@ -1088,14 +1088,14 @@ export default function TradingSystem() {
                   className="h-11 flex-1 rounded-xl text-[14px] font-semibold"
                   style={{ background: T.surfaceHi, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
                 >
-                  Скасувати
+                  {tx('Скасувати', 'Cancel')}
                 </button>
                 <button
                   onClick={() => { if (confirm.reset) { setDoc(resetDoc()); setConfirm(null); } else deletePage(confirm); }}
                   className="h-11 flex-1 rounded-xl text-[14px] font-bold"
                   style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
-                  {confirm.reset ? 'Замінити' : 'Видалити'}
+                  {confirm.reset ? tx('Замінити', 'Replace') : tx('Видалити', 'Delete')}
                 </button>
               </div>
             </motion.div>

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { CalendarDays, Repeat2, AlertTriangle } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 import { fmtR, MISTAKE_TYPES } from '../../lib/reviewsData';
 import { SoftCard } from '../ui/Hovers';
 
@@ -10,9 +11,9 @@ import { SoftCard } from '../ui/Hovers';
 ================================================================== */
 
 const PRESETS = [
-  { key: 'day',   label: 'День',    days: 0 },
-  { key: 'week',  label: 'Тиждень', days: 6 },
-  { key: 'month', label: 'Місяць',  days: 29 },
+  { key: 'day',   label: tx('День', 'Day'),    days: 0 },
+  { key: 'week',  label: tx('Тиждень', 'Week'), days: 6 },
+  { key: 'month', label: tx('Місяць', 'Month'),  days: 29 },
 ];
 
 export function PeriodPicker({ from, to, onChange }) {
@@ -69,12 +70,12 @@ export function PeriodPicker({ from, to, onChange }) {
 
 export function PeriodStats({ stats }) {
   const items = [
-    { label: 'Угод', value: stats.total },
+    { label: tx('Угод', 'Trades'), value: stats.total },
     { label: 'Net R', value: fmtR(stats.netR), color: stats.netR > 0 ? T.ok : stats.netR < 0 ? T.bad : T.text },
     { label: 'Win rate', value: `${Math.round(stats.winrate)}%` },
-    { label: 'За планом', value: `${Math.round(stats.planRate)}%`, color: stats.total ? (stats.planRate >= 70 ? T.ok : T.warn) : T.text },
-    { label: 'Помилок', value: stats.mistakes, color: stats.mistakes > 0 ? T.warn : T.text },
-    { label: 'Ціна помилок', value: stats.costOfMistakes ? fmtR(stats.costOfMistakes) : '0R', color: stats.costOfMistakes < 0 ? T.bad : T.text },
+    { label: tx('За планом', 'By plan'), value: `${Math.round(stats.planRate)}%`, color: stats.total ? (stats.planRate >= 70 ? T.ok : T.warn) : T.text },
+    { label: tx('Помилок', 'Mistakes'), value: stats.mistakes, color: stats.mistakes > 0 ? T.warn : T.text },
+    { label: tx('Ціна помилок', 'Cost of mistakes'), value: stats.costOfMistakes ? fmtR(stats.costOfMistakes) : '0R', color: stats.costOfMistakes < 0 ? T.bad : T.text },
   ];
 
   return (
@@ -120,11 +121,11 @@ export function RepeatedMistakes({ rows }) {
           <Repeat2 size={15} strokeWidth={2.2} style={{ color: T.warn }} />
         </div>
         <div className="min-w-0">
-          <h3 className="truncate text-[15px] font-bold" style={{ fontFamily: T.display, color: T.text }}>Що повторюється</h3>
+          <h3 className="truncate text-[15px] font-bold" style={{ fontFamily: T.display, color: T.text }}>{tx('Що повторюється', 'What repeats')}</h3>
           <p className="truncate text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
             {repeats.length
-              ? `${repeats.length} ${repeats.length === 1 ? 'помилка була' : 'помилки були'} й до цього періоду`
-              : 'Усе нове — повторів немає'}
+              ? tx(`${repeats.length} ${repeats.length === 1 ? 'помилка була' : 'помилки були'} й до цього періоду`, `${repeats.length} ${repeats.length === 1 ? 'mistake also happened' : 'mistakes also happened'} before this period`)
+              : tx('Усе нове — повторів немає', 'All new — no repeats')}
           </p>
         </div>
       </div>
@@ -148,7 +149,7 @@ export function RepeatedMistakes({ rows }) {
                   {meta.label}
                 </div>
                 <div className="truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                  {isRepeat ? `${r.now} у цьому періоді · ${r.before} раніше` : `${r.now} у цьому періоді`}
+                  {isRepeat ? tx(`${r.now} у цьому періоді · ${r.before} раніше`, `${r.now} this period · ${r.before} before`) : tx(`${r.now} у цьому періоді`, `${r.now} this period`)}
                 </div>
               </div>
               <span className="shrink-0 text-[14px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: r.cost < 0 ? T.bad : T.text3 }}>

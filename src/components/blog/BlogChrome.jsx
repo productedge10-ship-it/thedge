@@ -4,6 +4,10 @@ import ImageSlider from '../ui/ImageSlider';
 import { resolveSrc } from '../../lib/blogImages';
 import { BlogCat, EdgeWordmark } from './BlogLogo';
 import { useAuth } from '../../context/AuthContext';
+import { t as tx } from '../../lib/lang';
+
+/* Головна сайту тією ж мовою, що й блог. */
+const siteHome = (lang) => (lang === 'en' ? '/en' : '/');
 
 /* ==================================================================
    БЛОГ — оболонка й стилі.
@@ -114,7 +118,7 @@ export function Cover({ cover, title, big = false, zoomable = false, vars }) {
       aria-hidden
     >
       <span className="bl-cover-grid" />
-      <span className="bl-cover-hint">{cover?.hint || 'ілюстрація'}</span>
+      <span className="bl-cover-hint">{cover?.hint || tx('ілюстрація', 'illustration')}</span>
     </div>
   );
 }
@@ -171,7 +175,7 @@ export function BlogHeader({ lang, children, nav = true }) {
             яка прийшла з лендінга чи із застосунку, не мала очевидного
             способу повернутись — лише кнопку «назад» у браузері.
             Залогіненого повертаємо в застосунок, гостя — на лендінг. */}
-        <a className="bl-back" href={user ? '/app' : '/'} aria-label={lang === 'en' ? 'Back to site' : 'На сайт'}>
+        <a className="bl-back" href={user ? '/app' : siteHome(lang)} aria-label={lang === 'en' ? 'Back to site' : 'На сайт'}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
           <span>{lang === 'en' ? 'Back to site' : 'На сайт'}</span>
         </a>
@@ -182,17 +186,17 @@ export function BlogHeader({ lang, children, nav = true }) {
 
         {nav && (
           <nav className="bl-head-nav">
-            <Link to={blogPath(lang)}>Усі статті</Link>
-            <a href="/#product">Продукт</a>
-            <a href="/#pricing">Ціни</a>
+            <Link to={blogPath(lang)}>{lang === 'en' ? 'All articles' : 'Усі статті'}</Link>
+            <a href={`${siteHome(lang)}#product`}>{lang === 'en' ? 'Product' : 'Продукт'}</a>
+            <a href={`${siteHome(lang)}#pricing`}>{lang === 'en' ? 'Pricing' : 'Ціни'}</a>
           </nav>
         )}
 
         <div className="bl-head-right">
           {children}
           {user
-            ? <a className="bl-btn bl-btn--head" href="/app">Відкрити застосунок</a>
-            : <a className="bl-btn bl-btn--head" href="/auth">Почати безкоштовно</a>}
+            ? <a className="bl-btn bl-btn--head" href="/app">{lang === 'en' ? 'Open the app' : 'Відкрити застосунок'}</a>
+            : <a className="bl-btn bl-btn--head" href="/auth">{lang === 'en' ? 'Start for free' : 'Почати безкоштовно'}</a>}
         </div>
       </div>
     </header>
@@ -209,14 +213,16 @@ export function BlogFooter({ lang }) {
             <EdgeWordmark height={32} className="bl-word" />
           </span>
           <p className="bl-foot-note">
-            Журнал трейдера: план, угоди, аналітика й розбори в одному місці.
+            {lang === 'en'
+              ? 'A trading journal: plan, trades, analytics and reviews in one place.'
+              : 'Журнал трейдера: план, угоди, аналітика й розбори в одному місці.'}
           </p>
         </div>
         <nav className="bl-foot-links">
-          <Link to={blogPath(lang)}>Усі статті</Link>
-          <a href="/">Продукт</a>
-          <a href="/#pricing">Ціни</a>
-          <a href="/auth">Вхід</a>
+          <Link to={blogPath(lang)}>{lang === 'en' ? 'All articles' : 'Усі статті'}</Link>
+          <a href={siteHome(lang)}>{lang === 'en' ? 'Product' : 'Продукт'}</a>
+          <a href={`${siteHome(lang)}#pricing`}>{lang === 'en' ? 'Pricing' : 'Ціни'}</a>
+          <a href="/auth">{lang === 'en' ? 'Sign in' : 'Вхід'}</a>
         </nav>
       </div>
       <div className="bl-foot-bottom">© {new Date().getFullYear()} The Edge</div>

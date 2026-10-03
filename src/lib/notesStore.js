@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Нотатки в базі.
@@ -67,7 +68,7 @@ const toApp = (row) => ({
 const toRow = (note, userId) => ({
   id: note.id,
   user_id: userId,
-  title: note.title || 'Без назви',
+  title: note.title || tx('Без назви', 'Untitled'),
   description: note.description || '',
   tags: note.tags || [],
   images: note.images || [],
