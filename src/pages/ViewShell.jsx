@@ -31,6 +31,11 @@ const RO_CSS = `
      разом з анімаціями зникли б і ці гачки, і гість побачив би кнопки,
      які йому не належать. */
   .edge-view-ro .edge-owner-only { display: none !important; }
+  /* Поля й списки, які гість не може змінювати (план: дата, актив,
+     bias, таймфрейм). Лише перегляд — без кліку й без фокусу. */
+  .edge-view-ro .edge-ro-lock { pointer-events: none; opacity: .75; }
+  .edge-view-ro .edge-ro-scope textarea,
+  .edge-view-ro .edge-ro-scope input { pointer-events: none; caret-color: transparent; }
   .demo-bar-label{ display: inline; }
   .demo-bar-desc{ display: inline; }
   .view-bar-short{ display: none; }
@@ -75,6 +80,17 @@ export default function ViewShell() {
     const name = state.snap?.owner?.name;
     document.title = name ? `Журнал ${name} · The Edge` : 'Журнал трейдера · The Edge';
   }, [state.snap]);
+
+  /* Поля в плані — лише для читання: гість не друкує в них, і
+     на сторінці не зʼявляється «є незбережені зміни». */
+  useEffect(() => {
+    const lock = () => document.querySelectorAll('.edge-view-ro .edge-ro-scope textarea, .edge-view-ro .edge-ro-scope input')
+      .forEach((el) => { if (!el.readOnly) el.readOnly = true; });
+    lock();
+    const mo = new MutationObserver(lock);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
 
   if (state.loading) {
     return (

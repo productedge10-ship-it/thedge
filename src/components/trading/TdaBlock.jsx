@@ -216,7 +216,7 @@ function TdaBlock({ id, tf, image, text, isDimmed, onSave, eyebrow }) {
           style={{ borderBottom: `1px solid ${T.line}`, background: T.sunken }}
         >
           <div className="flex items-center gap-2">
-            <TfSelect value={tf} onChange={(v) => onSave(id, { tf: v, image, text: note.valueRef.current, isDimmed: dim })} />
+            <span className="edge-ro-lock"><TfSelect value={tf} onChange={(v) => onSave(id, { tf: v, image, text: note.valueRef.current, isDimmed: dim })} /></span>
             {/* Поки читаємо шапку скріна — тихий пульс біля поля.
                 Без нього поле мовчки заповнюється через дві секунди
                 після вставки, і це виглядає як глюк. */}

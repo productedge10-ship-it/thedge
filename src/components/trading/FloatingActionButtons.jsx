@@ -36,7 +36,7 @@ export default function FloatingActionButtons({
           whileHover={{ y: -2 }}
           whileTap={{ scale: 0.96 }}
           transition={SPRING}
-          className="flex items-center gap-2.5 rounded-full px-4 py-2.5 text-[14px] font-semibold"
+          className="edge-owner-only flex items-center gap-2.5 rounded-full px-4 py-2.5 text-[14px] font-semibold"
           style={{
             background: T.surface,
             border: `1px solid rgba(${T.okRgb},0.28)`,
@@ -56,7 +56,7 @@ export default function FloatingActionButtons({
         whileHover={canSaveToCloud ? { y: -2 } : undefined}
         whileTap={canSaveToCloud ? { scale: 0.96 } : undefined}
         transition={SPRING}
-        className="flex items-center gap-2.5 rounded-full px-4 py-2.5 text-[13px] font-semibold"
+        className="edge-owner-only flex items-center gap-2.5 rounded-full px-4 py-2.5 text-[13px] font-semibold"
         style={{
           background: T.surface,
           border: `1px solid rgba(${cfg.rgb},0.28)`,

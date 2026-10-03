@@ -559,7 +559,7 @@ export default function PlanHeader({
         {/* Diagnostics-квіз про «сьогодні», а не про конкретний план,
             тому лишається однаковим і на денному, і на тижневому масштабі —
             «все те саме» навмисно, щоб хедер не міняв форму при перемиканні. */}
-        <div className="flex flex-wrap items-center gap-2 no-print">
+        <div className="edge-owner-only flex flex-wrap items-center gap-2 no-print">
           <TextBtn
             icon={Briefcase}
             data-tour="plan-add-trade"

@@ -914,7 +914,7 @@ export default function DailyPlan() {
   const quizDone = diagComplete(diag);
 
   return (
-    <div className="relative min-h-screen w-full">
+    <div className="edge-ro-scope relative min-h-screen w-full">
 
       <div className="relative z-10 mx-auto w-full max-w-[2200px] px-4 pb-32 pt-5 sm:px-6 lg:w-[92%] lg:px-0 lg:pb-40 lg:pt-6">
         <PlanHeader

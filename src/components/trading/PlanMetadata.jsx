@@ -100,7 +100,7 @@ export default function PlanMetadata({
 }) {
   return (
     <div
-      className="rounded-2xl p-4 sm:p-5"
+      className="edge-ro-lock rounded-2xl p-4 sm:p-5"
       style={{ background: T.surface, border: `1px solid ${T.line}` }}
     >
       <style>{`
