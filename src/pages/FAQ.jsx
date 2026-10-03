@@ -10,6 +10,7 @@ import {
 
 import useTerminalSkin from '../hooks/useTerminalSkin';
 import { openTour } from '../lib/tour';
+import { t as tx } from '../lib/lang';
 
 /* ------------------------------------------------------------------ */
 /*  THE EDGE — theme tokens (same as Auth page)                        */
@@ -154,62 +155,62 @@ export default function FAQ() {
     {
       icon: Gauge,
       color: 'var(--edge-acc, var(--edge-acc))', rgb: '139,123,255',
-      title: 'Огляд',
-      desc: 'Перший екран, який відповідає на головне питання: «Як у мене справи?» — одним реченням і чотирма цифрами.',
+      title: tx('Огляд', 'Overview'),
+      desc: tx('Перший екран, який відповідає на головне питання: «Як у мене справи?» — одним реченням і чотирма цифрами.', 'The first screen, answering the main question — "How am I doing?" — in one sentence and four numbers.'),
       points: [
-        'Розумний підсумок людською мовою: «Ти +17.3R за 47 угод. Ср — твій найкращий день, а спокій — твій найкращий стан».',
-        'KPI-картки з міні-графіками: Чистий R, Вінрейт, Профіт-фактор і Ціна тільта — скільки R з\'їли емоції.',
-        'Крива еквіті з максимальною просадкою та блок «Звідки береться R» — топ-фактори твого прибутку: сесія, актив, день, сетап.',
-        '«План дотримано vs Порушено», «Емоційний стан vs Результат» та «Найдорожчі звички» — три блоки, які показують, де саме тече твій результат.',
+        tx('Розумний підсумок людською мовою: «Ти +17.3R за 47 угод. Ср — твій найкращий день, а спокій — твій найкращий стан».', 'A smart summary in plain language: "You\'re +17.3R over 47 trades. Wednesday is your best day, and calm is your best state."'),
+        tx('KPI-картки з міні-графіками: Чистий R, Вінрейт, Профіт-фактор і Ціна тільта — скільки R з\'їли емоції.', 'KPI cards with mini charts: Net R, Win rate, Profit factor and Cost of tilt — how much R your emotions ate.'),
+        tx('Крива еквіті з максимальною просадкою та блок «Звідки береться R» — топ-фактори твого прибутку: сесія, актив, день, сетап.', 'Equity curve with max drawdown and a "Where your R comes from" block — the top drivers of your profit: session, asset, day, setup.'),
+        tx('«План дотримано vs Порушено», «Емоційний стан vs Результат» та «Найдорожчі звички» — три блоки, які показують, де саме тече твій результат.', '"Plan followed vs Broken", "Emotional state vs Result" and "Most expensive habits" — three blocks that show exactly where your results leak.'),
       ],
     },
     {
       icon: LineChart,
       color: 'var(--edge-info)', rgb: '79,139,255',
-      title: 'Перформанс',
-      desc: 'Чиста математика твоєї системи. Тут видно не «пощастило / не пощастило», а справжнє очікування на кожну угоду.',
+      title: tx('Перформанс', 'Performance'),
+      desc: tx('Чиста математика твоєї системи. Тут видно не «пощастило / не пощастило», а справжнє очікування на кожну угоду.', 'The pure math of your system. Here you see not "lucky / unlucky" but your real expectancy per trade.'),
       points: [
-        'Очікування (+R на угоду), середній плюс і мінус, серії перемог та поразок, фактор відновлення.',
-        'Середній R по днях тижня та чистий R по сесіях (Asia / London / New York) — коли ти реально заробляєш.',
-        'Розподіл R-множників: хвіст справа — це те, за що ти платиш усіма мінусами.',
-        'Underwater-крива просадки, R по годинах входу та scatter «час утримання vs результат» — кожна точка це угода.',
+        tx('Очікування (+R на угоду), середній плюс і мінус, серії перемог та поразок, фактор відновлення.', 'Expectancy (+R per trade), average win and loss, win and loss streaks, recovery factor.'),
+        tx('Середній R по днях тижня та чистий R по сесіях (Asia / London / New York) — коли ти реально заробляєш.', 'Average R by weekday and net R by session (Asia / London / New York) — when you actually make money.'),
+        tx('Розподіл R-множників: хвіст справа — це те, за що ти платиш усіма мінусами.', 'R-multiple distribution: the right tail is what you pay for with all your losses.'),
+        tx('Underwater-крива просадки, R по годинах входу та scatter «час утримання vs результат» — кожна точка це угода.', 'Underwater drawdown curve, R by entry hour and a "holding time vs result" scatter — every dot is a trade.'),
       ],
     },
     {
       icon: BrainCircuit,
       color: '#c084fc', rgb: '192,132,252',
-      title: 'Психологія',
-      desc: 'Найпотужніша вкладка. Модель зчитує всі твої угоди і збирає психологічний зліпок — з цифрами, а не відчуттями.',
+      title: tx('Психологія', 'Psychology'),
+      desc: tx('Найпотужніша вкладка. Модель зчитує всі твої угоди і збирає психологічний зліпок — з цифрами, а не відчуттями.', 'The most powerful tab. The model reads all your trades and builds a psychological snapshot — with numbers, not feelings.'),
       points: [
-        'Нейропрофіль: нейро-індекс /100, твій тип трейдера та п\'ять шкал — Фокус, Контроль, Відновлення, Дисципліна, Ризик.',
-        'Вердикт по дисципліні: «Зараз +17.3R → Потенціал без витоків +37.6R». Дисципліна має конкретну ціну в R.',
-        '«Куди течуть гроші»: помилки виконання, вхід одразу після збитку, імпульсивні стани, надлишковий ризик — з сумою по кожному.',
-        'Ланцюг тільта (як падає очікування після 1/2/3 збитків), емоційний радар і рейтинг «Стан входу → гроші»: спокій дає +1.67R, тільт — −0.23R.',
-        'Чек-лист перед входом: не галочки, а факт — як часто ти реально дотримувався кожного правила, і скільки коштувало кожне порушення.',
+        tx('Нейропрофіль: нейро-індекс /100, твій тип трейдера та п\'ять шкал — Фокус, Контроль, Відновлення, Дисципліна, Ризик.', 'Neuro profile: a neuro index /100, your trader type and five scales — Focus, Control, Recovery, Discipline, Risk.'),
+        tx('Вердикт по дисципліні: «Зараз +17.3R → Потенціал без витоків +37.6R». Дисципліна має конкретну ціну в R.', 'Discipline verdict: "Now +17.3R → Potential without leaks +37.6R". Discipline has a concrete price in R.'),
+        tx('«Куди течуть гроші»: помилки виконання, вхід одразу після збитку, імпульсивні стани, надлишковий ризик — з сумою по кожному.', '"Where the money leaks": execution mistakes, entering right after a loss, impulsive states, excess risk — with a total for each.'),
+        tx('Ланцюг тільта (як падає очікування після 1/2/3 збитків), емоційний радар і рейтинг «Стан входу → гроші»: спокій дає +1.67R, тільт — −0.23R.', 'Tilt chain (how expectancy drops after 1/2/3 losses), an emotion radar and an "Entry state → money" ranking: calm gives +1.67R, tilt gives −0.23R.'),
+        tx('Чек-лист перед входом: не галочки, а факт — як часто ти реально дотримувався кожного правила, і скільки коштувало кожне порушення.', 'Pre-entry checklist: not checkboxes but facts — how often you actually followed each rule, and what each violation cost.'),
       ],
     },
     {
       icon: Layers,
       color: '#00e0a4', rgb: '0,224,164',
-      title: 'Активи та Сетапи',
-      desc: 'Де твій edge живе, а де вмирає. Система прямо каже, що торгувати, а від чого тимчасово відійти.',
+      title: tx('Активи та Сетапи', 'Assets & Setups'),
+      desc: tx('Де твій edge живе, а де вмирає. Система прямо каже, що торгувати, а від чого тимчасово відійти.', 'Where your edge lives and where it dies. The system tells you straight what to trade and what to step away from for now.'),
       points: [
-        'Ефективність активів з вердиктом системи: «Найкраще зараз GER40, EURUSD, US100. Від GBPUSD, USDJPY краще відійти».',
-        'Матриця напрямків Long / Short: баланс PnL і вінрейт по кожному боці для кожного активу — асиметрія важливіша за загальний вінрейт.',
-        'Ефективність сетапів: Trendline break +11.4R проти FVG fill −3.4R — рейтинг твоїх патернів з WR і середнім R.',
-        'Теплова матриця «Актив × Сесія»: зелені клітини — твої золоті комбінації, червоні — сліпі зони.',
-        'Статистика по кожному проп-акаунту: вінрейт, кількість угод, помилки.',
+        tx('Ефективність активів з вердиктом системи: «Найкраще зараз GER40, EURUSD, US100. Від GBPUSD, USDJPY краще відійти».', 'Asset performance with the system\'s verdict: "Best right now: GER40, EURUSD, US100. Better step away from GBPUSD, USDJPY."'),
+        tx('Матриця напрямків Long / Short: баланс PnL і вінрейт по кожному боці для кожного активу — асиметрія важливіша за загальний вінрейт.', 'Long / Short direction matrix: PnL balance and win rate for each side of every asset — the asymmetry matters more than the overall win rate.'),
+        tx('Ефективність сетапів: Trendline break +11.4R проти FVG fill −3.4R — рейтинг твоїх патернів з WR і середнім R.', 'Setup performance: Trendline break +11.4R vs FVG fill −3.4R — a ranking of your patterns with WR and average R.'),
+        tx('Теплова матриця «Актив × Сесія»: зелені клітини — твої золоті комбінації, червоні — сліпі зони.', '"Asset × Session" heatmap: green cells are your golden combinations, red ones are blind spots.'),
+        tx('Статистика по кожному проп-акаунту: вінрейт, кількість угод, помилки.', 'Stats for each prop account: win rate, number of trades, mistakes.'),
       ],
     },
     {
       icon: CalendarClock,
       color: 'var(--edge-warn)', rgb: '245,158,11',
-      title: 'Історія угод',
-      desc: 'Повний реєстр усього, що ти наторгував — з фільтрами по акаунтах і періодах.',
+      title: tx('Історія угод', 'Trade history'),
+      desc: tx('Повний реєстр усього, що ти наторгував — з фільтрами по акаунтах і періодах.', 'A full register of everything you\'ve traded — with filters by account and period.'),
       points: [
-        'Перемикання між акаунтами (FTMO, Funding Pips, MFF) та періодами: весь час, квартал, 30 днів, тиждень.',
-        'Кожна угода тягне за собою контекст: емоцію, помилки, сесію, сетап — усе, що потім живить аналітику.',
-        'Експорт звіту одним кліком.',
+        tx('Перемикання між акаунтами (FTMO, Funding Pips, MFF) та періодами: весь час, квартал, 30 днів, тиждень.', 'Switch between accounts (FTMO, Funding Pips, MFF) and periods: all time, quarter, 30 days, week.'),
+        tx('Кожна угода тягне за собою контекст: емоцію, помилки, сесію, сетап — усе, що потім живить аналітику.', 'Every trade carries its context: emotion, mistakes, session, setup — everything that later feeds the analytics.'),
+        tx('Експорт звіту одним кліком.', 'One-click report export.'),
       ],
     },
   ];
@@ -217,118 +218,118 @@ export default function FAQ() {
   /* ---------------------- MODULE DOCUMENTATION ---------------------- */
   const documentation = [
     {
-      category: 'Routine (Щоденна рутина)',
+      category: tx('Routine (Щоденна рутина)', 'Routine (Daily routine)'),
       icon: <History size={16} className="text-[var(--edge-text)]/40" />,
       items: [
         {
           title: 'Trading Plan',
           icon: <Target size={22} />,
           color: 'var(--edge-info)', rgb: '79,139,255',
-          desc: 'Головний робочий простір трейдера на кожен день. Створюйте торгову ідею перед сесією, логуйте угоди в процесі та підводьте підсумки.',
+          desc: tx('Головний робочий простір трейдера на кожен день. Створюйте торгову ідею перед сесією, логуйте угоди в процесі та підводьте підсумки.', 'The trader\'s main daily workspace. Build your trade idea before the session, log trades as you go and wrap up at the end.'),
           features: [
-            { title: 'Pre-Session Quiz', desc: "Обов'язковий чеклист стану перед торгами. З'являється лише для нових планів на поточний день." },
-            { title: 'AI Logic Critic', desc: "Штучний інтелект аналізує ваш текст плану на наявність логічних дір та відсутності 'Plan B'." },
-            { title: 'Post-Session & Psychology', desc: "Порівняння 'Planned Bias' з 'Actual'. Оцінка виконання (1-5) та Журнал Психології (оцінка тильту, страху, впевненості)." },
+            { title: 'Pre-Session Quiz', desc: tx("Обов'язковий чеклист стану перед торгами. З'являється лише для нових планів на поточний день.", 'A mandatory state checklist before trading. Appears only for new plans for the current day.') },
+            { title: 'AI Logic Critic', desc: tx("Штучний інтелект аналізує ваш текст плану на наявність логічних дір та відсутності 'Plan B'.", 'AI checks your plan text for logical holes and a missing "Plan B".') },
+            { title: 'Post-Session & Psychology', desc: tx("Порівняння 'Planned Bias' з 'Actual'. Оцінка виконання (1-5) та Журнал Психології (оцінка тильту, страху, впевненості).", 'Compare "Planned Bias" with "Actual". Rate your execution (1-5) and keep a Psychology Journal (tilt, fear, confidence ratings).') },
           ],
         },
         {
           title: '20 Trades Method',
           icon: <Activity size={22} />,
           color: '#00e0a4', rgb: '0,224,164',
-          desc: 'Тренажер дисципліни за Марком Дугласом. Відв\'язує емоції від результату та вчить мислити ймовірностями.',
+          desc: tx('Тренажер дисципліни за Марком Дугласом. Відв\'язує емоції від результату та вчить мислити ймовірностями.', 'A discipline trainer based on Mark Douglas. Detaches emotions from outcomes and teaches you to think in probabilities.'),
           features: [
-            { title: 'Фокус на Процесі', desc: 'Тут немає результатів Win/Loss. Тільки фіксація дотримання правил: Стратегія, Ризик, План, Виконання.' },
-            { title: 'Discipline Score', desc: 'Система автоматично вираховує відсоток ідеальних угод, де були дотримані всі правила без винятку.' },
-            { title: 'Візуальна Сітка', desc: 'Наочний прогрес серії з 20 угод у вигляді єдиної таблиці для вироблення довгострокового мислення.' },
+            { title: tx('Фокус на Процесі', 'Focus on Process'), desc: tx('Тут немає результатів Win/Loss. Тільки фіксація дотримання правил: Стратегія, Ризик, План, Виконання.', 'There are no Win/Loss results here. You only record whether you followed the rules: Strategy, Risk, Plan, Execution.') },
+            { title: 'Discipline Score', desc: tx('Система автоматично вираховує відсоток ідеальних угод, де були дотримані всі правила без винятку.', 'The system automatically calculates the share of perfect trades where every rule was followed without exception.') },
+            { title: tx('Візуальна Сітка', 'Visual Grid'), desc: tx('Наочний прогрес серії з 20 угод у вигляді єдиної таблиці для вироблення довгострокового мислення.', 'Clear progress through a 20-trade series in a single table, to build long-term thinking.') },
           ],
         },
         {
           title: 'Trading Journal',
           icon: <BookOpen size={22} />,
           color: 'var(--edge-ok)', rgb: '52,211,153',
-          desc: 'Журнал усіх ваших угод. Централізована таблиця для швидкого перегляду результатів та дисципліни.',
+          desc: tx('Журнал усіх ваших угод. Централізована таблиця для швидкого перегляду результатів та дисципліни.', 'A log of all your trades. One central table for a quick look at results and discipline.'),
           features: [
-            { title: 'Швидкі KPI', desc: 'Миттєва статистика зверху: загальний RR, вінрейт, відсоток угод за планом та відсоток допущених помилок.' },
-            { title: 'Кастомний Календар', desc: "Фільтруйте угоди за будь-який період зручним календарем з кнопками 'Сьогодні', 'Цей тиждень', 'Останні 3 місяці'." },
-            { title: 'Спліт-модалка деталей', desc: 'Клікніть на угоду, і відкриється подвійний екран: зліва — деталі самої угоди (фото, помилки), справа — повний TDA аналіз плану того дня.' },
+            { title: tx('Швидкі KPI', 'Quick KPIs'), desc: tx('Миттєва статистика зверху: загальний RR, вінрейт, відсоток угод за планом та відсоток допущених помилок.', 'Instant stats at the top: total RR, win rate, share of trades by plan and share of trades with mistakes.') },
+            { title: tx('Кастомний Календар', 'Custom Calendar'), desc: tx("Фільтруйте угоди за будь-який період зручним календарем з кнопками 'Сьогодні', 'Цей тиждень', 'Останні 3 місяці'.", 'Filter trades for any period with a handy calendar and "Today", "This week", "Last 3 months" buttons.') },
+            { title: tx('Спліт-модалка деталей', 'Split details modal'), desc: tx('Клікніть на угоду, і відкриється подвійний екран: зліва — деталі самої угоди (фото, помилки), справа — повний TDA аналіз плану того дня.', 'Click a trade to open a dual view: trade details on the left (photos, mistakes), the full TDA analysis of that day\'s plan on the right.') },
           ],
         },
         {
           title: 'Analyses Log',
           icon: <FileText size={22} />,
           color: '#818cf8', rgb: '129,140,248',
-          desc: 'База даних усіх ваших створених щоденних планів. Бібліотека вашого торгового досвіду.',
+          desc: tx('База даних усіх ваших створених щоденних планів. Бібліотека вашого торгового досвіду.', 'A database of all the daily plans you\'ve created. The library of your trading experience.'),
           features: [
-            { title: 'Розумний пошук', desc: 'Шукайте плани за текстом, активами або за допомогою зручного календаря.' },
-            { title: 'List / Grid View', desc: 'Перемикайтесь між детальним списком та компактною плиткою з кольоровою індикацією Bias.' },
+            { title: tx('Розумний пошук', 'Smart search'), desc: tx('Шукайте плани за текстом, активами або за допомогою зручного календаря.', 'Search plans by text, asset or with a handy calendar.') },
+            { title: 'List / Grid View', desc: tx('Перемикайтесь між детальним списком та компактною плиткою з кольоровою індикацією Bias.', 'Switch between a detailed list and compact tiles with color-coded Bias.') },
           ],
         },
         {
           title: 'Periodic Reviews',
           icon: <BrainCircuit size={22} />,
           color: '#c084fc', rgb: '192,132,252',
-          desc: 'Інструмент для глибокої роботи над собою. Аналізуйте тижні чи місяці за допомогою AI.',
+          desc: tx('Інструмент для глибокої роботи над собою. Аналізуйте тижні чи місяці за допомогою AI.', 'A tool for deep work on yourself. Analyze weeks or months with AI.'),
           features: [
-            { title: 'Спліт-екран', desc: 'Зліва — всі ваші плани, помилки та угоди за вибраний період. Справа — текстовий редактор для звіту.' },
-            { title: 'Масовий AI Аналіз', desc: 'Виберіть до 7 проблемних днів, і ШІ знайде психологічні патерни, сильні сторони та згенерує правила на наступний тиждень.' },
+            { title: tx('Спліт-екран', 'Split screen'), desc: tx('Зліва — всі ваші плани, помилки та угоди за вибраний період. Справа — текстовий редактор для звіту.', 'On the left — all your plans, mistakes and trades for the chosen period. On the right — a text editor for your report.') },
+            { title: tx('Масовий AI Аналіз', 'Bulk AI Analysis'), desc: tx('Виберіть до 7 проблемних днів, і ШІ знайде психологічні патерни, сильні сторони та згенерує правила на наступний тиждень.', 'Pick up to 7 problem days, and AI will find psychological patterns and strengths and generate rules for next week.') },
           ],
         },
         {
           title: 'Trading System (Playbook)',
           icon: <BookOpen size={22} />,
           color: '#fb923c', rgb: '251,146,60',
-          desc: 'Ваша особиста Вікіпедія. Конституція вашої торгівлі, детальний опис сетапів та правил риск-менеджменту.',
+          desc: tx('Ваша особиста Вікіпедія. Конституція вашої торгівлі, детальний опис сетапів та правил риск-менеджменту.', 'Your personal Wikipedia. The constitution of your trading, with detailed setups and risk management rules.'),
           features: [
-            { title: 'Папки та Drag & Drop', desc: 'Створюйте необмежену вкладеність папок та перетягуйте сторінки між ними для ідеальної структури.' },
-            { title: 'Rich Text & Tiptap', desc: 'Повноцінний текстовий редактор з підтримкою заголовків, списків та палітри кольорів у стилі TradingView.' },
-            { title: 'AI Рефакторинг', desc: "Натисніть магічну кнопку, і ШІ автоматично відформатує ваші 'сирі' думки у структурований текст, зберігши всі трейдерські терміни." },
+            { title: tx('Папки та Drag & Drop', 'Folders & Drag & Drop'), desc: tx('Створюйте необмежену вкладеність папок та перетягуйте сторінки між ними для ідеальної структури.', 'Nest folders as deep as you like and drag pages between them for a perfect structure.') },
+            { title: 'Rich Text & Tiptap', desc: tx('Повноцінний текстовий редактор з підтримкою заголовків, списків та палітри кольорів у стилі TradingView.', 'A full text editor with headings, lists and a TradingView-style color palette.') },
+            { title: tx('AI Рефакторинг', 'AI Refactoring'), desc: tx("Натисніть магічну кнопку, і ШІ автоматично відформатує ваші 'сирі' думки у структурований текст, зберігши всі трейдерські терміни.", 'Press the magic button and AI will turn your raw thoughts into structured text, keeping all the trading terms.') },
           ],
         },
         {
           title: 'Notes / Dashboard',
           icon: <LayoutGrid size={22} />,
           color: 'var(--edge-warn)', rgb: '251,191,36',
-          desc: 'Швидкі нотатки. Зберігайте сюди короткі спостереження, бектести або цікаві сетапи з ринку.',
+          desc: tx('Швидкі нотатки. Зберігайте сюди короткі спостереження, бектести або цікаві сетапи з ринку.', 'Quick notes. Save short observations, backtests or interesting market setups here.'),
           features: [
-            { title: 'Система Тегів', desc: 'Створюйте власні теги і миттєво фільтруйте нотатки кліком по тегу прямо на картці.' },
-            { title: 'Авто-стиснення фото', desc: 'Вставляйте графіки через Ctrl+V — система автоматично стисне їх у формат WebP для швидкої роботи.' },
+            { title: tx('Система Тегів', 'Tag System'), desc: tx('Створюйте власні теги і миттєво фільтруйте нотатки кліком по тегу прямо на картці.', 'Create your own tags and filter notes instantly by clicking a tag right on the card.') },
+            { title: tx('Авто-стиснення фото', 'Auto photo compression'), desc: tx('Вставляйте графіки через Ctrl+V — система автоматично стисне їх у формат WebP для швидкої роботи.', 'Paste charts with Ctrl+V — the system automatically compresses them to WebP so everything stays fast.') },
           ],
         },
       ],
     },
     {
-      category: 'Data (Статистика та Метрики)',
+      category: tx('Data (Статистика та Метрики)', 'Data (Stats & Metrics)'),
       icon: <Database size={16} className="text-[var(--edge-text)]/40" />,
       items: [
         {
           title: 'Prop Accounts',
           icon: <Wallet size={22} />,
           color: 'var(--edge-warn)', rgb: '245,158,11',
-          desc: 'Управління вашими торговими рахунками (FTMO, Funding Pips тощо).',
+          desc: tx('Управління вашими торговими рахунками (FTMO, Funding Pips тощо).', 'Manage your trading accounts (FTMO, Funding Pips, etc.).'),
           features: [
-            { title: 'Трекінг балансу', desc: 'Додавайте рахунки та слідкуйте за загальним капіталом в управлінні.' },
-            { title: "Прив'язка угод", desc: 'Рахунки з цієї бази використовуються при додаванні угод в Trading Plan.' },
+            { title: tx('Трекінг балансу', 'Balance tracking'), desc: tx('Додавайте рахунки та слідкуйте за загальним капіталом в управлінні.', 'Add accounts and keep track of the total capital you manage.') },
+            { title: tx("Прив'язка угод", 'Trade linking'), desc: tx('Рахунки з цієї бази використовуються при додаванні угод в Trading Plan.', 'Accounts from this list are used when you add trades in Trading Plan.') },
           ],
         },
         {
           title: 'Error Log',
           icon: <ShieldAlert size={22} />,
           color: 'var(--edge-bad)', rgb: '248,113,113',
-          desc: "Ваша 'Галерея болю'. Ізольований простір для перегляду та аналізу виключно збиткових та помилкових рішень.",
+          desc: tx("Ваша 'Галерея болю'. Ізольований простір для перегляду та аналізу виключно збиткових та помилкових рішень.", 'Your "Gallery of pain". A separate space to review and analyze only losing and mistaken decisions.'),
           features: [
-            { title: 'Ізоляція помилок', desc: "Усі угоди, позначені як 'Помилка', автоматично потрапляють сюди разом зі скріншотами." },
-            { title: 'Редагування психології', desc: 'Детально описуйте причини тильту та змінюйте статуси FOMO/Followed Plan постфактум.' },
+            { title: tx('Ізоляція помилок', 'Mistake isolation'), desc: tx("Усі угоди, позначені як 'Помилка', автоматично потрапляють сюди разом зі скріншотами.", 'All trades marked as a mistake land here automatically, along with their screenshots.') },
+            { title: tx('Редагування психології', 'Psychology editing'), desc: tx('Детально описуйте причини тильту та змінюйте статуси FOMO/Followed Plan постфактум.', 'Describe the causes of tilt in detail and change FOMO/Followed Plan statuses after the fact.') },
           ],
         },
         {
           title: 'Analytics',
           icon: <BarChart2 size={22} />,
           color: 'var(--edge-acc, var(--edge-acc))', rgb: '139,123,255',
-          desc: 'Математика вашої торгової системи. Детальні дашборди для пошуку вашої торгової переваги (Edge). Повний гайд — у секції вище.',
+          desc: tx('Математика вашої торгової системи. Детальні дашборди для пошуку вашої торгової переваги (Edge). Повний гайд — у секції вище.', 'The math of your trading system. Detailed dashboards to find your trading edge. The full guide is in the section above.'),
           features: [
-            { title: 'Cost of Tilt', desc: "Найважливіша метрика. Показує, скільки 'R' (прибутку) ви втратили через порушення правил та емоції." },
-            { title: 'BE та Missed', desc: "Угоди зі статусом 'Break Even' та 'Missed' враховуються у лічильниках, але НЕ псують вашу фінансову криву RR." },
-            { title: 'Детальні зрізи', desc: 'Аналіз прибутковості по днях тижня, торгових сесіях (London/NY) та напрямку (Long/Short).' },
+            { title: 'Cost of Tilt', desc: tx("Найважливіша метрика. Показує, скільки 'R' (прибутку) ви втратили через порушення правил та емоції.", 'The most important metric. Shows how much R (profit) you lost to rule breaks and emotions.') },
+            { title: tx('BE та Missed', 'BE & Missed'), desc: tx("Угоди зі статусом 'Break Even' та 'Missed' враховуються у лічильниках, але НЕ псують вашу фінансову криву RR.", 'Trades with "Break Even" and "Missed" status count in the counters but do NOT spoil your RR equity curve.') },
+            { title: tx('Детальні зрізи', 'Detailed breakdowns'), desc: tx('Аналіз прибутковості по днях тижня, торгових сесіях (London/NY) та напрямку (Long/Short).', 'Profitability by weekday, trading session (London/NY) and direction (Long/Short).') },
           ],
         },
       ],
@@ -337,10 +338,10 @@ export default function FAQ() {
 
   /* ------------------ FLOATING NAV MENU ------------------ */
   const navItems = [
-    { id: 'overview', label: 'Огляд', icon: <Compass size={14} /> },
-    { id: 'analytics', label: 'Аналітика', icon: <BarChart2 size={14} /> },
-    { id: 'contact', label: 'Підтримка', icon: <MessageCircle size={14} /> },
-    { id: 'modules', label: 'Модулі', icon: <Layers size={14} /> },
+    { id: 'overview', label: tx('Огляд', 'Overview'), icon: <Compass size={14} /> },
+    { id: 'analytics', label: tx('Аналітика', 'Analytics'), icon: <BarChart2 size={14} /> },
+    { id: 'contact', label: tx('Підтримка', 'Support'), icon: <MessageCircle size={14} /> },
+    { id: 'modules', label: tx('Модулі', 'Modules'), icon: <Layers size={14} /> },
   ];
 
   return (
@@ -420,22 +421,19 @@ export default function FAQ() {
               className="text-[34px] md:text-[44px] font-bold text-[var(--edge-text)] leading-[1.1] max-w-[760px]"
               style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif", letterSpacing: '-0.6px' }}
             >
-              Журнал, який не просто зберігає угоди —{' '}
-              <span
-                style={{
-                  backgroundImage: `linear-gradient(120deg, ${ACCENT_HEX}, #c4b5fd)`,
-                  WebkitBackgroundClip: 'text',
-                  backgroundClip: 'text',
-                  color: 'transparent',
-                }}
-              >
-                він розбирає тебе
+              {tx('Журнал, який не просто зберігає угоди —', 'A journal that doesn\'t just store your trades —')}{' '}
+              {/* Виділення лишається, але суцільним акцентом замість
+                  фіолетового градієнта: градієнт у тексті — прикраса,
+                  а не наголос, і на кінці він вицвітав. */}
+              <span style={{ color: 'var(--edge-acc-text, #A498FF)' }}>
+                {tx('він розбирає тебе', 'it breaks you down')}
               </span>.
             </h1>
             <p className="text-[15px] text-[var(--edge-text)]/55 mt-4 max-w-[640px] leading-relaxed">
-              The Edge читає кожну твою угоду, бачить тильт, revenge-входи та FOMO — і чесно, але
-              по-доброму каже, що саме ти робиш не так. Нижче — все, що вміє система, і як цим
-              користуватись.
+              {tx(
+                'The Edge читає кожну твою угоду, бачить тильт, revenge-входи та FOMO — і чесно, але по-доброму каже, що саме ти робиш не так. Нижче — все, що вміє система, і як цим користуватись.',
+                'The Edge reads every trade you take, spots tilt, revenge entries and FOMO — and tells you honestly, but kindly, what exactly you\'re doing wrong. Below is everything the system can do and how to use it.',
+              )}
             </p>
 
             {/* Тур звідси, а не з окремого розділу: сюди приходять
@@ -453,7 +451,7 @@ export default function FAQ() {
               onMouseLeave={(e) => (e.currentTarget.style.background = `rgba(${ACCENT},0.10)`)}
             >
               <Sparkles size={15} strokeWidth={2.4} className="transition-transform duration-300 group-hover:scale-110" />
-              Пройти знайомство — хвилина
+              {tx('Пройти знайомство — хвилина', 'Take the quick tour — one minute')}
             </button>
           </motion.div>
 
@@ -469,16 +467,19 @@ export default function FAQ() {
                       <Bot size={22} strokeWidth={1.8} />
                     </div>
                     <h3 className="text-[20px] font-bold text-[var(--edge-text)] mb-3" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
-                      AI-психолог трейдера
+                      {tx('AI-психолог трейдера', 'AI trading psychologist')}
                     </h3>
                     <p className="text-[14px] text-[var(--edge-text)]/55 leading-relaxed mb-4">
-                      Він питає, як ти хочеш торгувати — а потім дивиться, чи ти реально так торгуєш.
-                      Читає угоди, ловить тильт, revenge-входи та FOMO, і відповідає цифрами з твого
-                      журналу, а не загальними словами.
+                      {tx(
+                        'Він питає, як ти хочеш торгувати — а потім дивиться, чи ти реально так торгуєш. Читає угоди, ловить тильт, revenge-входи та FOMO, і відповідає цифрами з твого журналу, а не загальними словами.',
+                        'It asks how you want to trade — and then checks whether you actually trade that way. It reads your trades, catches tilt, revenge entries and FOMO, and answers with numbers from your journal, not generic advice.',
+                      )}
                     </p>
                     <p className="text-[14px] text-[var(--edge-text)]/55 leading-relaxed">
-                      Аналізує твої дії, твою торгову систему, плани та угоди — і дає вердикт: що
-                      працює, що зливає R, і яке правило поставити наступним.
+                      {tx(
+                        'Аналізує твої дії, твою торгову систему, плани та угоди — і дає вердикт: що працює, що зливає R, і яке правило поставити наступним.',
+                        'It analyzes your actions, your trading system, plans and trades — and gives a verdict: what works, what bleeds R, and which rule to add next.',
+                      )}
                     </p>
                   </div>
 
@@ -495,25 +496,27 @@ export default function FAQ() {
                           className="w-[6px] h-[6px] rounded-full"
                           style={{ background: '#00e0a4', boxShadow: '0 0 8px rgba(0,224,164,0.8)' }}
                         />
-                        AI-психолог · на зв'язку
+                        {tx("AI-психолог · на зв'язку", 'AI psychologist · online')}
                       </div>
                       <div
                         className="rounded-[12px] p-3.5 text-[12.5px] leading-relaxed text-[var(--edge-text)]/85"
                         style={{ background: `rgba(${ACCENT},0.10)`, border: `1px solid rgba(${ACCENT},0.22)` }}
                       >
-                        <span style={{ color: ACCENT_HEX }}>✦</span> Ти відкрив 3 угоди за 8 хвилин після
-                        того збитку по GBP. Це твій патерн revenge-трейду — вінрейт у таких входах{' '}
+                        <span style={{ color: ACCENT_HEX }}>✦</span> {tx(
+                          'Ти відкрив 3 угоди за 8 хвилин після того збитку по GBP. Це твій патерн revenge-трейду — вінрейт у таких входах',
+                          'You opened 3 trades within 8 minutes after that GBP loss. That\'s your revenge-trading pattern — your win rate on these entries is',
+                        )}{' '}
                         <span className="text-[#ff8080] font-semibold">22%</span>.
                       </div>
                       <div
                         className="rounded-[12px] p-3.5 text-[12.5px] leading-relaxed text-[var(--edge-text)]/70 self-end max-w-[85%]"
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
                       >
-                        Постав мені лок-аут на 30 хв після будь-якого збитку.
+                        {tx('Постав мені лок-аут на 30 хв після будь-якого збитку.', 'Set a 30-minute lockout for me after any loss.')}
                       </div>
                       <div className="flex items-center gap-2 text-[11px] text-[var(--edge-text)]/35">
                         <RefreshCw size={12} className="animate-spin" style={{ animationDuration: '3s' }} />
-                        правило додано в чек-лист перед входом
+                        {tx('правило додано в чек-лист перед входом', 'rule added to your pre-entry checklist')}
                       </div>
                     </div>
                   </div>
@@ -528,11 +531,13 @@ export default function FAQ() {
                   <Zap size={22} strokeWidth={1.8} />
                 </div>
                 <h3 className="text-[18px] font-bold text-[var(--edge-text)] mb-3" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
-                  Авто-імпорт з MT5
+                  {tx('Авто-імпорт з MT5', 'Auto-import from MT5')}
                 </h3>
                 <p className="text-[13.5px] text-[var(--edge-text)]/55 leading-relaxed mb-5">
-                  Підключаєш один раз — і кожен філ, SL, TP та частковий вихід лягає в журнал у
-                  реальному часі. Без CSV, без копіпасту.
+                  {tx(
+                    'Підключаєш один раз — і кожен філ, SL, TP та частковий вихід лягає в журнал у реальному часі. Без CSV, без копіпасту.',
+                    'Connect once — and every fill, SL, TP and partial close lands in your journal in real time. No CSV, no copy-paste.',
+                  )}
                 </p>
                 <div className="flex flex-col gap-2">
                   {[
@@ -551,7 +556,7 @@ export default function FAQ() {
                   ))}
                   <div className="flex items-center gap-2 text-[10.5px] text-[var(--edge-text)]/35 mt-1" style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: 1 }}>
                     <span className="w-[6px] h-[6px] rounded-full" style={{ background: '#00e0a4', boxShadow: '0 0 8px rgba(0,224,164,0.8)' }} />
-                    LIVE · синхронізовано з MT5
+                    {tx('LIVE · синхронізовано з MT5', 'LIVE · synced with MT5')}
                   </div>
                 </div>
               </GlassCard>
@@ -564,17 +569,20 @@ export default function FAQ() {
                   <Layers size={22} strokeWidth={1.8} />
                 </div>
                 <h3 className="text-[18px] font-bold text-[var(--edge-text)] mb-3" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
-                  Абсолютна AI-екосистема
+                  {tx('Абсолютна AI-екосистема', 'A complete AI ecosystem')}
                 </h3>
                 <p className="text-[13.5px] text-[var(--edge-text)]/55 leading-relaxed mb-5">
-                  Це не просто лог помилок. Це могутня екосистема, яка безперервно вивчає твої угоди, звички, настрій та глибоку психологію. AI не дає тобі зірватися в тільт — він змушує запам'ятовувати слабкі місця, виправляти їх і до міліметра виконувати Торгову Систему. Він бачить все і робить тебе кращим.
+                  {tx(
+                    "Це не просто лог помилок. Це могутня екосистема, яка безперервно вивчає твої угоди, звички, настрій та глибоку психологію. AI не дає тобі зірватися в тільт — він змушує запам'ятовувати слабкі місця, виправляти їх і до міліметра виконувати Торгову Систему. Він бачить все і робить тебе кращим.",
+                    "It's not just a mistake log. It's an ecosystem that constantly studies your trades, habits, mood and deeper psychology. The AI keeps you from sliding into tilt — it makes you remember your weak spots, fix them and follow your Trading System to the millimeter. It sees everything and makes you better.",
+                  )}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { t: 'Контроль ТС', c: '0,224,164' },
-                    { t: 'Захист від тільту', c: '248,113,113' },
-                    { t: 'AI-Трекінг', c: '139,123,255' },
-                    { t: 'Психологія', c: '251,191,36' },
+                    { t: tx('Контроль ТС', 'System control'), c: '0,224,164' },
+                    { t: tx('Захист від тільту', 'Tilt protection'), c: '248,113,113' },
+                    { t: tx('AI-Трекінг', 'AI tracking'), c: '139,123,255' },
+                    { t: tx('Психологія', 'Psychology'), c: '251,191,36' },
                   ].map((tag) => (
                     <span
                       key={tag.t}
@@ -598,9 +606,12 @@ export default function FAQ() {
         <div id="analytics" className="scroll-mt-32">
           <motion.div {...rise(0)} className="mb-20">
             <SectionTitle
-              eyebrow="Analytics · твій edge в цифрах"
-              title="Аналітика, яка йде вглиб"
-              sub="Вінрейт по сесіях, розподіл R-множників, найкращі пари, найгірші години. 200+ метрик, які відповідають на одне питання: де мій справжній edge? Все розкладено по п'яти вкладках — щоб нічого не відволікало і все було легко знайти."
+              eyebrow={tx('Analytics · твій edge в цифрах', 'Analytics · your edge in numbers')}
+              title={tx('Аналітика, яка йде вглиб', 'Analytics that goes deep')}
+              sub={tx(
+                "Вінрейт по сесіях, розподіл R-множників, найкращі пари, найгірші години. 200+ метрик, які відповідають на одне питання: де мій справжній edge? Все розкладено по п'яти вкладках — щоб нічого не відволікало і все було легко знайти.",
+                'Win rate by session, R-multiple distribution, best pairs, worst hours. 200+ metrics that answer one question: where is my real edge? Everything is split across five tabs — so nothing distracts you and everything is easy to find.',
+              )}
             />
 
             <div className="flex flex-col gap-5">
@@ -651,10 +662,11 @@ export default function FAQ() {
               >
                 <Flame size={22} style={{ color: ACCENT_HEX }} className="shrink-0 mt-0.5" />
                 <p className="text-[13.5px] text-[var(--edge-text)]/75 leading-relaxed">
-                  Головна ідея всієї аналітики: <span className="text-[var(--edge-text)] font-semibold">дисципліна має ціну в R</span>.
-                  Система рахує різницю між тим, що є, і тим, що вже могло бути без витоків — і показує
-                  конкреттні звички, які з'їдають результат. Не «стань дисциплінованішим», а «ось ці 4
-                  порушення коштували тобі 11.3R за місяць».
+                  {tx('Головна ідея всієї аналітики:', 'The core idea behind all the analytics:')} <span className="text-[var(--edge-text)] font-semibold">{tx('дисципліна має ціну в R', 'discipline has a price in R')}</span>.
+                  {' '}{tx(
+                    "Система рахує різницю між тим, що є, і тим, що вже могло бути без витоків — і показує конкретні звички, які з'їдають результат. Не «стань дисциплінованішим», а «ось ці 4 порушення коштували тобі 11.3R за місяць».",
+                    'The system calculates the gap between what you have and what you could have had without the leaks — and shows the specific habits eating your results. Not "be more disciplined", but "these 4 violations cost you 11.3R this month".',
+                  )}
                 </p>
               </div>
             </motion.div>
@@ -675,10 +687,10 @@ export default function FAQ() {
                   </div>
                   <div>
                     <h2 className="text-[var(--edge-text)] font-bold text-[15px] mb-1" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
-                      Зв'язок зі мною
+                      {tx("Зв'язок зі мною", 'Contact me')}
                     </h2>
                     <p className="text-[var(--edge-text)]/50 text-[13px] leading-relaxed">
-                      Якщо виникнуть питання або щось не працює — будь ласка, повідомте мене в Telegram.
+                      {tx('Якщо виникнуть питання або щось не працює — будь ласка, повідомте мене в Telegram.', 'If you have questions or something isn\'t working, please let me know on Telegram.')}
                     </p>
                   </div>
                 </div>
@@ -694,7 +706,7 @@ export default function FAQ() {
                     boxShadow: '0 14px 30px -12px rgba(37,163,233,0.6), inset 0 1px 0 rgba(255,255,255,0.25)',
                   }}
                 >
-                  <Send size={14} /> Написати в Telegram
+                  <Send size={14} /> {tx('Написати в Telegram', 'Message on Telegram')}
                 </motion.a>
               </div>
             </GlassCard>
@@ -705,9 +717,9 @@ export default function FAQ() {
         <div id="modules" className="scroll-mt-32">
           <motion.div {...rise(0)}>
             <SectionTitle
-              eyebrow="Документація терміналу"
-              title="Всі модулі системи"
-              sub="Опис кожного інструмента та як з нього витиснути максимум."
+              eyebrow={tx('Документація терміналу', 'Terminal documentation')}
+              title={tx('Всі модулі системи', 'All system modules')}
+              sub={tx('Опис кожного інструмента та як з нього витиснути максимум.', 'What each tool does and how to get the most out of it.')}
             />
 
             <div className="space-y-14">

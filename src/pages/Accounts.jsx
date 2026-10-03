@@ -462,7 +462,7 @@ return (
       >
         <div className="min-w-0">
           {/* Шапка — один в один як у «Журналі помилок»: надпис із
-              крапкою, заголовок фірмовим Unbounded з градієнтом, підпис
+              крапкою, заголовок фірмовим Unbounded (без градієнта), підпис
               Golos. Тут стояв Roboto — сторінка виглядала як із іншого
               застосунку. */}
           <div className="flex items-center gap-[9px]">
@@ -483,10 +483,9 @@ return (
               fontFamily: T.display,
               letterSpacing: '-1.9px',
               lineHeight: 1,
-              backgroundImage: `linear-gradient(170deg, ${T.text} 34%, ${T.text3})`,
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              /* Суцільним кольором: градієнт «текст → сірий» видавав
+                 шаблон і гасив кінець слова. */
+              color: T.text,
             }}
           >
             Accounts

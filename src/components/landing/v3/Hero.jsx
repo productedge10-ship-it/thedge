@@ -178,14 +178,11 @@ export default function Hero() {
           >
             {tx('Не шукай ідеальну стратегію', 'Stop hunting for the perfect strategy')}{' '}
             <br />
-            <span
-              style={{
-                background: 'linear-gradient(170deg,#ffffff 32%,#a9a5bd)',
-                WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-              }}
-            >
-              {tx('Зрозумій свою', 'Understand yours')}
-            </span>{' '}
+            {/* Друга половина заголовка — тим самим білим, без градієнта.
+                Градієнт «білий → сірий» — найупізнаваніший прийом
+                шаблонних AI-лендінгів, а кінець фрази в ньому ще й
+                вицвітав до 6:1. Фразу тримає сама думка й розрив рядка. */}
+            {tx('Зрозумій свою', 'Understand yours')}{' '}
             {/* Описовий рядок у самому <h1>: несе ключі (журнал, угод,
                 MetaTrader, аналітика), яких немає в поетичному заголовку.
                 Дрібніший і приглушений — читається як підзаголовок. */}

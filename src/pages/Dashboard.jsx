@@ -10,6 +10,7 @@ import {
 
 import { useAuth } from '../context/AuthContext';
 import { notify } from '../utils/notify';
+import { t as tx, LOCALE } from '../lib/lang';
 import useCloudState from '../hooks/useCloudState';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import {
@@ -47,14 +48,14 @@ const fmtDate = (iso) => {
   if (!iso) return '—';
   const d = new Date(iso + (String(iso).length <= 10 ? 'T12:00:00' : ''));
   if (isNaN(d)) return iso;
-  return d.toLocaleDateString('uk-UA', { day: '2-digit', month: 'long', year: 'numeric' }).replace(/\sр\./, '');
+  return d.toLocaleDateString(LOCALE, { day: '2-digit', month: 'long', year: 'numeric' }).replace(/\sр\./, '');
 };
 
 const fmtShort = (iso) => {
   if (!iso) return '—';
   const d = new Date(iso + (String(iso).length <= 10 ? 'T12:00:00' : ''));
   if (isNaN(d)) return iso;
-  return d.toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' }).replace(/\sр\./, '');
+  return d.toLocaleDateString(LOCALE, { day: '2-digit', month: 'short' }).replace(/\sр\./, '');
 };
 
 
@@ -337,13 +338,13 @@ function RecentCard({ note, folder, onOpen }) {
           className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase"
           style={{ background: `${c}1f`, border: `1px solid ${c}42`, fontFamily: T.mono, letterSpacing: '1.3px', color: `${c}f2` }}
         >
-          {folder?.name || 'Без папки'}
+          {folder?.name || tx('Без папки', 'No folder')}
         </span>
         <span className="text-[11.5px]" style={{ fontFamily: T.mono, color: 'var(--edge-text3)' }}>{date}</span>
       </div>
 
       <div className="mt-3.5 text-[16px] font-semibold" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.3px' }}>
-        {(note.title || '').trim() || 'Без назви'}
+        {(note.title || '').trim() || tx('Без назви', 'Untitled')}
       </div>
       <div className="mt-2 overflow-hidden text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.55, maxHeight: 39 }}>
         {text}
@@ -476,11 +477,11 @@ function NoteTile({ note, color, date, pills, images, voices, icon, cover, tall,
           className="flex items-center gap-1.5"
           style={{ opacity: hov ? 1 : 0, transform: `translateY(${hov ? '0' : '-5px'})`, transition: 'all .2s', pointerEvents: hov ? 'auto' : 'none' }}
         >
-          <CardBtn title="Редагувати" onClick={onEdit} accent><Pencil size={13} strokeWidth={1.9} /></CardBtn>
-          <CardBtn title={note.archived ? 'Повернути зі стрічки' : 'В архів'} onClick={onArchive}>
+          <CardBtn title={tx('Редагувати', 'Edit')} onClick={onEdit} accent><Pencil size={13} strokeWidth={1.9} /></CardBtn>
+          <CardBtn title={note.archived ? tx('Повернути зі стрічки', 'Restore to feed') : tx('В архів', 'Archive')} onClick={onArchive}>
             {note.archived ? <ArchiveRestore size={13} strokeWidth={1.9} /> : <Archive size={13} strokeWidth={1.9} />}
           </CardBtn>
-          <CardBtn title="Видалити" onClick={onDelete} danger><Trash2 size={13} strokeWidth={1.9} /></CardBtn>
+          <CardBtn title={tx('Видалити', 'Delete')} onClick={onDelete} danger><Trash2 size={13} strokeWidth={1.9} /></CardBtn>
         </div>
       </div>
 
@@ -488,7 +489,7 @@ function NoteTile({ note, color, date, pills, images, voices, icon, cover, tall,
         className="relative mt-3"
         style={{ fontFamily: T.display, fontSize: 18.5, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.4px', lineHeight: 1.25 }}
       >
-        {note.title || 'Без назви'}
+        {note.title || tx('Без назви', 'Untitled')}
       </div>
       {/* Коли зверху обкладинка, тексту в звичайній картці лишається
           рівно на нуль рядків — і краще не показати нічого, ніж
@@ -508,7 +509,7 @@ function NoteTile({ note, color, date, pills, images, voices, icon, cover, tall,
           <span
             role="button"
             tabIndex={-1}
-            title={`Відкрити бектест: ${trade.name}`}
+            title={tx(`Відкрити бектест: ${trade.name}`, `Open backtest: ${trade.name}`)}
             onClick={(e) => { e.stopPropagation(); onTrade(trade); }}
             className="inline-flex max-w-full items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold"
             style={{ fontFamily: T.mono, letterSpacing: '0.4px', background: A(0.14), border: `1px solid ${A(0.4)}`, color: 'var(--edge-acc)', cursor: 'pointer' }}
@@ -554,7 +555,7 @@ function NoteLine({ note, color, date, pills, icon, pinned, onOpen, onEdit, onAr
             className="truncate"
             style={{ fontFamily: T.display, fontSize: 15.5, fontWeight: 600, color: 'var(--edge-text)', letterSpacing: '-0.3px' }}
           >
-            {note.title || 'Без назви'}
+            {note.title || tx('Без назви', 'Untitled')}
           </div>
         </div>
         <div className="mt-1 truncate" style={{ fontFamily: T.sans, fontSize: 13, color: 'var(--edge-text3)' }}>
@@ -572,11 +573,11 @@ function NoteLine({ note, color, date, pills, icon, pinned, onOpen, onEdit, onAr
         className="flex w-[104px] shrink-0 items-center justify-end gap-1.5"
         style={{ opacity: hov ? 1 : 0, transition: 'opacity .2s', pointerEvents: hov ? 'auto' : 'none' }}
       >
-        <CardBtn title="Редагувати" onClick={onEdit} accent><Pencil size={13} strokeWidth={1.9} /></CardBtn>
-        <CardBtn title={note.archived ? 'Повернути зі стрічки' : 'В архів'} onClick={onArchive}>
+        <CardBtn title={tx('Редагувати', 'Edit')} onClick={onEdit} accent><Pencil size={13} strokeWidth={1.9} /></CardBtn>
+        <CardBtn title={note.archived ? tx('Повернути зі стрічки', 'Restore to feed') : tx('В архів', 'Archive')} onClick={onArchive}>
           {note.archived ? <ArchiveRestore size={13} strokeWidth={1.9} /> : <Archive size={13} strokeWidth={1.9} />}
         </CardBtn>
-        <CardBtn title="Видалити" onClick={onDelete} danger><Trash2 size={13} strokeWidth={1.9} /></CardBtn>
+        <CardBtn title={tx('Видалити', 'Delete')} onClick={onDelete} danger><Trash2 size={13} strokeWidth={1.9} /></CardBtn>
       </div>
     </div>
   );
@@ -623,8 +624,8 @@ function QuickNoteBar({ onClick }) {
       </span>
 
       <span className="min-w-0 flex-1 text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: hov ? 'var(--edge-text)' : 'var(--edge-text2)' }}>
-        Швидка нотатка
-        <span className="ml-2 font-normal" style={{ color: 'var(--edge-text3)' }}>почни писати — збережеться сюди</span>
+        {tx('Швидка нотатка', 'Quick note')}
+        <span className="ml-2 font-normal" style={{ color: 'var(--edge-text3)' }}>{tx('почни писати — збережеться сюди', 'start typing — it saves here')}</span>
       </span>
 
       <span
@@ -762,7 +763,7 @@ export default function Notes() {
         setFolders(shelf);
         setNotes(all);
       } catch (err) {
-        if (alive) notify.error('Не вдалось завантажити нотатки', err.message);
+        if (alive) notify.error(tx('Не вдалось завантажити нотатки', 'Couldn\'t load notes'), err.message);
       } finally {
         if (alive) setLoading(false);
       }
@@ -798,7 +799,7 @@ export default function Notes() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         if (busy()) return undefined;
         e.preventDefault();
-        const box = document.querySelector('input[placeholder="Пошук у папці"], input[placeholder="Пошук"]');
+        const box = document.querySelector(`input[placeholder="${tx('Пошук у папці', 'Search in folder')}"], input[placeholder="${tx('Пошук', 'Search')}"]`);
         box?.focus();
         return undefined;
       }
@@ -846,7 +847,7 @@ export default function Notes() {
       .slice()
       .sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')))
       .slice(0, 3)
-      .map((n) => (n.title || '').trim() || 'Без назви')
+      .map((n) => (n.title || '').trim() || tx('Без назви', 'Untitled'))
       .join(' · ');
   };
 
@@ -861,15 +862,15 @@ export default function Notes() {
     }, 0);
     if (!last) return '—';
     const mins = Math.round((Date.now() - last) / 60000);
-    if (mins < 1) return 'щойно';
-    if (mins < 60) return `${mins} хв`;
+    if (mins < 1) return tx('щойно', 'just now');
+    if (mins < 60) return tx(`${mins} хв`, `${mins} min ago`);
     const hours = Math.round(mins / 60);
-    if (hours < 24) return `${hours} год`;
+    if (hours < 24) return tx(`${hours} год`, `${hours} h ago`);
     const days = Math.round(hours / 24);
-    if (days === 1) return 'вчора';
-    if (days < 31) return `${days} ${plural(days, 'день', 'дні', 'днів')}`;
+    if (days === 1) return tx('вчора', 'yesterday');
+    if (days < 31) return tx(`${days} ${plural(days, 'день', 'дні', 'днів')}`, `${days} days ago`);
     const months = Math.round(days / 30);
-    return `${months} ${plural(months, 'місяць', 'місяці', 'місяців')}`;
+    return tx(`${months} ${plural(months, 'місяць', 'місяці', 'місяців')}`, `${months} ${months === 1 ? 'month' : 'months'} ago`);
   };
 
   /* Пошук на полиці шукає і по назвах папок, і по тому, що в них
@@ -916,8 +917,8 @@ export default function Notes() {
      відкрито. «Без папки» й архів — теж вигляди папки, просто без
      власного запису в базі, тому колір у них нейтральний. */
   const headTitle = scope === 'archive'
-    ? 'Архів'
-    : openFolder?.name || (openId === NO_FOLDER ? 'Без папки' : 'Записник');
+    ? tx('Архів', 'Archive')
+    : openFolder?.name || (openId === NO_FOLDER ? tx('Без папки', 'No folder') : tx('Записник', 'Notebook'));
   const headColor = scope === 'archive' || !openFolder ? 'var(--edge-text3)' : openFolder.color;
 
   /* Теги рядком — тільки ті, що справді зустрічаються тут, і одразу
@@ -932,7 +933,7 @@ export default function Notes() {
     /* У «Всі» немає власного кольору: акцент теми — це CSS-змінна,
        і дописати до неї прозорість рядком не можна. Тому колір для
        цієї плашки підставляється окремо, через rgba. */
-    return [{ id: null, name: 'Всі', count: inScope.length, color: null }, ...rest];
+    return [{ id: null, name: tx('Всі', 'All'), count: inScope.length, color: null }, ...rest];
   }, [inScope, tree]);
 
   const filtered = useMemo(() => {
@@ -949,7 +950,7 @@ export default function Notes() {
          людина закріпила запис саме для того, щоб не шукати його. */
       const pin = (cardOf(b).pin ? 1 : 0) - (cardOf(a).pin ? 1 : 0);
       if (pin) return pin;
-      if (sort === 'title') return (a.title || '').localeCompare(b.title || '', 'uk');
+      if (sort === 'title') return (a.title || '').localeCompare(b.title || '', LOCALE);
       return sort === 'newest'
         ? new Date(b.created_at) - new Date(a.created_at)
         : new Date(a.created_at) - new Date(b.created_at);
@@ -994,11 +995,14 @@ export default function Notes() {
          показувати ту саму сіру картку. */
       if (!cardSupport.ok && Object.keys(data.card || {}).length && !warnedCard.current) {
         warnedCard.current = true;
-        notify.error('Вигляд картки не збережеться', 'У таблиці notes ще немає колонки card — сам запис збережено, оформлення живе до перезавантаження.');
+        notify.error(
+          tx('Вигляд картки не збережеться', 'Card style won\'t be saved'),
+          tx('У таблиці notes ще немає колонки card — сам запис збережено, оформлення живе до перезавантаження.', 'The notes table has no card column yet — the note itself is saved, but its style lasts only until reload.'),
+        );
       }
     } catch (err) {
       setNotes(before);
-      notify.error('Нотатка не збереглась', err.message);
+      notify.error(tx('Нотатка не збереглась', 'Note wasn\'t saved'), err.message);
     }
   };
 
@@ -1019,7 +1023,7 @@ export default function Notes() {
       removeImages(doomed?.images);
     } catch (err) {
       setNotes(before);
-      notify.error('Не вдалось видалити', err.message);
+      notify.error(tx('Не вдалось видалити', 'Couldn\'t delete'), err.message);
     }
   };
 
@@ -1036,12 +1040,12 @@ export default function Notes() {
     try {
       await setNoteArchived(user.id, n.id, next);
       notify.success(
-        next ? 'В архіві' : 'Повернуто',
-        next ? 'Нотатка прибрана зі стрічки, але залишилась у записнику.' : 'Нотатка знову в основній стрічці.',
+        next ? tx('В архіві', 'Archived') : tx('Повернуто', 'Restored'),
+        next ? tx('Нотатка прибрана зі стрічки, але залишилась у записнику.', 'The note is out of the feed but still in your notebook.') : tx('Нотатка знову в основній стрічці.', 'The note is back in the main feed.'),
       );
     } catch (err) {
       setNotes(before);
-      notify.error('Не вдалось перенести', err.message);
+      notify.error(tx('Не вдалось перенести', 'Couldn\'t move'), err.message);
     }
   };
 
@@ -1059,7 +1063,7 @@ export default function Notes() {
       await setNoteFolder(user.id, n.id, next);
     } catch (err) {
       setNotes(before);
-      notify.error('Не вдалось перенести', err.message);
+      notify.error(tx('Не вдалось перенести', 'Couldn\'t move'), err.message);
     }
   };
 
@@ -1089,7 +1093,7 @@ export default function Notes() {
       return f;
     } catch (err) {
       setFolders(before);
-      notify.error('Не вдалось створити папку', err.message);
+      notify.error(tx('Не вдалось створити папку', 'Couldn\'t create folder'), err.message);
       return null;
     }
   };
@@ -1115,7 +1119,7 @@ export default function Notes() {
       await updateFolder(user.id, f.id, safe);
     } catch (err) {
       setFolders(before);
-      notify.error('Не вдалось зберегти папку', err.message);
+      notify.error(tx('Не вдалось зберегти папку', 'Couldn\'t save folder'), err.message);
     }
   };
 
@@ -1132,11 +1136,11 @@ export default function Notes() {
 
     try {
       await removeFolder(user.id, f.id);
-      notify.success('Папку прибрано', 'Нотатки з неї переїхали в «Без папки».');
+      notify.success(tx('Папку прибрано', 'Folder removed'), tx('Нотатки з неї переїхали в «Без папки».', 'Its notes moved to “No folder”.'));
     } catch (err) {
       setFolders(before);
       setNotes(beforeNotes);
-      notify.error('Не вдалось видалити папку', err.message);
+      notify.error(tx('Не вдалось видалити папку', 'Couldn\'t delete folder'), err.message);
     }
   };
 
@@ -1159,7 +1163,7 @@ export default function Notes() {
       await reorderFolders(user.id, next);
     } catch (err) {
       setFolders(before);
-      notify.error('Порядок не зберігся', err.message);
+      notify.error(tx('Порядок не зберігся', 'Order wasn\'t saved'), err.message);
     }
   };
 
@@ -1189,7 +1193,7 @@ export default function Notes() {
         {/* ─────────── Хедер полиці ───────────
 
             Розкладка з макета: підпис із крапкою, велика назва
-            градієнтом, смужка з трьома числами, а праворуч — пошук,
+            (суцільним кольором — градієнт прибрано), смужка з трьома числами, а праворуч — пошук,
             перемикач вигляду й одна яскрава кнопка. */}
         {onShelf ? (
           <motion.div
@@ -1202,7 +1206,7 @@ export default function Notes() {
               <div className="flex items-center gap-[9px]">
                 <span className="h-[5px] w-[5px] rounded-full" style={{ background: 'var(--edge-acc)', boxShadow: `0 0 12px 2px ${A(0.67)}` }} />
                 <span className="text-[11px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-acc)' }}>
-                  Нотатки
+                  {tx('Нотатки', 'Notes')}
                 </span>
               </div>
 
@@ -1212,13 +1216,12 @@ export default function Notes() {
                   fontFamily: T.display,
                   letterSpacing: '-2.4px',
                   lineHeight: 0.96,
-                  backgroundImage: 'linear-gradient(170deg, var(--edge-text) 30%, var(--edge-text3))',
-                  WebkitBackgroundClip: 'text',
-                  backgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  /* Суцільним кольором: градієнт «текст → сірий» видавав
+                     шаблон і гасив кінець слова. */
+                  color: 'var(--edge-text)',
                 }}
               >
-                Записник
+                {tx('Записник', 'Notebook')}
               </h1>
 
             </div>
@@ -1244,13 +1247,13 @@ export default function Notes() {
                 }}
               >
                 {[
-                  { v: folders.length, t: plural(folders.length, 'папка', 'папки', 'папок'), tShort: 'папок', c: 'var(--edge-text)', icon: FolderIcon },
-                  { v: active.length, t: plural(active.length, 'запис', 'записи', 'записів'), tShort: 'зап.', c: 'var(--edge-text)', icon: NotebookPen },
+                  { v: folders.length, t: tx(plural(folders.length, 'папка', 'папки', 'папок'), folders.length === 1 ? 'folder' : 'folders'), tShort: tx('папок', 'fold.'), c: 'var(--edge-text)', icon: FolderIcon },
+                  { v: active.length, t: tx(plural(active.length, 'запис', 'записи', 'записів'), active.length === 1 ? 'note' : 'notes'), tShort: tx('зап.', 'notes'), c: 'var(--edge-text)', icon: NotebookPen },
                   /* На вузькому екрані навіть короткий підпис не
                      влазить поруч із двома іншими клітинками — тому
                      нижче min-360px підпису нема зовсім, лишається
                      тільки іконка й число: вони самі по собі зрозумілі. */
-                  { v: `+${weekCount}`, t: 'за тиждень', tShort: 'тижд.', c: 'var(--edge-ok)', icon: TrendingUp },
+                  { v: `+${weekCount}`, t: tx('за тиждень', 'this week'), tShort: tx('тижд.', 'wk'), c: 'var(--edge-ok)', icon: TrendingUp },
                 ].map(({ v, t, tShort, c, icon: I }, i) => (
                   /* На телефоні три клітинки ділять ширину порівну й
                      центруються, на ширшому екрані — тиснуться вліво
@@ -1294,7 +1297,7 @@ export default function Notes() {
                   onChange={(e) => setShelfQuery(e.target.value)}
                   onFocus={() => setShelfFocus(true)}
                   onBlur={() => setShelfFocus(false)}
-                  placeholder="Пошук"
+                  placeholder={tx('Пошук', 'Search')}
                   className="w-full border-none bg-transparent text-[13.5px] font-medium outline-none"
                   style={{ fontFamily: T.sans, color: T.text }}
                 />
@@ -1314,7 +1317,7 @@ export default function Notes() {
                   пікселі нижчою — рівно стільки, щоб рядок виглядав
                   зібраним недбало. */}
               <div className="flex h-11 shrink-0 items-center rounded-[13px] p-[3px]" style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)' }}>
-                {[{ k: 'grid', I: LayoutGrid, t: 'Плиткою' }, { k: 'list', I: Rows3, t: 'Списком' }].map(({ k, I, t }) => (
+                {[{ k: 'grid', I: LayoutGrid, t: tx('Плиткою', 'Grid') }, { k: 'list', I: Rows3, t: tx('Списком', 'List') }].map(({ k, I, t }) => (
                   <button
                     key={k}
                     onClick={() => setShelfView(k)}
@@ -1332,7 +1335,7 @@ export default function Notes() {
                 ))}
               </div>
 
-              <NewFolderCta onClick={addFolder}>Нова папка</NewFolderCta>
+              <NewFolderCta onClick={addFolder}>{tx('Нова папка', 'New folder')}</NewFolderCta>
               </div>
             </div>
           </motion.div>
@@ -1357,7 +1360,7 @@ export default function Notes() {
               onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--edge-text3)')}
             >
               <ChevronLeft size={14} strokeWidth={2} />
-              до всіх папок
+              {tx('до всіх папок', 'to all folders')}
             </button>
 
             <div className="mt-[18px] flex flex-wrap items-start justify-between gap-9">
@@ -1385,7 +1388,7 @@ export default function Notes() {
                     <div className="flex items-center gap-[9px]">
                       <span className="h-[5px] w-[5px] rounded-full" style={{ background: 'var(--edge-acc)', boxShadow: `0 0 12px 2px ${A(0.67)}` }} />
                       <span className="text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2.4px', color: 'var(--edge-acc)' }}>
-                        {scope === 'archive' ? 'Архів' : 'Папка'}
+                        {scope === 'archive' ? tx('Архів', 'Archive') : tx('Папка', 'Folder')}
                       </span>
                     </div>
                     <h1
@@ -1394,10 +1397,8 @@ export default function Notes() {
                         fontFamily: T.display,
                         letterSpacing: '-1.8px',
                         lineHeight: 1,
-                        backgroundImage: 'linear-gradient(170deg, var(--edge-text) 34%, var(--edge-text3))',
-                        WebkitBackgroundClip: 'text',
-                        backgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
+                        /* Як і в шапці записника — суцільним кольором. */
+                        color: 'var(--edge-text)',
                       }}
                     >
                       {headTitle}
@@ -1407,8 +1408,8 @@ export default function Notes() {
 
                 <div className="mt-4 flex flex-wrap items-center gap-2.5">
                   {[
-                    { I: NotebookPen, t: `${inScope.length} ${plural(inScope.length, 'запис', 'записи', 'записів')}` },
-                    { I: Clock, t: `оновлено ${updatedOf(openId)}` },
+                    { I: NotebookPen, t: tx(`${inScope.length} ${plural(inScope.length, 'запис', 'записи', 'записів')}`, `${inScope.length} ${inScope.length === 1 ? 'note' : 'notes'}`) },
+                    { I: Clock, t: tx(`оновлено ${updatedOf(openId)}`, `updated ${updatedOf(openId)}`) },
                   ].map(({ I, t }) => (
                     <span
                       key={t}
@@ -1442,7 +1443,7 @@ export default function Notes() {
                     onChange={(e) => setSearch(e.target.value)}
                     onFocus={() => setFeedFocus(true)}
                     onBlur={() => setFeedFocus(false)}
-                    placeholder="Пошук у папці"
+                    placeholder={tx('Пошук у папці', 'Search in folder')}
                     className="w-full border-none bg-transparent text-[13.5px] font-medium outline-none"
                     style={{ fontFamily: T.sans, color: T.text }}
                   />
@@ -1456,7 +1457,7 @@ export default function Notes() {
                 <PanelBtn onClick={() => setSort((v) => (v === 'newest' ? 'oldest' : v === 'oldest' ? 'title' : 'newest'))}>
                   <ArrowDownUp size={14} strokeWidth={1.8} style={{ color: 'var(--edge-text3)' }} />
                   <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: 'var(--edge-text2)' }}>
-                    {sort === 'newest' ? 'нові' : sort === 'oldest' ? 'старі' : 'за назвою'}
+                    {sort === 'newest' ? tx('нові', 'newest') : sort === 'oldest' ? tx('старі', 'oldest') : tx('за назвою', 'by title')}
                   </span>
                 </PanelBtn>
 
@@ -1470,13 +1471,13 @@ export default function Notes() {
                   >
                     <Archive size={14} strokeWidth={1.8} style={{ color: scope === 'archive' ? 'var(--edge-acc)' : 'var(--edge-text3)' }} />
                     <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: scope === 'archive' ? 'var(--edge-text)' : 'var(--edge-text2)' }}>
-                      {scope === 'archive' ? 'зі стрічки' : `архів ${archived.length}`}
+                      {scope === 'archive' ? tx('зі стрічки', 'from feed') : tx(`архів ${archived.length}`, `archive ${archived.length}`)}
                     </span>
                   </PanelBtn>
                 )}
 
                 <div className="flex h-11 items-center rounded-[13px] p-[3px]" style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)' }}>
-                  {[{ k: 'grid', I: LayoutGrid, t: 'Плиткою' }, { k: 'list', I: Rows3, t: 'Списком' }].map(({ k, I, t }) => (
+                  {[{ k: 'grid', I: LayoutGrid, t: tx('Плиткою', 'Grid') }, { k: 'list', I: Rows3, t: tx('Списком', 'List') }].map(({ k, I, t }) => (
                     <button
                       key={k}
                       onClick={() => setView(k)}
@@ -1495,7 +1496,7 @@ export default function Notes() {
                 </div>
 
                 <GradientCta onClick={() => setEditing(blankForm(openId && openId !== NO_FOLDER ? openId : null))}>
-                  Нова нотатка
+                  {tx('Нова нотатка', 'New note')}
                 </GradientCta>
               </div>
             </div>
@@ -1510,7 +1511,7 @@ export default function Notes() {
             {feedTags.length > 0 && (
               <div className="mt-[30px] flex flex-wrap items-center gap-2.5 pb-0.5">
                 <span className="mr-1 text-[10.5px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '2px', color: 'var(--edge-text3)' }}>
-                  Теги
+                  {tx('Теги', 'Tags')}
                 </span>
                 {feedTags.map((t) => (
                   <FilterPill
@@ -1535,7 +1536,7 @@ export default function Notes() {
             transition={{ duration: 0.35, ease: EASE }}
             className="mt-[46px]"
           >
-            <SectionRule hint={!shelfQ && folders.length > 1 ? 'Перетягни, щоб змінити порядок' : null}>Папки</SectionRule>
+            <SectionRule hint={!shelfQ && folders.length > 1 ? tx('Перетягни, щоб змінити порядок', 'Drag to reorder') : null}>{tx('Папки', 'Folders')}</SectionRule>
 
             <FolderBoard
               folders={shelfFolders}
@@ -1569,11 +1570,11 @@ export default function Notes() {
                         onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--edge-acc)')}
                         onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--edge-acc)')}
                       >
-                        Всі записи →
+                        {tx('Всі записи →', 'All notes →')}
                       </button>
                     )}
                   >
-                    Останні записи
+                    {tx('Останні записи', 'Recent notes')}
                   </SectionRule>
                 </div>
 
@@ -1597,7 +1598,7 @@ export default function Notes() {
           <div className="flex items-center justify-center gap-2.5 py-28">
             <Loader2 size={18} className="animate-spin" style={{ color: T.acc }} />
             <span className="text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              дістаю нотатки…
+              {tx('дістаю нотатки…', 'loading notes…')}
             </span>
           </div>
         ) : onShelf ? null : filtered.length === 0 ? (
@@ -1618,15 +1619,15 @@ export default function Notes() {
 
             <div className="mt-3.5 text-[15px] font-semibold" style={{ fontFamily: T.display, color: 'var(--edge-text2)' }}>
               {inScope.length > 0
-                ? 'Нічого не знайшлось'
-                : scope === 'archive' ? 'Архів порожній' : 'Тут поки порожньо'}
+                ? tx('Нічого не знайшлось', 'Nothing found')
+                : scope === 'archive' ? tx('Архів порожній', 'Archive is empty') : tx('Тут поки порожньо', 'Nothing here yet')}
             </div>
             <div className="mt-1.5 max-w-[420px] text-[13px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.7 }}>
               {inScope.length > 0
-                ? 'Спробуй інший запит або скинь фільтр по тегах'
+                ? tx('Спробуй інший запит або скинь фільтр по тегах', 'Try another search or clear the tag filter')
                 : scope === 'archive'
-                  ? 'Сюди потрапляє відпрацьоване: те, що вже зроблено, але викидати шкода.'
-                  : 'Записуй усе, що варто памʼятати. Теги допоможуть знайти це через місяць.'}
+                  ? tx('Сюди потрапляє відпрацьоване: те, що вже зроблено, але викидати шкода.', 'Finished things go here: done, but too good to throw away.')
+                  : tx('Записуй усе, що варто памʼятати. Теги допоможуть знайти це через місяць.', 'Write down everything worth remembering. Tags will help you find it a month from now.')}
             </div>
 
             <div className="mt-5">
@@ -1636,11 +1637,11 @@ export default function Notes() {
                   className="h-10 rounded-xl px-4 text-[13px] font-semibold"
                   style={{ background: 'rgba(var(--edge-hair-rgb),0.04)', border: '1px solid var(--edge-line)', color: 'var(--edge-text2)', fontFamily: T.sans }}
                 >
-                  Скинути фільтри
+                  {tx('Скинути фільтри', 'Clear filters')}
                 </button>
               ) : scope !== 'archive' && (
                 <GradientCta onClick={() => setEditing(blankForm(openId && openId !== NO_FOLDER ? openId : null))}>
-                  Написати першу
+                  {tx('Написати першу', 'Write the first one')}
                 </GradientCta>
               )}
             </div>
@@ -1689,9 +1690,9 @@ export default function Notes() {
             <div className="flex items-center gap-[18px] px-[19px] pb-1">
               <span className="w-2 shrink-0" />
               {[
-                { w: 0, t: 'Нотатка', a: 'left' },
-                { w: 180, t: 'Теги', a: 'left' },
-                { w: 96, t: 'Дата', a: 'right' },
+                { w: 0, t: tx('Нотатка', 'Note'), a: 'left' },
+                { w: 180, t: tx('Теги', 'Tags'), a: 'left' },
+                { w: 96, t: tx('Дата', 'Date'), a: 'right' },
               ].map(({ w, t, a }) => (
                 <span
                   key={t}
@@ -1820,10 +1821,10 @@ export default function Notes() {
                 <Trash2 size={22} strokeWidth={1.9} style={{ color: T.bad }} />
               </div>
               <div className="mb-2.5 text-[19px] font-bold" style={{ fontFamily: T.display, color: T.text }}>
-                Видалити нотатку?
+                {tx('Видалити нотатку?', 'Delete note?')}
               </div>
               <p className="mb-6 text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
-                Запис зникне назавжди — скасувати не вийде.
+                {tx('Запис зникне назавжди — скасувати не вийде.', 'The note will be gone for good — this can\'t be undone.')}
               </p>
               <div className="flex gap-2.5">
                 <button
@@ -1831,14 +1832,14 @@ export default function Notes() {
                   className="h-11 flex-1 rounded-xl text-[14px] font-semibold"
                   style={{ background: T.surfaceHi, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
                 >
-                  Залишити
+                  {tx('Залишити', 'Keep')}
                 </button>
                 <button
                   onClick={confirmDelete}
                   className="h-11 flex-1 rounded-xl text-[14px] font-bold transition-transform active:scale-[0.98]"
                   style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
-                  Видалити
+                  {tx('Видалити', 'Delete')}
                 </button>
               </div>
             </motion.div>

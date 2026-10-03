@@ -4,6 +4,7 @@ import {
   Plus, Loader2, Search, AlertTriangle, ShieldCheck,
 } from 'lucide-react';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
+import { t as tx } from '../lib/lang';
 import { Magnetic } from '../components/ui/Hovers';
 import { notify } from '../utils/notify';
 import { useAuth } from '../context/AuthContext';
@@ -292,8 +293,8 @@ export default function ErrorLog() {
       console.error('saveError', e);
       if (!editingId) setEntries((list) => list.filter((x) => x.id !== entry.id));
       notify.error(
-        'Помилку не збережено',
-        e?.message || e?.details || 'База не прийняла запис.',
+        tx('Помилку не збережено', 'Mistake not saved'),
+        e?.message || e?.details || tx('База не прийняла запис.', 'The database rejected the entry.'),
       );
       /* Форму повертаємо як була — інакше текст, який людина щойно
          набрала, доводиться писати вдруге. */
@@ -422,7 +423,7 @@ export default function ErrorLog() {
                 className="text-[11px] font-bold uppercase"
                 style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-acc)' }}
               >
-                Дисципліна
+                {tx('Дисципліна', 'Discipline')}
               </span>
             </div>
 
@@ -432,17 +433,16 @@ export default function ErrorLog() {
                 fontFamily: T.display,
                 letterSpacing: '-1.9px',
                 lineHeight: 1,
-                backgroundImage: `linear-gradient(170deg, ${T.text} 34%, ${T.text3})`,
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                /* Суцільним кольором: градієнт «текст → сірий» видавав
+                   шаблон і гасив кінець слова. */
+                color: T.text,
               }}
             >
-              Журнал помилок
+              {tx('Журнал помилок', 'Mistake log')}
             </h1>
 
             <p className="mt-3.5 text-[15.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.55 }}>
-              Помилка, яку записано й розібрано, — єдина, що не повторюється.
+              {tx('Помилка, яку записано й розібрано, — єдина, що не повторюється.', "A mistake you've logged and reviewed is the only one that doesn't repeat.")}
             </p>
 
             {/* Цифра нерозібраних — єдине, що перетворює цю сторінку
@@ -466,13 +466,13 @@ export default function ErrorLog() {
                   className="h-1.5 w-1.5 rounded-full"
                   style={{ background: 'var(--edge-warn)', boxShadow: '0 0 10px 2px rgba(var(--edge-warn-rgb),0.80)' }}
                 />
-                {openCount} {openCount === 1 ? 'запис чекає' : 'записів чекають'} на розбір
+                {tx(`${openCount} ${openCount === 1 ? 'запис чекає' : 'записів чекають'} на розбір`, `${openCount} ${openCount === 1 ? 'entry awaits' : 'entries await'} review`)}
               </button>
             )}
           </div>
 
           <ErrorCta onClick={() => setComposerOpen(true)}>
-            Зафіксувати помилку
+            {tx('Зафіксувати помилку', 'Log a mistake')}
           </ErrorCta>
         </motion.div>
 
@@ -490,7 +490,7 @@ export default function ErrorLog() {
           >
             <Loader2 size={16} className="animate-spin" style={{ color: T.text4 }} />
             <span className="text-[14px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              Дістаємо твої записи
+              {tx('Дістаємо твої записи', 'Loading your entries')}
             </span>
           </div>
         ) : entries.length === 0 ? (
@@ -529,15 +529,15 @@ export default function ErrorLog() {
             </span>
 
             <div className="relative mt-5 text-[23px] font-bold" style={{ fontFamily: T.display, color: 'var(--edge-text)', letterSpacing: '-0.6px' }}>
-              Тут поки порожньо
+              {tx('Тут поки порожньо', 'Nothing here yet')}
             </div>
             <p className="relative mt-3 max-w-[430px] text-[15px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)', lineHeight: 1.65 }}>
-              Перший запис завжди найважчий — і саме він найцінніший.
-              Зафіксуй помилку, поки памʼятаєш, що саме відчував.
+              {tx('Перший запис завжди найважчий — і саме він найцінніший.', 'The first entry is always the hardest — and the most valuable.')}
+              {' '}{tx('Зафіксуй помилку, поки памʼятаєш, що саме відчував.', 'Log a mistake while you still remember exactly how it felt.')}
             </p>
 
             <ErrorCta onClick={() => setComposerOpen(true)} className="mt-6">
-              Зафіксувати першу
+              {tx('Зафіксувати першу', 'Log the first one')}
             </ErrorCta>
           </motion.div>
         ) : filteredEntries.length === 0 ? (
@@ -555,10 +555,10 @@ export default function ErrorLog() {
               <Search size={20} strokeWidth={1.8} />
             </span>
             <div className="mt-3.5 text-[16px] font-semibold" style={{ fontFamily: T.display, color: 'var(--edge-text2)' }}>
-              Нічого не знайшлось
+              {tx('Нічого не знайшлось', 'Nothing found')}
             </div>
             <p className="mt-1.5 text-[13.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)' }}>
-              Спробуй інший запит або скинь фільтри
+              {tx('Спробуй інший запит або скинь фільтри', 'Try another search or reset the filters')}
             </p>
             <button
               onClick={() => { setQuery(''); setCatFilter(null); setAssetFilter('all'); }}
@@ -567,7 +567,7 @@ export default function ErrorLog() {
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = `rgba(${T.accRgb},0.5)`; e.currentTarget.style.color = 'var(--edge-text)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--edge-line)'; e.currentTarget.style.color = 'var(--edge-text2)'; }}
             >
-              Скинути фільтри
+              {tx('Скинути фільтри', 'Reset filters')}
             </button>
           </motion.div>
         ) : (

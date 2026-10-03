@@ -50,6 +50,7 @@ import {
   getVersion as flagsVersion,
 } from "../lib/flags";
 import useCloudState from "../hooks/useCloudState";
+import { t as tx, LOCALE } from "../lib/lang";
 
 /* ==================================================================
    Календар економічних новин.
@@ -115,7 +116,7 @@ const isToday = (iso) => iso === dayKey(new Date());
 const DAY_FMT = (iso) => {
   const d = new Date(`${iso}T12:00:00`);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("uk-UA", {
+  return d.toLocaleDateString(LOCALE, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -131,10 +132,10 @@ const plural = (n, one, few, many) => {
   return many;
 };
 
-const evWord = (n) => `${n} ${plural(n, "подія", "події", "подій")}`;
+const evWord = (n) => tx(`${n} ${plural(n, "подія", "події", "подій")}`, `${n} ${n === 1 ? "event" : "events"}`);
 
 /* Знахідний відмінок для «Показати …»: «показати 1 подія» ріже око. */
-const evWordAcc = (n) => `${n} ${plural(n, "подію", "події", "подій")}`;
+const evWordAcc = (n) => tx(`${n} ${plural(n, "подію", "події", "подій")}`, `${n} ${n === 1 ? "event" : "events"}`);
 
 /* ---------- згорнуті дні ----------
 
@@ -356,8 +357,8 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
       data-strip-active={active ? "1" : undefined}
       title={
         empty
-          ? "Подій немає"
-          : "Клік — перейти до дня, подвійний — показати тільки його"
+          ? tx("Подій немає", "No events")
+          : tx("Клік — перейти до дня, подвійний — показати тільки його", "Click to jump to the day, double-click to show only that day")
       }
       className="relative w-[74px] shrink-0 snap-start overflow-hidden rounded-[15px] px-2.5 pb-2.5 pt-3.5 text-left sm:w-auto sm:px-3.5 sm:pb-3 sm:pt-4"
       style={{
@@ -432,7 +433,7 @@ function StripDay({ day, active, onPick, onSolo, solo }) {
           transition: "color .18s",
         }}
       >
-        {solo ? "тільки цей" : empty ? "вихідний" : evWord(day.total)}
+        {solo ? tx("тільки цей", "only this") : empty ? tx("вихідний", "day off") : evWord(day.total)}
       </span>
     </button>
   );
@@ -491,7 +492,7 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
           });
           setOpen((v) => !v);
         }}
-        title={watched ? `Нагадаю ${leadLabel(lead)} — змінити` : "Нагадати"}
+        title={watched ? tx(`Нагадаю ${leadLabel(lead)} — змінити`, `Reminder: ${leadLabel(lead)} — change`) : tx("Нагадати", "Remind me")}
         style={{
           color: watched ? (label ? "var(--edge-acc)" : T.acc) : open || hovered ? "var(--edge-text2)" : "var(--edge-text4)",
           background: watched ? A(label ? 0.18 : 0.12) : open ? "var(--edge-hair)" : label ? "var(--edge-hair)" : "transparent",
@@ -549,7 +550,7 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
               color: "var(--edge-text3)",
             }}
           >
-            Нагадати
+            {tx("Нагадати", "Remind me")}
           </span>
 
           {LEAD_OPTIONS.map((o) => {
@@ -596,7 +597,7 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
                 style={{ fontFamily: T.sans, color: "var(--edge-bad)" }}
               >
                 <X size={12} strokeWidth={2.4} />
-                Прибрати нагадування
+                {tx("Прибрати нагадування", "Remove reminder")}
               </button>
             </>
           )}
@@ -683,9 +684,9 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
   })();
 
   const facts = [
-    { label: "факт", raw: ev.actual },
-    { label: "прогноз", raw: ev.forecast },
-    { label: "було", raw: ev.previous },
+    { label: tx("факт", "actual"), raw: ev.actual },
+    { label: tx("прогноз", "forecast"), raw: ev.forecast },
+    { label: tx("було", "previous"), raw: ev.previous },
   ].filter((b) => b.raw);
 
   return (
@@ -964,7 +965,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                       color: "var(--edge-text3)",
                     }}
                   >
-                    Що це означає
+                    {tx("Що це означає", "What it means")}
                   </span>
 
                   {mine && (
@@ -1006,7 +1007,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                       className="mt-3 text-[13px]"
                       style={{ fontFamily: T.sans, color: "var(--edge-text3)" }}
                     >
-                      Опису для цієї події знайти не вдалось.
+                      {tx("Опису для цієї події знайти не вдалось.", "Couldn't find a description for this event.")}
                     </p>
                   )}
 
@@ -1048,7 +1049,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                         ) : (
                           <Bell size={12} strokeWidth={2} />
                         )}
-                        {watched ? `Нагадаю за ${leadLabel(lead)}` : "Нагадати"}
+                        {watched ? tx(`Нагадаю за ${leadLabel(lead)}`, `Reminder: ${leadLabel(lead)}`) : tx("Нагадати", "Remind me")}
                       </button>
                     )}
                   </div>
@@ -1069,7 +1070,7 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                         color: "var(--edge-text3)",
                       }}
                     >
-                      {gap && !gap.done ? "Очікують" : "Сюрприз"}
+                      {gap && !gap.done ? tx("Очікують", "Expected") : tx("Сюрприз", "Surprise")}
                     </span>
                     <span
                       className="rounded-full px-2.5 py-[3px] text-[10px] font-bold"
@@ -1135,11 +1136,14 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                       >
                         {gap.done
                           ? gap.d === 0
-                            ? "Вийшло рівно як очікували — реакції зазвичай немає."
-                            : `Факт ${gap.d > 0 ? "вище" : "нижче"} за прогноз.`
+                            ? tx("Вийшло рівно як очікували — реакції зазвичай немає.", "Came out exactly as expected — usually no reaction.")
+                            : tx(`Факт ${gap.d > 0 ? "вище" : "нижче"} за прогноз.`, `Actual came in ${gap.d > 0 ? "above" : "below"} forecast.`)
                           : gap.d === 0
-                            ? "Чекають без змін до попереднього значення."
-                            : `Чекають ${gap.d > 0 ? "вище" : "нижче"} за попереднє${ev.time ? `, вихід о ${ev.time}` : ""}.`}
+                            ? tx("Чекають без змін до попереднього значення.", "Expected unchanged from the previous value.")
+                            : tx(
+                              `Чекають ${gap.d > 0 ? "вище" : "нижче"} за попереднє${ev.time ? `, вихід о ${ev.time}` : ""}.`,
+                              `Expected ${gap.d > 0 ? "above" : "below"} the previous value${ev.time ? `, out at ${ev.time}` : ""}.`,
+                            )}
                       </p>
 
                       <div className="mt-4 flex items-stretch gap-2">
@@ -1150,10 +1154,10 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                               style={{
                                 fontFamily: T.display,
                                 fontSize: 14,
-                                fontWeight: b.label === "факт" ? 700 : 500,
+                                fontWeight: b.label === tx("факт", "actual") ? 700 : 500,
                                 letterSpacing: "-0.2px",
                                 color:
-                                  b.label === "факт" ? "var(--edge-text)" : "var(--edge-text3)",
+                                  b.label === tx("факт", "actual") ? "var(--edge-text)" : "var(--edge-text3)",
                               }}
                             >
                               {b.raw}
@@ -1178,8 +1182,8 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
                       style={{ fontFamily: T.sans, color: "var(--edge-text3)" }}
                     >
                       {facts.length
-                        ? "Порівняти нема з чим — опублікували лише одне значення."
-                        : "Ця подія без цифр — важить сам факт виступу чи зустрічі."}
+                        ? tx("Порівняти нема з чим — опублікували лише одне значення.", "Nothing to compare — only one value was published.")
+                        : tx("Ця подія без цифр — важить сам факт виступу чи зустрічі.", "This event has no numbers — what matters is the speech or meeting itself.")}
                     </p>
                   )}
                 </div>
@@ -1265,7 +1269,7 @@ function AlertToasts() {
                   color: "var(--edge-bad)",
                 }}
               >
-                {a.minutes <= 0 ? "виходить зараз" : `через ${a.minutes} хв`}
+                {a.minutes <= 0 ? tx("виходить зараз", "releasing now") : tx(`через ${a.minutes} хв`, `in ${a.minutes} min`)}
               </div>
 
               <div
@@ -1295,7 +1299,7 @@ function AlertToasts() {
                       className="h-[3px] w-[3px] rounded-full"
                       style={{ background: "var(--edge-line-hi)" }}
                     />
-                    <span>прогноз {a.forecast}</span>
+                    <span>{tx("прогноз", "forecast")} {a.forecast}</span>
                   </>
                 )}
               </div>
@@ -1305,7 +1309,7 @@ function AlertToasts() {
               onClick={() => setList((s) => s.filter((x) => x.id !== a.id))}
               className="grid h-6 w-6 shrink-0 place-items-center rounded-lg"
               style={{ color: "var(--edge-text3)" }}
-              title="Прибрати"
+              title={tx("Прибрати", "Dismiss")}
             >
               <X size={13} strokeWidth={2.4} />
             </button>
@@ -1497,7 +1501,7 @@ export default function News() {
       return {
         iso,
         dow: d
-          .toLocaleDateString("uk-UA", { weekday: "short" })
+          .toLocaleDateString(LOCALE, { weekday: "short" })
           .replace(".", ""),
         num: String(d.getDate()).padStart(2, "0"),
         total: list.length,
@@ -1512,7 +1516,7 @@ export default function News() {
     const b = new Date(`${strip[6].iso}T12:00:00`);
     const fmt = (d, withMonth) =>
       d.toLocaleDateString(
-        "uk-UA",
+        LOCALE,
         withMonth ? { day: "numeric", month: "long" } : { day: "numeric" },
       );
     const sameMonth = a.getMonth() === b.getMonth();
@@ -1668,11 +1672,11 @@ export default function News() {
     syncNewsAlert(ev, lead)
       .then((state) => {
         if (state === 'queued') {
-          notify.success('Нагадаємо в Telegram',
-            lead > 0 ? `За ${lead} хв до події.` : 'У момент виходу.');
+          notify.success(tx('Нагадаємо в Telegram', "We'll remind you on Telegram"),
+            lead > 0 ? tx(`За ${lead} хв до події.`, `${lead} min before the event.`) : tx('У момент виходу.', 'At release time.'));
         } else if (state === 'past') {
-          notify.error('Цей момент уже минув',
-            'До події лишилось менше часу — обери коротше попередження.');
+          notify.error(tx('Цей момент уже минув', 'That moment has already passed'),
+            tx('До події лишилось менше часу — обери коротше попередження.', 'There\'s less time left before the event — pick a shorter heads-up.'));
         }
       })
       .catch(() => {});
@@ -1690,8 +1694,8 @@ export default function News() {
   const upLead = upcoming ? leadOf(upcoming.list[0].id) : LEAD_MIN;
 
   const LEVELS = [
-    { id: MAJOR, label: "Середній і вище", color: T.acc },
-    { id: "all", label: "Усі події", color: "var(--edge-text3)" },
+    { id: MAJOR, label: tx("Середній і вище", "Medium and up"), color: T.acc },
+    { id: "all", label: tx("Усі події", "All events"), color: "var(--edge-text3)" },
     ...IMPACTS,
   ];
 
@@ -1748,7 +1752,7 @@ export default function News() {
                   color: "var(--edge-acc)",
                 }}
               >
-                Економічний календар
+                {tx("Економічний календар", "Economic calendar")}
               </span>
             </div>
 
@@ -1759,13 +1763,12 @@ export default function News() {
                   fontFamily: T.display,
                   letterSpacing: "-1.8px",
                   lineHeight: 1,
-                  backgroundImage: `linear-gradient(170deg, ${T.text} 34%, ${T.text3})`,
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
+                  /* Суцільним кольором: градієнт «текст → сірий» видавав
+                     шаблон і гасив кінець слова. */
+                  color: T.text,
                 }}
               >
-                Новини
+                {tx("Новини", "News")}
               </h1>
               {rangeLabel && (
                 <span
@@ -1874,10 +1877,10 @@ export default function News() {
                   style={{ fontFamily: T.sans, color: "var(--edge-text)" }}
                 >
                   {ccys.length === 0
-                    ? "Всі валюти"
+                    ? tx("Всі валюти", "All currencies")
                     : ccys.length <= 3
                       ? ccys.join(", ")
-                      : `${ccys.length} валюти`}
+                      : tx(`${ccys.length} валюти`, `${ccys.length} currencies`)}
                 </span>
               </DropButton>
 
@@ -1894,7 +1897,7 @@ export default function News() {
                       color: ccys.length === 0 ? "var(--edge-text)" : "var(--edge-text3)",
                     }}
                   >
-                    <span className="flex-1 text-left">Всі валюти</span>
+                    <span className="flex-1 text-left">{tx("Всі валюти", "All currencies")}</span>
                     <span
                       style={{
                         fontFamily: T.mono,
@@ -1945,7 +1948,7 @@ export default function News() {
 
             <button
               onClick={refresh}
-              title="Оновити"
+              title={tx("Оновити", "Refresh")}
               className="order-2 grid h-10 w-[42px] shrink-0 place-items-center rounded-xl sm:order-3"
               style={{
                 background: "var(--edge-hair)",
@@ -1998,7 +2001,7 @@ export default function News() {
                 color: "var(--edge-text3)",
               }}
             >
-              {busy ? "вантажу тиждень…" : "на цей тиждень даних немає"}
+              {busy ? tx("вантажу тиждень…", "loading the week…") : tx("на цей тиждень даних немає", "no data for this week")}
             </div>
           ) : (
             <div
@@ -2071,7 +2074,7 @@ export default function News() {
                       color: "var(--edge-bad)",
                     }}
                   >
-                    Далі — {evWord(upcoming.list.length)} разом
+                    {tx("Далі —", "Next —")} {evWord(upcoming.list.length)} {tx("разом", "together")}
                   </div>
                   <div
                     className="mt-[5px] flex items-baseline gap-[3px]"
@@ -2088,14 +2091,14 @@ export default function News() {
                       className="text-[12.5px]"
                       style={{ color: "var(--edge-text3)" }}
                     >
-                      г
+                      {tx("г", "h")}
                     </span>
                     <span className="ml-1 text-[25px]">{cdM}</span>
                     <span
                       className="text-[12.5px]"
                       style={{ color: "var(--edge-text3)" }}
                     >
-                      хв
+                      {tx("хв", "m")}
                     </span>
                   </div>
                 </div>
@@ -2175,7 +2178,7 @@ export default function News() {
                   watched={upWatched}
                   lead={upLead}
                   hovered
-                  label={upWatched ? `Нагадаю ${leadLabel(upLead)}` : "Нагадати"}
+                  label={upWatched ? tx(`Нагадаю ${leadLabel(upLead)}`, `Reminder: ${leadLabel(upLead)}`) : tx("Нагадати", "Remind me")}
                   onPick={(min) =>
                     upcoming.list.forEach((e) => setWatch(e, min))
                   }
@@ -2224,7 +2227,7 @@ export default function News() {
                 }}
               >
                 <X size={11} strokeWidth={2.4} />
-                Скинути фільтри
+                {tx("Скинути фільтри", "Clear filters")}
               </motion.button>
             )}
           </AnimatePresence>
@@ -2250,7 +2253,7 @@ export default function News() {
                 }}
               >
                 <ChevronLeft size={12} strokeWidth={2.4} />
-                Цей тиждень
+                {tx("Цей тиждень", "This week")}
               </motion.button>
             )}
           </AnimatePresence>
@@ -2283,7 +2286,7 @@ export default function News() {
                   transition: "transform .2s",
                 }}
               />
-              {allFolded ? "Розгорнути всі дні" : "Згорнути всі дні"}
+              {allFolded ? tx("Розгорнути всі дні", "Expand all days") : tx("Згорнути всі дні", "Collapse all days")}
             </button>
           )}
 
@@ -2297,7 +2300,7 @@ export default function News() {
               color: "var(--edge-text3)",
             }}
           >
-            {shown.length} з {rows.length} подій
+            {tx(`${shown.length} з ${rows.length} подій`, `${shown.length} of ${rows.length} events`)}
           </span>
         </motion.div>
 
@@ -2321,7 +2324,7 @@ export default function News() {
                 className="mb-1 text-[14.5px] font-bold"
                 style={{ fontFamily: T.display, color: T.bad }}
               >
-                Календар не завантажився
+                {tx("Календар не завантажився", "The calendar didn't load")}
               </div>
               <p
                 className="text-[13px]"
@@ -2343,7 +2346,7 @@ export default function News() {
             style={{ fontFamily: T.sans, color: "var(--edge-text3)" }}
           >
             <Loader2 size={16} className="animate-spin" />
-            вантажу календар…
+            {tx("вантажу календар…", "loading calendar…")}
           </div>
         )}
 
@@ -2356,15 +2359,15 @@ export default function News() {
             style={{ fontFamily: T.sans, color: "var(--edge-text3)", lineHeight: 1.7 }}
           >
             {rows.length ? (
-              "Під ці фільтри нічого не підпадає."
+              tx("Під ці фільтри нічого не підпадає.", "Nothing matches these filters.")
             ) : week > 0 ? (
               <>
-                На цей тиждень розклад ще не опублікували.
+                {tx("На цей тиждень розклад ще не опублікували.", "The schedule for this week hasn't been published yet.")}
                 <br />
-                Далекі дати зʼявляються поступово, за тиждень-два.
+                {tx("Далекі дати зʼявляються поступово, за тиждень-два.", "Dates further out appear gradually, a week or two ahead.")}
               </>
             ) : (
-              "На цей тиждень подій немає."
+              tx("На цей тиждень подій немає.", "No events this week.")
             )}
           </p>
         )}
@@ -2429,7 +2432,7 @@ export default function News() {
                       toggleFold(day);
                     }
                   }}
-                  title={shut ? "Розгорнути день" : "Згорнути день"}
+                  title={shut ? tx("Розгорнути день", "Expand day") : tx("Згорнути день", "Collapse day")}
                   className="flex cursor-pointer select-none items-center gap-2.5 sm:gap-3.5">
                   <div
                     className="w-12 shrink-0 rounded-[13px] py-1.5 text-center sm:w-14 sm:py-2"
@@ -2448,7 +2451,7 @@ export default function News() {
                       }}
                     >
                       {d
-                        .toLocaleDateString("uk-UA", { weekday: "short" })
+                        .toLocaleDateString(LOCALE, { weekday: "short" })
                         .replace(".", "")}
                     </div>
                     <div
@@ -2501,7 +2504,7 @@ export default function News() {
                               color: "var(--edge-acc)",
                             }}
                           >
-                            Сьогодні
+                            {tx("Сьогодні", "Today")}
                           </span>
                         </span>
                       )}
@@ -2523,7 +2526,7 @@ export default function News() {
                             style={{ color: "var(--edge-bad)" }}
                           >
                             {high}{" "}
-                            {plural(high, "важлива", "важливі", "важливих")}
+                            {tx(plural(high, "важлива", "важливі", "важливих"), "high-impact")}
                           </span>
                         </>
                       )}
@@ -2539,7 +2542,7 @@ export default function News() {
 
                   {!shut && (
                     <div className="hidden shrink-0 items-center gap-3.5 lg:flex">
-                      {["Факт", "Прогноз", "Було"].map((h) => (
+                      {[tx("Факт", "Actual"), tx("Прогноз", "Forecast"), tx("Було", "Previous")].map((h) => (
                         <span
                           key={h}
                           className="w-[88px] text-right text-[9px] font-bold uppercase"
@@ -2641,7 +2644,7 @@ function FoldPill({ shut, count }) {
         style={{ fontFamily: T.sans }}
       >
         <span className="hidden sm:inline">
-          {shut ? `Показати ${evWordAcc(count)}` : "Згорнути день"}
+          {shut ? tx(`Показати ${evWordAcc(count)}`, `Show ${evWordAcc(count)}`) : tx("Згорнути день", "Collapse day")}
         </span>
         <span className="sm:hidden">{shut ? count : ""}</span>
       </span>
@@ -2668,7 +2671,7 @@ function NavBtn({ onClick, disabled, side }) {
       onClick={disabled ? undefined : onClick}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      title={side === "left" ? "Попередній тиждень" : "Наступний тиждень"}
+      title={side === "left" ? tx("Попередній тиждень", "Previous week") : tx("Наступний тиждень", "Next week")}
       className="grid w-8 shrink-0 place-items-center rounded-[13px] sm:w-[38px]"
       style={{
         background: hov && !disabled ? "var(--edge-hair-strong)" : "var(--edge-hair)",
@@ -2687,7 +2690,7 @@ function NavBtn({ onClick, disabled, side }) {
 /* ---------- «зараз» у стрічці дня ---------- */
 
 function NowLine() {
-  const now = new Date().toLocaleTimeString("uk-UA", {
+  const now = new Date().toLocaleTimeString(LOCALE, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -2726,7 +2729,7 @@ function NowLine() {
         className="shrink-0 pl-3 text-[9px] font-bold uppercase"
         style={{ fontFamily: T.mono, letterSpacing: "2px", color: "var(--edge-acc)" }}
       >
-        Зараз
+        {tx("Зараз", "Now")}
       </div>
     </div>
   );

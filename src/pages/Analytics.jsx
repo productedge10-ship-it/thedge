@@ -19,6 +19,7 @@ import AiLab from '../components/analytics/AiLab';
 import { EMOTION_LABEL } from '../components/analytics/data';
 import ExportStats from '../components/analytics/ExportStats';
 import { withSandbox } from '../lib/sandbox';
+import { t as tx, LOCALE, isEn } from '../lib/lang';
 
 /* ==================================================================
    Аналітика.
@@ -27,6 +28,14 @@ import { withSandbox } from '../lib/sandbox';
 ================================================================== */
 
 const PERIODS = ['Весь час', 'Цей квартал', 'Останні 30 днів', 'Цей тиждень'];
+/* Назви періодів — це й ідентифікатори (periodStart, картка), тож
+   перекладаємо лише в момент показу. */
+const PERIOD_LABEL = {
+  'Весь час': tx('Весь час', 'All time'),
+  'Цей квартал': tx('Цей квартал', 'This quarter'),
+  'Останні 30 днів': tx('Останні 30 днів', 'Last 30 days'),
+  'Цей тиждень': tx('Цей тиждень', 'This week'),
+};
 
 /* Напівпрозорий кант і заливки шапки крутяться навколо однієї змінної
    теми, тому пишемо їх через хелпер, а не двадцять разів рядком. */
@@ -35,6 +44,7 @@ const hair = (a) => `rgba(var(--edge-hair-rgb, 255,255,255), ${a})`;
 /* «28 угод», а не «28 trades»: у випадашці періоду число стоїть поруч
    із назвою, і однина там трапляється частіше, ніж здається. */
 const tradeWord = (n) => {
+  if (isEn) return n === 1 ? 'trade' : 'trades';
   const d = n % 10;
   const h = n % 100;
   if (d === 1 && h !== 11) return 'угода';
@@ -78,7 +88,7 @@ function PeriodDropdown({ value, onChange, counts }) {
       >
         <CalendarDays size={14} strokeWidth={1.7} style={{ color: T.text3 }} />
         <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, letterSpacing: '-0.01em', color: T.text }}>
-          {value}
+          {PERIOD_LABEL[value] || value}
         </span>
         <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2, ease: EASE }} className="flex shrink-0" style={{ color: T.text3 }}>
           <ChevronDown size={11} strokeWidth={2.6} />
@@ -103,7 +113,7 @@ function PeriodDropdown({ value, onChange, counts }) {
               className="px-2.5 pb-2 pt-[7px] text-[8.5px] font-medium uppercase"
               style={{ fontFamily: T.mono, letterSpacing: '0.3em', color: T.text2 }}
             >
-              Період
+              {tx('Період', 'Period')}
             </div>
 
             {PERIODS.map((p) => {
@@ -126,7 +136,7 @@ function PeriodDropdown({ value, onChange, counts }) {
                       className="h-1 w-1 shrink-0 rounded-full"
                       style={{ background: on ? T.acc : hair(0.16), boxShadow: on ? `0 0 8px rgba(${T.accRgb},0.8)` : 'none' }}
                     />
-                    {p}
+                    {PERIOD_LABEL[p] || p}
                   </span>
                   <span className="shrink-0 text-[9.5px]" style={{ fontFamily: T.mono, letterSpacing: '0.08em', color: on ? T.acc : T.text2 }}>
                     {counts?.[p] || ''}
@@ -219,16 +229,16 @@ export default function Analytics() {
      впізнається ще до читання підпису. Де є семантичний токен — беремо
      його, решта два відтінки живуть тут. */
   const NAV = [
-    { id: 'Overview', label: 'Огляд', icon: LayoutDashboard, anim: 'an-ic-overview', tone: T.acc },
-    { id: 'Performance', label: 'Перформанс', icon: TrendingUp, anim: 'an-ic-perf', tone: T.ok },
-    { id: 'Psychology', label: 'Психологія', icon: BrainCircuit, badge: `${r1(s.tiltCost)}R`, anim: 'an-ic-psy', tone: '#fb7185' },
-    { id: 'Assets', label: 'Активи', icon: Wallet, anim: 'an-ic-assets', tone: T.info },
+    { id: 'Overview', label: tx('Огляд', 'Overview'), icon: LayoutDashboard, anim: 'an-ic-overview', tone: T.acc },
+    { id: 'Performance', label: tx('Перформанс', 'Performance'), icon: TrendingUp, anim: 'an-ic-perf', tone: T.ok },
+    { id: 'Psychology', label: tx('Психологія', 'Psychology'), icon: BrainCircuit, badge: `${r1(s.tiltCost)}R`, anim: 'an-ic-psy', tone: '#fb7185' },
+    { id: 'Assets', label: tx('Активи', 'Assets'), icon: Wallet, anim: 'an-ic-assets', tone: T.info },
     /* «Що якби» і «Ризик» були двома вкладками поруч, хоча це один
        ланцюжок: спершу рахуємо, скільки звички коштували на історії,
        що вже є, потім проганяємо те, що лишилось, уперед. Тепер це
        один розділ із двома кроками й передачею цифр між ними. */
-    { id: 'Simulator', label: 'Симулятор', icon: FlaskConical, anim: 'an-ic-sim', tone: T.warn },
-    { id: 'History', label: 'Історія угод', icon: HistoryIcon, anim: 'an-ic-history', tone: '#2dd4bf' },
+    { id: 'Simulator', label: tx('Симулятор', 'Simulator'), icon: FlaskConical, anim: 'an-ic-sim', tone: T.warn },
+    { id: 'History', label: tx('Історія угод', 'Trade history'), icon: HistoryIcon, anim: 'an-ic-history', tone: '#2dd4bf' },
     /* AI останнім і з власною міткою.
        Межа між арифметикою і думкою моделі має бути видна в самій
        навігації: решта розділів рахує формули по журналу, цей —
@@ -372,28 +382,25 @@ export default function Analytics() {
                     className="mb-[13px] flex items-center gap-[11px] text-[9px] font-medium uppercase"
                     style={{ fontFamily: T.mono, letterSpacing: '0.34em' }}
                   >
-                    <span style={{ color: T.acc }}>Дані</span>
+                    <span style={{ color: T.acc }}>{tx('Дані', 'Data')}</span>
                     <span className="h-px w-3.5 shrink-0" style={{ background: hair(0.14) }} />
                     <span key={tab} className="an-anim truncate" style={{ color: T.text2, animation: 'an-slide-in .26s ease' }}>
                       {activeLabel}
                     </span>
                   </div>
 
-                  {/* Назва градієнтом: від тексту до акценту — та сама
-                      пара кольорів, що тримає всю шапку. */}
+                  {/* Назва суцільним кольором тексту. Був градієнт до
+                      акценту на кінці слова: заголовок ставав найяскравішим
+                      акцентним місцем сторінки, хоча головне тут — цифри. */}
                   <h1
                     className="edge-page-title m-0"
                     style={{
                       fontFamily: T.display,
                       letterSpacing: '-0.045em',
-                      backgroundImage: `linear-gradient(98deg, ${T.text} 24%, ${T.text} 52%, ${T.acc} 99%)`,
-                      WebkitBackgroundClip: 'text',
-                      backgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
                       color: T.text,
                     }}
                   >
-                    Аналітика
+                    {tx('Аналітика', 'Analytics')}
                   </h1>
                 </div>
 
@@ -422,17 +429,17 @@ export default function Analytics() {
                     {/* дефолтний напис — тане, звільняючи місце ядру */}
                     <span className="receipt-cta-default relative z-10 flex w-full items-center justify-center gap-2">
                       <Sparkles size={15} strokeWidth={1.8} className="transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
-                      <span className="whitespace-nowrap text-[12.5px] font-bold" style={{ letterSpacing: '-0.012em' }}>Поділитись статистикою</span>
+                      <span className="whitespace-nowrap text-[12.5px] font-bold" style={{ letterSpacing: '-0.012em' }}>{tx('Поділитись статистикою', 'Share stats')}</span>
                     </span>
 
                     {/* темне ядро — картка експорту, що розгортається з центру */}
                     <span aria-hidden className="receipt-cta-core absolute inset-[2px] z-[5] rounded-[11px]">
                       <span className="receipt-cta-step receipt-cta-step-1">
-                        <b>[EXPORT]</b> Пакую картку…
+                        <b>[EXPORT]</b> {tx('Пакую картку…', 'Packing card…')}
                       </span>
                       <span className="receipt-cta-final">
                         <b className={`receipt-cta-final-badge tone-${netMetric.tone}`}>{netMetric.value}</b>
-                        <span className="receipt-cta-final-label">Картка готова</span>
+                        <span className="receipt-cta-final-label">{tx('Картка готова', 'Card ready')}</span>
                         <span className="receipt-cta-arrow-wrap">
                           <span aria-hidden className="receipt-cta-arrow-ring" />
                           <span className="receipt-cta-arrow"><ArrowRight size={13} strokeWidth={2.6} color="#0c0b10" /></span>
@@ -551,7 +558,7 @@ export default function Analytics() {
                               boxShadow: `inset 0 0 0 1px rgba(${T.accRgb},0.22)`,
                             }}
                           >
-                            скоро
+                            {tx('скоро', 'soon')}
                             <span
                               aria-hidden
                               className="an-anim pointer-events-none absolute inset-y-0 left-0 w-1/2"
@@ -600,7 +607,7 @@ export default function Analytics() {
           >
             <Loader2 size={16} className="animate-spin" style={{ color: T.text4 }} />
             <span className="text-[14px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-              Рахуємо по твоїх угодах
+              {tx('Рахуємо по твоїх угодах', 'Crunching your trades')}
             </span>
           </div>
         )}
@@ -611,15 +618,15 @@ export default function Analytics() {
             style={{ border: `1px dashed ${T.line}` }}
           >
             <div className="mb-2.5 text-[21px] font-bold" style={{ fontFamily: T.display, color: T.text }}>
-              {failed ? 'Не вдалось дістати угоди' : 'Рахувати поки нема чого'}
+              {failed ? tx('Не вдалось дістати угоди', "Couldn't load your trades") : tx('Рахувати поки нема чого', 'Nothing to analyze yet')}
             </div>
             <p
               className="mb-6 max-w-[440px] text-[14px]"
               style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.6 }}
             >
               {failed
-                ? 'Спробуй оновити сторінку. Якщо повториться — це вже на нашому боці.'
-                : 'Аналітика читає твій журнал угод. Приблизно з двадцятої угоди вона починає казати щось, чого ти про себе не знав — до того вибірка замала, щоб їй вірити.'}
+                ? tx('Спробуй оновити сторінку. Якщо повториться — це вже на нашому боці.', "Try refreshing the page. If it happens again, it's on our side.")
+                : tx('Аналітика читає твій журнал угод. Приблизно з двадцятої угоди вона починає казати щось, чого ти про себе не знав — до того вибірка замала, щоб їй вірити.', "Analytics reads your trade journal. From around your twentieth trade it starts telling you things you didn't know about yourself — before that, the sample is too small to trust.")}
             </p>
             {!failed && (
               <Link
@@ -627,7 +634,7 @@ export default function Analytics() {
                 className="flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-bold"
                 style={{ fontFamily: T.sans, background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)' }}
               >
-                <BookOpen size={15} strokeWidth={2.6} /> Записати угоду
+                <BookOpen size={15} strokeWidth={2.6} /> {tx('Записати угоду', 'Log a trade')}
               </Link>
             )}
           </div>
@@ -642,8 +649,8 @@ export default function Analytics() {
               style={{ color: T.acc }}
             >
               {last
-                ? new Date(last.date).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })
-                : 'За обраний період угод немає'}
+                ? new Date(last.date).toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })
+                : tx('За обраний період угод немає', 'No trades in the selected period')}
             </div>
             <p
               className="mt-2.5 max-w-[62ch] text-[19px] font-medium leading-[1.45] lg:text-[22px]"
@@ -652,16 +659,16 @@ export default function Analytics() {
               {/* Фраза будується з того, що справді є. Раніше вона
                   впевнено називала «найкращий день» навіть коли угод
                   було три — і виглядала як вигадка. */}
-              Ти <Delta v={s.net} /> за {s.trades.length} угод.
+              {tx('Ти', "You're")} <Delta v={s.net} /> {tx(`за ${s.trades.length} угод.`, `over ${s.trades.length} ${s.trades.length === 1 ? 'trade' : 'trades'}.`)}
               {s.trades.length >= 10 && bestDay && (
                 <>
-                  {' '}{bestDay.day} — твій найкращий день
+                  {' '}{bestDay.day}{tx(' — твій найкращий день', ' is your best day')}
                   {[...s.emotionStats].some((e) => e.trades) && (
-                    <>, а {EMOTION_LABEL[[...s.emotionStats].sort((a, b) => b.avg - a.avg)[0].emotion].toLowerCase()} — твій найкращий стан</>
+                    <>{tx(', а ', ', and ')}{EMOTION_LABEL[[...s.emotionStats].sort((a, b) => b.avg - a.avg)[0].emotion].toLowerCase()}{tx(' — твій найкращий стан', ' is your best state')}</>
                   )}.
                 </>
               )}
-              {s.trades.length < 10 && ' Ще замало, щоб шукати закономірності — веди журнал далі.'}
+              {s.trades.length < 10 && tx(' Ще замало, щоб шукати закономірності — веди журнал далі.', ' Too early to look for patterns — keep journaling.')}
             </p>
           </div>
           {/* Жовтий ярлик «дисципліна просідає» прибрано свідомо.
