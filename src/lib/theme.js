@@ -57,6 +57,7 @@ export const T = {
   accPress:  'var(--edge-acc-press, #7A69F0)',
   accText:   'var(--edge-acc-text, #A498FF)',  // акцент як колір тексту
   onAcc:     'var(--edge-on-acc, #0A0A0C)',     // текст на акцентній заливці
+  danger:    'var(--edge-danger, #C93A3A)',     // заливка кнопки видалення (текст на ній білий)
 
   /* Семантика */
   ok:        'var(--edge-ok, #34d399)',

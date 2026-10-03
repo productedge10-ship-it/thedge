@@ -73,15 +73,36 @@ h1, h2, h3, h4, h5, h6 {
 
    Для полів фокус і так видно двома способами: миготливою кареткою
    всередині й зміною кольору рамки обгортки. Третій був зайвим. */
+/* Кільце — тепер через outline, а не box-shadow.
+
+   Box-shadow з нульовою вагою (:where) програвав будь-якій кнопці з
+   власною тінню: інлайнова boxShadow або клас тіні його просто
+   затирали, і саме на головних, найпомітніших кнопках фокус зникав.
+   Outline з тінню не конфліктує взагалі, а заокруглення сучасні
+   браузери (Chrome 94+, Safari 16.4+, Firefox 88+) вже малюють по
+   border-radius — давня причина відмовитись від нього зникла.
+
+   Вага навмисно вища за клас (:is дає вагу атрибута): так кільце
+   перебиває Tailwind `outline-none`, яке стоїть на кнопках заради
+   вигляду після кліку. Мишею :focus-visible не вмикається, тож для
+   миші нічого не міняється. Інлайнове `outline: none` воно не переб'є —
+   таких кнопок одиниці, їх виправимо разом із кнопками.
+
+   Відступ 2px дає темну щілину між кнопкою й кільцем — та сама роль,
+   що була в темного внутрішнього кільця: акцент не зливається з
+   акцентною кнопкою. */
+:is(a, button, [role='button'], [role='switch'], [role='menuitem'],
+    [role='menuitemcheckbox'], [tabindex]:not([tabindex='-1']),
+    summary):focus-visible {
+  outline: 2px solid var(--edge-acc, #8b7bff);
+  outline-offset: 2px;
+}
+/* Підняти над сусідами — окремим правилом з нульовою вагою. З вагою
+   :is воно перебило б клас `absolute` і зсунуло б абсолютно
+   позиціоновані кнопки в момент фокуса. */
 :where(a, button, [role='button'], [role='switch'], [role='menuitem'],
        [role='menuitemcheckbox'], [tabindex]:not([tabindex='-1']),
        summary):focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--edge-bg, #0A0A0C),
-    0 0 0 4px var(--edge-acc, #8b7bff);
-  border-radius: inherit;
-  /* Щоб кільце не ховалось під сусідні картки в сітці. */
   position: relative;
   z-index: 20;
 }
@@ -1475,6 +1496,9 @@ h1, h2, h3, h4, h5, h6 {
   --edge-acc-hover: #9d8fff;
   --edge-acc-press: #7a69f0;
   --edge-acc-text: #a498ff;
+  --edge-danger: #c93a3a;
+  --edge-danger-hover: #b33232;
+  --edge-danger-press: #9e2b2b;
   --edge-ok: #34d399;
   --edge-ok-rgb: 52, 211, 153;
   --edge-warn: #fbbf24;
@@ -1638,6 +1662,127 @@ input.edge-page-title { line-height: 1.15 !important; }
 .edge-light .edge-add-btn svg {
   color: #fff;
 }
+
+/* ==================================================================
+   Кнопка — components/ui/Button.jsx.
+
+   До неї в застосунку було щонайменше сім «головних» кнопок: градієнт
+   з білим текстом, темна з фіолетовою рамкою, суцільна з темним,
+   висоти від 42 до 54, радіуси від 12 до 16. Людина не могла за
+   виглядом сказати, яка дія на екрані головна.
+
+   Тепер чотири ролі й три розміри, і все. Стани — псевдокласами тут,
+   а не onMouseEnter у розмітці: так ховер, натиск і вимкнений стан
+   однакові на кожній кнопці й працюють без JavaScript.
+
+   Без тіней, світіння, градієнтів і зсуву вгору на ховері. Головну
+   кнопку видно за кольором — цього досить; заграва під нею тягнула
+   око сильніше за сам текст на екрані.
+
+   Кольори — тільки змінні теми, тому кнопка перемикається разом зі
+   світлою темою без окремих правил.
+================================================================== */
+.edge-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  font-family: var(--edge-sans, "Golos Text"), system-ui, sans-serif;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  /* Лише колір: рух і тінь на ховері — те, від чого відмовляємось. */
+  transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+.edge-btn svg { flex-shrink: 0; }
+
+/* Розміри. lg — тільки для лендінга й порожніх станів: у робочих
+   екранах 44px — уже «плакат», а не інструмент. */
+.edge-btn--sm { height: 32px; padding: 0 12px; border-radius: 8px;  font-size: 13px; }
+.edge-btn--md { height: 40px; padding: 0 16px; border-radius: 10px; font-size: 14px; }
+.edge-btn--lg { height: 44px; padding: 0 20px; border-radius: 10px; font-size: 15px; }
+.edge-btn--block { display: flex; width: 100%; }
+/* Кнопка лише з іконкою — квадратна, щоб ряд іконок стояв рівно. */
+.edge-btn--icon.edge-btn--sm { width: 32px; padding: 0; }
+.edge-btn--icon.edge-btn--md { width: 40px; padding: 0; }
+.edge-btn--icon.edge-btn--lg { width: 44px; padding: 0; }
+
+/* primary — одна на екран. Текст бере --edge-on-acc: у темній він
+   темний (6:1), у світлій — світлий, бо там темний акцент. */
+.edge-btn--primary { background: var(--edge-acc); color: var(--edge-on-acc); }
+.edge-btn--primary:hover { background: var(--edge-acc-hover); }
+.edge-btn--primary:active { background: var(--edge-acc-press); }
+
+/* secondary — усі інші дії поруч із головною. */
+.edge-btn--secondary {
+  background: var(--edge-surface-hi);
+  border-color: var(--edge-line-hi);
+  color: var(--edge-text);
+}
+.edge-btn--secondary:hover { background: var(--edge-surface-3); }
+.edge-btn--secondary:active { background: var(--edge-surface); }
+
+/* ghost — третинні дії в тулбарах і картках: без рамки, щоб ряд
+   таких кнопок не перетворювався на ряд коробок. */
+.edge-btn--ghost { background: transparent; color: var(--edge-text2); }
+.edge-btn--ghost:hover { background: var(--edge-surface-hi); color: var(--edge-text); }
+.edge-btn--ghost:active { background: var(--edge-surface); }
+
+/* destructive — заливка з окремого токена, а не --edge-bad: той
+   світлий, і білий напис на ньому не читався б. */
+.edge-btn--destructive { background: var(--edge-danger); color: #fff; }
+.edge-btn--destructive:hover { background: var(--edge-danger-hover); }
+.edge-btn--destructive:active { background: var(--edge-danger-press); }
+
+/* Натиск — ледь помітне стискання. Це єдиний рух у кнопці: він
+   підтверджує, що клік зарахований, і не тягне уваги. */
+.edge-btn:active:not(:disabled):not([aria-disabled='true']) { transform: scale(.98); }
+
+/* Вимкнена — однаково для всіх ролей. Раніше в налаштуваннях це було
+   opacity .7 і звичайний курсор, і вимкнену кнопку не відрізнити від
+   активної. Тепер вона втрачає колір повністю. */
+/* aria-busy виключено: кнопка, що завантажує, теж aria-disabled, але
+   має лишитись свого кольору — інакше в момент кліку вона «гасне» і
+   виглядає так, ніби дія не пройшла. */
+.edge-btn:disabled,
+.edge-btn[aria-disabled='true']:not([aria-busy='true']) {
+  background: var(--edge-surface-hi);
+  border-color: var(--edge-line);
+  color: var(--edge-disabled);
+  cursor: not-allowed;
+}
+.edge-btn--ghost:disabled,
+.edge-btn--ghost[aria-disabled='true']:not([aria-busy='true']) { background: transparent; border-color: transparent; }
+
+/* Завантаження: кнопка не реагує й не міняє ширини. Курсор — wait,
+   а не not-allowed: дія не заборонена, вона вже виконується. */
+.edge-btn[aria-busy='true'] { cursor: wait; pointer-events: none; }
+.edge-btn__label--hidden { visibility: hidden; }
+.edge-btn__spinner-over {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.edge-btn__spin { animation: edge-btn-spin .8s linear infinite; }
+@keyframes edge-btn-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .edge-btn { transition: none; }
+  .edge-btn:active:not(:disabled) { transform: none; }
+  /* Спінер лишаємо, але повільніше: без руху людина не зрозуміє, що
+     щось відбувається. */
+  .edge-btn__spin { animation-duration: 2s; }
+}
+/* Той самий вимикач руху, що й у налаштуваннях «Рух і світіння». */
+.edge-no-motion .edge-btn { transition: none; }
+.edge-no-motion .edge-btn:active { transform: none; }
 
 /* ------------------------------------------------------------------
    Поява картки кроку в розборі.
