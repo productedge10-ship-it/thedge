@@ -55,32 +55,32 @@ import { shareUrl } from '../../lib/sandbox';
 /* Надпис над заголовком. Він групує розділи за змістом: видно, що
    «Тема» і «Рух» — про одне й те саме, хоч і лежать окремо. */
 const TABS = [
-  { id: 'profile', label: 'Profile', icon: User, eyebrow: 'PERSONAL', hint: 'What we should call you' },
-  { id: 'goal', label: 'Weekly goal', icon: Target, eyebrow: 'RHYTHM', hint: 'What the “Week” tile on the Launchpad shows' },
-  { id: 'journal', label: 'Journal', icon: BookOpen, eyebrow: 'PRACTICE', hint: 'How many questions to ask after every trade' },
+  { id: 'profile', label: t('Профіль', 'Profile'), icon: User, eyebrow: t('ОСОБИСТЕ', 'PERSONAL'), hint: t('Як до тебе звертатись', 'What we should call you') },
+  { id: 'goal', label: t('Ціль на тиждень', 'Weekly goal'), icon: Target, eyebrow: t('РИТМ', 'RHYTHM'), hint: t('Що показує плитка «Тиждень» на Лаунчпаді', 'What the “Week” tile on the Launchpad shows') },
+  { id: 'journal', label: t('Журнал', 'Journal'), icon: BookOpen, eyebrow: t('ПРАКТИКА', 'PRACTICE'), hint: t('Скільки питань ставити після кожної угоди', 'How many questions to ask after every trade') },
   /* «AutoImport MT5», а не «AutoImport MT5»: назва має казати, що
      станеться, а не що тут технічно лежить. «Підключення» чого до
      чого — незрозуміло; «угоди з MT5 приїжджають самі» — зрозуміло
      одразу. id лишається 'connect': на нього посилаються openSettings
      з інших сторінок, і перейменування зламало б ці переходи. */
-  { id: 'connect', label: 'AutoImport MT5', icon: Plug, eyebrow: 'SYNC', hint: 'Connect your trading account — the trades will sync automatically' },
-  { id: 'telegram', label: 'Telegram', icon: Send, eyebrow: 'NOTIFY', hint: 'Alerts, new trades and the daily wrap — straight to your chat' },
+  { id: 'connect', label: t('Автоімпорт MT5', 'AutoImport MT5'), icon: Plug, eyebrow: t('СИНХРОНІЗАЦІЯ', 'SYNC'), hint: t('Підключи торговий рахунок — угоди підтягуватимуться самі', 'Connect your trading account — the trades will sync automatically') },
+  { id: 'telegram', label: t('Telegram', 'Telegram'), icon: Send, eyebrow: t('СПОВІЩЕННЯ', 'NOTIFY'), hint: t('Таймери, нові угоди й підсумок дня — просто в чат', 'Alerts, new trades and the daily wrap — straight to your chat') },
   /* Підписка стоїть одразу після платних розділів, а не в кінці
      списку: людина потрапляє сюди саме з них, побачивши замок. */
   /* Поширення журналу — поруч із Telegram: обидва про те, що журнал
      бачить хтось, крім тебе. */
-  { id: 'share', label: 'Share journal', icon: Share2, eyebrow: 'PUBLIC', hint: 'A read-only link to your journal, analytics and analyses' },
-  { id: 'billing', label: 'Subscription', icon: Sparkles, eyebrow: 'PLAN', hint: 'What Pro unlocks and when the card is charged' },
+  { id: 'share', label: t('Поділитись журналом', 'Share journal'), icon: Share2, eyebrow: t('ПУБЛІЧНЕ', 'PUBLIC'), hint: t('Посилання лише для перегляду журналу, аналітики й аналізів', 'A read-only link to your journal, analytics and analyses') },
+  { id: 'billing', label: t('Підписка', 'Subscription'), icon: Sparkles, eyebrow: t('ТАРИФ', 'PLAN'), hint: t('Що відкриває Pro і коли списується оплата', 'What Pro unlocks and when the card is charged') },
   /* Реферальне посилання — одразу під підпискою: нараховане йде саме
      в її рахунок. */
-  { id: 'referral', label: t('Запроси друга', 'Invite a friend'), icon: Gift, eyebrow: 'INVITE', hint: t('Твоє посилання і 10% з першої оплати кожного друга', 'Your link and 10% of each friend’s first payment') },
+  { id: 'referral', label: t('Запроси друга', 'Invite a friend'), icon: Gift, eyebrow: t('ЗАПРОШЕННЯ', 'INVITE'), hint: t('Твоє посилання і 10% з першої оплати кожного друга', 'Your link and 10% of each friend’s first payment') },
   /* «Security» звідси прибрано до того часу, поки не буде готова сама
      двофакторка. Вкладка була, вміст до неї — ні, тож вона показувала
      порожню панель. Пункт меню, який нічого не відкриває, гірший за
      відсутній: людина думає, що зламалось саме в неї. */
-  { id: 'look', label: 'Theme & language', icon: Palette, eyebrow: 'APPEARANCE', hint: 'Light or dark, English or Ukrainian' },
-  { id: 'motion', label: 'Motion & glow', icon: Sparkles, eyebrow: 'APPEARANCE', hint: 'How much movement you can stand over six hours at a screen' },
-  { id: 'menu', label: 'Sections', icon: LayoutGrid, eyebrow: 'NAVIGATION', hint: 'Hide what you don’t use — the data stays' },
+  { id: 'look', label: t('Тема і мова', 'Theme & language'), icon: Palette, eyebrow: t('ВИГЛЯД', 'APPEARANCE'), hint: t('Світла чи темна, українська чи англійська', 'Light or dark, English or Ukrainian') },
+  { id: 'motion', label: t('Рух і світіння', 'Motion & glow'), icon: Sparkles, eyebrow: t('ВИГЛЯД', 'APPEARANCE'), hint: t('Скільки руху ти витримуєш за шість годин біля екрана', 'How much movement you can stand over six hours at a screen') },
+  { id: 'menu', label: t('Розділи', 'Sections'), icon: LayoutGrid, eyebrow: t('НАВІГАЦІЯ', 'NAVIGATION'), hint: t('Сховай те, чим не користуєшся, — дані лишаються', 'Hide what you don’t use — the data stays') },
 ];
 
 /* ------------------------------------------------------------------
@@ -124,8 +124,11 @@ const EN = {
 };
 
 /* Підпис варіанта: англійський, якщо є; інакше той, що в списку. */
-const label = (group, item) => EN[group]?.[item.id]?.[0] ?? item.label;
-const hintOf = (group, item) => EN[group]?.[item.id]?.[1] ?? item.hint;
+/* Англійський підпис — лише коли інтерфейс англійською. Досі EN
+   підставлявся завжди, і українська людина бачила ці картки
+   англійською. */
+const label = (group, item) => (LANG === 'en' ? EN[group]?.[item.id]?.[0] : null) ?? item.label;
+const hintOf = (group, item) => (LANG === 'en' ? EN[group]?.[item.id]?.[1] : null) ?? item.hint;
 
 /* Картка-варіант. Один опис на всі списки вибору, щоб «Ціль», «Журнал»,
    «Рух» і «Світло» не розʼїжджались на піксель. */
@@ -375,7 +378,7 @@ export default function SettingsModal() {
                     color: T.text,
                   }}
                 >
-                  Settings
+                  {t('Налаштування', 'Settings')}
                 </div>
                 <div
                   style={{
@@ -386,7 +389,7 @@ export default function SettingsModal() {
                     color: T.text3,
                   }}
                 >
-                  Changes apply at once and follow you across devices
+                  {t('Зміни діють одразу й синхронізуються між пристроями', 'Changes apply at once and follow you across devices')}
                 </div>
               </div>
 
@@ -463,7 +466,7 @@ export default function SettingsModal() {
                   Підтримка — дія («щось зламалось»), соцмережі — просто
                   «де нас почитати», і важити однаково вони не мають. */}
               <div className="mb-2.5 grid grid-cols-2 gap-2">
-                <SocialLink href="https://t.me/theedgejournal" label="Channel" track="settings.telegram">
+                <SocialLink href="https://t.me/theedgejournal" label={t('Канал', 'Channel')} track="settings.telegram">
                   <Send size={13} strokeWidth={2.2} style={{ color: T.acc }} />
                 </SocialLink>
                 <SocialLink href="https://www.instagram.com/theedge.space/" label="Instagram" track="settings.instagram">
@@ -508,7 +511,7 @@ export default function SettingsModal() {
                 }}
               >
                 <Send size={14} strokeWidth={2.2} style={{ color: T.acc }} />
-                Message on Telegram
+                {t('Написати в Telegram', 'Message on Telegram')}
               </a>
 
               <button
@@ -536,7 +539,7 @@ export default function SettingsModal() {
                 }}
               >
                 <RotateCcw size={15} strokeWidth={2.2} style={{ opacity: 0.85 }} />
-                Reset everything
+                {t('Скинути все', 'Reset everything')}
               </button>
             </div>
 
@@ -581,7 +584,7 @@ export default function SettingsModal() {
 
                 <button
                   onClick={() => setOpen(false)}
-                  aria-label="Close"
+                  aria-label={t('Закрити', 'Close')}
                   className="grid shrink-0 place-items-center"
                   style={{
                     width: 38,
@@ -639,7 +642,7 @@ export default function SettingsModal() {
                 {safeTab === 'profile' && (
                   <div className="flex flex-col" style={{ gap: 30, maxWidth: '100%' }}>
                     <div>
-                      <Label>What we should call you</Label>
+                      <Label>{t('Як до тебе звертатись', 'What we should call you')}</Label>
                       <input
                         value={nick}
                         onChange={(e) => setNick(e.target.value)}
@@ -649,7 +652,7 @@ export default function SettingsModal() {
                         }}
                         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                         maxLength={32}
-                        placeholder="A nickname — otherwise we’ll use the start of your email"
+                        placeholder={t('Нікнейм — інакше візьмемо початок твоєї пошти', 'A nickname — otherwise we’ll use the start of your email')}
                         className="w-full outline-none"
                         style={{
                           fontFamily: T.sans,
@@ -672,7 +675,7 @@ export default function SettingsModal() {
                         способом підтвердитись лишалось би натиснути
                         заблоковану кнопку — незрозуміло й нелогічно. */}
                     <div>
-                      <Label>Email</Label>
+                      <Label>{t('Пошта', 'Email')}</Label>
                       <div
                         className="flex items-center"
                         style={{
@@ -718,7 +721,7 @@ export default function SettingsModal() {
                               color: emailVerified === false ? T.warn : T.ok,
                             }}
                           >
-                            {emailVerified === false ? 'Not verified' : 'Verified'}
+                            {emailVerified === false ? t('Не підтверджено', 'Not verified') : t('Підтверджено', 'Verified')}
                           </div>
                         </div>
 
@@ -740,13 +743,13 @@ export default function SettingsModal() {
                             onMouseEnter={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.22)`; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = `rgba(${T.accRgb},0.14)`; }}
                           >
-                            Verify
+                            {t('Підтвердити', 'Verify')}
                           </button>
                         )}
                       </div>
 
                       {emailVerified === false && (
-                        <Note>Until your email is verified you can’t create accounts or log trades.</Note>
+                        <Note>{t('Поки пошта не підтверджена, не вийде оформити підписку.', 'Until your email is verified you can’t subscribe.')}</Note>
                       )}
                     </div>
 
@@ -758,8 +761,8 @@ export default function SettingsModal() {
                 {safeTab === 'goal' && (
                   <div style={{ maxWidth: '100%' }}>
                     <Head
-                      title="Goal for the week"
-                      hint="What the “Week” tile on the Launchpad shows"
+                      title={t('Ціль на тиждень', 'Goal for the week')}
+                      hint={t('Що показує плитка «Тиждень» на Лаунчпаді', 'What the “Week” tile on the Launchpad shows')}
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2" style={{ marginTop: 20, gap: 12 }}>
                       {GOALS.map((g) => {
@@ -798,7 +801,7 @@ export default function SettingsModal() {
                           className="shrink-0"
                           style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 500, color: T.text2 }}
                         >
-                          How many
+                          {t('Скільки', 'How many')}
                         </span>
                         <input
                           type="range"
@@ -820,7 +823,7 @@ export default function SettingsModal() {
                             color: T.acc,
                           }}
                         >
-                          {goalValue} {EN.unit[goalType] ?? goalById(goalType).unit}
+                          {goalValue} {(LANG === 'en' ? EN.unit[goalType] : null) ?? goalById(goalType).unit}
                         </span>
                       </div>
                     )}
@@ -831,8 +834,8 @@ export default function SettingsModal() {
                 {safeTab === 'journal' && (
                   <div style={{ maxWidth: '100%' }}>
                     <Head
-                      title="Trade review"
-                      hint="How many questions to ask yourself after every trade"
+                      title={t('Розбір угоди', 'Trade review')}
+                      hint={t('Скільки питань ставити собі після кожної угоди', 'How many questions to ask yourself after every trade')}
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2" style={{ marginTop: 20, gap: 12 }}>
                       {PSY.map((p) => {
@@ -862,7 +865,7 @@ export default function SettingsModal() {
                         color: T.text3,
                       }}
                     >
-                      In short mode the rest of the questions stay in the trade behind a toggle — they simply stop being required.
+                      {t('У короткому режимі решта питань лишається в угоді за перемикачем — вони просто перестають бути обовʼязковими.', 'In short mode the rest of the questions stay in the trade behind a toggle — they simply stop being required.')}
                     </div>
 
                     {/* Автовибір таймфрейму.
@@ -872,17 +875,17 @@ export default function SettingsModal() {
                         заповнюєш план. */}
                     <div style={{ marginTop: 30 }}>
                       <Head
-                        title="Timeframe from a screenshot"
-                        hint="TradingView writes the timeframe in the header — we can read it and fill the field in"
+                        title={t('Таймфрейм зі скріншота', 'Timeframe from a screenshot')}
+                        hint={t('TradingView пише таймфрейм у шапці — ми можемо прочитати його й заповнити поле', 'TradingView writes the timeframe in the header — we can read it and fill the field in')}
                       />
                       <Toggle
-                        label="Detect the timeframe automatically"
-                        hint="Only fills an empty field — your own choice is never overwritten"
+                        label={t('Визначати таймфрейм автоматично', 'Detect the timeframe automatically')}
+                        hint={t('Заповнює лише порожнє поле — твій власний вибір ніколи не перезаписується', 'Only fills an empty field — your own choice is never overwritten')}
                         on={s.autoTf !== false}
                         onClick={() => s.set({ autoTf: s.autoTf === false })}
                       />
                       <Note>
-                        Recognition runs in your browser: the screenshot goes nowhere, and neither does anything else.
+                        {t('Розпізнавання працює у твоєму браузері: скріншот нікуди не надсилається, як і будь-що інше.', 'Recognition runs in your browser: the screenshot goes nowhere, and neither does anything else.')}
                       </Note>
                     </div>
                   </div>
@@ -915,8 +918,8 @@ export default function SettingsModal() {
                 {safeTab === 'look' && (
                   <div style={{ maxWidth: '100%' }}>
                     <Head
-                      title="Theme"
-                      hint="Switches with a diagonal sweep — so it doesn’t hit your eyes"
+                      title={t('Тема', 'Theme')}
+                      hint={t('Перемикається діагональною хвилею — щоб не різало очі', 'Switches with a diagonal sweep — so it doesn’t hit your eyes')}
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2" style={{ marginTop: 20, gap: 12 }}>
                       {THEMES.map((th) => {
@@ -1004,8 +1007,8 @@ export default function SettingsModal() {
                   <div className="flex flex-col" style={{ maxWidth: '100%', gap: 34 }}>
                     <div>
                       <Head
-                        title="Animation"
-                        hint="How much movement you can stand over six hours at a screen"
+                        title={t('Анімація', 'Animation')}
+                        hint={t('Скільки руху ти витримуєш за шість годин біля екрана', 'How much movement you can stand over six hours at a screen')}
                       />
 
                       {/* Окремий рубильник понад трьома режимами: коли людина
@@ -1037,7 +1040,7 @@ export default function SettingsModal() {
                         }}
                       >
                         <ZapOff size={15} strokeWidth={2.2} style={{ opacity: 0.7 }} />
-                        Turn off all animation
+                        {t('Вимкнути всю анімацію', 'Turn off all animation')}
                       </button>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3" style={{ marginTop: 12, gap: 12 }}>
@@ -1062,10 +1065,10 @@ export default function SettingsModal() {
                           «спокійних»: той режим сам по собі прибирає фон, і
                           активний тумблер поруч обіцяв би те, чого не буде. */}
                       <Toggle
-                        label="Live background"
+                        label={t('Живий фон', 'Live background')}
                         hint={s.motion === 'calm'
-                          ? 'Calm animation already removes the background'
-                          : 'Drifting dots that scatter away from the cursor'}
+                          ? t('Спокійна анімація вже прибирає фон', 'Calm animation already removes the background')
+                          : t('Точки, що розлітаються від курсора', 'Drifting dots that scatter away from the cursor')}
                         on={s.liveBg && s.motion === 'full'}
                         disabled={s.motion !== 'full'}
                         onClick={() => s.set({ liveBg: !s.liveBg })}
@@ -1074,8 +1077,8 @@ export default function SettingsModal() {
 
                     <div>
                       <Head
-                        title="Glow under the cursor"
-                        hint="A halo that follows the mouse across cards. Separate from animation — you can keep the motion and drop the glow"
+                        title={t('Світіння під курсором', 'Glow under the cursor')}
+                        hint={t('Ореол, що йде за мишею по картках. Окремо від анімації — можна лишити рух і прибрати світіння', 'A halo that follows the mouse across cards. Separate from animation — you can keep the motion and drop the glow')}
                       />
                       <div className="grid grid-cols-1 sm:grid-cols-2" style={{ marginTop: 20, gap: 12 }}>
                         {FX.map((f) => {
@@ -1119,7 +1122,7 @@ export default function SettingsModal() {
                       </div>
 
                       {s.motion === 'off' && (
-                        <Note>Animation is off, so the glow stays off too. Turn motion back on to set its brightness.</Note>
+                        <Note>{t('Анімацію вимкнено, тож світіння теж вимкнене. Увімкни рух, щоб налаштувати яскравість.', 'Animation is off, so the glow stays off too. Turn motion back on to set its brightness.')}</Note>
                       )}
                     </div>
                   </div>
@@ -1129,10 +1132,10 @@ export default function SettingsModal() {
                 {safeTab === 'menu' && (
                   <div style={{ maxWidth: '100%' }}>
                     <Head
-                      title="Sections in the menu"
+                      title={t('Розділи в меню', 'Sections in the menu')}
                       hint={hiddenCount
-                        ? `${hiddenCount} hidden. Hiding deletes nothing — the data stays, only the menu item goes.`
-                        : 'Hide what you don’t use. The data stays, only the menu item goes.'}
+                        ? t(`Сховано: ${hiddenCount}. Приховування нічого не видаляє — дані лишаються, зникає лише пункт меню.`, `${hiddenCount} hidden. Hiding deletes nothing — the data stays, only the menu item goes.`)
+                        : t('Сховай те, чим не користуєшся. Дані лишаються, зникає лише пункт меню.', 'Hide what you don’t use. The data stays, only the menu item goes.')}
                     />
 
                     <div className="flex flex-col" style={{ marginTop: 28, gap: 26 }}>
@@ -1251,7 +1254,7 @@ function PasswordBlock({ armed, onDone }) {
       if (error) throw error;
       setSent(true);
       startCooldown();
-      notify.success('Email sent', `A password change link is on its way to ${user?.email}.`);
+      notify.success(t('Лист надіслано', 'Email sent'), t(`Посилання для зміни пароля вже летить на ${user?.email}.`, `A password change link is on its way to ${user?.email}.`));
     } catch (e) {
       /* Найчастіша помилка тут — серверний ліміт Supabase на частоту
          листів. Сирий англійський текст лякає без потреби, тому
@@ -1260,9 +1263,9 @@ function PasswordBlock({ armed, onDone }) {
       const seconds = raw.match(/after (\d+) seconds?/i)?.[1];
       if (seconds) {
         startCooldown(Number(seconds));
-        notify.error('Hold on a moment', `The next email can be sent in ${seconds} s.`);
+        notify.error(t('Хвилинку', 'Hold on a moment'), t(`Наступний лист можна надіслати через ${seconds} с.`, `The next email can be sent in ${seconds} s.`));
       } else {
-        notify.error('Couldn’t send it', raw || 'Try again in a minute.');
+        notify.error(t('Не вдалося надіслати', 'Couldn’t send it'), raw || t('Спробуй за хвилину.', 'Try again in a minute.'));
       }
     } finally {
       setSending(false);
@@ -1275,7 +1278,7 @@ function PasswordBlock({ armed, onDone }) {
 
   return (
     <div>
-      <Label>Password</Label>
+      <Label>{t('Пароль', 'Password')}</Label>
       <div
         className="flex items-center"
         style={{
@@ -1304,12 +1307,12 @@ function PasswordBlock({ armed, onDone }) {
 
         <div className="min-w-0 flex-1">
           <div style={{ fontFamily: T.sans, fontSize: 15.5, fontWeight: 600, color: T.text }}>
-            {sent ? 'Email sent' : 'Change password'}
+            {sent ? t('Лист надіслано', 'Email sent') : t('Змінити пароль', 'Change password')}
           </div>
           <div style={{ fontFamily: T.sans, marginTop: 3, fontSize: 13, color: T.text3 }}>
             {sent
-              ? 'Open the link from the email and set a new password'
-              : 'We’ll send a link to your email'}
+              ? t('Відкрий посилання з листа й задай новий пароль', 'Open the link from the email and set a new password')
+              : t('Надішлемо посилання на твою пошту', 'We’ll send a link to your email')}
           </div>
         </div>
 
@@ -1335,17 +1338,16 @@ function PasswordBlock({ armed, onDone }) {
         >
           {sending && <Loader2 size={13} className="animate-spin" />}
           {left > 0
-            ? `Again in ${left} s`
+            ? t(`Знову через ${left} с`, `Again in ${left} s`)
             : sending
-              ? 'Sending…'
-              : sent ? 'Send again' : 'Send the link'}
+              ? t('Надсилаю…', 'Sending…')
+              : sent ? t('Надіслати ще раз', 'Send again') : t('Надіслати посилання', 'Send the link')}
         </button>
       </div>
 
       {sent && (
         <Note>
-          No email? Check the Spam folder. Your current password keeps working
-          until a new one is set.
+          {t('Листа немає? Глянь у «Спам». Поточний пароль працює, доки не задаси новий.', 'No email? Check the Spam folder. Your current password keeps working until a new one is set.')}
         </Note>
       )}
     </div>
@@ -1378,15 +1380,15 @@ function NewPasswordForm({ onDone }) {
       const { error } = await supabase.auth.updateUser({ password: pass });
       if (error) throw error;
       endRecoveryFlow();
-      notify.success('Password changed', 'Use the new one next time you sign in.');
+      notify.success(t('Пароль змінено', 'Password changed'), t('Наступного разу входь з новим.', 'Use the new one next time you sign in.'));
       onDone();
     } catch (e2) {
       const raw = String(e2?.message || '');
       /* Supabase відмовляє, якщо новий пароль дорівнює старому. Сирий
          англійський текст тут нічого не пояснює. */
       setErr(/should be different/i.test(raw)
-        ? 'That’s the password you already have. Pick a different one.'
-        : raw || 'Couldn’t save it. Try again.');
+        ? t('Це твій теперішній пароль. Обери інший.', 'That’s the password you already have. Pick a different one.')
+        : raw || t('Не вдалося зберегти. Спробуй ще раз.', 'Couldn’t save it. Try again.'));
     } finally {
       setSaving(false);
     }
@@ -1406,7 +1408,7 @@ function NewPasswordForm({ onDone }) {
 
   return (
     <form onSubmit={save}>
-      <Label>New password</Label>
+      <Label>{t('Новий пароль', 'New password')}</Label>
 
       <div
         style={{
@@ -1420,7 +1422,7 @@ function NewPasswordForm({ onDone }) {
         <div className="flex items-center" style={{ gap: 11 }}>
           <KeyRound size={15} strokeWidth={2.2} style={{ color: T.acc, flex: 'none' }} />
           <span style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text2, lineHeight: '20px' }}>
-            Link confirmed — set your new password
+            {t('Посилання підтверджено — задай новий пароль', 'Link confirmed — set your new password')}
           </span>
         </div>
 
@@ -1431,7 +1433,7 @@ function NewPasswordForm({ onDone }) {
             autoFocus
             autoComplete="new-password"
             onChange={(e) => { setPass(e.target.value); setErr(''); }}
-            placeholder={`New password — ${PASS_MIN} characters or more`}
+            placeholder={t(`Новий пароль — від ${PASS_MIN} символів`, `New password — ${PASS_MIN} characters or more`)}
             className="w-full outline-none"
             style={field(tooShort)}
             onFocus={(e) => { if (!tooShort) e.currentTarget.style.borderColor = T.acc; }}
@@ -1442,7 +1444,7 @@ function NewPasswordForm({ onDone }) {
           <button
             type="button"
             onClick={() => setShow((v) => !v)}
-            aria-label={show ? 'Hide password' : 'Show password'}
+            aria-label={show ? t('Сховати пароль', 'Hide password') : t('Показати пароль', 'Show password')}
             className="absolute grid place-items-center"
             style={{
               right: 8, top: 8, width: 38, height: 38,
@@ -1460,7 +1462,7 @@ function NewPasswordForm({ onDone }) {
           value={pass2}
           autoComplete="new-password"
           onChange={(e) => { setPass2(e.target.value); setErr(''); }}
-          placeholder="Once more, to be sure"
+          placeholder={t('Ще раз, для певності', 'Once more, to be sure')}
           className="w-full outline-none"
           style={{ ...field(mismatch), marginTop: 10, paddingRight: 18 }}
           onFocus={(e) => { if (!mismatch) e.currentTarget.style.borderColor = T.acc; }}
@@ -1469,7 +1471,7 @@ function NewPasswordForm({ onDone }) {
 
         {(mismatch || tooShort || err) && (
           <div style={{ fontFamily: T.sans, marginTop: 10, fontSize: 13, color: T.bad, lineHeight: '19px' }}>
-            {err || (tooShort ? `Too short — ${PASS_MIN} characters minimum.` : 'The passwords don’t match.')}
+            {err || (tooShort ? t(`Закороткий — мінімум ${PASS_MIN} символів.`, `Too short — ${PASS_MIN} characters minimum.`) : t('Паролі не збігаються.', 'The passwords don’t match.'))}
           </div>
         )}
 
@@ -1493,7 +1495,7 @@ function NewPasswordForm({ onDone }) {
           }}
         >
           {saving && <Loader2 size={15} className="animate-spin" />}
-          {saving ? 'Saving…' : 'Save password'}
+          {saving ? t('Зберігаю…', 'Saving…') : t('Зберегти пароль', 'Save password')}
         </button>
       </div>
     </form>
@@ -1538,7 +1540,7 @@ function ShareTab() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      notify.error('Could not copy', 'Select the link and copy it manually.');
+      notify.error(t('Не вдалося скопіювати', 'Could not copy'), t('Виділи посилання й скопіюй вручну.', 'Select the link and copy it manually.'));
     }
   };
 
@@ -1550,7 +1552,7 @@ function ShareTab() {
     const { data, error } = await supabase
       .from('journal_shares').insert({ user_id: user.id }).select('token').single();
     setBusy(false);
-    if (error) { notify.error('Could not create the link', error.message); return; }
+    if (error) { notify.error(t('Не вдалося створити посилання', 'Could not create the link'), error.message); return; }
     setToken(data.token);
     copy(shareUrl(data.token));
   };
@@ -1564,9 +1566,9 @@ function ShareTab() {
     const { data, error } = await supabase
       .from('journal_shares').insert({ user_id: user.id }).select('token').single();
     setBusy(false);
-    if (error) { setToken(null); notify.error('Could not create the link', error.message); return; }
+    if (error) { setToken(null); notify.error(t('Не вдалося створити посилання', 'Could not create the link'), error.message); return; }
     setToken(data.token);
-    notify.success('New link created', 'The old one no longer works.');
+    notify.success(t('Нове посилання створено', 'New link created'), t('Старе більше не працює.', 'The old one no longer works.'));
   };
 
   const disable = async () => {
@@ -1574,9 +1576,9 @@ function ShareTab() {
     setBusy(true);
     const { error } = await supabase.from('journal_shares').delete().eq('user_id', user.id);
     setBusy(false);
-    if (error) { notify.error('Could not close access', error.message); return; }
+    if (error) { notify.error(t('Не вдалося закрити доступ', 'Could not close access'), error.message); return; }
     setToken(null);
-    notify.success('Access closed', 'Nobody can open your journal by the old link.');
+    notify.success(t('Доступ закрито', 'Access closed'), t('За старим посиланням журнал більше ніхто не відкриє.', 'Nobody can open your journal by the old link.'));
   };
 
   const ghost = {
@@ -1588,8 +1590,8 @@ function ShareTab() {
   return (
     <div style={{ maxWidth: '100%' }}>
       <Head
-        title="Share your journal"
-        hint="Anyone with the link sees your Trading Journal, Analytics and Analyses — exactly as you do, but without the right to change anything."
+        title={t('Поділитись журналом', 'Share your journal')}
+        hint={t('Кожен, хто має посилання, бачить твій журнал, аналітику й аналізи — так само, як ти, але без права щось змінювати.', 'Anyone with the link sees your Trading Journal, Analytics and Analyses — exactly as you do, but without the right to change anything.')}
       />
 
       {loading ? (
@@ -1598,13 +1600,13 @@ function ShareTab() {
         <div style={{ marginTop: 22 }}>
           <ShareBtn onClick={enable} disabled={busy}>
             {busy ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} strokeWidth={2.4} />}
-            Create link &amp; copy
+            {t('Створити й скопіювати посилання', 'Create link & copy')}
           </ShareBtn>
-          <Note>Your MT5 logins, settings, notes and tasks are never shown — only trades, accounts, plans and analytics.</Note>
+          <Note>{t('Логіни MT5, налаштування, нотатки й задачі не показуються ніколи — лише угоди, рахунки, плани й аналітика.', 'Your MT5 logins, settings, notes and tasks are never shown — only trades, accounts, plans and analytics.')}</Note>
         </div>
       ) : (
         <div style={{ marginTop: 22 }}>
-          <Label>Your link</Label>
+          <Label>{t('Твоє посилання', 'Your link')}</Label>
           <div className="flex items-center" style={{ marginTop: 10, gap: 10 }}>
             <input
               readOnly
@@ -1626,7 +1628,7 @@ function ShareTab() {
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
                 >
                   {copied ? <Check size={16} strokeWidth={2.6} /> : <Copy size={16} strokeWidth={2.4} />}
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied ? t('Скопійовано', 'Copied') : t('Копіювати', 'Copy')}
                 </motion.span>
               </AnimatePresence>
             </ShareBtn>
@@ -1634,10 +1636,10 @@ function ShareTab() {
 
           <div className="flex flex-wrap" style={{ marginTop: 14, gap: 10 }}>
             <a href={url} target="_blank" rel="noreferrer" style={ghost}>
-              <ExternalLink size={15} strokeWidth={2.2} /> Open as a guest
+              <ExternalLink size={15} strokeWidth={2.2} /> {t('Відкрити як гість', 'Open as a guest')}
             </a>
             <button type="button" onClick={regenerate} disabled={busy} style={ghost}>
-              <RefreshCw size={15} strokeWidth={2.2} /> New link
+              <RefreshCw size={15} strokeWidth={2.2} /> {t('Нове посилання', 'New link')}
             </button>
             <button
               type="button"
@@ -1645,11 +1647,11 @@ function ShareTab() {
               disabled={busy}
               style={{ ...ghost, color: T.bad, border: `1px solid rgba(${T.badRgb},0.3)`, background: `rgba(${T.badRgb},0.08)` }}
             >
-              <Link2Off size={15} strokeWidth={2.2} /> Close access
+              <Link2Off size={15} strokeWidth={2.2} /> {t('Закрити доступ', 'Close access')}
             </button>
           </div>
 
-          <Note>“New link” and “Close access” stop the old link immediately. Trades you add later show up for guests automatically.</Note>
+          <Note>{t('«Нове посилання» і «Закрити доступ» одразу вимикають старе посилання. Угоди, які ти додаси пізніше, гості побачать автоматично.', '“New link” and “Close access” stop the old link immediately. Trades you add later show up for guests automatically.')}</Note>
         </div>
       )}
     </div>
@@ -1972,7 +1974,7 @@ const NO_FILL = {
    яскрава пляма посеред приглушеної форми зчитувалась як реклама,
    а не як спокійний вихід «написати нам». Впізнати дію можна і без
    бренд-кольору — іконка літака вже все каже. */
-function TelegramButton({ label = 'Message us on Telegram' }) {
+function TelegramButton({ label = t('Напиши нам у Telegram', 'Message us on Telegram') }) {
   const [hot, setHot] = useState(false);
 
   return (
@@ -2027,22 +2029,22 @@ function TelegramButton({ label = 'Message us on Telegram' }) {
 const SYNC_STATE = {
   checking: {
     rgb: () => T.accRgb,
-    title: 'Checking the connection…',
-    text: 'Logging into the terminal. Usually a few seconds.',
+    title: t('Перевіряю підключення…', 'Checking the connection…'),
+    text: t('Заходжу в термінал. Зазвичай кілька секунд.', 'Logging into the terminal. Usually a few seconds.'),
   },
   slow: {
     rgb: () => T.warnRgb,
-    title: 'Still checking',
-    text: 'Taking longer than usual. You can close this — the result will be here when you come back.',
+    title: t('Ще перевіряю', 'Still checking'),
+    text: t('Довше, ніж зазвичай. Можна закрити — результат чекатиме тут, коли повернешся.', 'Taking longer than usual. You can close this — the result will be here when you come back.'),
   },
   ok: {
     rgb: () => T.okRgb,
-    title: 'Connected',
-    text: 'Your trades will start arriving with the next sync.',
+    title: t('Підключено', 'Connected'),
+    text: t('Угоди почнуть надходити з наступною синхронізацією.', 'Your trades will start arriving with the next sync.'),
   },
   fail: {
     rgb: () => T.badRgb,
-    title: 'Couldn’t connect',
+    title: t('Не вдалося підключитись', 'Couldn’t connect'),
     text: null,
   },
 };
@@ -2053,7 +2055,7 @@ function SyncStatus({ phase, msg, support, onRetry, onDone }) {
      людина, в якої справді помилка, має знати, куди писати. «Try
      again» лишаємо — раптом вона хоче підключити інший рахунок. */
   const v = support
-    ? { ...SYNC_STATE.fail, title: 'Пробний період закрито' }
+    ? { ...SYNC_STATE.fail, title: t('Пробний період закрито', 'Trial closed') }
     : SYNC_STATE[phase] || SYNC_STATE.checking;
   const rgb = v.rgb();
   const waiting = phase === 'checking' || phase === 'slow';
@@ -2101,7 +2103,7 @@ function SyncStatus({ phase, msg, support, onRetry, onDone }) {
 
         {support && (
           <div style={{ marginTop: 12 }}>
-            <TelegramButton label="Написати в Telegram" />
+            <TelegramButton label={t('Написати в Telegram', 'Message us on Telegram')} />
           </div>
         )}
 
@@ -2125,7 +2127,7 @@ function SyncStatus({ phase, msg, support, onRetry, onDone }) {
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
           >
-            {phase === 'fail' ? 'Try again' : 'Done'}
+            {phase === 'fail' ? t('Спробувати ще', 'Try again') : t('Готово', 'Done')}
           </button>
         )}
       </div>
@@ -2385,9 +2387,9 @@ function BrokerPicker({ value, onChange }) {
    треба знати, що рахунок на місці й котрий саме, і на цьому все.
    Керування підключенням живе у формі вище. */
 const LINK_STATE = {
-  active:  { c: T.ok,   label: 'connected' },
-  pending: { c: T.warn, label: 'checking' },
-  error:   { c: T.bad,  label: 'failed' },
+  active:  { c: T.ok,   label: t('підключено', 'connected') },
+  pending: { c: T.warn, label: t('перевірка', 'checking') },
+  error:   { c: T.bad,  label: t('помилка', 'failed') },
 };
 
 function LinkedAccounts({ tick }) {
@@ -2420,12 +2422,12 @@ function LinkedAccounts({ tick }) {
         className="flex items-center justify-between"
         style={{ fontFamily: T.sans, padding: '2px 4px 4px', fontSize: 12, color: T.text3 }}
       >
-        <span>Підключені термінали</span>
+        <span>{t('Підключені термінали', 'Linked terminals')}</span>
         <span
           className="tabular-nums"
           style={{ fontWeight: 700, color: rows.length >= MT5_LIMIT ? T.warn : T.text3 }}
         >
-          {rows.length} з {MT5_LIMIT}
+          {rows.length} {t('з', 'of')} {MT5_LIMIT}
         </span>
       </div>
 
@@ -2472,7 +2474,7 @@ function LinkedRow({ row, onGone }) {
     && Date.now() - new Date(row.created_at).getTime() > 3 * 60 * 1000;
 
   const st = waiting
-    ? { c: T.warn, label: 'waiting for server' }
+    ? { c: T.warn, label: t('чекаю на сервер', 'waiting for server') }
     : (LINK_STATE[row.status] || LINK_STATE.pending);
 
   const broker = brokerById(row.broker);
@@ -2541,7 +2543,7 @@ function LinkedRow({ row, onGone }) {
             style={{ gap: 8 }}
           >
             <span style={{ fontFamily: T.sans, fontSize: 11.5, color: T.text3 }}>
-              Unlink and remove its trades?
+              {t('Відвʼязати й прибрати його угоди?', 'Unlink and remove its trades?')}
             </span>
             <button
               type="button"
@@ -2559,14 +2561,14 @@ function LinkedRow({ row, onGone }) {
               }}
             >
               {busy && <Loader2 size={11} className="animate-spin" />}
-              Yes
+              {t('Так', 'Yes')}
             </button>
             <button
               type="button"
               onClick={() => setAsking(false)}
               style={{ fontFamily: T.sans, fontSize: 11, fontWeight: 700, color: T.text4 }}
             >
-              No
+              {t('Ні', 'No')}
             </button>
           </motion.span>
         ) : (
@@ -2608,7 +2610,7 @@ function LinkedRow({ row, onGone }) {
               style={{ height: 22, borderRadius: 7, color: T.text4, overflow: 'hidden' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = T.bad; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = T.text4; }}
-              title="Unlink this account"
+              title={t('Відвʼязати цей рахунок', 'Unlink this account')}
             >
               <Unlink size={13} strokeWidth={2.3} />
             </motion.button>
@@ -2660,10 +2662,10 @@ function TelegramTab() {
       watchRef.current = watchTelegramLink((next) => {
         setState(next);
         setCode(null);
-        notify.success('Telegram підключено', 'Сповіщення приходитимуть у чат.');
+        notify.success(t('Telegram підключено', 'Telegram connected'), t('Сповіщення приходитимуть у чат.', 'Notifications will arrive in the chat.'));
       });
     } catch (e) {
-      notify.error('Не вдалось створити код', e?.message || 'Спробуй ще раз.');
+      notify.error(t('Не вдалось створити код', 'Couldn’t create the code'), e?.message || t('Спробуй ще раз.', 'Try again.'));
     } finally {
       setBusy(false);
     }
@@ -2677,9 +2679,9 @@ function TelegramTab() {
       setCode(null);
       if (watchRef.current) { watchRef.current(); watchRef.current = null; }
       await load();
-      notify.success('Відключено', 'Бот більше нічого не надсилатиме.');
+      notify.success(t('Відключено', 'Disconnected'), t('Бот більше нічого не надсилатиме.', 'The bot won’t send anything else.'));
     } catch (e) {
-      notify.error('Не вдалось відключити', e?.message || 'Спробуй ще раз.');
+      notify.error(t('Не вдалось відключити', 'Couldn’t disconnect'), e?.message || t('Спробуй ще раз.', 'Try again.'));
     } finally {
       setBusy(false);
     }
@@ -2698,7 +2700,7 @@ function TelegramTab() {
       await setTelegramPref('morningHour', h);
     } catch (e) {
       setState((s) => ({ ...s, morningHour: prev }));
-      notify.error('Не збереглось', e?.message || 'Спробуй ще раз.');
+      notify.error(t('Не збереглось', 'Not saved'), e?.message || t('Спробуй ще раз.', 'Try again.'));
     }
   };
 
@@ -2710,14 +2712,14 @@ function TelegramTab() {
       await setTelegramPref(key, next);
     } catch (e) {
       setState((s) => ({ ...s, [key]: !next })); // не вийшло — повертаємо
-      notify.error('Не збереглось', e?.message || 'Спробуй ще раз.');
+      notify.error(t('Не збереглось', 'Not saved'), e?.message || t('Спробуй ще раз.', 'Try again.'));
     }
   };
 
   if (!state) {
     return (
       <div style={{ maxWidth: '100%' }}>
-        <Head title="Telegram" hint="Читаю стан підключення…" />
+        <Head title="Telegram" hint={t('Читаю стан підключення…', 'Reading the connection state…')} />
       </div>
     );
   }
@@ -2726,7 +2728,7 @@ function TelegramTab() {
     <div style={{ maxWidth: '100%' }}>
       <Head
         title="Telegram"
-        hint="Таймери з плану, нові угоди з терміналу й підсумок дня — у твій чат"
+        hint={t('Таймери з плану, нові угоди з терміналу й підсумок дня — у твій чат', 'Plan timers, new trades from the terminal and the daily wrap — in your chat')}
       />
 
       {/* ---------- стан ---------- */}
@@ -2757,12 +2759,12 @@ function TelegramTab() {
 
         <div className="min-w-0 flex-1">
           <div style={{ fontFamily: T.sans, fontSize: 15.5, fontWeight: 600, color: T.text }}>
-            {state.linked ? 'Підключено' : 'Не підключено'}
+            {state.linked ? t('Підключено', 'Connected') : t('Не підключено', 'Not connected')}
           </div>
           <div style={{ fontFamily: T.sans, marginTop: 3, fontSize: 13, color: state.linked ? T.ok : T.text3 }}>
             {state.linked
-              ? (state.username ? `@${state.username}` : 'чат прив’язано')
-              : `Бот @${BOT_NAME}`}
+              ? (state.username ? `@${state.username}` : t('чат прив’язано', 'chat linked'))
+              : t(`Бот @${BOT_NAME}`, `Bot @${BOT_NAME}`)}
           </div>
         </div>
 
@@ -2785,7 +2787,7 @@ function TelegramTab() {
             transition: 'all .18s',
           }}
         >
-          {state.linked ? 'Відключити' : 'Підключити'}
+          {state.linked ? t('Відключити', 'Disconnect') : t('Підключити', 'Connect')}
         </button>
       </div>
 
@@ -2801,7 +2803,7 @@ function TelegramTab() {
           }}
         >
           <div style={{ fontFamily: T.sans, fontSize: 13.5, color: T.text2 }}>
-            Відкрилась вкладка з ботом — натисни там <b>Start</b>.
+            {t('Відкрилась вкладка з ботом — натисни там', 'A tab with the bot has opened — press')} <b>Start</b>{t('.', ' there.')}
           </div>
 
           {/* Код показуємо не для набору руками, а на випадок, коли
@@ -2822,7 +2824,7 @@ function TelegramTab() {
           </div>
 
           <div style={{ fontFamily: T.sans, marginTop: 8, fontSize: 12.5, color: T.text3 }}>
-            Код живе 15 хвилин. Чекаю на бота…
+            {t('Код живе 15 хвилин. Чекаю на бота…', 'The code lives for 15 minutes. Waiting for the bot…')}
           </div>
         </div>
       )}
@@ -2830,34 +2832,34 @@ function TelegramTab() {
       {/* ---------- що саме слати ---------- */}
       <div style={{ marginTop: 30, opacity: state.linked ? 1 : 0.45 }}>
         <Head
-          title="Що приходить у чат"
-          hint={state.linked ? undefined : 'Стане доступним після підключення'}
+          title={t('Що приходить у чат', 'What arrives in the chat')}
+          hint={state.linked ? undefined : t('Стане доступним після підключення', 'Available once connected')}
         />
 
         <Toggle
-          label="Таймери з плану"
-          hint="Нагадування, які ти сам ставиш під час сесії"
+          label={t('Таймери з плану', 'Plan timers')}
+          hint={t('Нагадування, які ти сам ставиш під час сесії', 'Reminders you set yourself during the session')}
           on={state.alerts}
           disabled={!state.linked}
           onClick={() => flip('alerts')}
         />
         <Toggle
-          label="Нові угоди з MT5"
-          hint="Щойно воркер забрав угоду з термінала"
+          label={t('Нові угоди з MT5', 'New trades from MT5')}
+          hint={t('Щойно воркер забрав угоду з термінала', 'As soon as the worker picks the trade up from the terminal')}
           on={state.trades}
           disabled={!state.linked}
           onClick={() => flip('trades')}
         />
         <Toggle
-          label="Підсумок дня"
-          hint="Увечері: скільки угод, підсумок у R, чи були помилки"
+          label={t('Підсумок дня', 'Daily wrap')}
+          hint={t('Увечері: скільки угод, підсумок у R, чи були помилки', 'In the evening: how many trades, the result in R, any mistakes')}
           on={state.daily}
           disabled={!state.linked}
           onClick={() => flip('daily')}
         />
         <Toggle
-          label="Нагадати про план"
-          hint="Вранці в будні, якщо плану на сьогодні ще немає"
+          label={t('Нагадати про план', 'Plan reminder')}
+          hint={t('Вранці в будні, якщо плану на сьогодні ще немає', 'Weekday mornings, if there is no plan for today yet')}
           on={state.plan}
           disabled={!state.linked}
           onClick={() => flip('plan')}
@@ -2899,7 +2901,7 @@ function TelegramTab() {
                     >
                       <Clock size={13} strokeWidth={2.2} style={{ color: T.text3 }} />
                     </span>
-                    О котрій нагадати
+                    {t('О котрій нагадати', 'Remind me at')}
                   </span>
 
                   <div
@@ -2962,7 +2964,7 @@ function TelegramTab() {
                     але не заважає головному питанню — «о котрій». */}
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
                   <span style={{ fontFamily: T.sans, fontSize: 12.5, color: T.text3, lineHeight: 1.5 }}>
-                    За київським часом. У вихідні не турбуємо.
+                    {t('За київським часом. У вихідні не турбуємо.', 'Kyiv time. We don’t disturb you on weekends.')}
                   </span>
                 </div>
               </div>
@@ -3125,7 +3127,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
       stopWatch();
       onSaved?.();
     } else if (row.status === 'error') {
-      setFailMsg(row.last_error || 'Couldn’t log in with these details.');
+      setFailMsg(row.last_error || t('Не вдалося увійти з цими даними.', 'Couldn’t log in with these details.'));
       setPhase('fail');
       stopWatch();
     }
@@ -3170,7 +3172,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
         }
       }, 45000);
     } catch (e) {
-      setFailMsg(e?.message || 'Couldn’t save it.');
+      setFailMsg(e?.message || t('Не вдалося зберегти.', 'Couldn’t save it.'));
       setFailSupport(e?.code === 'trial_mt5_used');
       setPhase('fail');
     } finally {
@@ -3269,8 +3271,8 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
             </div>
             <div style={{ fontFamily: T.sans, marginTop: 5, fontSize: 13.5, color: full ? T.warn : T.text3 }}>
               {full
-                ? `Ліміт вичерпано — ${used} з ${MT5_LIMIT}`
-                : 'Login, password and server'}
+                ? t(`Ліміт вичерпано — ${used} з ${MT5_LIMIT}`, `Limit reached — ${used} of ${MT5_LIMIT}`)
+                : t('Логін, пароль і сервер', 'Login, password and server')}
             </div>
 
             {/* Причина, а не самий заборонний знак.
@@ -3294,7 +3296,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
                   color: T.text2,
                 }}
               >
-                Відключи один зі старих рахунків нижче, щоб звільнити місце.
+                {t('Відключи один зі старих рахунків нижче, щоб звільнити місце.', 'Unlink one of the older accounts below to free up a slot.')}
               </div>
             )}
           </motion.div>
@@ -3328,11 +3330,11 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
                 кожна фірма має власну збірку терміналу, і сервери вона
                 знає тільки свої. Помилитись тут — значить отримати
                 «сервер не знайдено» з правильно введеною назвою. */}
-            <FormField label="Prop firm">
+            <FormField label={t('Проп-фірма', 'Prop firm')}>
               <BrokerPicker value={broker} onChange={setBroker} />
             </FormField>
 
-            <FormField label="Server">
+            <FormField label={t('Сервер', 'Server')}>
               <input
                 {...NO_FILL}
                 name="edge-mt5-server"
@@ -3372,11 +3374,16 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
                       color: T.text2,
                     }}
                   >
-                    {brokerById(broker).name} runs on the standard MetaTrader 5.
-                    Copy the server name exactly as it appears in your credentials email.
+                    {t(
+                      `${brokerById(broker).name} працює на стандартному MetaTrader 5. Скопіюй назву сервера точно так, як у листі з доступами.`,
+                      `${brokerById(broker).name} runs on the standard MetaTrader 5. Copy the server name exactly as it appears in your credentials email.`,
+                    )}
                     {brokerById(broker).company && (
                       <>
-                        {' '}In the terminal it's listed under "{brokerById(broker).company}", not "{brokerById(broker).name}".
+                        {' '}{t(
+                          `У терміналі він значиться як «${brokerById(broker).company}», а не «${brokerById(broker).name}».`,
+                          `In the terminal it's listed under "${brokerById(broker).company}", not "${brokerById(broker).name}".`,
+                        )}
                       </>
                     )}
                   </div>
@@ -3404,7 +3411,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
               }}
             >
               <HelpCircle size={14} strokeWidth={2.3} />
-              Something not working?
+              {t('Щось не виходить?', 'Something not working?')}
             </button>
 
             <AnimatePresence initial={false}>
@@ -3442,7 +3449,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
 
                     <div className="min-w-0 flex-1">
                       <div style={{ fontFamily: T.sans, fontSize: 14, fontWeight: 700, color: T.text }}>
-                        Need a hand?
+                        {t('Потрібна допомога?', 'Need a hand?')}
                       </div>
                       <p
                         style={{
@@ -3453,8 +3460,10 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
                           color: T.text3,
                         }}
                       >
-                        Don’t see your prop firm, the connection won’t go through, or the server
-                        isn’t found — message us and we’ll sort it out, usually the same day.
+                        {t(
+                          'Немає твоєї проп-фірми, підключення не проходить або сервер не знаходиться — напиши нам, розберемось, зазвичай того ж дня.',
+                          'Don’t see your prop firm, the connection won’t go through, or the server isn’t found — message us and we’ll sort it out, usually the same day.',
+                        )}
                       </p>
 
                       <div className="mt-3.5">
@@ -3466,7 +3475,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
               )}
             </AnimatePresence>
 
-            <FormField label="Login" hint="account number">
+            <FormField label={t('Логін', 'Login')} hint={t('номер рахунку', 'account number')}>
               <input
                 {...NO_FILL}
                 name="edge-mt5-login"
@@ -3480,7 +3489,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
               />
             </FormField>
 
-            <FormField label="Investor password" hint="read-only">
+            <FormField label={t('Інвесторський пароль', 'Investor password')} hint={t('лише читання', 'read-only')}>
               <input
                 {...NO_FILL}
                 autoComplete="new-password"
@@ -3500,7 +3509,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
             <div className="flex items-start" style={{ gap: 10 }}>
               <KeyRound size={14} strokeWidth={2.2} style={{ color: T.text4, marginTop: 2, flexShrink: 0 }} />
               <p style={{ fontFamily: T.sans, fontSize: 12.5, lineHeight: '19px', color: T.text4 }}>
-                The investor password is read-only — nobody can place a trade with it, us included.
+                {t('Інвесторський пароль — лише для читання: з ним ніхто не відкриє угоду, ми теж.', 'The investor password is read-only — nobody can place a trade with it, us included.')}
               </p>
             </div>
 
@@ -3529,7 +3538,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
                 }}
               >
                 {busy && <Loader2 size={15} className="animate-spin" />}
-                {busy ? 'Saving…' : 'Connect account'}
+                {busy ? t('Зберігаю…', 'Saving…') : t('Підключити рахунок', 'Connect account')}
               </button>
             ) : (
               <SyncStatus phase={phase} msg={failMsg} support={phase === 'fail' && failSupport} onRetry={retry} onDone={onClose} />
@@ -3564,7 +3573,7 @@ export function Mt5Card({ fancy, open, faded, onHover, onOpen, onClose, onSaved 
                 transition: 'background .28s ease, border-color .28s ease, color .28s ease',
               }}
             >
-              Set it up
+              {t('Налаштувати', 'Set it up')}
               <motion.span
                 className="grid place-items-center"
                 animate={{ x: hot ? 2 : 0 }}
@@ -3647,7 +3656,7 @@ function SoonCard({ faded, onHover }) {
           color: T.acc,
         }}
       >
-        Soon
+        {t('Скоро', 'Soon')}
       </span>
 
       <div className="relative">
@@ -3668,7 +3677,7 @@ function SoonCard({ faded, onHover }) {
             cTrader
           </div>
           <div style={{ fontFamily: T.sans, marginTop: 5, fontSize: 13.5, color: T.text3 }}>
-            Sign in with your cTrader ID
+            {t('Вхід через cTrader ID', 'Sign in with your cTrader ID')}
           </div>
         </div>
       </div>
@@ -3683,7 +3692,7 @@ function SoonCard({ faded, onHover }) {
           color: T.text4,
         }}
       >
-        Next in line after MT5
+        {t('Наступний у черзі після MT5', 'Next in line after MT5')}
       </div>
     </motion.div>
   );

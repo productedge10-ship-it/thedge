@@ -19,39 +19,44 @@ import { t as tx } from './lang';
 
 export const KEY = 'settings';
 
+/* Назви пунктів і груп — парою tx(укр, eng). Досі вони були лише
+   англійською, і українська людина бачила англійське меню на кожному
+   екрані. group і label — тільки підписи: логіка меню (сховані
+   пункти, демо, перегляд за посиланням) спирається на `to`, тож
+   переклад її не зачіпає. Назви узгоджені з плитками Лаунчпада. */
 /* Меню як дані, а не як розмітка. Раніше пункти жили прямо в JSX
    бічної панелі — і сховати щось означало правити розмітку. Тепер
    список один, а панель просто читає його. */
 export const NAV = [
   {
-    group: 'Routine',
+    group: tx('Рутина', 'Routine'),
     items: [
-      { to: '/app', label: 'Launchpad', icon: 'LayoutGrid', end: true, fixed: true },
-      { to: '/plan', label: 'Trading Plan', icon: 'Target' },
-      { to: '/journal', label: 'Trading Journal', icon: 'BookOpen' },
-      { to: '/20-trades', label: '20 Trades Method', icon: 'Activity' },
-      { to: '/checklist', label: 'Trading Checklist', icon: 'ClipboardCheck' },
-      { to: '/todo', label: 'Tasks / To-Do', icon: 'CheckSquare', badge: 'tasks' },
-      { to: '/calculator', label: 'Calculator', icon: 'Calculator' },
+      { to: '/app', label: tx('Лаунчпад', 'Launchpad'), icon: 'LayoutGrid', end: true, fixed: true },
+      { to: '/plan', label: tx('Торговий план', 'Trading Plan'), icon: 'Target' },
+      { to: '/journal', label: tx('Журнал угод', 'Trading Journal'), icon: 'BookOpen' },
+      { to: '/20-trades', label: tx('Метод 20 угод', '20 Trades Method'), icon: 'Activity' },
+      { to: '/checklist', label: tx('Чекліст', 'Trading Checklist'), icon: 'ClipboardCheck' },
+      { to: '/todo', label: tx('Завдання', 'Tasks / To-Do'), icon: 'CheckSquare', badge: 'tasks' },
+      { to: '/calculator', label: tx('Калькулятор', 'Calculator'), icon: 'Calculator' },
     ],
   },
   {
-    group: 'Research',
+    group: tx('Дослідження', 'Research'),
     items: [
-      { to: '/news', label: 'News Calendar', icon: 'CalendarClock' },
-      { to: '/analyses', label: 'Analyses', icon: 'FileText' },
-      { to: '/reviews', label: 'Reviews', icon: 'BrainCircuit' },
-      { to: '/backtest', label: 'Backtesting', icon: 'History' },
-      { to: '/system', label: 'Trading System', icon: 'NotebookPen' },
-      { to: '/notes', label: 'Notes', icon: 'FileText' },
+      { to: '/news', label: tx('Календар новин', 'News Calendar'), icon: 'CalendarClock' },
+      { to: '/analyses', label: tx('Архів планів', 'Analyses'), icon: 'FileText' },
+      { to: '/reviews', label: tx('Розбори', 'Reviews'), icon: 'BrainCircuit' },
+      { to: '/backtest', label: tx('Бектести', 'Backtesting'), icon: 'History' },
+      { to: '/system', label: tx('Торгова система', 'Trading System'), icon: 'NotebookPen' },
+      { to: '/notes', label: tx('Нотатки', 'Notes'), icon: 'FileText' },
     ],
   },
   {
-    group: 'Data',
+    group: tx('Дані', 'Data'),
     items: [
-      { to: '/analytics', label: 'Analytics', icon: 'BarChart2' },
-      { to: '/accounts', label: 'Accounts', icon: 'Users' },
-      { to: '/error', label: 'Error Log', icon: 'AlertTriangle' },
+      { to: '/analytics', label: tx('Аналітика', 'Analytics'), icon: 'BarChart2' },
+      { to: '/accounts', label: tx('Рахунки', 'Accounts'), icon: 'Users' },
+      { to: '/error', label: tx('Журнал помилок', 'Error Log'), icon: 'AlertTriangle' },
     ],
   },
   /* Блог живе поза застосунком (публічний /blog, без Layout), але
@@ -61,9 +66,9 @@ export const NAV = [
      не сидить, і посилання виводило б людину з пісочниці на
      справжній сайт. */
   {
-    group: 'Blog',
+    group: tx('Блог', 'Blog'),
     items: [
-      { to: '/blog', label: 'Blog', icon: 'Newspaper' },
+      { to: '/blog', label: tx('Блог', 'Blog'), icon: 'Newspaper' },
     ],
   },
 ];

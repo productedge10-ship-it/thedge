@@ -21,11 +21,18 @@ import { startCheckout } from '../lib/billing';
 import useSubscription from '../hooks/useSubscription';
 import { FREE_LIMITS } from '../lib/billing';
 import { openSettings } from '../lib/settings';
+import { t as tx } from '../lib/lang';
 
 const PREDEFINED_FIRMS = [
   'FTMO', 'Funding Pips', 'Topstep', 'The Funded Trader', 
   'FundedNext', 'MyFundedFX', 'Personal'
 ];
+
+/* 'Personal' — це значення, яке лягає в базу як назва фірми, тому
+   перекладаємо лише підпис на екрані, а не саме значення: інакше
+   рахунки, створені українською й англійською, розійшлися б по
+   двох різних «фірмах». */
+const firmLabel = (firm) => (firm === 'Personal' ? tx('Особистий', 'Personal') : firm);
 
 
 // Прив'язка фірм до їхніх доменів для завантаження реальних логотипів
@@ -149,7 +156,7 @@ function AddAccountCta({ onClick }) {
         <Wallet size={16} strokeWidth={2} className="acc-wallet acc-wallet-2" style={{ color: 'color-mix(in srgb, var(--edge-acc, #8b7bff) 70%, white)' }} />
         <Wallet size={16} strokeWidth={2.4} className="acc-wallet acc-wallet-1" style={{ color: 'var(--edge-acc, #8b7bff)' }} />
       </span>
-      <span className="acc-burst-label whitespace-nowrap">Add Account</span>
+      <span className="acc-burst-label whitespace-nowrap">{tx('Додати рахунок', 'Add Account')}</span>
       <span className="acc-burst-glimmer" aria-hidden="true" />
     </button>
   );
@@ -221,7 +228,7 @@ export default function Accounts() {
       setAccounts(accRes.data || []);
       if (!payRes.error) setPayouts(payRes.data || []);
     } catch (error) {
-      notify.error('Could not load accounts', error.message);
+      notify.error(tx('Не вдалося завантажити рахунки', 'Could not load accounts'), error.message);
     } finally {
       setLoading(false);
     }
@@ -290,17 +297,17 @@ export default function Accounts() {
           closeModal();
         }
       }
-    } catch (error) { notify.error('Save failed', error.message); } finally { setIsSubmitting(false); }
+    } catch (error) { notify.error(tx('Не вдалося зберегти', 'Save failed'), error.message); } finally { setIsSubmitting(false); }
   }
 
   async function deleteAccount(e, id) {
     e.stopPropagation();
-    if (!confirm("Delete this account for good? Its whole payout history goes with it.")) return;
+    if (!confirm(tx('Видалити рахунок назавжди? Разом з ним зникне вся історія виплат.', 'Delete this account for good? Its whole payout history goes with it.'))) return;
     try {
       const { error } = await supabase.from('prop_accounts').delete().eq('id', id);
       if (error) throw error;
       setAccounts(accounts.filter(a => a.id !== id));
-    } catch (error) { notify.error('Delete failed', error.message); }
+    } catch (error) { notify.error(tx('Не вдалося видалити', 'Delete failed'), error.message); }
   }
 
   const patchAccount = (next) => {
@@ -468,7 +475,7 @@ return (
               className="text-[11px] font-bold uppercase"
               style={{ fontFamily: T.mono, letterSpacing: '2.6px', color: 'var(--edge-text3)' }}
             >
-              Capital
+              {tx('Капітал', 'Capital')}
             </span>
           </div>
           <h1
@@ -482,10 +489,10 @@ return (
               color: T.text,
             }}
           >
-            Accounts
+            {tx('Рахунки', 'Accounts')}
           </h1>
           <p className="mt-3.5 text-[15.5px]" style={{ fontFamily: T.sans, color: 'var(--edge-text3)', lineHeight: 1.55 }}>
-            How much capital is at work and how it's behaving
+            {tx('Скільки капіталу в роботі і як він поводиться', "How much capital is at work and how it's behaving")}
           </p>
         </div>
 
@@ -505,7 +512,9 @@ return (
             <span className="acc-archive-icon">
               <Archive size={13.5} strokeWidth={2.4} style={{ color: 'var(--edge-acc, var(--edge-acc))' }} />
             </span>
-            {showArchive ? <><span className="sm:hidden">Back</span><span className="hidden sm:inline">Back to accounts</span></> : 'Archive'}
+            {showArchive
+              ? <><span className="sm:hidden">{tx('Назад', 'Back')}</span><span className="hidden sm:inline">{tx('До рахунків', 'Back to accounts')}</span></>
+              : tx('Архів', 'Archive')}
             {!showArchive && closedAccounts.length > 0 && (
               <span
                 className="grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold"
@@ -530,20 +539,20 @@ return (
       >
         {[
           {
-            label: 'Total capital', icon: Wallet, hue: T.accRgb, color: T.text,
+            label: tx('Загальний капітал', 'Total capital'), icon: Wallet, hue: T.accRgb, color: T.text,
             value: formatBalance(totals.capital),
           },
           {
-            label: 'Account size', icon: Activity, hue: '110,168,254', color: T.text2,
+            label: tx('Розмір рахунків', 'Account size'), icon: Activity, hue: '110,168,254', color: T.text2,
             value: formatBalance(totals.size),
           },
           {
-            label: 'Unwithdrawn profit', icon: TrendingUp, hue: T.okRgb,
+            label: tx('Невиведений прибуток', 'Unwithdrawn profit'), icon: TrendingUp, hue: T.okRgb,
             color: totals.open >= 0 ? T.ok : T.bad,
             value: `${totals.open >= 0 ? '+' : '−'}${formatBalance(Math.abs(totals.open))}`,
           },
           {
-            label: 'Withdrawn', icon: Trophy, hue: T.warnRgb,
+            label: tx('Виведено', 'Withdrawn'), icon: Trophy, hue: T.warnRgb,
             color: totals.paid ? T.warn : T.text4,
             value: formatBalance(totals.paid),
           },
@@ -580,7 +589,7 @@ return (
           >
             <Building2 className="text-[var(--edge-text4)] mb-4 opacity-50" size={48} />
             <p className="text-[var(--edge-text3)] font-black text-xs uppercase tracking-widest">
-              {showArchive ? 'No closed accounts' : 'No accounts yet'}
+              {showArchive ? tx('Закритих рахунків немає', 'No closed accounts') : tx('Ще немає рахунків', 'No accounts yet')}
             </p>
           </motion.div>
         ) : (
@@ -627,7 +636,7 @@ return (
                             backdropFilter: 'blur(6px)',
                           }}
                         >
-                          <Lock size={11} strokeWidth={2.6} /> Closed
+                          <Lock size={11} strokeWidth={2.6} /> {tx('Закрито', 'Closed')}
                         </span>
                       )}
                       <div className="relative z-10 flex items-start justify-between gap-2 sm:gap-3">
@@ -640,11 +649,11 @@ return (
                           </div>
                           <div className="min-w-0">
                             <h3 className="truncate text-[16px] font-bold sm:text-[18px]" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.015em' }}>
-                              {acc.firm_name}
+                              {firmLabel(acc.firm_name)}
                             </h3>
                             <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-semibold" style={{ fontFamily: T.sans, color: isClosed ? T.text4 : T.ok }}>
                               <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: isClosed ? T.text4 : T.ok, boxShadow: 'none' }} />
-                              {isClosed ? 'Closed' : 'Active'}
+                              {isClosed ? tx('Закрито', 'Closed') : tx('Активний', 'Active')}
                             </div>
                           </div>
                         </div>
@@ -679,7 +688,7 @@ return (
                       >
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.11em]" style={{ fontFamily: T.sans, color: T.text4 }}>
-                            Current balance
+                            {tx('Поточний баланс', 'Current balance')}
                           </p>
                           {open !== 0 && (
                             <span
@@ -711,7 +720,7 @@ return (
                       <div className="relative z-10 mt-auto">
                         <div className="mb-2 flex items-center justify-between gap-3 text-[12px] font-semibold" style={{ fontFamily: T.sans }}>
                           <span className="uppercase tracking-[0.09em]" style={{ color: T.text4 }}>
-                            To {goalPct}% goal · {money(goal)}
+                            {tx(`До цілі ${goalPct}% · ${money(goal)}`, `To ${goalPct}% goal · ${money(goal)}`)}
                           </span>
                           <span className="uppercase tracking-[0.05em]" style={{ color: goalColor }}>
                             {Math.round(pct)}%
@@ -730,13 +739,13 @@ return (
                         <div className="mt-3.5 flex items-center justify-between gap-3 pt-3.5" style={{ borderTop: `1px solid ${T.line}` }}>
                           <span className="flex items-center gap-1.5 text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: paid ? T.acc : T.text4 }}>
                             <ArrowDownToLine size={12.5} strokeWidth={2.4} />
-                            {paid ? `withdrawn ${money(paid)}` : 'no payouts yet'}
+                            {paid ? tx(`виведено ${money(paid)}`, `withdrawn ${money(paid)}`) : tx('виплат ще не було', 'no payouts yet')}
                           </span>
                           <span
                             className="acc-details-chip flex items-center gap-1 text-[12.5px] font-semibold opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100"
                             style={{ fontFamily: T.sans, color: T.acc }}
                           >
-                            Details
+                            {tx('Деталі', 'Details')}
                             <ArrowRight size={12.5} strokeWidth={2.6} />
                           </span>
                         </div>
@@ -778,7 +787,7 @@ return (
             {/* Хедер модалки */}
             <div className="flex shrink-0 justify-between items-center px-5 py-4 sm:px-6 sm:py-5 border-b border-[var(--edge-line)] bg-[var(--edge-sunken)]">
               <h2 className="text-sm font-bold text-[var(--edge-text)] uppercase tracking-wider flex items-center gap-2.5">
-                {editingId ? 'Edit account' : 'New account'}
+                {editingId ? tx('Редагувати рахунок', 'Edit account') : tx('Новий рахунок', 'New account')}
               </h2>
               <button 
                 onClick={closeModal} 
@@ -797,8 +806,8 @@ return (
               <div className="flex shrink-0 gap-1 px-5 pt-5 sm:px-6">
                 <div className="flex w-full gap-[3px] rounded-[11px] p-[3px]" style={{ background: T.bg, border: `1px solid ${T.line}` }}>
                   {[
-                    ['manual', 'Enter manually', Building2],
-                    ['mt5', 'Link MT5 terminal', Plug],
+                    ['manual', tx('Ввести вручну', 'Enter manually'), Building2],
+                    ['mt5', tx('Привʼязати термінал MT5', 'Link MT5 terminal'), Plug],
                   ].map(([k, l, Icon]) => {
                     const on = addMode === k;
                     return (
@@ -850,7 +859,10 @@ return (
                   onSaved={() => { closeModal(); fetchAccounts(); }}
                 />
                 <p className="mt-4 text-center text-[12px] leading-[19px] text-[var(--edge-text4)]">
-                  Картка зʼявиться тут сама, щойно сервер зайде в термінал — з реальним балансом і назвою звідти.
+                  {tx(
+                    'Картка зʼявиться тут сама, щойно сервер зайде в термінал — з реальним балансом і назвою звідти.',
+                    'The card will appear here on its own as soon as the server logs into the terminal — with the real balance and name from there.',
+                  )}
                 </p>
               </div>
             )}
@@ -862,7 +874,7 @@ return (
               {/* Секція: Вибір Фірми */}
               <div className="flex flex-col gap-4">
                 <label className="text-[10px] font-black tracking-widest text-[var(--edge-text3)] uppercase">
-                  Choose a firm
+                  {tx('Обери фірму', 'Choose a firm')}
                 </label>
                 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -901,7 +913,7 @@ return (
                           <Building2 size={12} className="text-[var(--edge-text3)]" style={{ display: domain ? 'none' : 'flex' }} />
                         </div>
                         <span className={`min-w-0 break-words text-xs font-black tracking-wide leading-tight transition-colors ${isSelected ? 'text-[var(--edge-acc)]' : 'text-[var(--edge-text2)] group-hover:text-[var(--edge-text)]'}`}>
-                          {firm}
+                          {firmLabel(firm)}
                         </span>
                       </motion.button>
                     );
@@ -949,7 +961,7 @@ return (
                   <input 
                     type="text" 
                     required 
-                    placeholder="Or type custom firm name..." 
+                    placeholder={tx('Або впиши назву фірми…', 'Or type custom firm name...')} 
                     value={newFirm} 
                     onChange={(e) => setNewFirm(e.target.value)} 
                     className="w-full bg-[#111218] border border-[var(--edge-line)] focus:border-[var(--edge-acc)]/40 pl-11 pr-4 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-medium transition-all duration-300 placeholder:text-[var(--edge-text4)] focus:bg-[#14151C]" 
@@ -961,7 +973,7 @@ return (
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-black tracking-widest text-[var(--edge-text3)] uppercase">
-                    Account Size
+                    {tx('Розмір рахунку', 'Account Size')}
                   </label>
                 </div>
                 
@@ -1013,7 +1025,7 @@ return (
                   загальний). Поки що ніде не рахується автоматично. */}
               <div className="flex flex-col gap-4">
                 <label className="text-[10px] font-black tracking-widest text-[var(--edge-text3)] uppercase">
-                  Risk limits <span className="normal-case font-medium tracking-normal text-[var(--edge-text4)]">(optional, from your prop's rules)</span>
+                  {tx('Ліміти ризику', 'Risk limits')} <span className="normal-case font-medium tracking-normal text-[var(--edge-text4)]">{tx('(необовʼязково, з правил твого пропа)', "(optional, from your prop's rules)")}</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="relative group">
@@ -1026,7 +1038,7 @@ return (
                       onChange={(e) => setNewDailyLoss(e.target.value)}
                       className={`w-full bg-[#111218] border border-[var(--edge-line)] focus:border-[var(--edge-acc)]/40 pl-4 pr-9 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-mono font-bold transition-all duration-300 placeholder:text-[var(--edge-text4)] placeholder:font-normal ${noSpinnerClass}`}
                     />
-                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--edge-text4)]">% / day</span>
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--edge-text4)]">{tx('% / день', '% / day')}</span>
                   </div>
                   <div className="relative group">
                     <input
@@ -1038,7 +1050,7 @@ return (
                       onChange={(e) => setNewTotalLoss(e.target.value)}
                       className={`w-full bg-[#111218] border border-[var(--edge-line)] focus:border-[var(--edge-acc)]/40 pl-4 pr-9 py-3.5 rounded-xl text-sm text-[var(--edge-text)] outline-none font-mono font-bold transition-all duration-300 placeholder:text-[var(--edge-text4)] placeholder:font-normal ${noSpinnerClass}`}
                     />
-                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--edge-text4)]">% total</span>
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--edge-text4)]">{tx('% загалом', '% total')}</span>
                   </div>
                 </div>
               </div>
@@ -1064,7 +1076,7 @@ return (
                     <Loader2 size={18} className="animate-spin text-[var(--edge-acc)]" />
                   ) : (
                     <span className="text-[var(--edge-text3)] font-sans font-medium uppercase tracking-[0.25em] text-[10.5px] leading-none group-hover:text-[var(--edge-text)] transition-colors duration-300">
-                      {editingId ? 'Save Configuration' : 'Create Prop Account'}
+                      {editingId ? tx('Зберегти зміни', 'Save Configuration') : tx('Створити рахунок', 'Create Prop Account')}
                     </span>
                   )}
                 </div>

@@ -192,7 +192,7 @@ const SECTIONS = [
     hint: tx('Підготуватись, поки ринок ще не відкрився', 'Get ready while the market is still closed'),
     items: [
       {
-        to: '/plan', icon: Target, title: 'Trading Plan', hue: HUE.ice,
+        to: '/plan', icon: Target, title: tx('Торговий план', 'Trading Plan'), hue: HUE.ice,
         text: tx('Розписати день по таймфреймах і визначити bias', 'Map out the day across timeframes and set your bias'),
         badge: (s) => (s.plansToday ? tx(`${s.plansToday} на сьогодні`, `${s.plansToday} for today`) : tx('ще не створений', 'not created yet')),
         alert: (s) => !s.plansToday,
