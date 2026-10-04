@@ -50,6 +50,11 @@ export const P = {
 
 export const F = { display: T.display, sans: T.sans, mono: T.mono };
 
+/* Вісь стовпчиків завжди включає нуль. Без цього Recharts підбирав
+   межі за даними, і сесія з −1.8R на осі від −1.8 до −4.2 виглядала
+   майже нулем — графік казав протилежне правді. */
+export const ZERO_DOMAIN = [(min) => Math.min(0, min), (max) => Math.max(0, max)];
+
 /* Акцент у застосунку — CSS-змінна, тож альфу до неї не дописати
    рядком. Тільки через rgba з трійкою. */
 export const A = (a) => `rgba(${T.accRgb}, ${a})`;

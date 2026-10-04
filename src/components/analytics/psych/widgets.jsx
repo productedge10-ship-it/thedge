@@ -9,7 +9,7 @@ import {
   Compass, Flame, Gauge, Hand, Info, Layers, NotebookPen, Radar as RadarIcon, ScanEye, ShieldCheck, Sparkles, Target, XCircle,
 } from 'lucide-react';
 import { Delta, ChartTip, axis } from '../ui';
-import { F } from '../overview/theme';
+import { F, ZERO_DOMAIN } from '../overview/theme';
 import { EMOTION_COLOR, EMOTION_LABEL, signed, r1, r2, sum } from '../data';
 import ComingSoon from '../shared/ComingSoon';
 import { t as tx } from '../../../lib/lang';
@@ -1262,7 +1262,7 @@ const ALL_PSYCH_WIDGETS = {
               <BarChart data={rows} margin={{ top: 6, right: 10, left: -24, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--edge-surface-hi, #18181C)" />
                 <XAxis dataKey="day" {...axis} tick={{ fontSize: 11, fill: 'var(--edge-text3, #7A7A85)' }} />
-                <YAxis {...axis} />
+                <YAxis domain={ZERO_DOMAIN} {...axis} />
                 <RTooltip content={<ChartTip unit={isRate ? '%' : 'R'} />} cursor={{ fill: '#ffffff08' }} />
                 <Bar
                   dataKey={isRate ? 'rate' : 'cost'}

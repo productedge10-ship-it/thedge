@@ -7,7 +7,7 @@ import {
   Activity, AlertOctagon, BrainCircuit, Clock, CalendarDays, CheckCircle2,
   Crosshair, Flame, Layers, ShieldCheck, Target, TrendingUp, Wallet, XCircle, Zap,
 } from 'lucide-react';
-import { P, F, mix } from './theme';
+import { P, F, mix, ZERO_DOMAIN } from './theme';
 import { EMOTION_COLOR, EMOTION_LABEL, r1, r2, signed, sum } from '../data';
 import { t as tx } from '../../../lib/lang';
 import ReviewProgress from '../../ui/ReviewProgress';
@@ -232,6 +232,13 @@ function Building({ color, label, w = 84, h = 30 }) {
   );
 }
 
+/* Висота смуги під криву. KpiBody резервує під неї стільки ж місця
+   знизу (мінус 6px, на які крива звисає за край): раніше крива на 74px
+   лежала поверх нижньої половини картки й перекреслювала підпис
+   «146 угод · 21 міс.» в обох темах. */
+const SPARK_H = 58;
+const SPARK_ROOM = SPARK_H - 6;
+
 /* Спарклайн під числом. Три вигляди, бо один і той самий ряд читається
    по-різному: площа показує масштаб, лінія — форму, а «без графіка»
    потрібен тим, кому в картці важливе лише число. */
@@ -243,7 +250,7 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
 
   if (data.length < 2) {
     return (
-      <div style={{ position: 'absolute', left: -6, right: -6, bottom: -6, height: 74, opacity: hover ? 1 : 0.55, transition: 'opacity .28s ease' }}>
+      <div style={{ position: 'absolute', left: -6, right: -6, bottom: -6, height: SPARK_H, opacity: hover ? 1 : 0.55, transition: 'opacity .28s ease' }}>
         <Building color={color} w={88} h={30} />
       </div>
     );
@@ -262,7 +269,7 @@ function Spark({ data, dataKey, color, view, id, hover, tip: showTip = true, lab
        дивляться. */
     <div
       style={{
-        position: 'absolute', left: -6, right: -6, bottom: -6, height: 74,
+        position: 'absolute', left: -6, right: -6, bottom: -6, height: SPARK_H,
         opacity: hover ? 1 : 0.62,
         transition: 'opacity .28s ease',
         /* Лише верхній край кривої мʼяко гасне — щоб випадковий пік не
@@ -337,7 +344,7 @@ function KpiBody({ value, color, sub, spark, facts = [], w = 1, hover }) {
   const wide = w >= 2 && facts.length > 0;
 
   return (
-    <div style={{ position: 'relative', minHeight: 104, display: 'flex', gap: 18 }}>
+    <div style={{ position: 'relative', minHeight: 104, display: 'flex', gap: 18, paddingBottom: spark ? SPARK_ROOM : 0 }}>
       {spark}
 
       {/* Число не ловить курсор.
@@ -722,7 +729,7 @@ export const WIDGETS = {
           <ResponsiveContainer>
             <BarChart data={rows} margin={{ top: 8, right: 4, left: -24, bottom: 0 }}>
               <XAxis dataKey="session" {...ax} />
-              <YAxis {...ax} />
+              <YAxis domain={ZERO_DOMAIN} {...ax} />
               {o.tip !== 'off' && <RTooltip {...tip} formatter={(v) => [fmt(v), 'Результат']} cursor={{ fill: 'rgba(255,255,255,.03)' }} />}
               <ReferenceLine y={0} stroke={P.line} />
               <Bar dataKey={key} radius={[5, 5, 0, 0]} isAnimationActive animationDuration={420}>
@@ -760,7 +767,7 @@ export const WIDGETS = {
           <ResponsiveContainer>
             <BarChart data={rows} margin={{ top: 8, right: 4, left: -24, bottom: 0 }}>
               <XAxis dataKey="day" {...ax} />
-              <YAxis {...ax} />
+              <YAxis domain={ZERO_DOMAIN} {...ax} />
               {o.tip !== 'off' && <RTooltip {...tip} formatter={(v) => [fmt(v), 'Результат']} cursor={{ fill: 'rgba(255,255,255,.03)' }} />}
               <ReferenceLine y={0} stroke={P.line} />
               <Bar dataKey={o.metric} radius={[5, 5, 0, 0]} isAnimationActive animationDuration={420}>

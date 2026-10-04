@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { BarChart as RechartsBarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip as RTooltip, PieChart, Pie } from 'recharts';
+import { ZERO_DOMAIN } from './overview/theme';
 import { Wallet, ArrowUpRight, ArrowDownRight, TrendingUp, Layers, Crosshair, Clock, Trophy, Activity, AlertTriangle, Lightbulb, BarChart2, PieChart as PieIcon, Maximize2, X, Sparkles, Target, Zap, ShieldCheck } from 'lucide-react';
 import { motion, useMotionValue, useMotionTemplate, AnimatePresence } from 'framer-motion';
 import { Panel, Delta, axis } from './ui';
@@ -541,7 +542,7 @@ export default function Assets({ s }) {
                             <linearGradient id="assetLoss" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#f87171" stopOpacity={0.3}/><stop offset="100%" stopColor="#f87171" stopOpacity={0.8}/></linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--edge-line, var(--edge-line))" />
-                          <XAxis type="number" {...axis} />
+                          <XAxis type="number" domain={ZERO_DOMAIN} {...axis} />
                           <YAxis dataKey="asset" type="category" {...axis} width={70} tick={{ fontSize: 12, fill: 'var(--edge-text2, var(--edge-text2))', fontWeight: 'bold' }} />
                           <RTooltip content={<AssetTooltip />} isAnimationActive={false} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                           <ReferenceLine x={0} stroke="var(--edge-line-hi, var(--edge-line-hi))" strokeWidth={2} />

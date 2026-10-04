@@ -3,6 +3,7 @@ import {
   ResponsiveContainer, ComposedChart, Area, Line, BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ReferenceLine,
 } from 'recharts';
+import { ZERO_DOMAIN } from './overview/theme';
 import {
   ShieldAlert, Info, AlertTriangle, RotateCcw, Download,
 } from 'lucide-react';
@@ -331,7 +332,7 @@ export default function Risk({ trades, carried }) {
               <BarChart data={sim.hist} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--edge-surface-hi, #18181C)" />
                 <XAxis dataKey="x" {...axis} unit="%" minTickGap={26} />
-                <YAxis {...axis} />
+                <YAxis domain={ZERO_DOMAIN} {...axis} />
                 <ReferenceLine x={0} stroke="var(--edge-line-hi, var(--edge-line-hi))" />
                 <Bar dataKey="n" radius={[2, 2, 0, 0]} isAnimationActive={false}>
                   {sim.hist.map((h, i) => (

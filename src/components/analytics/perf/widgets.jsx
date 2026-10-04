@@ -7,7 +7,7 @@ import {
   Activity, ArrowDownRight, CalendarDays, ChartColumn, Clock, Crosshair,
   Flame, Layers, ShieldCheck, Target, Timer, TrendingUp,
 } from 'lucide-react';
-import { F, P } from '../overview/theme';
+import { F, P, ZERO_DOMAIN } from '../overview/theme';
 import { EMOTION_COLOR, EMOTION_LABEL, EMOTIONS, r1, r2, signed, sum } from '../data';
 import { t as tx } from '../../../lib/lang';
 import ReviewProgress from '../../ui/ReviewProgress';
@@ -453,7 +453,7 @@ export const PERF_WIDGETS = {
             <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
               {grid()}
               <XAxis dataKey="n" {...AX} tickFormatter={(v) => `−${v}`} />
-              <YAxis {...AX} />
+              <YAxis domain={ZERO_DOMAIN} {...AX} />
               {o.tip !== 'off' && <RTooltip
                 {...TIP}
                 labelFormatter={(v) => tx(`прибрано ${v} угод`, `${v} ${Number(v) === 1 ? 'trade' : 'trades'} removed`)}
@@ -486,7 +486,7 @@ export const PERF_WIDGETS = {
             <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
               {grid()}
               <XAxis dataKey="depth" {...AX} tick={{ ...AX.tick, fontSize: 9.5 }} interval={0} />
-              <YAxis {...AX} />
+              <YAxis domain={ZERO_DOMAIN} {...AX} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [tx(`${signed(v, 2)}R · ${p.payload.n} угод`, `${signed(v, 2)}R · ${p.payload.n} ${p.payload.n === 1 ? 'trade' : 'trades'}`), tx('Середня', 'Average')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
               <ReferenceLine y={0} stroke={P.lineHover} />
               <Bar dataKey="avg" radius={[5, 5, 0, 0]} maxBarSize={44} isAnimationActive animationDuration={420}>
@@ -568,7 +568,7 @@ export const PERF_WIDGETS = {
               <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
                 {grid()}
                 <XAxis dataKey="day" {...AX} />
-                <YAxis {...AX} />
+                <YAxis domain={ZERO_DOMAIN} {...AX} />
                 {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [tx(`${fmt(v)} · ${p.payload.trades} угод`, `${fmt(v)} · ${p.payload.trades} ${p.payload.trades === 1 ? 'trade' : 'trades'}`), tx('Результат', 'Result')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
                 <ReferenceLine y={0} stroke={P.lineHover} />
                 <Bar dataKey={o.metric} radius={[3, 3, 3, 3]} maxBarSize={34} isAnimationActive animationDuration={420}>
@@ -605,7 +605,7 @@ export const PERF_WIDGETS = {
               <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
                 {grid()}
                 <XAxis dataKey="session" {...AX} />
-                <YAxis {...AX} />
+                <YAxis domain={ZERO_DOMAIN} {...AX} />
                 {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [tx(`${fmt(v)} · ${p.payload.trades} угод`, `${fmt(v)} · ${p.payload.trades} ${p.payload.trades === 1 ? 'trade' : 'trades'}`), tx('Результат', 'Result')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
                 <ReferenceLine y={0} stroke={P.lineHover} />
                 <Bar dataKey={o.metric} radius={[3, 3, 0, 0]} maxBarSize={54} isAnimationActive animationDuration={420}>
@@ -642,7 +642,7 @@ export const PERF_WIDGETS = {
             <BarChart data={rows} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
               {grid()}
               <XAxis dataKey="hour" {...AX} interval="preserveStartEnd" />
-              <YAxis {...AX} />
+              <YAxis domain={ZERO_DOMAIN} {...AX} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n, p) => [tx(`${signed(v)}R · ${p.payload.trades} угод`, `${signed(v)}R · ${p.payload.trades} ${p.payload.trades === 1 ? 'trade' : 'trades'}`), tx('Результат', 'Result')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
               <ReferenceLine y={0} stroke={P.lineHover} />
               <Bar dataKey="net" radius={[2, 2, 0, 0]} maxBarSize={16} isAnimationActive animationDuration={420}>
@@ -667,7 +667,7 @@ export const PERF_WIDGETS = {
             <BarChart data={s.buckets} margin={{ top: 8, right: 6, left: -22, bottom: 0 }}>
               {grid()}
               <XAxis dataKey="name" {...AX} tick={{ ...AX.tick, fontSize: 9.5 }} interval={0} />
-              <YAxis {...AX} allowDecimals={false} />
+              <YAxis domain={ZERO_DOMAIN} {...AX} allowDecimals={false} />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v) => [tx(`${v} угод`, `${v} ${v === 1 ? 'trade' : 'trades'}`), tx('Кількість', 'Count')]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
               <Bar dataKey="value" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={420}>
                 {s.buckets.map((b) => <Cell key={b.name} fill={b.color} fillOpacity={0.85} />)}
@@ -761,13 +761,17 @@ export const PERF_WIDGETS = {
             >
               {grid()}
               <XAxis dataKey="m" {...AX} />
-              <YAxis {...AX} />
+              {/* R і вінрейт — різні одиниці. На спільній осі 31% стискав
+                  стовпчик −5R майже до нуля, тож у вінрейту своя шкала
+                  0–100, прихована: значення видно в підказці. */}
+              <YAxis domain={ZERO_DOMAIN} {...AX} />
+              <YAxis yAxisId="wr" orientation="right" domain={[0, 100]} hide />
               {o.tip !== 'off' && <RTooltip {...TIP} formatter={(v, n) => [n === tx('Вінрейт %', 'Win rate %') ? `${v}%` : `${signed(v)}R`, n]} cursor={{ fill: 'rgba(var(--edge-hair-rgb),0.03)' }} />}
               <Bar dataKey="net" name={tx('Чистий R', 'Net R')} barSize={40} radius={[3, 3, 0, 0]} isAnimationActive animationDuration={420}>
                 {s.byMonth.map((m) => <Cell key={m.key} fill={m.net >= 0 ? P.ok : P.bad} />)}
               </Bar>
               <Line
-                type="monotone" dataKey="wr" name={tx('Вінрейт %', 'Win rate %')} stroke={P.warn} strokeWidth={2}
+                yAxisId="wr" type="monotone" dataKey="wr" name={tx('Вінрейт %', 'Win rate %')} stroke={P.warn} strokeWidth={2}
                 dot={{ r: 3 }} isAnimationActive animationDuration={900}
               />
             </ComposedChart>
@@ -837,7 +841,7 @@ export const PERF_WIDGETS = {
         <div style={{ width: '100%', flex: 1, minHeight: 120 }}>
           <ResponsiveContainer>
             <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 12, left: 4, bottom: 4 }}>
-              <XAxis type="number" {...AX} />
+              <XAxis type="number" domain={ZERO_DOMAIN} {...AX} />
               {/* 68 обрізало «Впевненість» до «певненість» — найдовшу
                   назву стану треба вміщати цілою, не найкоротшу. */}
               <YAxis type="category" dataKey="emotion" {...AX} width={92} tickFormatter={(v) => ({ calm: tx('Спокій', 'Calm'), confident: tx('Впевненість', 'Confident'), anxious: tx('Тривога', 'Anxious'), tilt: tx('Тільт', 'Tilt'), fomo: 'FOMO' }[v] || v)} />

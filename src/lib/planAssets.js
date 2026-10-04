@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Активи для перемикача плану.
@@ -9,6 +10,9 @@ import { supabase } from './supabase';
 ================================================================== */
 
 export const NO_PAIR_LABEL = 'Без активу';
+
+/* NO_PAIR_LABEL лежить у базі як значення — перекладаємо лише при показі */
+export const pairLabel = (p) => (p === NO_PAIR_LABEL ? tx('Без активу', 'No asset') : p);
 
 export const localDay = () => {
   const d = new Date();
