@@ -836,7 +836,10 @@ export default function Auth() {
      Порядок важливий: місце, звідки людину розвернув ProtectedRoute,
      головніше за намір — вона йшла на конкретну сторінку. */
   const wantsPro = new URLSearchParams(location.search).get('next') === 'pro';
-  const from = location.state?.from?.pathname
+  /* Разом із параметрами: без них `/app?settings=billing`, перерваний
+     входом, повертав людину просто в застосунок, а не на оплату. */
+  const back = location.state?.from;
+  const from = (back?.pathname && `${back.pathname}${back.search || ''}${back.hash || ''}`)
     || (wantsPro ? '/app?settings=billing' : '/app');
   const canvasRef = useRef(null);
   useCandlestickChart(canvasRef);

@@ -292,9 +292,17 @@ export default function SettingsModal() {
      Скидаємо саме на закритті, а не на відкритті. Відкрити вікно
      можна з кількох місць, а «з Accounts одразу в AutoImport MT5» саме й
      задає вкладку перед показом — скидання на відкритті затирало б
-     цей намір. */
+     цей намір.
+
+     Саме на ПЕРЕХОДІ «відкрито → закрито», а не на будь-якому
+     `open === false`. Інакше на першому рендері цей ефект бачив ще
+     старе open = false і в тому ж проході ставив 'profile' після того,
+     як ефект вище поставив вкладку з адреси, — і `?settings=billing`
+     відкривав «Профіль» замість «Підписки». */
+  const wasOpen = useRef(open);
   useEffect(() => {
-    if (!open) setTab('profile');
+    if (wasOpen.current && !open) setTab('profile');
+    wasOpen.current = open;
   }, [open]);
 
   useEffect(() => {
