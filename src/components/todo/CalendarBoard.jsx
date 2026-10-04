@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { capFirst } from '../../lib/lang';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Timer, Check, AlertTriangle, X } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
@@ -211,8 +212,8 @@ export default function CalendarBoard({ tasks, sessions, onToggle, onEdit, onDel
                 style={{ borderBottom: `1px solid ${T.line}`, background: 'rgba(19,19,22,0.94)', backdropFilter: 'blur(14px)' }}
               >
                 <div className="min-w-0">
-                  <div className="truncate text-[17px] font-bold capitalize" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
-                    {fmtDayLong(openDay)}
+                  <div className="truncate text-[17px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
+                    {capFirst(fmtDayLong(openDay))}
                   </div>
                   <div className="truncate text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
                     {dayTasks.length ? `${dayTasks.filter((t) => t.done).length} з ${dayTasks.length} зроблено` : 'нічого не заплановано'}

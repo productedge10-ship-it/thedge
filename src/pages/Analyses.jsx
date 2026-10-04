@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { capFirst } from '../lib/lang';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ArrowUpDown, Loader2, Inbox, PenLine, AlertTriangle, X, Layers, Crosshair, Star, LayoutGrid, Rows3 } from 'lucide-react';
@@ -813,10 +814,10 @@ export default function Analyses() {
                       {/* шапка місяця */}
                       <div className="mb-4 flex flex-wrap items-baseline gap-3">
                         <h2
-                          className="text-[19px] font-bold capitalize"
+                          className="text-[19px] font-bold"
                           style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.02em' }}
                         >
-                          {month.label}
+                          {capFirst(month.label)}
                         </h2>
                         <span className="text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text3 }}>
                           {planType === 'weekly'

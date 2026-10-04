@@ -50,7 +50,7 @@ import {
   getVersion as flagsVersion,
 } from "../lib/flags";
 import useCloudState from "../hooks/useCloudState";
-import { t as tx, LOCALE } from "../lib/lang";
+import { t as tx, LOCALE, capFirst } from "../lib/lang";
 
 /* ==================================================================
    Календар економічних новин.
@@ -2464,7 +2464,7 @@ export default function News() {
                   <div className="min-w-0 flex-1 sm:flex-none">
                     <div className="flex items-center gap-2.5">
                       <span
-                        className="truncate capitalize text-[15px] sm:text-[16.5px]"
+                        className="truncate text-[15px] sm:text-[16.5px]"
                         style={{
                           fontFamily: T.display,
                           fontWeight: 600,
@@ -2472,7 +2472,7 @@ export default function News() {
                           letterSpacing: "-0.3px",
                         }}
                       >
-                        {DAY_FMT(day)}
+                        {capFirst(DAY_FMT(day))}
                       </span>
                       {now && (
                         <span

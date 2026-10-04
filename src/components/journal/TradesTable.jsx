@@ -7,7 +7,21 @@ import {
 import AssetIcon from '../ui/AssetIcon';
 import { T, SPRING, EASE } from '../../lib/theme';
 import { isReviewed, signedR } from '../../lib/tradeStats';
-import { t as tx } from '../../lib/lang';
+import { t as tx, isEn } from '../../lib/lang';
+
+/* «30 вер» / «Sep 30» замість «2026-09-30»: повна ISO-дата не влазила
+   в колонку й рвалась посередині («2026-09-» / «30»). Рік — лише якщо
+   не поточний; повна дата лишається в підказці. */
+const MONTHS_UK = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function shortDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+  if (!m) return iso || '—';
+  const day = Number(m[3]);
+  const mon = (isEn ? MONTHS_EN : MONTHS_UK)[Number(m[2]) - 1];
+  const year = Number(m[1]) !== new Date().getFullYear() ? ` ${m[1]}` : '';
+  return isEn ? `${mon} ${day}${year}` : `${day} ${mon}${year}`;
+}
 
 /* ==================================================================
    Таблиця угод.
@@ -163,8 +177,8 @@ function MobileRow({ t, res, rr, rrColor, pColor, rowShowProfit, onToggleProfit,
             </span>
           )}
         </span>
-        <span className="shrink-0 text-[12px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
-          {t.plan_date}
+        <span className="shrink-0 whitespace-nowrap text-[12px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }} title={t.plan_date}>
+          {shortDate(t.plan_date)}
         </span>
       </div>
 
@@ -516,7 +530,7 @@ export default function TradesTable({
                       className="absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-r-full transition-all duration-250 group-hover:h-[34px]"
                       style={{ background: res ? res.c : T.acc }}
                     />
-                    {t.plan_date}
+                    <span className="whitespace-nowrap" title={t.plan_date}>{shortDate(t.plan_date)}</span>
                   </td>
 
                   {/* Актив з логотипом — головний вертикальний орієнтир */}

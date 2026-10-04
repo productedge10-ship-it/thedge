@@ -985,7 +985,8 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
         {!collapsed && (
           <div className="mt-1.5 flex h-6 items-center px-3">
             <span className="whitespace-nowrap font-['JetBrains_Mono'] text-[9.5px] font-semibold uppercase tracking-[1.5px] text-[var(--edge-nav-dim)] select-none">
-              V{appVersion?.version || '0.6'} · BETA
+              {/* version.json уже каже «0.6 - beta» — не дописуємо BETA вдруге */}
+              V{String(appVersion?.version || '0.6').replace(/[\s\-·]*beta\b/i, '').trim()} · BETA
             </span>
           </div>
         )}

@@ -14,6 +14,7 @@ import {
 import { T, EASE } from '../../lib/theme';
 import { LANGS, LANG, setLang, t } from '../../lib/lang';
 import Button from '../ui/Button';
+import ConfirmModal from '../ui/ConfirmModal';
 import { notify } from '../../utils/notify';
 import { supabase, hadAuthTokenInUrl, endRecoveryFlow } from '../../lib/supabase';
 import { useSettings } from '../../context/SettingsContext';
@@ -230,6 +231,7 @@ export default function SettingsModal() {
   const [open, setOpen] = useState(ARRIVED_FOR_PASSWORD);
   const [tab, setTab] = useState('profile');
   const [armed, setArmed] = useState(ARRIVED_FOR_PASSWORD);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   /* Мітку з адреси прибираємо: перезавантаження сторінки не має вдруге
      відкривати форму, а токена в сесії вже може не бути. */
@@ -523,33 +525,28 @@ export default function SettingsModal() {
                 {t('Написати в Telegram', 'Message on Telegram')}
               </a>
 
-              <button
-                onClick={s.reset}
-                className="flex items-center justify-center"
-                style={{
-                  fontFamily: T.sans,
-                  gap: 9,
-                  height: 48,
-                  borderRadius: 13,
-                  border: `1px solid ${T.line}`,
-                  color: T.text3,
-                  fontSize: 14,
-                  transition: 'all .18s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = T.lineHi;
-                  e.currentTarget.style.color = T.text2;
-                  e.currentTarget.style.background = T.surfaceHi;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = T.line;
-                  e.currentTarget.style.color = T.text3;
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                <RotateCcw size={15} strokeWidth={2.2} style={{ opacity: 0.85 }} />
-                {t('Скинути все', 'Reset everything')}
-              </button>
+              {/* Незворотна дія — окремо від посилань і в іншому вигляді.
+                  Досі вона виглядала точнісінько як кнопка Instagram поруч
+                  і спрацьовувала з одного кліку, без жодного питання. */}
+              <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${T.line}` }}>
+                <Button variant="destructive" block icon={RotateCcw} onClick={() => setConfirmReset(true)}>
+                  {t('Скинути все', 'Reset everything')}
+                </Button>
+              </div>
+              {/* Скидаються лише налаштування (DEFAULTS у lib/settings) — так
+                  і пишемо, щоб людина не боялась за угоди. */}
+              <ConfirmModal
+                open={confirmReset}
+                title={t('Скинути налаштування?', 'Reset settings?')}
+                text={t(
+                  'Нік, тема, анімації, приховані пункти меню й ціль тижня повернуться до стандартних.',
+                  'Nickname, theme, motion, hidden menu items and the weekly goal will return to defaults.',
+                )}
+                detail={t('Угоди, плани й інші дані не зміняться.', 'Trades, plans and other data stay as they are.')}
+                confirmLabel={t('Скинути', 'Reset')}
+                onConfirm={() => { s.reset(); setConfirmReset(false); }}
+                onCancel={() => setConfirmReset(false)}
+              />
             </div>
 
             {/* ---------- вміст ---------- */}

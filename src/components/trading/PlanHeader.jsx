@@ -6,7 +6,7 @@ import Button from '../ui/Button';
 import { T, SPRING, EASE } from './planTheme';
 import { usePlanBlocks, PHASE_LABEL } from '../../lib/planBlocks';
 import { weekRelLabel } from '../../lib/weekPlan';
-import { t as tx } from '../../lib/lang';
+import { t as tx, capFirst } from '../../lib/lang';
 import { pairLabel } from '../../lib/planAssets';
 
 /* ==================================================================
@@ -628,10 +628,10 @@ export default function PlanHeader({
         {weekly && <WeekArrow dir="prev" onClick={onPrevWeek} />}
 
         <h1
-          className="edge-page-title capitalize"
+          className="edge-page-title"
           style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
         >
-          {title}
+          {capFirst(title)}
         </h1>
 
         {weekly && <WeekArrow dir="next" onClick={onNextWeek} />}

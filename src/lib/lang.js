@@ -97,3 +97,22 @@ export function setLang(id) {
 }
 
 if (typeof document !== 'undefined') document.documentElement.lang = LANG;
+
+/* Українська множина: 1 прогін, 2–4 прогони, 5+ прогонів, 11–14 —
+   теж «прогонів». Англійську рахуємо окремо — там лише one/other. */
+export function pluralUk(n, one, few, many) {
+  const a = Math.abs(n) % 100;
+  const b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b === 1) return one;
+  if (b >= 2 && b <= 4) return few;
+  return many;
+}
+
+/* Велика лише перша літера рядка. CSS `capitalize` робив великою першу
+   літеру КОЖНОГО слова — і «понеділок, 28 вересня» ставав «Понеділок,
+   28 Вересня». Українські місяці в датах пишуться з малої. */
+export const capFirst = (v) => {
+  const s = String(v ?? '');
+  return s ? s[0].toLocaleUpperCase() + s.slice(1) : s;
+};

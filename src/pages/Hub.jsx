@@ -17,7 +17,7 @@ import { loadHubState, daysSince, greeting } from '../lib/hubData';
 import { DEFAULT_LAYOUT, normalizeLayout, move } from '../lib/launchpad';
 import { goalById } from '../lib/settings';
 import useTerminalSkin from '../hooks/useTerminalSkin';
-import { t as tx, LOCALE } from '../lib/lang';
+import { t as tx, LOCALE, pluralUk } from '../lib/lang';
 
 
 /* ==================================================================
@@ -275,7 +275,7 @@ const SECTIONS = [
       {
         to: '/backtest', icon: History, title: tx('Бектести', 'Backtests'), hue: HUE.mint,
         text: tx('Перевірити ідею на історії', 'Test an idea on historical data'),
-        badge: (s) => (s.backtests ? tx(`${s.backtests} прогонів`, `${s.backtests} ${s.backtests === 1 ? 'run' : 'runs'}`) : tx('ще жодного', 'none yet')),
+        badge: (s) => (s.backtests ? tx(`${s.backtests} ${pluralUk(s.backtests, 'прогін', 'прогони', 'прогонів')}`, `${s.backtests} ${s.backtests === 1 ? 'run' : 'runs'}`) : tx('ще жодного', 'none yet')),
       },
       {
         to: '/20-trades', icon: Activity, title: tx('20 угод', '20 trades'), hue: HUE.lime,
