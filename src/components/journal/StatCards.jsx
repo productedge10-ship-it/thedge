@@ -3,6 +3,9 @@ import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
 import { Hash, Target, TrendingUp, TrendingDown, ShieldCheck, Flame, Snowflake } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { Spotlight } from '../ui/Hovers';
+import { t as tx } from '../../lib/lang';
+import { REVIEW_MIN } from '../../lib/tradeStats';
+import ReviewProgress from '../ui/ReviewProgress';
 
 /* ==================================================================
    Картки статистики.
@@ -176,6 +179,9 @@ export default function StatCards({ stats, chartData }) {
   const wrLow = stats.total >= 5 && stats.winrate < 45;
   /* Дисципліна червоніє, коли план порушується частіше ніж у третині угод */
   const planLow = stats.total >= 5 && stats.planRate < 70;
+  /* Поки розібраних угод мало, відсоток був би вигадкою: імпорт MT5
+     сам ставить «за планом», і людина без жодного розбору бачила 100%. */
+  const planKnown = stats.reviewed >= REVIEW_MIN;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -193,7 +199,7 @@ export default function StatCards({ stats, chartData }) {
         icon={Target}
         accent={wrLow ? T.warn : null}
         spark={<Spark data={chartData} dataKey="winRate" color={wrLow ? T.warn : T.text3} primary="Win rate" />}
-        note={stats.total > 0 ? `${Math.round((stats.winrate / 100) * stats.total)} of ${stats.total}` : null}
+        note={stats.decided > 0 ? `${stats.wins} ${tx('з', 'of')} ${stats.decided} · ${tx('без BE', 'excl. BE')}` : tx('без BE', 'excl. BE')}
       >
         <Num color={wrLow ? T.warn : T.text}>{stats.winrate}%</Num>
       </Card>
@@ -236,11 +242,15 @@ export default function StatCards({ stats, chartData }) {
       <Card
         label="Plan Adherence"
         icon={ShieldCheck}
-        accent={planLow ? T.bad : null}
-        spark={<Spark data={chartData} dataKey="planRate" color={planLow ? T.bad : T.text3} primary="Plan rate" />}
-        note={stats.mistakeRate > 0 ? `mistakes in ${stats.mistakeRate}% of trades` : null}
+        accent={planKnown && planLow ? T.bad : null}
+        spark={planKnown ? <Spark data={chartData} dataKey="planRate" color={planLow ? T.bad : T.text3} primary="Plan rate" /> : null}
+        note={planKnown && stats.mistakeRate > 0 ? `mistakes in ${stats.mistakeRate}% of trades` : null}
       >
-        <Num color={planLow ? T.bad : T.text}>{stats.planRate}%</Num>
+        {planKnown ? (
+          <Num color={planLow ? T.bad : T.text}>{stats.planRate}%</Num>
+        ) : (
+          <ReviewProgress reviewed={stats.reviewed || 0} align="left" />
+        )}
       </Card>
     </div>
   );

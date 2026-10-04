@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { STATES, REASONS, HARD } from '../../lib/dayReview';
 import { t as tx } from '../../lib/lang';
+import { tradeSummary, REVIEW_MIN } from '../../lib/tradeStats';
 
 export function mulberry32(seed) {
   return function () {
@@ -273,7 +274,7 @@ function conflicts(t, reviews) {
     const state = d.state || [];
 
     if (flow.includes('plan')) {
-      const bad = list.filter((x) => !x.planFollowed);
+      const bad = list.filter((x) => x.planFollowed === false);
       if (bad.length) {
         out.push({
           date: d.date,
@@ -331,7 +332,11 @@ export function useStats(trades, reviews) {
     const be = t.filter((x) => x.result === 'BE');
     const gross = sum(wins.map((x) => x.rr));
     const grossLoss = Math.abs(sum(losses.map((x) => x.rr)));
-    const net = gross - grossLoss;
+    /* net — з усіх угод, а не gross − grossLoss: R беззбиткових угод,
+       закритих трохи в мінус чи плюс, — теж реальний результат, і
+       Журнал його рахує. Без нього сторінки показували різний net R. */
+    const summary = tradeSummary(t);
+    const net = summary.netR;
 
     let acc = 0, peak = 0, maxDD = 0;
     const equity = t.map((x) => {
@@ -346,7 +351,7 @@ export function useStats(trades, reviews) {
       if (x.result === 'WIN') { curW++; curL = 0; } else if (x.result === 'LOSS') { curL++; curW = 0; }
       bestW = Math.max(bestW, curW); worstL = Math.max(worstL, curL);
     });
-    for (let i = t.length - 1; i >= 0; i--) { if (t[i].planFollowed) cleanStreak++; else break; }
+    for (let i = t.length - 1; i >= 0; i--) { if (t[i].planFollowed === true) cleanStreak++; else break; }
 
     const tiltCost = sum(t.filter((x) => x.rr < 0 && (x.mistakes.length > 0 || x.emotion === 'tilt' || x.emotion === 'anxious')).map((x) => x.rr));
 
@@ -398,8 +403,12 @@ export function useStats(trades, reviews) {
       return g ? { ...g, emotion: e } : { key: e, emotion: e, trades: 0, net: 0, avg: 0, wr: 0, mistakes: 0, list: [] };
     });
 
-    const followed = t.filter((x) => x.planFollowed);
-    const broken = t.filter((x) => !x.planFollowed);
+    /* planFollowed === null — угоду не розбирали; вона не «за планом»
+       і не «з порушенням», а поза цим розрізом (див. analyticsStore). */
+    const followed = t.filter((x) => x.planFollowed === true);
+    const broken = t.filter((x) => x.planFollowed === false);
+    /* Демо-генератор поля reviewed не має — його угоди розібрані */
+    const reviewed = t.filter((x) => x.reviewed !== false).length;
 
     const buckets = [
       { name: '≤ −1R', min: -99, max: -1, color: '#f87171' },
@@ -479,9 +488,7 @@ export function useStats(trades, reviews) {
     return {
       pnl, pnlCount,
       trades: t, wins, losses, be, gross, grossLoss, net, equity, maxDD,
-      wr: wins.length + losses.length
-        ? Math.round((wins.length / (wins.length + losses.length)) * 100)
-        : 0,
+      wr: summary.winrate,
       pf: grossLoss ? gross / grossLoss : gross,
       expectancy: n ? net / n : 0,
       avgWin: wins.length ? gross / wins.length : 0,
@@ -496,8 +503,16 @@ export function useStats(trades, reviews) {
       avgAfterLoss, avgAfterWin, revenge,
       followed, broken, buckets, byDow, bySession, byHour,
       byAsset, bySetup, byAccount, matrix, byMonth, wrCurve, pfCurve,
-      mistakeRate: n ? Math.round((t.filter((x) => x.mistakes.length).length / n) * 100) : 0,
-      adherence: n ? Math.round((followed.length / n) * 100) : 0,
+      /* Частка помилок — з розібраних угод. null, поки їх мало: «0%
+         помилок» на нерозібраному журналі читалось як похвала. */
+      mistakeRate: reviewed >= REVIEW_MIN
+        ? Math.round((t.filter((x) => x.mistakes.length).length / reviewed) * 100)
+        : null,
+      adherence: reviewed ? Math.round((followed.length / reviewed) * 100) : 0,
+      /* Скільки угод людина розібрала сама і чи досить цього для
+         відсотка дисципліни й висновків про стан */
+      reviewed,
+      reviewOk: reviewed >= REVIEW_MIN,
       recovery: maxDD ? net / Math.abs(maxDD) : 0,
     };
   }, [trades, reviews]);

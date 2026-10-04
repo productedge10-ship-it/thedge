@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { getTradeProfit } from '../utils/journalUtils';
 import { accountSize } from './accountsStore';
 import { t as tx } from './lang';
+import { isReviewed, withReviewedAt, REVIEW_TRACE_COLUMNS } from './tradeStats';
 
 /* ==================================================================
    Угоди для аналітики.
@@ -68,6 +69,12 @@ function emotionOf(row) {
 const sessionOf = (row) => row.session || tx('Не вказано', 'Not set');
 
 const toApp = (row, sizes = {}) => {
+  /* Нерозібрана угода не має ні стану, ні відповіді про план: «за
+     планом» і «спокій» тут були б не відповіддю людини, а значенням за
+     замовчуванням імпорту, і з них виростали висновки на кшталт
+     «впевненість — твій найкращий стан». Тому null — графіки такі
+     угоди в розрізи плану й емоцій просто не беруть. */
+  const reviewed = isReviewed(row);
   const date = row.plan_date || (row.created_at || '').slice(0, 10);
   const d = date ? new Date(`${date}T12:00:00`) : null;
 
@@ -84,13 +91,14 @@ const toApp = (row, sizes = {}) => {
     session: sessionOf(row),
     account: row.account_name || '—',
     setup: row.setup || null,
-    emotion: emotionOf(row),
+    emotion: reviewed ? emotionOf(row) : null,
+    reviewed,
     result: RESULT[String(row.result || '').trim().toLowerCase()],
     rr: typeof row.rr === 'number' ? row.rr : 0,
     mistakes: row.has_mistake
       ? [row.mistake_category || tx('Помилка без категорії', 'Uncategorized mistake')]
       : [],
-    planFollowed: !!row.followed_plan && !row.has_mistake,
+    planFollowed: reviewed ? !!row.followed_plan && !row.has_mistake : null,
     rushed: !!row.rushed,
     risk: typeof row.risk === 'number' ? row.risk : null,
     /* Як закрилась позиція за даними термінала. Для психології це
@@ -108,26 +116,26 @@ const toApp = (row, sizes = {}) => {
 };
 
 export async function fetchTrades(userId, { from, to } = {}) {
-  let q = supabase
-    .from('trades')
-    .select(`
-      id, plan_date, plan_pair, account_name, type, result, rr, risk, session,
-      setup, entry_time, exit_time,
-      followed_plan, rushed, has_mistake, mistake_category, trade_description, exit_reason,
-      psy_confident, psy_fear, psy_repeat, psy_revenge, created_at, profit_money
-    `)
-    .eq('user_id', userId)
-    .order('plan_date', { ascending: true })
-    .order('created_at', { ascending: true });
-
-  if (from) q = q.gte('plan_date', from);
-  if (to) q = q.lte('plan_date', to);
+  const make = (cols) => {
+    let q = supabase
+      .from('trades')
+      .select(cols)
+      .eq('user_id', userId)
+      .order('plan_date', { ascending: true })
+      .order('created_at', { ascending: true });
+    if (from) q = q.gte('plan_date', from);
+    if (to) q = q.lte('plan_date', to);
+    return q;
+  };
+  const cols = `id, plan_date, plan_pair, account_name, type, result, rr, risk, session,
+      setup, entry_time, exit_time, exit_reason, created_at, profit_money, ${REVIEW_TRACE_COLUMNS}`;
 
   /* Розміри рахунків потрібні лише для PnL угод, внесених руками з
      ризиком у відсотках. Якщо запит не вдався — аналітика однаково
      працює, просто в таких угод суми не буде. */
   const [{ data, error }, accRes] = await Promise.all([
-    q,
+    /* reviewed_at — з міграції 2026-10-04; до неї запит іде без нього */
+    withReviewedAt(make, cols),
     supabase.from('prop_accounts').select('firm_name, balance, initial_balance').eq('user_id', userId)
       .then((r) => r, () => ({ data: [] })),
   ]);

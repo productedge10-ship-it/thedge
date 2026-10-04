@@ -12,12 +12,15 @@ function buildBrief(s) {
     profitFactor: +s.pf.toFixed(2),
     expectancyR: +s.expectancy.toFixed(2),
     maxDrawdownR: +s.maxDD.toFixed(1),
-    planAdherencePct: s.adherence,
+    /* Поки розібраних угод мало, план і стан — значення імпорту, а не
+       відповіді людини: моделі їх не даємо, щоб не робила з них висновків */
+    reviewedTrades: s.reviewed,
+    planAdherencePct: s.reviewOk ? s.adherence : null,
     mistakeRatePct: s.mistakeRate,
     tiltCostR: +s.tiltCost.toFixed(1),
     avgRafterLoss: +s.avgAfterLoss.toFixed(2),
     avgRafterWin: +s.avgAfterWin.toFixed(2),
-    byEmotion: s.emotionStats.map((e) => ({ emotion: e.emotion, n: e.trades, avgR: e.avg, wr: e.wr })),
+    byEmotion: !s.reviewOk ? [] : s.emotionStats.map((e) => ({ emotion: e.emotion, n: e.trades, avgR: e.avg, wr: e.wr })),
     topMistakes: s.mistakeLedger.slice(0, 3).map((m) => ({ name: m.name, n: m.count, costR: m.cost })),
     bySession: s.bySession,
     byDayOfWeek: s.byDow,
@@ -35,11 +38,11 @@ function localVerdict(s) {
   const worstSes = [...s.bySession].sort((a, b) => a.net - b.net)[0];
   const leak = s.mistakeLedger[0];
   return [
-    tx(
+    s.reviewOk && tx(
       `Твоя перевага живе в одному режимі: угоди в стані «${EMOTION_LABEL[best.emotion]}» дають ${signed(best.avg, 2)}R у середньому, а «${EMOTION_LABEL[worst.emotion]}» — ${signed(worst.avg, 2)}R. Це не ринок, це стан входу.`,
       `Your edge lives in one mode: trades taken while "${EMOTION_LABEL[best.emotion]}" average ${signed(best.avg, 2)}R, while "${EMOTION_LABEL[worst.emotion]}" gives ${signed(worst.avg, 2)}R. It's not the market, it's your state at entry.`,
     ),
-    tx(
+    leak && leak.count > 0 && tx(
       `Найдорожча звичка — «${leak.name}»: ${leak.count} разів, ${r1(leak.cost)}R збитку. Прибрати її дешевше, ніж знайти новий сетап.`,
       `Your most expensive habit is "${leak.name}": ${leak.count} ${leak.count === 1 ? 'time' : 'times'}, ${r1(leak.cost)}R lost. Cutting it is cheaper than finding a new setup.`,
     ),
@@ -98,7 +101,7 @@ ${JSON.stringify(brief)}
       setMessages([...next, { role: 'ai', content: text }]);
     } catch (e) {
       setOffline(true);
-      setMessages([...next, { role: 'ai', content: localVerdict(stats).join('\n\n'), local: true }]);
+      setMessages([...next, { role: 'ai', content: localVerdict(stats).filter(Boolean).join('\n\n'), local: true }]);
     } finally {
       setBusy(false);
     }

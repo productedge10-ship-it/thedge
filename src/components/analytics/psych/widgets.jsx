@@ -13,6 +13,7 @@ import { F } from '../overview/theme';
 import { EMOTION_COLOR, EMOTION_LABEL, signed, r1, r2, sum } from '../data';
 import ComingSoon from '../shared/ComingSoon';
 import { t as tx } from '../../../lib/lang';
+import ReviewProgress from '../../ui/ReviewProgress';
 import { NeuroBody, SpotlightCard, TiltTooltip, PlanTooltip, derive, premiumEasing, TARGET_RISK } from './parts';
 
 /* ==================================================================
@@ -96,7 +97,9 @@ function Hollow({ children }) {
 const tailClean = (trades) => {
   let n = 0;
   for (let i = trades.length - 1; i >= 0; i--) {
-    if (dirty(trades[i])) break;
+    /* Нерозібрана угода — не «чиста», а невідома: серія на ній
+       обривається, інакше імпорт MT5 давав «40 угод без порушень». */
+    if (dirty(trades[i]) || trades[i].reviewed === false) break;
     n++;
   }
   return n;
@@ -1370,7 +1373,21 @@ const ALL_PSYCH_WIDGETS = {
 const MAIN_IDS = ['handcost', 'flowmoney', 'biasmoney', 'conflict', 'neuro', 'dayreview', 'tilt', 'emotions', 'states', 'mistakes', 'plan', 'risk', 'streaks', 'revenge', 'cleancurve', 'dowmood', 'hourrisk'];
 const SIDE_IDS = ['aicoach', 'verdict', 'checklist'];
 
-const pickWidgets = (ids) => Object.fromEntries(ids.map((id) => [id, ALL_PSYCH_WIDGETS[id]]));
+/* Блоки, що стоять на відповідях людини в самій угоді: план, помилка,
+   стан. Поки розібраних угод мало, будь-який висновок тут — висновок
+   з порожнього: імпорт MT5 сам ставить «за планом» і без мітки стану.
+   Решта (вихід руками з термінала, вечірній розбір, серії, ланцюг
+   після збитку) спирається на інші дані й лишається. */
+const NEEDS_REVIEW = new Set(['neuro', 'emotions', 'states', 'mistakes', 'plan', 'risk', 'verdict', 'checklist', 'revenge', 'cleancurve', 'dowmood', 'hourrisk']);
+
+const gate = (id, w) => (!NEEDS_REVIEW.has(id) ? w : {
+  ...w,
+  render: (props) => (props.s && props.s.reviewOk === false
+    ? <div className="flex h-full items-center justify-center px-4"><ReviewProgress reviewed={props.s.reviewed} /></div>
+    : w.render(props)),
+});
+
+const pickWidgets = (ids) => Object.fromEntries(ids.map((id) => [id, gate(id, ALL_PSYCH_WIDGETS[id])]));
 
 export const PSYCH_MAIN_WIDGETS = pickWidgets(MAIN_IDS);
 export const PSYCH_SIDE_WIDGETS = pickWidgets(SIDE_IDS);

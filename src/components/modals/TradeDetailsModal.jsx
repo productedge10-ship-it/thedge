@@ -6,7 +6,7 @@ import TextareaAutosize from 'react-textarea-autosize';
 import {
   X, Pencil, Save, Trash2, Loader2, ImagePlus,
   Check, AlertTriangle, ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Clock, BookOpen, Share2,
-  Eye, EyeOff, ChevronLeft, ChevronRight,
+  Eye, EyeOff, ChevronLeft, ChevronRight, Minus, ShieldCheck, ShieldAlert,
 } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
@@ -24,6 +24,9 @@ import { T } from '../../lib/theme';
 import { inSandbox, isSharedView, withSandbox } from '../../lib/sandbox';
 import useImageAttach, { filesFromPaste, imageFiles } from '../../hooks/useImageAttach';
 import { t as tx } from '../../lib/lang';
+import { isReviewed, REVIEW_FIELDS, writeWithOptional } from '../../lib/tradeStats';
+import { directionLabel, sessionLabel, resultTerm, resultTermFull, directionTerm, sessionTerm, exitReasonLabel } from '../../lib/tradeLabels';
+import Button from '../ui/Button';
 
 /* ==================================================================
    Деталі угоди — термінальна фінтех-панель: JetBrains Mono для цифр,
@@ -48,27 +51,50 @@ const MONO = "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, m
 
    Ключі збігаються зі значеннями, які пише воркер MT5. */
 const EXIT_REASON = {
-  tp:      { label: 'Тейк',        color: T.ok,    rgb: T.okRgb },
-  sl:      { label: 'Стоп',        color: T.bad,   rgb: T.badRgb },
-  manual:  { label: 'Руками',      color: T.warn,  rgb: T.warnRgb },
-  expert:  { label: 'Радник',      color: T.info,  rgb: T.infoRgb },
-  stopout: { label: 'Стоп-аут',    color: T.bad,   rgb: T.badRgb },
-  other:   { label: 'Інше',        color: T.text3, rgb: T.text3Rgb || '122,122,133' },
+  tp:      { label: exitReasonLabel('tp'),      color: T.ok,    rgb: T.okRgb },
+  sl:      { label: exitReasonLabel('sl'),      color: T.bad,   rgb: T.badRgb },
+  manual:  { label: exitReasonLabel('manual'),  color: T.warn,  rgb: T.warnRgb },
+  expert:  { label: exitReasonLabel('expert'),  color: T.info,  rgb: T.infoRgb },
+  stopout: { label: exitReasonLabel('stopout'), color: T.bad,   rgb: T.badRgb },
+  other:   { label: exitReasonLabel('other'),   color: T.text3, rgb: T.text3Rgb || '122,122,133' },
 };
 const SPRING_UI = { type: 'spring', duration: 0.35, bounce: 0 };
 const SPRING_TAP = { type: 'spring', duration: 0.22, bounce: 0 };
 
 /* value — те, що йде в базу (лишається сумісним з рештою застосунку:
    таблицею угод, фільтрами, статистикою); label — те, що бачить
-   трейдер тут: Take/Stop замість Win/Lose. */
+   трейдер тут, його мовою (спільний словник lib/tradeLabels). */
 const RESULT_OPTS = [
-  { value: 'Win',  label: 'Take', c: T.ok,   rgb: T.okRgb },
-  { value: 'Lose', label: 'Stop', c: T.bad,  rgb: T.badRgb },
-  { value: 'BE',   label: 'BE',   c: T.warn, rgb: T.warnRgb },
+  { value: 'Win',  label: resultTerm('Win'),  c: T.ok,   rgb: T.okRgb },
+  { value: 'Lose', label: resultTerm('Lose'), c: T.bad,  rgb: T.badRgb },
+  { value: 'BE',   label: resultTerm('BE'),   c: T.warn, rgb: T.warnRgb },
 ];
 
 const SESSIONS = ['Asia', 'London', 'New York'];
 const TYPES = ['Long', 'Short'];
+/* Кнопки правої панелі — терміни трейдерів (Long, London, TP), а не
+   переклад: так їх пише термінал і так їх читає людина на графіку.
+   Заголовки секцій лишаються мовою сайту. */
+const SESSION_LABELS = Object.fromEntries(SESSIONS.map((x) => [x, sessionTerm(x)]));
+const TYPE_LABELS = Object.fromEntries(TYPES.map((x) => [x, directionTerm(x)]));
+const RESULT_TERMS = Object.fromEntries(RESULT_OPTS.map((r) => [r.value, resultTerm(r.value)]));
+const RESULT_TITLES = Object.fromEntries(RESULT_OPTS.map((r) => [r.value, resultTermFull(r.value)]));
+
+/* 2026-09-28 → 28.09.2026: так дату читають у нас, ISO лишається для бази */
+const fmtDate = (v) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v || ''));
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : (v || '');
+};
+
+/* Бульові поля розбору. Нерозібрана угода показує їх порожніми: у
+   базі там значення за замовчуванням (followed_plan мав default true),
+   а не відповідь людини — і картка малювала «Discipline 3/3». */
+const REVIEW_FLAGS = ['followed_plan', 'rushed', 'has_mistake', 'psy_confident', 'psy_fear', 'psy_repeat', 'psy_revenge'];
+const asShown = (t) => (t && !isReviewed(t)
+  ? { ...t, ...Object.fromEntries(REVIEW_FLAGS.map((k) => [k, null])) }
+  : t);
+/* Лише справжні так/ні; все інше — «не відповідали» */
+const yesNo = (v) => (v === true || v === false ? v : null);
 
 /* Кожна сесія — свій відтінок, щоб бейдж впізнавався з першого
    погляду, а не тільки за текстом. */
@@ -100,6 +126,16 @@ function YesNoIcon({ good, size = 15 }) {
 
 function YesNo({ value, onChange, editing, invert }) {
   const good = invert ? !value : value;
+
+  /* Немає відповіді — нейтральна риска, а не зелена галочка: порожнє
+     поле не може виглядати як «добре». */
+  if (!editing && value === null) {
+    return (
+      <div className="grid h-6 w-6 place-items-center rounded-full" style={{ background: T.sunken }} title={tx('Немає відповіді', 'No answer')}>
+        <Minus size={13} strokeWidth={3} style={{ color: T.text4 }} />
+      </div>
+    );
+  }
 
   if (!editing) {
     return (
@@ -139,11 +175,11 @@ function YesNo({ value, onChange, editing, invert }) {
   );
 }
 
-function PillGroup({ options, value, onChange, editing, colorMap, groupId, labelMap }) {
+function PillGroup({ options, value, onChange, editing, colorMap, groupId, labelMap, titleMap }) {
   if (!editing) {
     const c = colorMap?.[value];
     return (
-      <span className="text-[15.5px] font-semibold" style={{ color: c ? c.c : T.text2, fontFamily: MONO }}>
+      <span className="text-[15.5px] font-semibold" title={titleMap?.[value]} style={{ color: c ? c.c : T.text2, fontFamily: MONO }}>
         {value ? (labelMap?.[value] ?? value) : '—'}
       </span>
     );
@@ -157,6 +193,7 @@ function PillGroup({ options, value, onChange, editing, colorMap, groupId, label
           <motion.button
             key={o}
             onClick={() => onChange(o)}
+            title={titleMap?.[o]}
             whileTap={{ scale: 0.95 }}
             className="relative overflow-hidden rounded-lg px-3 py-1.5 text-[14px] font-bold transition-colors duration-150"
             style={{
@@ -350,7 +387,7 @@ function AccountSelect({ value, options, onChange }) {
           transition: 'border-color .18s, box-shadow .18s',
         }}
       >
-        <span className="truncate text-[15px] font-semibold" style={{ fontFamily: MONO }}>{value || 'Select account'}</span>
+        <span className="truncate text-[15px] font-semibold" style={{ fontFamily: MONO }}>{value || tx('Обери акаунт', 'Select account')}</span>
         <ChevronDown size={14} style={{ color: T.text4, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
       </button>
       <AnimatePresence>
@@ -364,7 +401,7 @@ function AccountSelect({ value, options, onChange }) {
             style={{ background: T.surfaceHi, border: `1px solid ${T.lineHi}`, boxShadow: '0 18px 40px -12px rgba(0,0,0,.7)' }}
           >
             {options.length === 0 ? (
-              <div className="px-3 py-2.5 text-[13.5px]" style={{ color: T.text4, fontFamily: T.sans }}>No active accounts</div>
+              <div className="px-3 py-2.5 text-[13.5px]" style={{ color: T.text4, fontFamily: T.sans }}>{tx('Немає активних акаунтів', 'No active accounts')}</div>
             ) : options.map((o) => {
               const on = o.firm_name === value;
               return (
@@ -423,7 +460,7 @@ function Clamp({ text, lines = 4 }) {
           className="mt-1 text-[12.5px] font-semibold"
           style={{ fontFamily: T.sans, color: T.acc }}
         >
-          {more ? 'Show less' : 'Show more'}
+          {more ? tx('Згорнути', 'Show less') : tx('Показати більше', 'Show more')}
         </button>
       )}
     </div>
@@ -445,7 +482,7 @@ function PlanPanel({ plan, pair, date, onOpen }) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <BookOpen size={13} strokeWidth={2.4} style={{ color: T.acc }} />
-          <Eyebrow>TRADING PLAN</Eyebrow>
+          <Eyebrow>{tx('ТОРГОВИЙ ПЛАН', 'TRADING PLAN')}</Eyebrow>
           {showBias && (
             <span
               className="rounded-md px-2 py-0.5 text-[11.5px] font-bold uppercase tracking-[0.08em]"
@@ -464,7 +501,7 @@ function PlanPanel({ plan, pair, date, onOpen }) {
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text2; }}
           >
-            {plan ? 'Open plan' : 'Create plan'}
+            {plan ? tx('Відкрити план', 'Open plan') : tx('Створити план', 'Create plan')}
             <ArrowUpRight size={13} strokeWidth={2.4} />
           </button>
         )}
@@ -477,10 +514,12 @@ function PlanPanel({ plan, pair, date, onOpen }) {
         </div>
       ) : plan === null ? (
         <p className="mt-2.5 text-[14px]" style={{ fontFamily: T.sans, color: T.text4 }}>
-          {date && pair ? `No plan for ${pair} on ${date}.` : 'This trade has no date or asset to find a plan.'}
+          {date && pair
+            ? tx(`Плану для ${pair} на ${date} немає.`, `No plan for ${pair} on ${date}.`)
+            : tx('В угоди немає дати чи активу, щоб знайти план.', 'This trade has no date or asset to find a plan.')}
         </p>
       ) : empty ? (
-        <p className="mt-2.5 text-[14px]" style={{ fontFamily: T.sans, color: T.text4 }}>The plan exists but is still empty.</p>
+        <p className="mt-2.5 text-[14px]" style={{ fontFamily: T.sans, color: T.text4 }}>{tx('План є, але поки порожній.', 'The plan exists but is still empty.')}</p>
       ) : (
         <div className="mt-3 flex flex-col gap-3.5">
           {tda.length > 0 && (
@@ -508,13 +547,13 @@ function PlanPanel({ plan, pair, date, onOpen }) {
           )}
           {planText && (
             <div className="flex flex-col gap-1.5">
-              <Eyebrow>STRATEGY</Eyebrow>
+              <Eyebrow>{tx('СТРАТЕГІЯ', 'STRATEGY')}</Eyebrow>
               <Clamp text={planText} />
             </div>
           )}
           {conclusions && (
             <div className="flex flex-col gap-1.5">
-              <Eyebrow>CONCLUSIONS</Eyebrow>
+              <Eyebrow>{tx('ВИСНОВКИ', 'CONCLUSIONS')}</Eyebrow>
               <Clamp text={conclusions} lines={3} />
             </div>
           )}
@@ -644,7 +683,7 @@ function TradeMedia({ trade, images, ownShots, hasLevels, editing, busy, onFiles
                 </span>
               </>
             ) : (
-              <span className="text-[14.5px]" style={{ fontFamily: MONO, color: T.text4 }}>NO SCREENSHOTS</span>
+              <span className="text-[14.5px]" style={{ fontFamily: MONO, color: T.text4 }}>{tx('НЕМАЄ СКРІНШОТІВ', 'NO SCREENSHOTS')}</span>
             )}
           </div>
         ) : slide.kind === 'img' ? (
@@ -687,9 +726,18 @@ export default function TradeDetailsModal({
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
-  const [d, setD] = useState(trade);
+  const [d, setD] = useState(() => asShown(trade));
   const [processOpen, setProcessOpen] = useState(false);
   const [psyOpen, setPsyOpen] = useState(false);
+  /* Розібрана чи ні — за станом на відкриття і після збереження, а не
+     за поточними полями: інакше під час розбору картка «розбиралась»
+     би від першого ж кліку, ще до збереження. */
+  const [reviewed, setReviewed] = useState(() => isReviewed(trade));
+  /* Людина натиснула «Розібрати» — збереження ставить reviewed_at, навіть
+     якщо вона лише підтвердила порожні поля як «ні». */
+  const [reviewMode, setReviewMode] = useState(false);
+  const [quickBusy, setQuickBusy] = useState(false);
+  const processRef = useRef(null);
 
   /* Розбір помилки — те саме, що у формі запису: категорії, актив,
      посилання. Драфт лежить у стані й летить у журнал разом зі
@@ -702,7 +750,9 @@ export default function TradeDetailsModal({
   });
 
   useEffect(() => {
-    setD(trade);
+    setD(asShown(trade));
+    setReviewed(isReviewed(trade));
+    setReviewMode(false);
     setEditing(false);
     setComposerOpen(false);
     setErrDraft(null);
@@ -757,7 +807,12 @@ export default function TradeDetailsModal({
   const [copied, setCopied] = useState(false);
   async function share() {
     if (inSandbox()) {
-      notify.error(isSharedView() ? 'Лише перегляд' : 'Недоступно в демо', isSharedView() ? 'Це чужий журнал — поділитись угодою може лише власник.' : 'Поділитись угодою можна у своєму журналі після реєстрації.');
+      notify.error(
+        isSharedView() ? tx('Лише перегляд', 'View only') : tx('Недоступно в демо', 'Not available in the demo'),
+        isSharedView()
+          ? tx('Це чужий журнал — поділитись угодою може лише власник.', "This isn't your journal — only the owner can share a trade.")
+          : tx('Поділитись угодою можна у своєму журналі після реєстрації.', 'You can share trades from your own journal after signing up.'),
+      );
       return;
     }
     if (!d?.id || sharing) return;
@@ -771,9 +826,9 @@ export default function TradeDetailsModal({
       await navigator.clipboard.writeText(`${window.location.origin}/shared/trade/${d.id}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
-      notify.success('Лінк скопійовано', 'Угоду відкрито для перегляду за посиланням.');
+      notify.success(tx('Лінк скопійовано', 'Link copied'), tx('Угоду відкрито для перегляду за посиланням.', 'The trade is now viewable via the link.'));
     } catch (err) {
-      notify.error('Не вдалось поділитись', err.message);
+      notify.error(tx('Не вдалось поділитись', "Couldn't share"), err.message);
     } finally {
       setSharing(false);
     }
@@ -828,7 +883,12 @@ export default function TradeDetailsModal({
   async function toggleTda() {
     if (!d?.id || tdaBusy) return;
     if (inSandbox()) {
-      notify.error(isSharedView() ? 'Лише перегляд' : 'Недоступно в демо', isSharedView() ? 'Це чужий журнал — змінювати його може лише власник.' : 'Спробуй у своєму журналі після реєстрації.');
+      notify.error(
+        isSharedView() ? tx('Лише перегляд', 'View only') : tx('Недоступно в демо', 'Not available in the demo'),
+        isSharedView()
+          ? tx('Це чужий журнал — змінювати його може лише власник.', "This isn't your journal — only the owner can change it.")
+          : tx('Спробуй у своєму журналі після реєстрації.', 'Try it in your own journal after signing up.'),
+      );
       return;
     }
     const next = !d.share_tda;
@@ -839,11 +899,13 @@ export default function TradeDetailsModal({
       if (error) throw error;
       setD((p) => ({ ...p, ...patch }));
       notify.success(
-        next ? 'Розбір у посиланні' : 'Розбір приховано',
-        next ? 'Хто відкриє лінк, побачить твій TDA за цей день.' : 'За посиланням лишилась тільки сама угода.',
+        next ? tx('Розбір у посиланні', 'Analysis in the link') : tx('Розбір приховано', 'Analysis hidden'),
+        next
+          ? tx('Хто відкриє лінк, побачить твій TDA за цей день.', 'Anyone with the link will see your TDA for this day.')
+          : tx('За посиланням лишилась тільки сама угода.', 'The link now shows only the trade itself.'),
       );
     } catch (err) {
-      notify.error('Не вдалось змінити', err.message);
+      notify.error(tx('Не вдалось змінити', "Couldn't change it"), err.message);
     } finally {
       setTdaBusy(false);
     }
@@ -922,6 +984,21 @@ export default function TradeDetailsModal({
     ? `$${Math.round(riskMoney).toLocaleString('en-US')}`
     : null;
 
+  /* Запис угоди з перевіркою, що рядок справді змінився. Без
+     .select() Supabase на «нічого не оновлено» (угоду видалили, доступу
+     немає) відповідає без помилки — і картка писала «Збережено» на
+     зміни, яких у базі немає. */
+  async function writeTrade(id, payload) {
+    const { data, error } = await writeWithOptional(
+      (body) => supabase.from('trades').update(body).eq('id', id).select('id'),
+      payload,
+    );
+    if (error) throw error;
+    if (!data?.length) {
+      throw new Error(tx('Угоду не знайдено — зміни не записались.', 'Trade not found — changes were not saved.'));
+    }
+  }
+
   async function save() {
     if (attach.busy) {
       notify.error(tx('Скрін ще вантажиться', 'Screenshot is still uploading'), tx('Секунду — і можна зберігати.', 'One sec and you can save.'));
@@ -935,15 +1012,25 @@ export default function TradeDetailsModal({
          schema cache. Відсікаємо все, що починається з «_». */
       const { id, ...rest } = d;
       const payload = Object.fromEntries(Object.entries(rest).filter(([k]) => !k.startsWith('_')));
-      let { error } = await supabase.from('trades').update(payload).eq('id', id);
-      /* date_edited зʼявляється з міграцією 2026-09-30. Якщо її ще не
-         запустили, не губимо решту правок через одну колонку: дата
-         збережеться, просто синхронізація MT5 зможе її перезаписати. */
-      if (error && /date_edited/.test(error.message || '')) {
-        const { date_edited: _skip, ...rest2 } = payload;
-        ({ error } = await supabase.from('trades').update(rest2).eq('id', id));
+
+      /* Розбір збережено, якщо людина натиснула «Розібрати» або змінила
+         хоч одне поле розбору. Тоді ставимо reviewed_at, а прапорці, які
+         лишила порожніми, стають «ні»: розібрав і не відзначив страх —
+         отже страху не було. План лишається порожнім, якщо не відповів. */
+      const base = asShown(trade) || {};
+      const touched = REVIEW_FIELDS.some((k) => JSON.stringify(d[k] ?? null) !== JSON.stringify(base[k] ?? null));
+      const markReview = reviewMode || touched;
+      if (markReview) {
+        REVIEW_FLAGS.filter((k) => k !== 'followed_plan').forEach((k) => { if (payload[k] == null) payload[k] = false; });
+        payload.reviewed_at = new Date().toISOString();
+      } else if (!reviewed) {
+        /* Нерозібрану угоду показуємо з порожніми полями. Якщо розбір не
+           чіпали (правили, скажімо, дату), ці порожні поля в запис не
+           йдуть — база лишається як була. */
+        REVIEW_FLAGS.forEach((k) => { delete payload[k]; });
       }
-      if (error) throw error;
+
+      await writeTrade(id, payload);
 
       /* Дзеркало в журналі помилок. Досі його тут не було зовсім:
          правка опису помилки в картці угоди нікуди не доїжджала, і
@@ -956,14 +1043,57 @@ export default function TradeDetailsModal({
         console.error('sync error log', e);
       }
 
-      notify.success('Saved', 'Trade changes recorded.');
+      const saved = { ...d, ...payload, id };
+      setD(saved);
+      if (markReview) setReviewed(true);
+      setReviewMode(false);
+      notify.success(
+        tx('Збережено', 'Saved'),
+        markReview ? tx('Розбір угоди записано.', 'Trade review recorded.') : tx('Зміни в угоді записано.', 'Trade changes recorded.'),
+      );
       setEditing(false);
-      onUpdated?.(d);
-      onUpdateTrade?.(d);
+      onUpdated?.(saved);
+      onUpdateTrade?.(saved);
     } catch (err) {
-      notify.error('Failed to save', err.message);
+      notify.error(tx('Не вдалось зберегти', 'Failed to save'), err.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  /* «Розібрати» — редагування з розгорнутими Процесом і Психологією й
+     прокруткою до них: розбір має починатись там, де його питання. */
+  function startReview() {
+    setReviewMode(true);
+    setEditing(true);
+    setProcessOpen(true);
+    setPsyOpen(true);
+    setTimeout(() => processRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  }
+
+  /* «Усе за планом, без помилок» — найчастіша відповідь, тож одним
+     кліком і одразу в базу. Впевненість не чіпаємо: це не «поганий»
+     стан, і ставити її за людину ми не будемо. */
+  async function quickReview() {
+    if (!d?.id || quickBusy) return;
+    setQuickBusy(true);
+    try {
+      const patch = {
+        followed_plan: true, has_mistake: false, rushed: false,
+        psy_fear: false, psy_repeat: false, psy_revenge: false,
+        reviewed_at: new Date().toISOString(),
+      };
+      await writeTrade(d.id, patch);
+      const saved = { ...d, ...patch, psy_confident: d.psy_confident ?? false };
+      setD(saved);
+      setReviewed(true);
+      notify.success(tx('Розібрано', 'Reviewed'), tx('Угоду позначено: за планом, без помилок.', 'Marked as by plan, no mistakes.'));
+      onUpdated?.(saved);
+      onUpdateTrade?.(saved);
+    } catch (err) {
+      notify.error(tx('Не вдалось зберегти', 'Failed to save'), err.message);
+    } finally {
+      setQuickBusy(false);
     }
   }
 
@@ -977,12 +1107,12 @@ export default function TradeDetailsModal({
          угода видалялась назавжди. Один і той самий кошик поводився
          по-різному залежно від того, звідки його натиснули. */
       await deleteTrade(d, user?.id);
-      notify.success('Deleted', 'Trade removed from journal.');
+      notify.success(tx('Видалено', 'Deleted'), tx('Угоду прибрано з журналу.', 'Trade removed from journal.'));
       onDeleted?.(d.id);
       onDeleteClick?.(d.id);
       if (!onDeleted && !onDeleteClick) onClose();
     } catch (err) {
-      notify.error('Error', err.message);
+      notify.error(tx('Помилка', 'Error'), err.message);
     }
   }
 
@@ -1009,7 +1139,6 @@ export default function TradeDetailsModal({
   const rrColor = isNaN(rr) ? T.text4 : rr > 0 ? T.ok : rr < 0 ? T.bad : T.text3;
   const isLong = d.type === 'Long';
   const resultMap = Object.fromEntries(RESULT_OPTS.map((r) => [r.value, r]));
-  const resultLabelMap = Object.fromEntries(RESULT_OPTS.map((r) => [r.value, r.label]));
   const typeMap = { Long: { c: T.ok, rgb: T.okRgb }, Short: { c: T.bad, rgb: T.badRgb } };
 
   const rrDisplay = isNaN(rr) ? '—' : `${rr > 0 ? '+' : ''}${rr}R`;
@@ -1019,26 +1148,150 @@ export default function TradeDetailsModal({
   /* Дисципліна — той самий чекліст, що й «Процес», але зведений в
      оцінку для стрічки цифр: скільки з трьох пунктів пройдено без
      відхилень. */
+  /* Без !!: порожнє поле — це «немає відповіді» (ok = null), а не
+     «ні». Раніше null перетворювався на false, і для «поганих» пунктів
+     (помилка, поспіх, страх) порожнеча малювалась зеленою галочкою. */
   const processItems = [
-    { key: 'followed_plan', label: 'Followed the plan', invert: false, value: !!d.followed_plan },
-    { key: 'has_mistake', label: 'Analysis mistake', invert: true, value: !!d.has_mistake },
-    { key: 'rushed', label: 'Rushed / FOMO', invert: true, value: !!d.rushed },
-  ].map((p) => ({ ...p, ok: p.invert ? !p.value : p.value }));
-  const okCount = processItems.filter((p) => p.ok).length;
-  const deviations = processItems.filter((p) => !p.ok);
+    { key: 'followed_plan', label: tx('За планом', 'Followed the plan'), invert: false, value: yesNo(d.followed_plan) },
+    { key: 'has_mistake', label: tx('Помилка в аналізі', 'Analysis mistake'), invert: true, value: yesNo(d.has_mistake) },
+    { key: 'rushed', label: tx('Поспіх / FOMO', 'Rushed / FOMO'), invert: true, value: yesNo(d.rushed) },
+  ].map((p) => ({ ...p, ok: p.value === null ? null : p.invert ? !p.value : p.value }));
+  const okCount = processItems.filter((p) => p.ok === true).length;
+  const deviations = processItems.filter((p) => p.ok === false);
   const clean = deviations.length === 0;
-  const disciplineColor = clean ? T.ok : T.warn;
+  const disciplineColor = !reviewed ? T.text3 : clean ? T.ok : T.warn;
 
   const psyItems = [
-    { key: 'psy_confident', label: 'Confidence', invert: false, value: !!d.psy_confident },
-    { key: 'psy_fear', label: 'Fear', invert: true, value: !!d.psy_fear },
-    { key: 'psy_repeat', label: 'Re-entry', invert: true, value: !!d.psy_repeat },
-    { key: 'psy_revenge', label: 'Revenge trading', invert: true, value: !!d.psy_revenge },
-  ].map((p) => ({ ...p, ok: p.invert ? !p.value : p.value }));
+    { key: 'psy_confident', label: tx('Впевненість', 'Confidence'), invert: false, value: yesNo(d.psy_confident) },
+    { key: 'psy_fear', label: tx('Страх', 'Fear'), invert: true, value: yesNo(d.psy_fear) },
+    { key: 'psy_repeat', label: tx('Повторний вхід', 'Re-entry'), invert: true, value: yesNo(d.psy_repeat) },
+    { key: 'psy_revenge', label: tx('Відіграш', 'Revenge trading'), invert: true, value: yesNo(d.psy_revenge) },
+  ].map((p) => ({ ...p, ok: p.value === null ? null : p.invert ? !p.value : p.value }));
 
   const psyExpanded = editing || psyOpen;
 
   const timeRange = d.entry_time && d.exit_time ? `${d.entry_time.slice(0, 5)}–${d.exit_time.slice(0, 5)}` : null;
+
+  const headerActions = (
+    <>
+      <motion.button
+        onClick={share}
+        disabled={sharing}
+        title={tx('Поділитись: скопіювати посилання на угоду', 'Share: copy a link to this trade')}
+        whileTap={{ scale: 0.95 }}
+        transition={SPRING_TAP}
+        className="flex h-[34px] items-center gap-2 rounded-lg px-3 text-[14.5px] font-semibold transition-colors"
+        style={{
+          background: copied ? `rgba(${T.okRgb},0.12)` : T.bg,
+          border: `1px solid ${copied ? `rgba(${T.okRgb},0.35)` : T.line}`,
+          color: copied ? T.ok : T.text2,
+          fontFamily: T.sans,
+        }}
+        onMouseEnter={(e) => { if (!copied) e.currentTarget.style.borderColor = T.lineHi; }}
+        onMouseLeave={(e) => { if (!copied) e.currentTarget.style.borderColor = T.line; }}
+      >
+        {sharing ? <Loader2 size={13} className="animate-spin" /> : copied ? <Check size={13} strokeWidth={2.8} /> : <Share2 size={13} strokeWidth={2.4} />}
+        {copied ? tx('Скопійовано', 'Copied') : tx('Поділитись', 'Share')}
+      </motion.button>
+
+      {/* Іконка без підпису: дія рідкісна й другорядна поруч із
+          «Поділитись». Що вона робить — каже підказка при
+          наведенні, своя, бо системний title спливає аж через
+          секунду й у чужому стилі. */}
+      {hasPlanToShare && (
+        <div
+          className="relative shrink-0"
+          onMouseEnter={() => setTdaHint(true)}
+          onMouseLeave={() => setTdaHint(false)}
+        >
+          <motion.button
+            onClick={toggleTda}
+            disabled={tdaBusy}
+            whileTap={{ scale: 0.95 }}
+            transition={SPRING_TAP}
+            aria-label={d.share_tda ? tx('Прибрати розбір дня з посилання', "Remove the day's analysis from the link") : tx('Показати розбір дня за посиланням', "Show the day's analysis via the link")}
+            className="grid h-[34px] w-[34px] place-items-center rounded-lg transition-colors"
+            style={{
+              background: d.share_tda ? `rgba(${T.accRgb},0.12)` : T.bg,
+              border: `1px solid ${d.share_tda ? T.lineAcc : T.line}`,
+              color: d.share_tda ? T.acc : T.text3,
+            }}
+          >
+            {tdaBusy
+              ? <Loader2 size={14} className="animate-spin" />
+              : d.share_tda ? <Eye size={14} strokeWidth={2.3} /> : <EyeOff size={14} strokeWidth={2.3} />}
+          </motion.button>
+
+          <AnimatePresence>
+            {tdaHint && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                transition={{ duration: 0.14 }}
+                className="pointer-events-none absolute right-0 top-[calc(100%+8px)] z-50 w-[220px] rounded-xl px-3 py-2.5 text-left"
+                style={{
+                  background: T.surfaceHi,
+                  border: `1px solid ${T.lineHi}`,
+                  boxShadow: '0 16px 36px -14px rgba(0,0,0,0.9)',
+                }}
+              >
+                <div className="text-[12.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
+                  {d.share_tda ? tx('Розбір дня видно за посиланням', "The day's analysis is visible via the link") : tx('Розбір дня приховано', "The day's analysis is hidden")}
+                </div>
+                <div className="mt-1 text-[12px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.5 }}>
+                  {d.share_tda
+                    ? tx('Натисни, щоб лишити в лінку тільки саму угоду.', 'Click to keep only the trade itself in the link.')
+                    : tx('Натисни, щоб додати в лінк підготовку за цей день: графіки, стратегію, апдейти.', "Click to add this day's prep to the link: charts, strategy, updates.")}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+
+      {editing && (
+        <motion.button
+          onClick={() => { setD(asShown(trade)); setEditing(false); setReviewMode(false); }}
+          whileTap={{ scale: 0.95 }}
+          transition={SPRING_TAP}
+          className="h-[34px] rounded-lg px-3 text-[14.5px] font-semibold transition-colors"
+          style={{ color: T.text3, fontFamily: T.sans }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
+        >
+          {tx('Скасувати', 'Cancel')}
+        </motion.button>
+      )}
+
+      {editing ? (
+        <motion.button
+          onClick={save}
+          disabled={saving}
+          whileTap={{ scale: 0.95 }}
+          transition={SPRING_TAP}
+          className="flex h-[34px] items-center gap-2 rounded-lg px-4 text-[14.5px] font-bold"
+          style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
+        >
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} strokeWidth={2.6} />}
+          {tx('Зберегти', 'Save')}
+        </motion.button>
+      ) : (
+        <motion.button
+          onClick={() => setEditing(true)}
+          whileTap={{ scale: 0.95 }}
+          transition={SPRING_TAP}
+          className="flex h-[34px] items-center gap-2 rounded-lg px-3.5 text-[14.5px] font-semibold transition-colors"
+          style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
+        >
+          <Pencil size={13} strokeWidth={2.4} /> {tx('Редагувати', 'Edit')}
+        </motion.button>
+      )}
+    </>
+  );
 
   const body = (
     <motion.div
@@ -1067,61 +1320,73 @@ export default function TradeDetailsModal({
             рука — у правому верхньому куті. Тепер він завжди на
             першому рядку, праворуч, незалежно від того, скільки
             вторинних кнопок пішло на рядок нижче. */}
-        <header className="flex flex-col gap-2 px-4 py-4 sm:px-6" style={{ borderBottom: `1px solid ${T.line}`, background: T.sunken }}>
-          <div className="flex items-start gap-3">
+        <header className="flex flex-col gap-2.5 px-4 py-3 sm:px-6" style={{ borderBottom: `1px solid ${T.line}`, background: T.sunken }}>
+          {/* Один рядок: напрямок, актив, результат, плашка, дата й час —
+              і дії праворуч перед хрестиком. На вузькому екрані дії йдуть
+              другим рядком, а хрестик лишається в правому верхньому куті. */}
+          <div className="flex items-center gap-3">
             <div
-              className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl"
+              className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px]"
               style={{
                 background: isLong ? `rgba(${T.okRgb},0.09)` : `rgba(${T.badRgb},0.09)`,
                 border: `1px solid ${isLong ? `rgba(${T.okRgb},0.22)` : `rgba(${T.badRgb},0.22)`}`,
               }}
             >
               {isLong
-                ? <ArrowUpRight size={17} strokeWidth={2.4} style={{ color: T.ok }} />
-                : <ArrowDownRight size={17} strokeWidth={2.4} style={{ color: T.bad }} />}
+                ? <ArrowUpRight size={16} strokeWidth={2.4} style={{ color: T.ok }} />
+                : <ArrowDownRight size={16} strokeWidth={2.4} style={{ color: T.bad }} />}
             </div>
 
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h2 className="truncate text-[23.5px] font-semibold leading-none" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
-                  {d.plan_pair || 'Trade'}
-                </h2>
-                {res && (
-                  <span
-                    className="rounded-md px-2.5 py-[3px] text-[11.5px] font-bold uppercase tracking-[0.1em]"
-                    style={{ background: `rgba(${res.rgb},0.09)`, border: `1px solid rgba(${res.rgb},0.24)`, color: res.c, fontFamily: MONO }}
-                  >
-                    {res.label}
-                  </span>
-                )}
-                <span className="rounded-md px-2.5 py-[3px] text-[11.5px] tracking-[0.08em]" style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text3, fontFamily: MONO }}>
-                  {(d.type || '—').toUpperCase()}{d.session ? ` · ${d.session}` : ''}
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1.5">
+              <h2 className="truncate text-[21px] font-semibold leading-none" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.01em' }}>
+                {d.plan_pair || tx('Угода', 'Trade')}
+              </h2>
+              {res && (
+                <span
+                  title={resultTermFull(res.value)}
+                  className="rounded-lg px-2.5 py-[3px] text-[13px] font-bold"
+                  style={{ background: `rgba(${res.rgb},0.14)`, border: `1px solid rgba(${res.rgb},0.32)`, color: res.c, fontFamily: MONO }}
+                >
+                  {res.label}
                 </span>
-              </div>
+              )}
+              <span className="rounded-md px-2.5 py-[3px] text-[11.5px] tracking-[0.08em]" style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text3, fontFamily: MONO }}>
+                {d.type ? directionLabel(d.type).toUpperCase() : '—'}{d.session ? ` · ${sessionLabel(d.session)}` : ''}
+              </span>
               {editing ? (
                 /* Дату можна виправити, зокрема в угоді з MT5: термінал
                    пише дату входу, а людина часто веде угоду за днем
                    плану. Позначка date_edited каже базі не повертати
                    стару дату наступною синхронізацією. */
-                <div className="flex items-center gap-2.5 pt-1">
-                  <div style={{ width: 170 }}>
+                <div className="flex items-center gap-2.5">
+                  <div style={{ width: 160 }}>
                     <DateField
                       value={String(d.plan_date || '').slice(0, 10)}
                       onChange={(v) => v && set({ plan_date: v, date_edited: true })}
                       alwaysNumeric
-                      height={32}
-                      fontSize={13.5}
+                      height={28}
+                      fontSize={13}
                       z={1200}
                     />
                   </div>
-                  {timeRange ? <span className="text-[13.5px]" style={{ fontFamily: MONO, color: T.text4 }}>{timeRange}</span> : null}
+                  {timeRange ? <span className="text-[13px] tabular-nums" style={{ fontFamily: MONO, color: T.text4 }}>{timeRange}</span> : null}
                 </div>
               ) : (
-                <span className="text-[13.5px]" style={{ fontFamily: MONO, color: T.text4 }}>
-                  {d.plan_date}{timeRange ? ` · ${timeRange}` : ''}
+                <span className="whitespace-nowrap text-[13px] tabular-nums" style={{ fontFamily: MONO, color: T.text4 }}>
+                  {fmtDate(d.plan_date)}{timeRange ? <span style={{ color: T.text4, opacity: 0.6 }}> · </span> : null}{timeRange}
                 </span>
               )}
             </div>
+
+            {/* У журналі за посиланням кнопки власника (поділитись, TDA,
+                Edit) не показуємо зовсім. Раніше вони були, а натискання
+                закінчувалось «лише перегляд» — гість бачив кнопку, яка
+                ніколи не спрацює. */}
+            {!isSharedView() && (
+              <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                {headerActions}
+              </div>
+            )}
 
             <motion.button
               onClick={onClose}
@@ -1136,129 +1401,10 @@ export default function TradeDetailsModal({
             </motion.button>
           </div>
 
-          {/* У журналі за посиланням кнопки власника (поділитись, TDA,
-              Edit) не показуємо зовсім. Раніше вони були, а натискання
-              закінчувалось «лише перегляд» — гість бачив кнопку, яка
-              ніколи не спрацює. */}
           {!isSharedView() && (
-          <div className="flex flex-wrap items-center gap-2">
-            <motion.button
-              onClick={share}
-              disabled={sharing}
-              title="Поділитись: скопіювати посилання на угоду"
-              whileTap={{ scale: 0.95 }}
-              transition={SPRING_TAP}
-              className="flex h-[34px] items-center gap-2 rounded-lg px-3 text-[14.5px] font-semibold transition-colors"
-              style={{
-                background: copied ? `rgba(${T.okRgb},0.12)` : T.bg,
-                border: `1px solid ${copied ? `rgba(${T.okRgb},0.35)` : T.line}`,
-                color: copied ? T.ok : T.text2,
-                fontFamily: T.sans,
-              }}
-              onMouseEnter={(e) => { if (!copied) e.currentTarget.style.borderColor = T.lineHi; }}
-              onMouseLeave={(e) => { if (!copied) e.currentTarget.style.borderColor = T.line; }}
-            >
-              {sharing ? <Loader2 size={13} className="animate-spin" /> : copied ? <Check size={13} strokeWidth={2.8} /> : <Share2 size={13} strokeWidth={2.4} />}
-              {copied ? 'Скопійовано' : 'Поділитись'}
-            </motion.button>
-
-            {/* Іконка без підпису: дія рідкісна й другорядна поруч із
-                «Поділитись». Що вона робить — каже підказка при
-                наведенні, своя, бо системний title спливає аж через
-                секунду й у чужому стилі. */}
-            {hasPlanToShare && (
-              <div
-                className="relative shrink-0"
-                onMouseEnter={() => setTdaHint(true)}
-                onMouseLeave={() => setTdaHint(false)}
-              >
-                <motion.button
-                  onClick={toggleTda}
-                  disabled={tdaBusy}
-                  whileTap={{ scale: 0.95 }}
-                  transition={SPRING_TAP}
-                  aria-label={d.share_tda ? 'Прибрати розбір дня з посилання' : 'Показати розбір дня за посиланням'}
-                  className="grid h-[34px] w-[34px] place-items-center rounded-lg transition-colors"
-                  style={{
-                    background: d.share_tda ? `rgba(${T.accRgb},0.12)` : T.bg,
-                    border: `1px solid ${d.share_tda ? T.lineAcc : T.line}`,
-                    color: d.share_tda ? T.acc : T.text3,
-                  }}
-                >
-                  {tdaBusy
-                    ? <Loader2 size={14} className="animate-spin" />
-                    : d.share_tda ? <Eye size={14} strokeWidth={2.3} /> : <EyeOff size={14} strokeWidth={2.3} />}
-                </motion.button>
-
-                <AnimatePresence>
-                  {tdaHint && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 4 }}
-                      transition={{ duration: 0.14 }}
-                      className="pointer-events-none absolute right-0 top-[calc(100%+8px)] z-50 w-[220px] rounded-xl px-3 py-2.5 text-left"
-                      style={{
-                        background: T.surfaceHi,
-                        border: `1px solid ${T.lineHi}`,
-                        boxShadow: '0 16px 36px -14px rgba(0,0,0,0.9)',
-                      }}
-                    >
-                      <div className="text-[12.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
-                        {d.share_tda ? 'Розбір дня видно за посиланням' : 'Розбір дня приховано'}
-                      </div>
-                      <div className="mt-1 text-[12px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.5 }}>
-                        {d.share_tda
-                          ? 'Натисни, щоб лишити в лінку тільки саму угоду.'
-                          : `Натисни, щоб додати в лінк підготовку за цей день: графіки, стратегію, апдейти.`}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-
-
-            {editing && (
-              <motion.button
-                onClick={() => { setD(trade); setEditing(false); }}
-                whileTap={{ scale: 0.95 }}
-                transition={SPRING_TAP}
-                className="h-[34px] rounded-lg px-3 text-[14.5px] font-semibold transition-colors"
-                style={{ color: T.text3, fontFamily: T.sans }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = T.text)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = T.text3)}
-              >
-                Cancel
-              </motion.button>
-            )}
-
-            {editing ? (
-              <motion.button
-                onClick={save}
-                disabled={saving}
-                whileTap={{ scale: 0.95 }}
-                transition={SPRING_TAP}
-                className="flex h-[34px] items-center gap-2 rounded-lg px-4 text-[14.5px] font-bold"
-                style={{ background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
-              >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} strokeWidth={2.6} />}
-                Save
-              </motion.button>
-            ) : (
-              <motion.button
-                onClick={() => setEditing(true)}
-                whileTap={{ scale: 0.95 }}
-                transition={SPRING_TAP}
-                className="flex h-[34px] items-center gap-2 rounded-lg px-3.5 text-[14.5px] font-semibold transition-colors"
-                style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = T.lineHi)}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = T.line)}
-              >
-                <Pencil size={13} strokeWidth={2.4} /> Edit
-              </motion.button>
-            )}
-          </div>
+            <div className="flex flex-wrap items-center gap-2 sm:hidden">
+              {headerActions}
+            </div>
           )}
         </header>
 
@@ -1283,7 +1429,7 @@ export default function TradeDetailsModal({
 
           <div className="my-2.5 hidden w-px shrink-0 sm:mx-5 sm:block" style={{ background: T.line }} />
           <div className="flex min-w-[128px] flex-col gap-1.5 py-3.5 sm:min-w-0" style={{ flex: 1 }}>
-            <Eyebrow>PROFIT</Eyebrow>
+            <Eyebrow>{tx('ПРИБУТОК', 'PROFIT')}</Eyebrow>
             <span className={`truncate font-bold tabular-nums ${editing ? 'pt-1.5 text-[19px]' : 'text-[21.5px]'}`} style={{ fontFamily: MONO, color: profitColor }}>
               {profitDisplay}
             </span>
@@ -1291,43 +1437,25 @@ export default function TradeDetailsModal({
 
           <div className="my-2.5 hidden w-px shrink-0 sm:mx-5 sm:block" style={{ background: T.line }} />
           <div className="flex min-w-[128px] flex-col gap-1.5 py-3.5 sm:min-w-0" style={{ flex: editing ? 1.7 : 1 }}>
-            <Eyebrow tone={editing ? T.acc : undefined}>RISK</Eyebrow>
+            <Eyebrow tone={editing ? T.acc : undefined}>{tx('РИЗИК НА УГОДУ', 'RISK PER TRADE')}</Eyebrow>
             {editing ? (
-              /* Ризик — єдине поле тут, ціна помилки в якому вимірюється
-                 грішми, тому воно й виглядає інакше за сусідів: власне
-                 значення стоїть першим і великим, пресети — поруч як
-                 швидкий набір, а під ними сума, якою платиш. */
+              /* Поле тієї ж висоти й мови, що R і акаунт поруч: заглиблення,
+                 суцільний кант, акцент на фокусі. Пресети — чіпи-фільтри
+                 зі словника кнопок застосунку. Під полем — лише сума, якою
+                 платиш, або чого бракує, щоб її порахувати. */
               <div className="flex flex-col gap-1.5">
-                <div
-                  className="flex h-[38px] w-fit max-w-full items-center gap-1 rounded-[10px] p-[3px]"
-                  style={{
-                    background: `rgba(${T.accRgb},0.07)`,
-                    border: `1px solid rgba(${T.accRgb},0.34)`,
-                    boxShadow: `0 0 0 3px rgba(${T.accRgb},0.07)`,
-                  }}
-                >
-                  <label
-                    className="flex h-full items-center gap-0.5 rounded-[7px] pl-2.5 pr-2"
-                    style={{ background: T.sunken, cursor: 'text' }}
-                  >
-                    <input
-                      value={String(d.risk ?? '').replace('%', '')}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(',', '.').replace(/[^0-9.$]/g, '');
-                        set({ risk: v === '' ? '' : v.includes('$') ? v : `${v}%` });
-                      }}
-                      placeholder="—"
-                      inputMode="decimal"
-                      className="w-[42px] bg-transparent text-right text-[17px] font-bold tabular-nums outline-none"
-                      style={{ fontFamily: MONO, color: T.acc }}
-                    />
-                    {!String(d.risk ?? '').includes('$') && (
-                      <span className="text-[13px] font-bold" style={{ fontFamily: MONO, color: T.acc, opacity: 0.6 }}>%</span>
-                    )}
-                  </label>
-
-                  <span className="mx-0.5 h-4 w-px shrink-0" style={{ background: `rgba(${T.accRgb},0.24)` }} />
-
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <StripInput
+                    value={String(d.risk ?? '').replace('%', '')}
+                    onChange={(raw) => {
+                      const v = raw.replace(',', '.').replace(/[^0-9.$]/g, '');
+                      set({ risk: v === '' ? '' : v.includes('$') ? v : `${v}%` });
+                    }}
+                    placeholder="1"
+                    suffix={String(d.risk ?? '').includes('$') ? null : '%'}
+                    color={T.text}
+                    width={92}
+                  />
                   {RISK_PRESETS.map((r) => {
                     const on = String(d.risk || '').replace(/\s/g, '') === r;
                     return (
@@ -1335,31 +1463,30 @@ export default function TradeDetailsModal({
                         key={r}
                         type="button"
                         onClick={() => set({ risk: r })}
-                        className="h-full rounded-[7px] px-2 text-[13px] font-semibold tabular-nums transition-colors"
+                        className="h-[30px] rounded-lg px-2.5 text-[13px] font-semibold tabular-nums transition-colors"
                         style={{
                           fontFamily: MONO,
-                          background: on ? `rgba(${T.accRgb},0.22)` : 'transparent',
+                          background: on ? `rgba(${T.accRgb},0.14)` : T.sunken,
+                          border: `1px solid ${on ? T.lineAcc : T.line}`,
                           color: on ? T.acc : T.text3,
                         }}
-                        onMouseEnter={(e) => { if (!on) { e.currentTarget.style.background = `rgba(${T.accRgb},0.10)`; e.currentTarget.style.color = T.text2; } }}
-                        onMouseLeave={(e) => { if (!on) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+                        onMouseEnter={(e) => { if (!on) { e.currentTarget.style.borderColor = T.lineHi; e.currentTarget.style.color = T.text2; } }}
+                        onMouseLeave={(e) => { if (!on) { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.color = T.text3; } }}
                       >
-                        {r.replace('%', '')}
+                        {r}
                       </button>
                     );
                   })}
                 </div>
-
-                {/* Підказка каже саме те, чого бракує: без ризику — одне,
-                    без балансу акаунта — інше. Спільне «обери акаунт»
-                    брехало б у половині випадків. */}
-                <span className="text-[12.5px] font-semibold tabular-nums" style={{ fontFamily: MONO, color: riskMoneyLabel ? T.text2 : T.text4 }}>
-                  {riskMoneyLabel
-                    ? `${riskMoneyLabel} на угоду`
-                    : String(d.risk ?? '').trim()
-                      ? 'у акаунта немає балансу'
-                      : 'вкажи ризик'}
-                </span>
+                {/* Підказка каже саме те, чого бракує: без балансу акаунта
+                    сума не рахується. Порожнє поле пояснює плейсхолдер. */}
+                {(riskMoneyLabel || String(d.risk ?? '').trim()) && (
+                  <span className="text-[12px] tabular-nums" style={{ fontFamily: MONO, color: riskMoneyLabel ? T.text3 : T.text4 }}>
+                    {riskMoneyLabel
+                      ? tx(`≈ ${riskMoneyLabel} на угоду`, `≈ ${riskMoneyLabel} per trade`)
+                      : tx('у акаунта немає балансу', 'the account has no balance')}
+                  </span>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-0.5">
@@ -1375,7 +1502,7 @@ export default function TradeDetailsModal({
 
           <div className="my-2.5 hidden w-px shrink-0 sm:mx-5 sm:block" style={{ background: T.line }} />
           <div className="flex min-w-[128px] flex-col gap-1.5 py-3.5 sm:min-w-0" style={{ flex: 1.4 }}>
-            <Eyebrow>ACCOUNT</Eyebrow>
+            <Eyebrow>{tx('АКАУНТ', 'ACCOUNT')}</Eyebrow>
             {editing ? (
               <AccountSelect value={d.account_name} options={accountOptions} onChange={(v) => set({ account_name: v })} />
             ) : (
@@ -1385,17 +1512,25 @@ export default function TradeDetailsModal({
 
           <div className="my-2.5 hidden w-px shrink-0 sm:mx-5 sm:block" style={{ background: T.line }} />
           <div className="flex min-w-[128px] flex-col gap-1.5 py-3.5 sm:min-w-0" style={{ flex: 1 }}>
-            <Eyebrow>DISCIPLINE</Eyebrow>
-            <div className="flex items-center gap-2 pt-0.5">
-              <span className="text-[21.5px] font-bold tabular-nums" style={{ fontFamily: MONO, color: disciplineColor }}>
-                {okCount}/{processItems.length}
+            <Eyebrow>{tx('ДИСЦИПЛІНА', 'DISCIPLINE')}</Eyebrow>
+            {/* Нерозібрана угода не має оцінки — «3/3» тут було б значенням
+                за замовчуванням, а не дисципліною. */}
+            {!reviewed ? (
+              <span className="pt-1.5 text-[16px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>
+                {tx('не розібрано', 'not reviewed')}
               </span>
-              <div className="flex items-center gap-[3px]">
-                {processItems.map((p) => (
-                  <div key={p.key} className="h-3.5 w-[5px] rounded-full" style={{ background: p.ok ? T.ok : T.bad }} />
-                ))}
+            ) : (
+              <div className="flex items-center gap-2 pt-0.5">
+                <span className="text-[21.5px] font-bold tabular-nums" style={{ fontFamily: MONO, color: disciplineColor }}>
+                  {okCount}/{processItems.length}
+                </span>
+                <div className="flex items-center gap-[3px]">
+                  {processItems.map((p) => (
+                    <div key={p.key} className="h-3.5 w-[5px] rounded-full" style={{ background: p.ok === true ? T.ok : p.ok === false ? T.bad : T.line }} />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -1427,9 +1562,9 @@ export default function TradeDetailsModal({
             />
 
             <div className="rounded-xl p-4" style={{ border: `1px solid ${T.line}`, background: T.bg }}>
-              <Eyebrow>TRADE DESCRIPTION</Eyebrow>
+              <Eyebrow>{tx('ОПИС УГОДИ', 'TRADE DESCRIPTION')}</Eyebrow>
               <div className="mt-2">
-                <Editable editing={editing} value={d.trade_description} onChange={(v) => set({ trade_description: v })} placeholder="No description" />
+                <Editable editing={editing} value={d.trade_description} onChange={(v) => set({ trade_description: v })} placeholder={tx('Без опису', 'No description')} />
               </div>
             </div>
 
@@ -1438,6 +1573,28 @@ export default function TradeDetailsModal({
 
           {/* ПРАВА КОЛОНКА — довідка й чеклісти */}
           <motion.div layout transition={SPRING_UI} className="flex min-w-0 flex-col gap-3 p-5">
+            {/* Нерозібрана угода — один крок до розбору. Без цього блоку
+                людина не здогадувалась, що перемикачі Процесу й Психології
+                оживають лише після «Редагувати», і клацала по іконках. */}
+            {!reviewed && !editing && !isSharedView() && (
+              <div className="rounded-xl p-4" style={{ border: `1px solid ${T.lineAcc}`, background: `rgba(${T.accRgb},0.06)` }}>
+                <p className="text-[15px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>
+                  {tx('Угода не розібрана', "This trade isn't reviewed")}
+                </p>
+                <p className="mt-1 text-[13.5px] leading-[1.5]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                  {tx('Розбери за 20 секунд — так журнал побачить твої помилки й дисципліну', 'Review it in 20 seconds so the journal can see your mistakes and discipline')}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" variant="primary" icon={Pencil} onClick={startReview}>
+                    {tx('Розібрати', 'Review')}
+                  </Button>
+                  <Button size="sm" variant="secondary" loading={quickBusy} onClick={quickReview}>
+                    {tx('Усе за планом, без помилок ✓', 'All by plan, no mistakes ✓')}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Параметри. Пілюльні групи (Напрямок/Сесія/Результат) —
                 кожна на свій повний рядок: у половині картки «New
                 York» переносилась окремо й ламала висоту рядка.
@@ -1445,8 +1602,8 @@ export default function TradeDetailsModal({
             <div className="overflow-hidden rounded-xl" style={{ border: `1px solid ${T.line}`, background: T.bg }}>
               <div className="grid grid-cols-2" style={{ borderBottom: `1px solid ${T.line}` }}>
                 {[
-                  { label: 'ENTRY', field: 'entry_time' },
-                  { label: 'EXIT', field: 'exit_time' },
+                  { label: tx('ВХІД', 'ENTRY'), field: 'entry_time' },
+                  { label: tx('ВИХІД', 'EXIT'), field: 'exit_time' },
                 ].map((p, i) => (
                   <div
                     key={p.label}
@@ -1466,13 +1623,13 @@ export default function TradeDetailsModal({
               </div>
 
               <div className="flex flex-col gap-2 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
-                <Eyebrow>DIRECTION</Eyebrow>
-                <PillGroup groupId="type" editing={editing} options={TYPES} value={d.type} onChange={(v) => set({ type: v })} colorMap={typeMap} />
+                <Eyebrow>{tx('НАПРЯМОК', 'DIRECTION')}</Eyebrow>
+                <PillGroup groupId="type" editing={editing} options={TYPES} value={d.type} onChange={(v) => set({ type: v })} colorMap={typeMap} labelMap={TYPE_LABELS} />
               </div>
 
               <div className="flex flex-col gap-2 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
-                <Eyebrow>SESSION</Eyebrow>
-                <PillGroup groupId="session" editing={editing} options={SESSIONS} value={d.session} onChange={(v) => set({ session: v })} colorMap={SESSION_COLORS} />
+                <Eyebrow>{tx('СЕСІЯ', 'SESSION')}</Eyebrow>
+                <PillGroup groupId="session" editing={editing} options={SESSIONS} value={d.session} onChange={(v) => set({ session: v })} colorMap={SESSION_COLORS} labelMap={SESSION_LABELS} />
               </div>
 
               {/* Як саме закрилась позиція. Приходить із термінала й
@@ -1487,7 +1644,7 @@ export default function TradeDetailsModal({
                   грошима це одна угода, за дисципліною різні. */}
               {EXIT_REASON[d.exit_reason] && (
                 <div className="flex items-center justify-between gap-3 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
-                  <Eyebrow>ВИХІД</Eyebrow>
+                  <Eyebrow>{tx('ЯК ЗАКРИТО', 'CLOSED BY')}</Eyebrow>
                   <span
                     className="rounded-md px-2 py-1 text-[12.5px] font-bold"
                     style={{
@@ -1503,27 +1660,40 @@ export default function TradeDetailsModal({
               )}
 
               <div className="flex flex-col gap-2 px-3.5 py-3">
-                <Eyebrow>RESULT</Eyebrow>
-                <PillGroup groupId="result" editing={editing} options={RESULT_OPTS.map((r) => r.value)} value={d.result} onChange={(v) => set({ result: v })} colorMap={resultMap} labelMap={resultLabelMap} />
+                <Eyebrow>{tx('РЕЗУЛЬТАТ', 'RESULT')}</Eyebrow>
+                <PillGroup groupId="result" editing={editing} options={RESULT_OPTS.map((r) => r.value)} value={d.result} onChange={(v) => set({ result: v })} colorMap={resultMap} labelMap={RESULT_TERMS} titleMap={RESULT_TITLES} />
               </div>
 
             </div>
 
             {/* Процес — за замовчуванням тільки відхилення, решта за кліком */}
-            <div className="overflow-hidden rounded-xl" style={{ border: `1px solid ${clean ? T.line : `rgba(${T.badRgb},0.22)`}`, background: T.bg }}>
+            <div ref={processRef} className="overflow-hidden rounded-xl" style={{ border: `1px solid ${!reviewed || clean ? T.line : `rgba(${T.badRgb},0.22)`}`, background: T.bg, scrollMarginTop: 16 }}>
               <div className="flex items-center gap-2.5 px-3.5 py-3" style={{ borderBottom: `1px solid ${T.line}` }}>
+                {/* Щит — дисципліна виконання. Колір каже стан: сірий — ще не
+                    розібрано, зелений — усе за планом, червоний — є
+                    порушення (тоді й щит зі знаком оклику). */}
                 <div
                   className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md"
-                  style={{ background: clean ? `rgba(${T.okRgb},0.10)` : `rgba(${T.badRgb},0.11)`, color: clean ? T.ok : T.bad }}
+                  style={{
+                    background: !reviewed ? `rgba(${T.text3Rgb || '142,142,153'},0.10)` : clean ? `rgba(${T.okRgb},0.10)` : `rgba(${T.badRgb},0.11)`,
+                    color: !reviewed ? T.text3 : clean ? T.ok : T.bad,
+                  }}
                 >
-                  {clean ? <Check size={12} strokeWidth={3} /> : <AlertTriangle size={12} strokeWidth={2.6} />}
+                  {reviewed && !clean ? <ShieldAlert size={13} strokeWidth={2.4} /> : <ShieldCheck size={13} strokeWidth={2.4} />}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[14.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>Process</span>
-                  <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>Execution discipline</span>
+                  <span className="text-[14.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>{tx('Процес', 'Process')}</span>
+                  <span className="text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>{tx('Дисципліна виконання', 'Execution discipline')}</span>
                 </div>
-                <span className="text-[12.5px] font-semibold" style={{ fontFamily: MONO, color: clean ? T.ok : T.bad }}>
-                  {clean ? 'clean' : `${deviations.length} deviation${deviations.length === 1 ? '' : 's'}`}
+                <span className="text-[12.5px] font-semibold" style={{ fontFamily: T.sans, color: !reviewed ? T.text3 : clean ? T.ok : T.bad }}>
+                  {!reviewed
+                    ? tx('не розібрано', 'not reviewed')
+                    : clean
+                      ? tx('чисто', 'clean')
+                      : tx(
+                        `${deviations.length} відхилення`,
+                        `${deviations.length} deviation${deviations.length === 1 ? '' : 's'}`,
+                      )}
                 </span>
               </div>
 
@@ -1581,7 +1751,7 @@ export default function TradeDetailsModal({
                         className="overflow-hidden"
                         style={{ borderTop: `1px solid ${T.line}` }}
                       >
-                        {processItems.filter((p) => p.ok).map((p, i) => (
+                        {processItems.filter((p) => p.ok !== false).map((p, i) => (
                           <div key={p.key} className="flex items-center gap-2.5 px-3.5 py-2.5" style={{ borderTop: i ? `1px solid ${T.line}` : 'none' }}>
                             <span className="flex-1 text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>{p.label}</span>
                             <YesNo editing={false} value={p.value} invert={p.invert} onChange={() => {}} />
@@ -1600,7 +1770,7 @@ export default function TradeDetailsModal({
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={SPRING_UI} className="overflow-hidden">
                   <div className="rounded-xl p-3.5" style={{ border: `1px solid rgba(${T.badRgb},0.2)`, background: `rgba(${T.badRgb},0.03)` }}>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[12.5px] font-bold uppercase tracking-[0.08em]" style={{ fontFamily: MONO, color: T.bad }}>Mistake breakdown</span>
+                      <span className="text-[12.5px] font-bold uppercase tracking-[0.08em]" style={{ fontFamily: MONO, color: T.bad }}>{tx('Розбір помилки', 'Mistake breakdown')}</span>
                       {errDraft?.cats?.length > 0 && errDraft.cats.map((id) => {
                         const c = CATS.find((x) => x.id === id);
                         if (!c) return null;
@@ -1623,11 +1793,11 @@ export default function TradeDetailsModal({
                         className="ml-auto text-[13px] font-bold underline decoration-dotted underline-offset-2"
                         style={{ fontFamily: T.sans, color: T.text3 }}
                       >
-                        {errDraft ? 'Edit breakdown' : 'Break down in detail'}
+                        {errDraft ? tx('Змінити розбір', 'Edit breakdown') : tx('Розібрати детально', 'Break down in detail')}
                       </motion.button>
                     </div>
                     <div className="mt-2">
-                      <Editable editing={editing} value={d.mistake_description} onChange={(v) => set({ mistake_description: v })} placeholder="Mistake not described" minRows={2} />
+                      <Editable editing={editing} value={d.mistake_description} onChange={(v) => set({ mistake_description: v })} placeholder={tx('Помилку не описано', 'Mistake not described')} minRows={2} />
                     </div>
                   </div>
                 </motion.div>
@@ -1647,8 +1817,8 @@ export default function TradeDetailsModal({
                   <span className="text-[12.5px]">◈</span>
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[14.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>Psychology</span>
-                  <span className="whitespace-nowrap text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>State during the trade</span>
+                  <span className="text-[14.5px] font-bold" style={{ fontFamily: T.sans, color: T.text }}>{tx('Психологія', 'Psychology')}</span>
+                  <span className="whitespace-nowrap text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>{tx('Стан під час угоди', 'State during the trade')}</span>
                 </div>
                 {!editing && (
                   <motion.span animate={{ rotate: psyOpen ? 180 : 0 }} transition={SPRING_TAP}>
@@ -1678,7 +1848,7 @@ export default function TradeDetailsModal({
                             ].filter(Boolean).join(' ')}
                             style={{ borderColor: T.line }}
                           >
-                            <div className="h-1 w-1 shrink-0 rounded-full" style={{ background: p.ok ? T.text4 : T.bad }} />
+                            <div className="h-1 w-1 shrink-0 rounded-full" style={{ background: p.ok === false ? T.bad : T.text4 }} />
                             <span className="flex-1 truncate text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>{p.label}</span>
                             <YesNo editing={editing} value={p.value} invert={p.invert} onChange={(v) => set({ [p.key]: v })} />
                           </div>
@@ -1687,7 +1857,7 @@ export default function TradeDetailsModal({
                     </div>
                     {(editing || d.psy_notes?.trim()) && (
                       <div className="px-3.5 py-3" style={{ borderTop: `1px solid ${T.line}` }}>
-                        <Editable editing={editing} value={d.psy_notes} onChange={(v) => set({ psy_notes: v })} placeholder="No notes on state" minRows={2} maxRows={5} />
+                        <Editable editing={editing} value={d.psy_notes} onChange={(v) => set({ psy_notes: v })} placeholder={tx('Без нотаток про стан', 'No notes on state')} minRows={2} maxRows={5} />
                       </div>
                     )}
                   </motion.div>
@@ -1707,7 +1877,7 @@ export default function TradeDetailsModal({
               onMouseEnter={(e) => (e.currentTarget.style.color = T.bad)}
               onMouseLeave={(e) => (e.currentTarget.style.color = T.text4)}
             >
-              <Trash2 size={13} strokeWidth={2.3} /> Delete trade
+              <Trash2 size={13} strokeWidth={2.3} /> {tx('Видалити угоду', 'Delete trade')}
             </motion.button>
             )}
           </motion.div>
@@ -1738,9 +1908,9 @@ export default function TradeDetailsModal({
                 <div className="grid h-11 w-11 place-items-center rounded-full" style={{ background: `rgba(${T.badRgb},0.10)` }}>
                   <Trash2 size={17} strokeWidth={2.3} style={{ color: T.bad }} />
                 </div>
-                <h3 className="text-[20.5px] font-bold" style={{ fontFamily: T.display, color: T.text }}>Delete permanently?</h3>
+                <h3 className="text-[20.5px] font-bold" style={{ fontFamily: T.display, color: T.text }}>{tx('Видалити назавжди?', 'Delete permanently?')}</h3>
                 <p className="text-[15.5px] leading-relaxed" style={{ color: T.text3, fontFamily: T.sans }}>
-                  Screenshots, description, and the mistake review will be deleted along with the trade.
+                  {tx('Разом з угодою зникнуть скріни, опис і розбір помилки.', 'Screenshots, description, and the mistake review will be deleted along with the trade.')}
                 </p>
               </div>
               <div className="flex gap-2 p-5">
@@ -1751,7 +1921,7 @@ export default function TradeDetailsModal({
                   className="flex-1 rounded-xl py-3 text-[16.5px] font-bold"
                   style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text2, fontFamily: T.sans }}
                 >
-                  Cancel
+                  {tx('Скасувати', 'Cancel')}
                 </motion.button>
                 <motion.button
                   onClick={remove}
@@ -1760,7 +1930,7 @@ export default function TradeDetailsModal({
                   className="flex-1 rounded-xl py-3 text-[16.5px] font-bold"
                   style={{ background: T.bad, color: 'var(--edge-on-acc, #0A0A0C)', fontFamily: T.sans }}
                 >
-                  Delete
+                  {tx('Видалити', 'Delete')}
                 </motion.button>
               </div>
             </motion.div>

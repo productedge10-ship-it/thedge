@@ -10,6 +10,7 @@ import {
 import { F, P } from '../overview/theme';
 import { EMOTION_COLOR, EMOTION_LABEL, EMOTIONS, r1, r2, signed, sum } from '../data';
 import { t as tx } from '../../../lib/lang';
+import ReviewProgress from '../../ui/ReviewProgress';
 
 /* ==================================================================
    Бібліотека віджетів «Перформансу».
@@ -357,7 +358,7 @@ export const PERF_WIDGETS = {
         id={id} color="var(--edge-acc)" value={String(s.bestW)}
         subStats={[
           { label: tx('Серія мінусів', 'Losing streak'), val: String(s.worstL) },
-          { label: tx('Помилки', 'Mistakes'), val: `${s.mistakeRate}%` },
+          { label: tx('Помилки', 'Mistakes'), val: s.mistakeRate === null ? '—' : `${s.mistakeRate}%` },
         ]}
         data={s.byMonth} dataKey="wr"
       />
@@ -369,7 +370,7 @@ export const PERF_WIDGETS = {
     hint: tx('Частка угод за планом і ціна порушень', 'Share of trades by plan and the cost of breaking it'),
     icon: ShieldCheck, group: 'Числа', tone: P.ok, shape: 'gauge', defaultW: 1, defaultH: 1,
     options: {},
-    render: ({ s, w }) => (
+    render: ({ s, w }) => (!s.reviewOk ? <Empty><ReviewProgress reviewed={s.reviewed} /></Empty> : (
       <Kpi
         w={w} color={s.adherence >= 70 ? P.ok : P.warn} value={`${s.adherence}%`}
         facts={[
@@ -379,7 +380,7 @@ export const PERF_WIDGETS = {
           [tx('чистих поспіль', 'clean in a row'), String(s.cleanStreak)],
         ]}
       />
-    ),
+    )),
   },
 
   /* ---------- динаміка ---------- */

@@ -114,7 +114,7 @@ function buildSample(s) {
 
   const lines = [];
 
-  if (best && worst && best.emotion !== worst.emotion) {
+  if (s.reviewOk && best && worst && best.emotion !== worst.emotion) {
     lines.push(
       tx(
         `Твоя перевага живе в одному режимі: у стані «${EMOTION_LABEL[best.emotion]}» середня угода ${signed(best.avg, 2)}R, у стані «${EMOTION_LABEL[worst.emotion]}» — ${signed(worst.avg, 2)}R. Це не ринок, це стан входу.`,
@@ -324,7 +324,10 @@ export default function AiLab({ s }) {
 
   const stats = sample ? [
     { k: tx('РЕЗУЛЬТАТ', 'RESULT'), v: `${signed(s.net)}R`, c: s.net >= 0 ? '#2ee6a8' : '#ff5f6d' },
-    { k: tx('ДИСЦИПЛІНА', 'DISCIPLINE'), v: String(s.adherence), suffix: '%', c: s.adherence >= 70 ? '#2ee6a8' : '#f0a63c' },
+    /* Без досить розібраних угод відсоток був би значенням імпорту, а не дисципліною */
+    s.reviewOk
+      ? { k: tx('ДИСЦИПЛІНА', 'DISCIPLINE'), v: String(s.adherence), suffix: '%', c: s.adherence >= 70 ? '#2ee6a8' : '#f0a63c' }
+      : { k: tx('РОЗІБРАНО', 'REVIEWED'), v: `${s.reviewed}/${s.trades.length}`, c: '#fff' },
     { k: tx('ВІНРЕЙТ', 'WIN RATE'), v: String(s.wr), suffix: '%', c: '#fff' },
     { k: tx('ЦІНА ТІЛТУ', 'COST OF TILT'), v: `${r1(s.tiltCost)}R`, c: '#ff5f6d' },
   ] : [];

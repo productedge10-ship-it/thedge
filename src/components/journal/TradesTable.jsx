@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import AssetIcon from '../ui/AssetIcon';
 import { T, SPRING, EASE } from '../../lib/theme';
+import { isReviewed } from '../../lib/tradeStats';
+import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
    Таблиця угод.
@@ -86,6 +88,22 @@ const COLUMNS = [
    показують значущу іконку, просто різного кольору, тому весь
    рядок читається одним поглядом без розшифровки. */
 function Discipline({ trade }) {
+  /* Нерозібрана угода з MT5 не «за планом і без помилок» — на ній
+     просто ніхто нічого не відзначав. Три зелені галочки тут були б
+     похвалою за те, чого не було, тож показуємо нейтральну позначку. */
+  if (!isReviewed(trade)) {
+    return (
+      <div className="flex items-center justify-center">
+        <span
+          title={tx('Не розібрано', 'Not reviewed')}
+          className="rounded-full px-2 py-0.5 text-[11.5px] font-semibold"
+          style={{ fontFamily: T.sans, color: T.text3, border: `1px solid ${T.line}` }}
+        >
+          {tx('не розібрано', 'not reviewed')}
+        </span>
+      </div>
+    );
+  }
   const items = [
     { ok: !!trade.followed_plan, okIcon: ShieldCheck, badIcon: ShieldAlert, okC: T.ok, badC: T.bad,    okT: 'Followed the plan',  badT: 'Deviated from the plan' },
     { ok: !trade.has_mistake,    okIcon: CircleCheck,  badIcon: AlertTriangle, okC: T.ok, badC: T.warn, okT: 'No mistakes',         badT: 'Mistake in analysis' },

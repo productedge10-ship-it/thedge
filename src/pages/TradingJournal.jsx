@@ -22,6 +22,7 @@ import { notify } from "../utils/notify";
 import { prefetchTradeCandles, nudgeMt5Sync } from "../lib/mt5Store";
 import { useAuth } from "../context/AuthContext";
 import { getTradeProfit } from "../utils/journalUtils";
+import { tradeSummary, outcomeOf, rrOf, isReviewed, withReviewedAt, REVIEW_TRACE_COLUMNS } from "../lib/tradeStats";
 import { accountSize } from "../lib/accountsStore";
 import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
 
@@ -847,19 +848,17 @@ export default function TradingJournal() {
   );
 
   const fetchGlobalData = useCallback(async () => {
-    const q = applyFilters(
-      supabase
-        .from("trades")
-        /* profit_money тягнемо обовʼязково: для імпортованих угод це
-           справжній результат від брокера, і без нього підсумок у
-           доларах рахувався лише по тих угодах, де вручну заповнений
-           ризик. */
-        .select(
-          "plan_date, result, rr, followed_plan, has_mistake, rushed, exit_reason, account_name, risk, profit_money"
-        )
-        .order("plan_date", { ascending: true })
+    /* profit_money тягнемо обовʼязково: для імпортованих угод це
+       справжній результат від брокера, і без нього підсумок у
+       доларах рахувався лише по тих угодах, де вручну заповнений
+       ризик. Поля розбору — для isReviewed (дисципліна лише з
+       розібраних угод). */
+    const { data, error } = await withReviewedAt(
+      (cols) => applyFilters(
+        supabase.from("trades").select(cols).order("plan_date", { ascending: true })
+      ),
+      `plan_date, result, rr, exit_reason, account_name, risk, profit_money, ${REVIEW_TRACE_COLUMNS}`,
     );
-    const { data, error } = await q;
     /* Відкриті позиції у статистику не йдуть. У них немає результату,
        а `profit_money` — плаваюче число, яке міняється щохвилини: у
        вінрейті вони сидітимуть у знаменнику як програні, а в сумі
@@ -980,19 +979,26 @@ export default function TradingJournal() {
 
   /* ---------- Похідні дані ---------- */
   const stats = useMemo(() => {
-    const total = globalStatsData.length;
-    let wins = 0,
-      totalRR = 0,
-      totalProfit = 0,
+    /* Лише угоди з результатом — той самий набір, що бачить Аналітика
+       (див. fetchTrades): інакше «пропущені» й угоди без результату
+       додавали б свій R тільки тут, і цифри сторінок розходились. */
+    const closed = globalStatsData.filter((t) => outcomeOf(t.result));
+    const sum = tradeSummary(closed);
+    const total = sum.total;
+    let totalProfit = 0,
       priced = 0,
       followed = 0,
       mistakes = 0,
       rushed = 0;
 
-    globalStatsData.forEach((t) => {
-      if (t.result?.trim().toLowerCase() === "win") wins++;
-      totalRR += t.rr ? parseFloat(t.rr) : 0;
-      if (t.followed_plan) followed++;
+    /* Дисципліна — лише з розібраних угод: «за планом», яке поставив
+       імпорт MT5, не є відповіддю людини (див. isReviewed). */
+    let reviewed = 0;
+    closed.forEach((t) => {
+      if (isReviewed(t)) {
+        reviewed++;
+        if (t.followed_plan) followed++;
+      }
       if (t.has_mistake) mistakes++;
       if (t.rushed) rushed++;
       const p = getTradeProfit(t, accountsMap);
@@ -1001,16 +1007,20 @@ export default function TradingJournal() {
 
     return {
       total,
-      winrate: total ? Math.round((wins / total) * 100) : 0,
-      totalRR: parseFloat(totalRR.toFixed(2)),
+      winrate: sum.winrate,
+      wins: sum.wins,
+      decided: sum.decided,
+      totalRR: sum.netR,
       totalProfit: parseFloat(totalProfit.toFixed(2)),
       /* Скільки угод узагалі мають ціну. Якщо менше за всі — сума в
          доларах порахована не по тому ж наборі, що R, і мовчати про
          це не можна: саме так «−5.72R» опинявся поруч із «+$191». */
       pricedTrades: priced,
-      planRate: total ? Math.round((followed / total) * 100) : 0,
-      mistakeRate: total ? Math.round((mistakes / total) * 100) : 0,
-      rushRate: total ? Math.round((rushed / total) * 100) : 0,
+      planRate: reviewed ? Math.round((followed / reviewed) * 100) : 0,
+      reviewed,
+      /* Помилка й поспіх — теж відповіді людини, тому знаменник той самий */
+      mistakeRate: reviewed ? Math.round((mistakes / reviewed) * 100) : 0,
+      rushRate: reviewed ? Math.round((rushed / reviewed) * 100) : 0,
     };
   }, [globalStatsData, accountsMap]);
 
@@ -1033,19 +1043,26 @@ export default function TradingJournal() {
     let cumRR = 0,
       cumProfit = 0,
       wins = 0,
+      decided = 0,
+      reviewed = 0,
       followed = 0;
-    return globalStatsData.map((t, i) => {
-      cumRR += parseFloat(t.rr) || 0;
+    return globalStatsData.filter((t) => outcomeOf(t.result)).map((t, i) => {
+      cumRR += rrOf(t);
       const p = getTradeProfit(t, accountsMap);
       if (p !== null) cumProfit += p;
-      if (t.result?.trim().toLowerCase() === "win") wins++;
-      if (t.followed_plan) followed++;
+      const o = outcomeOf(t.result);
+      if (o === "win") wins++;
+      if (o === "win" || o === "loss") decided++;
+      if (isReviewed(t)) {
+        reviewed++;
+        if (t.followed_plan) followed++;
+      }
       return {
         name: format(new Date(t.plan_date), "dd MMM", { locale: uk }),
         cumulativeRR: parseFloat(cumRR.toFixed(2)),
         cumulativeProfit: parseFloat(cumProfit.toFixed(2)),
-        winRate: parseFloat(((wins / (i + 1)) * 100).toFixed(1)),
-        planRate: parseFloat(((followed / (i + 1)) * 100).toFixed(1)),
+        winRate: decided ? parseFloat(((wins / decided) * 100).toFixed(1)) : 0,
+        planRate: reviewed ? parseFloat(((followed / reviewed) * 100).toFixed(1)) : 0,
         trades: i + 1,
       };
     });

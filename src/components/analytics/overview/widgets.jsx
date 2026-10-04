@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { P, F, mix } from './theme';
 import { EMOTION_COLOR, EMOTION_LABEL, r1, r2, signed, sum } from '../data';
+import { t as tx } from '../../../lib/lang';
+import ReviewProgress from '../../ui/ReviewProgress';
 
 /* ==================================================================
    Бібліотека віджетів огляду.
@@ -454,7 +456,7 @@ export const WIDGETS = {
     },
     render: ({ s, o, id, w, hover }) => (
       <KpiBody
-        value={`${signed(s.net)}R`}
+        value={`${signed(s.net, 2)}R`}
         color={s.net >= 0 ? P.ok : P.bad}
         sub={o.sub === 'off' ? null
           : o.sub === 'avg' ? `${signed(s.expectancy, 2)}R на угоду`
@@ -490,7 +492,7 @@ export const WIDGETS = {
         color={P.acc}
         sub={o.sub === 'off' ? null
           : o.sub === 'be' ? `${s.be.length} у беззбиток`
-            : `${s.wins.length}W · ${s.losses.length}L`}
+            : `${s.wins.length}W · ${s.losses.length}L · ${tx('без BE', 'excl. BE')}`}
         spark={<Spark id={id} data={s.wrCurve} dataKey="wr" labelKey="date" name="Вінрейт" unit="%" color={P.acc} view={o.spark} hover={hover} tip={o.tip !== 'off'} />}
         w={w}
         hover={hover}
@@ -553,12 +555,12 @@ export const WIDGETS = {
         value={`${r1(s.tiltCost)}R`}
         color={P.bad}
         sub={o.sub === 'off' ? null
-          : o.sub === 'rate' ? `${s.mistakeRate}% угод з помилкою`
+          : o.sub === 'rate' ? (s.mistakeRate === null ? 'помилки ще не розібрані' : `${s.mistakeRate}% угод з помилкою`)
             : `${Math.round((Math.abs(s.tiltCost) / Math.max(1, s.gross)) * 100)}% від прибутку`}
         spark={<Spark id={id} data={s.equity} dataKey="dd" labelKey="date" name="Просадка" color={P.bad} view={o.spark} hover={hover} tip={o.tip !== 'off'} />}
         w={w}
         hover={hover}
-        facts={[['Угод з помилкою', `${s.mistakeRate}%`, P.warn], ['Після збитку', `${signed(s.avgAfterLoss, 2)}R`, s.avgAfterLoss >= 0 ? P.ok : P.bad], ['Після плюсу', `${signed(s.avgAfterWin, 2)}R`, s.avgAfterWin >= 0 ? P.ok : P.bad], ['Реванш', String(s.revenge), P.bad]]}
+        facts={[['Угод з помилкою', s.mistakeRate === null ? '—' : `${s.mistakeRate}%`, P.warn], ['Після збитку', `${signed(s.avgAfterLoss, 2)}R`, s.avgAfterLoss >= 0 ? P.ok : P.bad], ['Після плюсу', `${signed(s.avgAfterWin, 2)}R`, s.avgAfterWin >= 0 ? P.ok : P.bad], ['Реванш', String(s.revenge), P.bad]]}
       />
     ),
   },
@@ -795,6 +797,9 @@ export const WIDGETS = {
       chart: { label: 'Крива', choices: [['on', 'Показати'], ['off', 'Тільки цифри']], def: 'on' },
     },
     render: ({ s, o }) => {
+      /* Порівняння «за планом / без плану» з кількох розібраних угод
+         не каже нічого — показуємо, скільки ще розібрати. */
+      if (!s.reviewOk) return <Empty><ReviewProgress reviewed={s.reviewed} /></Empty>;
       const followed = sum(s.followed.map((t) => t.rr));
       const broken = sum(s.broken.map((t) => t.rr));
 
@@ -880,7 +885,7 @@ export const WIDGETS = {
         bestAsset && { label: `${bestAsset.key}`, v: bestAsset.net },
         bestSetup && { label: `Сетап «${bestSetup.key}»`, v: bestSetup.net },
         bestDay && { label: `${bestDay.day} — найкращий день`, v: bestDay.net },
-        { label: 'План дотримано', v: +sum(s.followed.map((t) => t.rr)).toFixed(1) },
+        s.reviewOk && { label: 'План дотримано', v: +sum(s.followed.map((t) => t.rr)).toFixed(1) },
         worstAsset && worstAsset !== bestAsset && { label: `${worstAsset.key}`, v: worstAsset.net },
       ].filter(Boolean);
 
@@ -925,6 +930,7 @@ export const WIDGETS = {
     },
     render: ({ s, o }) => {
       const rows = (s.emotionStats || []).filter((e) => e.trades);
+      if (!s.reviewOk) return <Empty><ReviewProgress reviewed={s.reviewed} /></Empty>;
       if (!rows.length) return <Empty>Стани ще не проставлені в угодах</Empty>;
 
       const key = o.metric;
@@ -981,6 +987,9 @@ export const WIDGETS = {
     },
     render: ({ s, o }) => {
       const rows = (s.mistakeLedger || []).filter((m) => m.count > 0);
+      /* «Помилок немає» на нерозібраних угодах — хибна похвала: їх
+         просто ніхто не відзначав. */
+      if (!s.reviewOk) return <Empty><ReviewProgress reviewed={s.reviewed} /></Empty>;
       if (!rows.length) return <Empty>Помилок у журналі немає. Так тримати.</Empty>;
 
       const sorted = [...rows].sort((a, b) => (o.metric === 'count' ? b.count - a.count : a.cost - b.cost));
@@ -1100,6 +1109,7 @@ export const WIDGETS = {
     defaultW: 1, defaultH: 1,
     options: {},
     render: ({ s }) => {
+      if (!s.reviewOk) return <Empty><ReviewProgress reviewed={s.reviewed} /></Empty>;
       const potential = s.net - sum(s.broken.filter((t) => t.rr < 0).map((t) => t.rr));
 
       return (

@@ -21,6 +21,8 @@ import { syncErrorFromTrade, fetchErrorForTrade, catsFromTrade } from '../../lib
 import { logTradeMovement, accountSize } from '../../lib/accountsStore';
 import { getTradeProfit } from '../../utils/journalUtils';
 import { CATS } from '../errors/utils';
+import { isReviewed, writeWithOptional } from '../../lib/tradeStats';
+import { resultLabel, directionLabel, sessionLabel } from '../../lib/tradeLabels';
 import ErrorComposerModal from '../errors/ErrorComposerModal';
 import AssetIcon from '../ui/AssetIcon';
 import ImageSlider from '../ui/ImageSlider';
@@ -105,7 +107,6 @@ const DIRECTIONS = ['Long', 'Short'];
    Значення в БД не чіпаємо взагалі — Win/Lose/BE лишаються, на них
    зав'язані фільтри, статистика й імпорт. Міняється рівно надпис. */
 const RESULT_CHIPS = ['Win', 'Lose', 'BE', 'In Progress', 'Missed'];
-const RESULT_LABEL = { Win: 'Take', Lose: 'Stop', BE: 'BE', 'In Progress': 'In progress', Missed: 'Missed' };
 const RESULT_COLORS = {
   Win: { c: GREEN, rgb: GREEN_RGB },
   Lose: { c: BAD, rgb: BAD_RGB },
@@ -190,7 +191,7 @@ function DirectionToggle({ value, onChange }) {
                 <path d={d === 'Long' ? 'M4 16l6-6 4 4 6-7' : 'M4 8l6 6 4-4 6 7'} />
               </svg>
             </span>
-            {d}
+            {directionLabel(d)}
           </button>
         );
       })}
@@ -243,7 +244,7 @@ function StatusPicker({ value, onChange, bare }) {
       value={value}
       options={RESULT_CHIPS}
       onChange={onChange}
-      labelOf={(v) => RESULT_LABEL[v] || v}
+      labelOf={resultLabel}
       colorOf={(o) => RESULT_COLORS[o]}
       placeholder={tx('Результат', 'Result')}
       isEmpty={(v) => !v || v === 'Not Selected'}
@@ -513,6 +514,7 @@ function SessionPicker({ value, onChange, bare }) {
       title={tx('Сесія', 'Session')}
       value={value}
       options={DEFAULT_SESSIONS}
+      labelOf={sessionLabel}
       onChange={onChange}
             colorOf={colorOf}
       placeholder={tx('Сесія', 'Session')}
@@ -1151,9 +1153,14 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       /* База віддає час як HH:MM:SS, полю input потрібні HH:MM */
       setEntryTime((existingTrade.entry_time || '').slice(0, 5));
       setExitTime((existingTrade.exit_time || '').slice(0, 5));
-      setFollowedPlan(existingTrade.followed_plan ?? null);
-      setRushed(existingTrade.rushed ?? null);
-      setHasMistake(existingTrade.has_mistake ?? null);
+      /* Нерозібрана угода — порожні відповіді. Значення в базі тут не
+         відповідь людини: followed_plan мав default true, і MT5-угода
+         відкривалась уже «за планом». */
+      const answered = isReviewed(existingTrade);
+      const ans = (v) => (answered ? v ?? null : null);
+      setFollowedPlan(ans(existingTrade.followed_plan));
+      setRushed(ans(existingTrade.rushed));
+      setHasMistake(ans(existingTrade.has_mistake));
       setMistakeText(existingTrade.mistake_description || '');
 
       let mImgs = [];
@@ -1161,10 +1168,10 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
       else if (existingTrade.mistake_image) mImgs = [existingTrade.mistake_image];
       setMistakeImages(mImgs);
 
-      setPsyConfident(existingTrade.psy_confident ?? null);
-      setPsyFear(existingTrade.psy_fear ?? null);
-      setPsyRepeat(existingTrade.psy_repeat ?? null);
-      setPsyRevenge(existingTrade.psy_revenge ?? null);
+      setPsyConfident(ans(existingTrade.psy_confident));
+      setPsyFear(ans(existingTrade.psy_fear));
+      setPsyRepeat(ans(existingTrade.psy_repeat));
+      setPsyRevenge(ans(existingTrade.psy_revenge));
       setPsyNotes(existingTrade.psy_notes || '');
 
       accToSet = existingTrade.account_name;
@@ -1383,17 +1390,31 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
         psy_confident: psyConfident, psy_fear: psyFear, psy_repeat: psyRepeat,
         psy_revenge: psyRevenge, psy_notes: psyNotes,
       };
+      /* Є хоч одна відповідь у розборі — угода розібрана. До міграції
+         2026-10-04 колонки немає, і writeWithOptional її відкине. */
+      if ([followedPlan, rushed, hasMistake, psyConfident, psyFear, psyRepeat, psyRevenge].some((v) => v !== null && v !== undefined)) {
+        payload.reviewed_at = new Date().toISOString();
+      }
 
       let tradeId = existingTrade?.id || null;
 
       if (existingTrade) {
-        const { error } = await supabase.from('trades').update(payload).eq('id', existingTrade.id);
+        const { data, error } = await writeWithOptional(
+          (body) => supabase.from('trades').update(body).eq('id', existingTrade.id).select('id'),
+          payload,
+        );
         if (error) throw error;
+        /* Без помилки, але й без рядка — база нічого не записала (угоду
+           видалили або немає доступу). «Оновлено» тут було б неправдою. */
+        if (!data?.length) throw new Error(tx('Угоду не знайдено — зміни не записались.', 'Trade not found — changes were not saved.'));
         notify.success(tx('Оновлено', 'Updated'), tx('Угоду успішно оновлено.', 'Trade updated.'));
       } else {
         /* id потрібен одразу: за ним помилка знайде дорогу назад до
            угоди, з якої вона взялась */
-        const { data, error } = await supabase.from('trades').insert([payload]).select('id').single();
+        const { data, error } = await writeWithOptional(
+          (body) => supabase.from('trades').insert([body]).select('id').single(),
+          payload,
+        );
         if (error) throw error;
         tradeId = data?.id || null;
 

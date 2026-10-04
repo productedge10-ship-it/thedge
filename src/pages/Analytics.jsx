@@ -616,11 +616,11 @@ export default function Analytics() {
               {/* Фраза будується з того, що справді є. Раніше вона
                   впевнено називала «найкращий день» навіть коли угод
                   було три — і виглядала як вигадка. */}
-              {tx('Ти', "You're")} <Delta v={s.net} /> {tx(`за ${s.trades.length} угод.`, `over ${s.trades.length} ${s.trades.length === 1 ? 'trade' : 'trades'}.`)}
+              {tx('Ти', "You're")} <Delta v={s.net} d={2} /> {tx(`за ${s.trades.length} угод.`, `over ${s.trades.length} ${s.trades.length === 1 ? 'trade' : 'trades'}.`)}
               {s.trades.length >= 10 && bestDay && (
                 <>
                   {' '}{bestDay.day}{tx(' — твій найкращий день', ' is your best day')}
-                  {[...s.emotionStats].some((e) => e.trades) && (
+                  {s.reviewOk && [...s.emotionStats].some((e) => e.trades) && (
                     <>{tx(', а ', ', and ')}{EMOTION_LABEL[[...s.emotionStats].sort((a, b) => b.avg - a.avg)[0].emotion].toLowerCase()}{tx(' — твій найкращий стан', ' is your best state')}</>
                   )}.
                 </>

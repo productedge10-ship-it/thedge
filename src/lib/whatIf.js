@@ -45,7 +45,7 @@ export const RULES = [
     label: tx('Тільки за планом', 'Plan only'),
     hint: tx('прибрати все, що йшло повз план', 'remove everything that went off plan'),
     tag: tx('угоди поза планом', 'off-plan trades'),
-    test: (t) => !t.planFollowed,
+    test: (t) => t.planFollowed === false,
   },
   {
     id: 'mistake',

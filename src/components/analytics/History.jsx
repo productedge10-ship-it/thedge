@@ -476,7 +476,7 @@ export default function History({ s }) {
   const filtered = useMemo(() => {
     return s.trades.slice().reverse().filter((t) => {
       const q = query.trim().toLowerCase();
-      const okQ = !q || [t.asset, t.side, t.account, t.setup, t.session, EMOTION_LABEL[t.emotion]].join(' ').toLowerCase().includes(q);
+      const okQ = !q || [t.asset, t.side, t.account, t.setup, t.session, EMOTION_LABEL[t.emotion] || ''].join(' ').toLowerCase().includes(q);
       const okF = filter === 'all' ? true : filter === 'win' ? t.result === 'WIN' : filter === 'loss' ? t.result === 'LOSS' : filter === 'mistake' ? t.mistakes.length > 0 : filter === 'clean' ? t.mistakes.length === 0 : t.planFollowed;
       const okDate = selectedDate ? t.date === format(selectedDate, 'yyyy-MM-dd') : true;
       return okQ && okF && okDate;
@@ -590,9 +590,12 @@ export default function History({ s }) {
                           </div>
 
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="inline-flex items-center justify-center text-[10.5px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-[8px] border bg-[var(--edge-surface-hi)]" style={{ color: EMOTION_COLOR[t.emotion], borderColor: EMOTION_COLOR[t.emotion] + '40' }}>
-                              {EMOTION_LABEL[t.emotion]}
-                            </span>
+                            {/* Нерозібрана угода стану не має — без чипа, а не «undefined» */}
+                            {t.emotion && (
+                              <span className="inline-flex items-center justify-center text-[10.5px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-[8px] border bg-[var(--edge-surface-hi)]" style={{ color: EMOTION_COLOR[t.emotion], borderColor: EMOTION_COLOR[t.emotion] + '40' }}>
+                                {EMOTION_LABEL[t.emotion]}
+                              </span>
+                            )}
                             
                             {t.mistakes.length > 0 && (
                               <div className="flex gap-1.5 flex-wrap">
