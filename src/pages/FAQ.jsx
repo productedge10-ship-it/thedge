@@ -32,7 +32,7 @@ function useEdgeFonts() {
     l3.id = 'edge-auth-fonts';
     l3.rel = 'stylesheet';
     l3.href =
-      'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap';
+      'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap';
     document.head.append(l1, l2, l3);
   }, []);
 }
@@ -465,6 +465,12 @@ export default function FAQ() {
                     </div>
                     <h3 className="text-[20px] font-bold text-[var(--edge-text)] mb-3" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                       {tx('AI-психолог трейдера', 'AI trading psychologist')}
+                      <span
+                        className="ml-2.5 inline-block rounded-md px-2 py-0.5 align-middle text-[11px] font-semibold"
+                        style={{ fontFamily: 'var(--edge-sans)', color: 'var(--edge-text3)', border: '1px solid var(--edge-line)' }}
+                      >
+                        {tx('скоро', 'soon')}
+                      </span>
                     </h3>
                     <p className="text-[14px] text-[var(--edge-text)]/55 leading-relaxed mb-4">
                       {tx(
@@ -491,9 +497,10 @@ export default function FAQ() {
                       >
                         <span
                           className="w-[6px] h-[6px] rounded-full"
-                          style={{ background: '#00e0a4', boxShadow: 'none' }}
+                          style={{ background: 'var(--edge-text4, #5A5A63)', boxShadow: 'none' }}
                         />
-                        {tx("AI-психолог · на зв'язку", 'AI psychologist · online')}
+                        {/* Був зелений «на зв'язку», хоча AI-психолога ще немає */}
+                        {tx('AI-психолог · скоро', 'AI psychologist · coming soon')}
                       </div>
                       <div
                         className="rounded-[12px] p-3.5 text-[12.5px] leading-relaxed text-[var(--edge-text)]/85"
@@ -790,7 +797,7 @@ export default function FAQ() {
           className="text-center mt-20 text-[10px] uppercase text-[var(--edge-text)]/25"
           style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: 2 }}
         >
-          © 2026 THE EDGE · SOC 2 · 256-BIT
+          © 2026 THE EDGE
         </div>
       </div>
     </div>

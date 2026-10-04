@@ -7,7 +7,7 @@ import {
 } from 'framer-motion';
 import {
   Mail, Lock, AlertTriangle, Check, ArrowLeft, ArrowRight,
-  Key, MailCheck, BarChart3, CircleDot, Diamond,
+  Key, MailCheck, BarChart3, BookOpen, RefreshCw,
 } from 'lucide-react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -38,30 +38,35 @@ const COINGECKO_IDS = [
   { id: 'cardano', sym: 'ADA/USD' },
 ];
 
+/* Лише те, що вже працює. Тут стояли «AI-психолог · 24/7» і
+   «Нейропрофіль трейдера» з числами-прикрасами (62, +37.6R): першого
+   ще немає, друге — оцінка з припущень. Людина, яка віддає нам торгові
+   дані, не має читати на вході обіцянки, яких продукт не тримає.
+   Праворуч — не вигадані цифри, а позначки того, що саме рахується. */
 const FEATURES = [
   {
-    icon: BarChart3,
+    icon: BookOpen,
     color: '#4f8bff',
     rgb: '79,139,255',
-    title: tx('Нейропрофіль трейдера', 'Trader neuro-profile'),
-    desc: tx('Психологічний зліпок кожної сесії', 'A psychological snapshot of every session'),
-    stat: '62',
+    title: tx('Журнал угод', 'Trade journal'),
+    desc: tx('Кожна угода з R, ризиком і розбором', 'Every trade with R, risk and a review'),
+    stat: 'R · $',
   },
   {
-    icon: CircleDot,
+    icon: RefreshCw,
     color: '#a78bfa',
     rgb: '167,139,250',
-    title: tx('AI-психолог', 'AI psychologist'),
-    desc: tx('Розбирає емоції та помилки в угодах', 'Breaks down emotions and mistakes in your trades'),
-    stat: '24/7',
+    title: tx('Автоімпорт з MT5', 'MT5 auto-import'),
+    desc: tx('Угоди підтягуються з термінала самі', 'Trades come in from the terminal on their own'),
+    stat: 'MT5',
   },
   {
-    icon: Diamond,
+    icon: BarChart3,
     color: '#00e0a4',
     rgb: '0,224,164',
-    title: tx('Вердикт по дисципліні', 'Discipline verdict'),
-    desc: tx('Бачиш, куди течуть твої R', 'See where your R leaks'),
-    stat: '+37.6R',
+    title: tx('Аналітика', 'Analytics'),
+    desc: tx('Вінрейт, профіт-фактор і R по сесіях та активах', 'Win rate, profit factor and R by session and asset'),
+    stat: 'WR · PF',
   },
 ];
 
@@ -82,7 +87,7 @@ function useEdgeFonts() {
     l3.id = 'edge-auth-fonts';
     l3.rel = 'stylesheet';
     l3.href =
-      'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap';
+      'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap';
     document.head.append(l1, l2, l3);
   }, []);
 }
@@ -495,7 +500,7 @@ function TickerMarquee({ data, small = false }) {
     <div className="overflow-hidden" style={{ maskImage: mask, WebkitMaskImage: mask }}>
       <div
         className={`flex ${small ? 'gap-5 text-[11px]' : 'gap-[34px] text-[12px]'} w-max`}
-        style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", animation: `edgeMarquee ${small ? 22 : 26}s linear infinite` }}
+        style={{ fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace", animation: `edgeMarquee ${small ? 22 : 26}s linear infinite` }}
       >
         {loop.map((tk, i) => (
           <div key={i} className="flex items-center gap-2 whitespace-nowrap">
@@ -743,7 +748,7 @@ function FeatureRow({ feature, index }) {
         </div>
         <div className="text-[11.5px] text-[#e8eaed]/45 mt-0.5">{desc}</div>
       </div>
-      <div className="text-[12px] font-semibold" style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", color }}>
+      <div className="text-[12px] font-semibold" style={{ fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace", color }}>
         {stat}
       </div>
     </motion.div>
@@ -1141,7 +1146,7 @@ export default function Auth() {
           <div className="max-w-[520px]">
             <div
               className="text-[11px] uppercase mb-[22px]"
-              style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 4, color: ACCENT_HEX }}
+              style={{ fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace", letterSpacing: 4, color: ACCENT_HEX }}
             >
               {tx('Доступ до торгового терміналу', 'Trading Terminal Access')}
             </div>
@@ -1153,7 +1158,7 @@ export default function Auth() {
             </div>
             <div
               className="mt-6 text-[10.5px] uppercase text-[#e8eaed]/35"
-              style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2.5 }}
+              style={{ fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace", letterSpacing: 2.5 }}
             >
               {tx('Клікни по графіку — розжени ринок ↗', 'Click the chart — pump the market ↗')}
             </div>
@@ -1163,11 +1168,14 @@ export default function Auth() {
             <div className="mb-[26px]">
               <TickerMarquee data={liveTicker} />
             </div>
+            {/* Тут було «SOC 2 · 256-бітне шифрування». Сертифікації SOC 2
+                у нас немає — заява була неправдою. На її місці факт, який
+                справді знімає страх: доступ до рахунку лише на читання. */}
             <div
-              className="flex items-center gap-[10px] text-[10.5px] uppercase text-[#e8eaed]/40"
-              style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2.5 }}
+              className="flex items-center gap-[10px] text-[12px] text-[#e8eaed]/45"
+              style={{ fontFamily: "var(--edge-sans, 'Golos Text'), system-ui, sans-serif", letterSpacing: 0.2 }}
             >
-              {tx('SOC 2 · 256-БІТНЕ ШИФРУВАННЯ', 'SOC 2 · 256-BIT ENCRYPTION')}
+              {tx('MT5 підключається лише інвесторським паролем — він не вміє торгувати', 'MT5 connects with an investor password only — it can’t place trades')}
             </div>
           </div>
         </div>
@@ -1200,19 +1208,11 @@ export default function Auth() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="flex items-center justify-between mb-5 text-[10.5px] uppercase text-[#e8eaed]/42"
-            style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2 }}
+            className="flex items-center justify-end mb-5 text-[10.5px] uppercase text-[#e8eaed]/42"
+            style={{ fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace", letterSpacing: 2 }}
           >
-            <div className="flex items-center gap-2">
-              <span
-                className="w-[7px] h-[7px] rounded-full"
-                style={{
-                  background: '#00e0a4', boxShadow: 'none',
-                  animation: 'edgePulse 2.4s ease-in-out infinite',
-                }}
-              />
-              {tx('Ринок відкрито', 'Market open')}
-            </div>
+            {/* «Ринок відкрито» з пульсуючою крапкою прибрано: напис був
+                статичний і горів навіть у вихідні. Лишився годинник. */}
             <div className="text-[#e8eaed]/60" style={{ letterSpacing: 1.5 }}>{clock}</div>
           </motion.div>
 
@@ -1289,7 +1289,7 @@ export default function Auth() {
                       <div className="font-bold text-[28px] tracking-[1px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                         {tx('ВХІД', 'SIGN IN')}
                       </div>
-                      <div className="text-[10px] tracking-[3.5px] text-[#e8eaed]/40 mt-2" style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace" }}>
+                      <div className="text-[10px] tracking-[3.5px] text-[#e8eaed]/40 mt-2" style={{ fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace" }}>
                         {tx('ДОСТУП ДО ТЕРМІНАЛУ', 'TRADING TERMINAL ACCESS')}
                       </div>
                     </div>
@@ -1325,7 +1325,7 @@ export default function Auth() {
                       <div className="font-bold text-[28px] tracking-[1px] text-white" style={{ fontFamily: "var(--edge-display, 'Unbounded'), system-ui, sans-serif" }}>
                         {tx('РЕЄСТРАЦІЯ', 'SIGN UP')}
                       </div>
-                      <div className="text-[10px] tracking-[3.5px] text-[#e8eaed]/40 mt-2" style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace" }}>
+                      <div className="text-[10px] tracking-[3.5px] text-[#e8eaed]/40 mt-2" style={{ fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace" }}>
                         {tx('ДОСТУП ДО ТЕРМІНАЛУ', 'TRADING TERMINAL ACCESS')}
                       </div>
                     </div>
@@ -1485,9 +1485,9 @@ export default function Auth() {
 
           <div
             className="text-center mt-5 text-[10px] uppercase text-[#e8eaed]/28"
-            style={{ fontFamily: "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace", letterSpacing: 2 }}
+            style={{ fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace", letterSpacing: 2 }}
           >
-            © 2026 THE EDGE · SOC 2 · 256-BIT
+            © 2026 THE EDGE
           </div>
         </div>
       </div>

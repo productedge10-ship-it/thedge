@@ -1,3 +1,5 @@
+import { signedR } from '../lib/tradeStats';
+
 // src/utils/journalUtils.js
 
 export const formatDate = (date) => {
@@ -54,8 +56,10 @@ export const getTradeProfit = (trade, accountsMap) => {
   }
 
   if (trade.rr === null || trade.rr === undefined) return null;
-  const rr = parseFloat(trade.rr);
-  if (isNaN(rr)) return null;
+  if (isNaN(parseFloat(trade.rr))) return null;
+  /* Знак — за спільним правилом (signedR): ручний «Мінус» з R 2.5 —
+     це збиток, а не +2.5 ризику в доларах. */
+  const rr = signedR(trade);
 
   let riskValue = 0;
   const riskStr = String(trade.risk || '').trim();

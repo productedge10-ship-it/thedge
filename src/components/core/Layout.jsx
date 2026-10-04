@@ -653,7 +653,7 @@ function useEdgeFonts() {
       /* Space Grotesk раніше обривався на 700, а логотип набраний 800 —
          вагу домальовував браузер, і знак виходив трохи різним у різних
          місцях. Тепер вага справжня. */
-      'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap';
+      'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap';
     document.head.append(l1, l2, l3);
   }, []);
 }

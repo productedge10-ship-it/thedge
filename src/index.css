@@ -1501,3 +1501,9 @@ input.edge-page-title { line-height: 1.15 !important; }
   .gate-row, .gate-msg { animation: none !important; transition: none !important; }
   .gate-fly { display: none; }
 }
+
+/* Цифри одним кроком. Будь-що, набране моноширинним (T.mono), — це
+   гроші, R, відсотки або колонки чисел. Тисячі інлайн-стилів не
+   правимо поодинці: стек T.mono починається з JetBrains Mono, тож
+   атрибут style кожного такого елемента його містить. */
+[style*="JetBrains Mono"] { font-variant-numeric: tabular-nums; }

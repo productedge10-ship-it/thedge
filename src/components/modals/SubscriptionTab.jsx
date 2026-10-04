@@ -212,6 +212,27 @@ function Feature({ k, title, hint, tone = 'acc' }) {
   );
 }
 
+/* Те, чого ще немає, — окремим рядком «Скоро», без дат. Серед
+   відкритих функцій AI-коуч читався як те, за що людина платить уже
+   зараз. */
+function SoonFeatures() {
+  const soon = Object.entries(PRO_FEATURES).filter(([, f]) => f.soon);
+  if (!soon.length) return null;
+  return (
+    <div className="flex flex-col gap-3 pt-4" style={{ borderTop: `1px solid ${T.line}` }}>
+      <div className="text-[10px] font-bold uppercase" style={{ fontFamily: T.sans, letterSpacing: '0.2em', color: T.text4 }}>
+        {tx('Скоро', 'Coming soon')}
+      </div>
+      {soon.map(([k, f]) => (
+        <div key={k} className="flex items-baseline justify-between gap-3">
+          <span className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text3 }}>{f.title}</span>
+          <span className="text-[12px]" style={{ fontFamily: T.sans, color: T.text4 }}>{tx('у розробці', 'in development')}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* Смуга залишку.
 
    Головка сидить усередині заливки, а не їде окремо. Окремо вона
@@ -650,9 +671,10 @@ export default function SubscriptionTab({ sub, onChanged }) {
           >
             {tx('Відкрито', 'Unlocked')}
           </div>
-          {Object.entries(PRO_FEATURES).map(([k, f]) => (
+          {Object.entries(PRO_FEATURES).filter(([, f]) => !f.soon).map(([k, f]) => (
             <Feature key={k} k={k} title={f.title} hint={f.hint} tone={tone} />
           ))}
+          <SoonFeatures />
         </div>
 
         {/* Факти про підписку.
@@ -903,9 +925,10 @@ export default function SubscriptionTab({ sub, onChanged }) {
           <div className="my-5 h-px w-full" style={{ background: T.line }} />
 
           <div className="flex flex-col gap-4">
-            {Object.entries(PRO_FEATURES).map(([k, f]) => (
+            {Object.entries(PRO_FEATURES).filter(([, f]) => !f.soon).map(([k, f]) => (
               <Feature key={k} k={k} title={f.title} hint={f.hint} />
             ))}
+            <SoonFeatures />
           </div>
 
           {/* Кнопка оплати — спільний Button, primary lg на всю ширину.

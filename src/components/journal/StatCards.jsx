@@ -163,8 +163,8 @@ function Card({ label, icon: Icon, accent, children, spark, note }) {
 
 const Num = ({ children, color }) => (
   <span
-    className="block text-[38px] font-black leading-none tabular-nums"
-    style={{ fontFamily: T.display, color: color || T.text, letterSpacing: '-0.02em' }}
+    className="block text-[36px] font-extrabold leading-none tabular-nums"
+    style={{ fontFamily: T.mono, color: color || T.text, letterSpacing: '-0.03em' }}
   >
     {children}
   </span>
@@ -308,8 +308,8 @@ export function StreakBar({ streak }) {
 
       <div className="relative flex flex-wrap items-center gap-x-2.5 gap-y-1">
         <motion.span
-          className="text-[32px] font-black italic leading-none tabular-nums"
-          style={{ fontFamily: T.display, color: c }}
+          className="text-[30px] font-extrabold leading-none tabular-nums"
+          style={{ fontFamily: T.mono, color: c }}
           animate={{ textShadow: [`0 0 0px rgba(${rgb},0)`, `0 0 18px rgba(${rgb},0.9)`, `0 0 0px rgba(${rgb},0)`] }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
         >

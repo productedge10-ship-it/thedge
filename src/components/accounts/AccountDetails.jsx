@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { notify } from '../../utils/notify';
 import { T, EASE, SPRING } from '../../lib/theme';
+import { t as tx } from '../../lib/lang';
 import {
   fetchEvents, ensureStart, addEvent, removeEvent, setBalance, fetchAccountTrades,
   tradeStats, money, money2, todayLocal, KINDS_EN, CLOSE_REASONS, closeAccount,
@@ -833,7 +834,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               </p>
               <span
                 className="text-[32px] font-semibold tabular-nums leading-none sm:text-[38px]"
-                style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
+                style={{ fontFamily: T.mono, color: T.text, letterSpacing: '-0.03em' }}
               >
                 {money2(balance)}
               </span>
@@ -856,7 +857,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               </p>
               <span
                 className="text-[32px] font-semibold tabular-nums leading-none sm:text-[38px]"
-                style={{ fontFamily: T.display, color: totalPaid ? T.warn : T.text, letterSpacing: '-0.03em' }}
+                style={{ fontFamily: T.mono, color: totalPaid ? T.warn : T.text, letterSpacing: '-0.03em' }}
               >
                 {money2(totalPaid)}
               </span>
@@ -870,7 +871,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
               </p>
               <span
                 className="text-[32px] font-semibold tabular-nums leading-none sm:text-[38px]"
-                style={{ fontFamily: T.display, color: earned >= 0 ? T.acc : T.bad, letterSpacing: '-0.03em' }}
+                style={{ fontFamily: T.mono, color: earned >= 0 ? T.acc : T.bad, letterSpacing: '-0.03em' }}
               >
                 {money(earned)}
               </span>
@@ -1297,7 +1298,7 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                         label: 'Win rate',
                         value: stats.total ? `${stats.winrate}%` : '—',
                         color: stats.total ? T.ok : T.text2,
-                        hint: stats.total ? `${stats.wins} of ${stats.total} closed green` : 'nothing in journal yet',
+                        hint: stats.total ? tx(`${stats.wins} з ${stats.decided} · без BE`, `${stats.wins} of ${stats.decided} · excl. BE`) : 'nothing in journal yet',
                       },
                       {
                         label: 'Net R',

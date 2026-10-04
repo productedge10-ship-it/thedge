@@ -18,11 +18,34 @@ const OUTCOME = { win: 'win', lose: 'loss', loss: 'loss', be: 'be', scratch: 'be
 export const outcomeOf = (result) => OUTCOME[String(result || '').trim().toLowerCase()] || null;
 
 /* R буває рядком (старі записи, ручне введення) — тому parseFloat,
-   а не перевірка typeof. */
+   а не перевірка typeof. Це сире число з бази, без знаку результату. */
 export const rrOf = (t) => {
   const v = parseFloat(t?.rr);
   return Number.isFinite(v) ? v : 0;
 };
+
+/* R угоди зі знаком — ОДНЕ правило для Журналу, Аналітики, Рахунків і
+   стартової сторінки.
+
+   Угода з MT5 приходить з R, у якому знак уже є (термінал знає, скільки
+   заробив чи втратив), — беремо як є, разом із дрібним плюсом чи мінусом
+   беззбиткових угод (комісія, спред).
+
+   У ручній угоді знак визначає результат, а число береться по модулю:
+   Плюс → +|R|, Мінус → −|R|, Беззбиток → 0. Людина вводить «2.5» і
+   обирає «Мінус» — це −2.5R, а не +2.5. Раніше сторінки читали це
+   по-різному: Журнал і Аналітика сумували число як є, Рахунки й старт
+   брали знак з результату (ще й рахували порожній мінус за −1R), і
+   net R для тих самих угод розходився. */
+export function signedR(t) {
+  const v = rrOf(t);
+  if (t?.source === 'mt5') return v;
+  const o = outcomeOf(t?.result);
+  if (o === 'win') return Math.abs(v);
+  if (o === 'loss') return -Math.abs(v);
+  if (o === 'be') return 0;
+  return v;
+}
 
 /* Поля розбору — те, що відповідає людина, а не термінал. Той самий
    список захищає від синхронізації тригер trades_keep_user_date
@@ -108,7 +131,7 @@ export function tradeSummary(trades) {
     else if (o === 'loss') losses++;
     else if (o === 'be') be++;
     /* net R — з усіх закритих угод, включно з BE: це реальні гроші */
-    netR += rrOf(t);
+    netR += signedR(t);
   });
   const decided = wins + losses;
   return {

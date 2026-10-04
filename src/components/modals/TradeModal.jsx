@@ -1643,7 +1643,14 @@ export default function TradeModal({ isOpen, onClose, planDate, planPair, existi
                           Тому $ стоїть підказкою поруч, а не окремою
                           смугою цифр: це те саме число, сказане двічі
                           різними мовами. */}
-                      <Row label={tx('Ціль', 'Target')} hint={oneR != null ? `≈ $${oneR.toLocaleString('en-US')} / 1R` : null}>
+                      {/* Число по модулю, знак ставить результат (signedR):
+                          «2.5» з «Мінусом» — це −2.5R. Підпис «Ціль» тут
+                          збивав — люди вводили заплановану ціль, і програш
+                          рахувався як плюс. */}
+                      <Row
+                        label="R"
+                        hint={[tx('Скільки R: знак обере результат', 'How many R: the result sets the sign'), oneR != null ? `≈ $${oneR.toLocaleString('en-US')} / 1R` : null].filter(Boolean).join(' · ')}
+                      >
                         <span className="flex items-center gap-1">
                           <input
                             value={rr}

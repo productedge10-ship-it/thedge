@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { signedR, outcomeOf } from './tradeStats';
 import { todayKey } from './diagnostics';
 import { t as tx } from './lang';
 
@@ -41,7 +42,7 @@ export async function loadHubState(userId) {
       .eq('user_id', userId).eq('date', today).maybeSingle(),
 
     supabase.from('trades')
-      .select('result, rr, has_mistake, followed_plan, plan_date')
+      .select('result, rr, has_mistake, followed_plan, plan_date, source')
       .eq('user_id', userId).gte('plan_date', weekAgo).lte('plan_date', today),
 
     supabase.from('user_state')
@@ -68,13 +69,9 @@ export async function loadHubState(userId) {
 
   /* ---------- тиждень у цифрах ---------- */
   const tw = trades.data || [];
-  const netRWeek = tw.reduce((s, t) => {
-    const rr = Number(t.rr) || 0;
-    if (t.result === 'BE') return s;
-    if (t.result === 'Lose') return s - Math.abs(rr || 1);
-    if (t.result === 'Win') return s + Math.abs(rr);
-    return s;
-  }, 0);
+  /* Те саме правило знаку, що в Журналі (signedR). Відкриті й
+     пропущені угоди в суму не йдуть — як і там. */
+  const netRWeek = tw.filter((t) => outcomeOf(t.result)).reduce((s, t) => s + signedR(t), 0);
 
   /* ---------- чисті дні ----------
 

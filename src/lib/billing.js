@@ -156,9 +156,13 @@ export const PRO_FEATURES = {
     title: tx('Бектест', 'Backtest'),
     hint: tx('Прогін стратегії по історії з тими самими метриками, що й у журналі', 'Run your strategy on historical data with the same metrics as your journal'),
   },
+  /* soon — функції ще немає. Екран підписки показує її окремим рядком
+     «Скоро», а не серед відкритого: обіцяти за гроші те, чого людина
+     не отримає після оплати, не можна. Дат не називаємо. */
   ai: {
     title: tx('AI-коуч', 'AI coach'),
     hint: tx('Розбір твоїх угод: що повторюється, де втрачаєш і що робити завтра', 'A breakdown of your trades: what repeats, where you lose, and what to do tomorrow'),
+    soon: true,
   },
 };
 

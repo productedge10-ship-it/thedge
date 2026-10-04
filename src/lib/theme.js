@@ -81,7 +81,11 @@ export const T = {
      тому без перемикача поводиться рівно як раніше. */
   display: "var(--edge-display, 'Unbounded', system-ui, -apple-system, sans-serif)",
   sans:    "var(--edge-sans, 'Golos Text', system-ui, -apple-system, sans-serif)",
-  mono:    "ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, monospace",
+  /* JetBrains Mono — першим: його вантажать Layout, вхід і лендінг.
+     Без нього в стеку на Windows ui-monospace не працює, SF Mono й
+     Menlo немає, і браузер доходив до загального monospace — тобто
+     Courier New. Consolas — запас для Windows до завантаження шрифту. */
+  mono:    "'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace",
 };
 
 /* Плавність в стилі Apple — швидкий старт, м'яке гальмування */
@@ -136,7 +140,7 @@ export function useMonoFont() {
     css.id = 'edge-mono-font';
     css.rel = 'stylesheet';
     css.href =
-      'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap';
+      'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap';
     document.head.append(css);
   }, []);
 }

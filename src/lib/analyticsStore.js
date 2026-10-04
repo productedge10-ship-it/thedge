@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { getTradeProfit } from '../utils/journalUtils';
 import { accountSize } from './accountsStore';
 import { t as tx } from './lang';
-import { isReviewed, withReviewedAt, REVIEW_TRACE_COLUMNS } from './tradeStats';
+import { isReviewed, withReviewedAt, REVIEW_TRACE_COLUMNS, signedR } from './tradeStats';
 
 /* ==================================================================
    Угоди для аналітики.
@@ -94,7 +94,10 @@ const toApp = (row, sizes = {}) => {
     emotion: reviewed ? emotionOf(row) : null,
     reviewed,
     result: RESULT[String(row.result || '').trim().toLowerCase()],
-    rr: typeof row.rr === 'number' ? row.rr : 0,
+    /* R зі знаком за спільним правилом; source потрібен signedR, щоб
+       повторний підрахунок (tradeSummary) дав те саме число */
+    rr: signedR(row),
+    source: row.source || null,
     mistakes: row.has_mistake
       ? [row.mistake_category || tx('Помилка без категорії', 'Uncategorized mistake')]
       : [],

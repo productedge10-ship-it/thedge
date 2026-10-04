@@ -22,7 +22,7 @@ import { notify } from "../utils/notify";
 import { prefetchTradeCandles, nudgeMt5Sync } from "../lib/mt5Store";
 import { useAuth } from "../context/AuthContext";
 import { getTradeProfit } from "../utils/journalUtils";
-import { tradeSummary, outcomeOf, rrOf, isReviewed, withReviewedAt, REVIEW_TRACE_COLUMNS } from "../lib/tradeStats";
+import { tradeSummary, outcomeOf, signedR, isReviewed, withReviewedAt, REVIEW_TRACE_COLUMNS } from "../lib/tradeStats";
 import { accountSize } from "../lib/accountsStore";
 import { T, EASE, SPRING, useEdgeFonts, stagger, fadeUp } from "../lib/theme";
 
@@ -1047,7 +1047,7 @@ export default function TradingJournal() {
       reviewed = 0,
       followed = 0;
     return globalStatsData.filter((t) => outcomeOf(t.result)).map((t, i) => {
-      cumRR += rrOf(t);
+      cumRR += signedR(t);
       const p = getTradeProfit(t, accountsMap);
       if (p !== null) cumProfit += p;
       const o = outcomeOf(t.result);

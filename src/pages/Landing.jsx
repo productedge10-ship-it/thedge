@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Globe, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useEdgeFonts } from '../lib/theme';
+import { useEdgeFonts, useMonoFont } from '../lib/theme';
 import { C, F, A, Cat, KEYFRAMES } from '../components/landing/v3/base';
 import { PALETTES } from '../lib/themes';
 import Hero, { Ticker } from '../components/landing/v3/Hero';
@@ -289,6 +289,9 @@ function preferredEnglish() {
 
 function LandingPage() {
   useEdgeFonts();
+  /* Макети угод на лендінгу набрані моноширинним — без цього рядка
+     вони падали в системний Courier */
+  useMonoFont();
   const lang = useLang();
 
   /* Мова документа — для читалок, перекладача браузера й пошуковика.

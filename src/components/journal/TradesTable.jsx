@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import AssetIcon from '../ui/AssetIcon';
 import { T, SPRING, EASE } from '../../lib/theme';
-import { isReviewed } from '../../lib/tradeStats';
+import { isReviewed, signedR } from '../../lib/tradeStats';
 import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
@@ -367,6 +367,8 @@ export default function TradesTable({
       let x = a[key];
       let y = b[key];
       if (key === 'rr' || key === '_profit') {
+        /* Сортуємо за тим R, що видно в рядку, — зі знаком результату */
+        if (key === 'rr') { x = x === null || x === undefined || x === '' ? x : signedR(a); y = y === null || y === undefined || y === '' ? y : signedR(b); }
         x = x === null || x === undefined || x === '' ? -Infinity : parseFloat(x);
         y = y === null || y === undefined || y === '' ? -Infinity : parseFloat(y);
         return (x - y) * mul;
@@ -430,7 +432,7 @@ export default function TradesTable({
         <div className="flex flex-col sm:hidden">
           {rows.map((t) => {
             const res = RESULT[t.result?.trim().toLowerCase()];
-            const rr = t.rr === null || t.rr === '' ? null : parseFloat(t.rr);
+            const rr = t.rr === null || t.rr === undefined || t.rr === '' ? null : signedR(t);
             const rrColor = rr === null ? T.text4 : rr > 0 ? T.ok : rr < 0 ? T.bad : T.text3;
             const pColor = t._profit === null ? T.text4 : t._profit > 0 ? T.ok : t._profit < 0 ? T.bad : T.text3;
             return (
@@ -488,7 +490,7 @@ export default function TradesTable({
           <tbody>
             {rows.map((t, idx) => {
               const res = RESULT[t.result?.trim().toLowerCase()];
-              const rr = t.rr === null || t.rr === '' ? null : parseFloat(t.rr);
+              const rr = t.rr === null || t.rr === undefined || t.rr === '' ? null : signedR(t);
               const rrColor = rr === null ? T.text4 : rr > 0 ? T.ok : rr < 0 ? T.bad : T.text3;
               const pColor = t._profit === null ? T.text4 : t._profit > 0 ? T.ok : t._profit < 0 ? T.bad : T.text3;
               const rowShowProfit = profitIds.has(t.id);

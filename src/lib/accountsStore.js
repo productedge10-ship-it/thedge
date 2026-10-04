@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { outcomeOf, signedR } from './tradeStats';
 
 /* ==================================================================
    Акаунти й рух грошей на них.
@@ -380,7 +381,7 @@ export async function fetchAccountTrades(userId, firmName) {
     /* `profit_money` і `exit_time` потрібні кривій балансу: знімки з
        терміналу існують лише з дня, коли воркер навчився їх писати, а
        все, що було раніше, відтворюється саме з угод. */
-    .select('id, plan_date, result, rr, risk, followed_plan, has_mistake, profit_money, exit_time')
+    .select('id, plan_date, result, rr, risk, followed_plan, has_mistake, profit_money, exit_time, source')
     .eq('user_id', userId)
     .eq('account_name', firmName)
     .order('plan_date', { ascending: true });
@@ -389,19 +390,16 @@ export async function fetchAccountTrades(userId, firmName) {
   return data || [];
 }
 
-/* R однієї угоди. Той самий підрахунок, що на стартовій сторінці:
-   виграш дає свій rr, програш — мінус один R, якщо rr не вказано. */
-export const tradeR = (t) => {
-  const rr = Number(t.rr) || 0;
-  if (t.result === 'Win') return Math.abs(rr);
-  if (t.result === 'Lose') return -Math.abs(rr || 1);
-  return 0;
-};
+/* R однієї угоди — спільне правило signedR (lib/tradeStats): той
+   самий знак, що в Журналі й Аналітиці. Раніше тут жило своє: знак
+   брався з результату завжди, навіть для MT5, а порожній мінус
+   рахувався за −1R — і net R рахунку не збігався з журналом. */
+export const tradeR = (t) => signedR(t);
 
 export function tradeStats(trades) {
-  const closed = trades.filter((t) => ['Win', 'Lose', 'BE'].includes(t.result));
-  const wins = closed.filter((t) => t.result === 'Win').length;
-  const losses = closed.filter((t) => t.result === 'Lose').length;
+  const closed = trades.filter((t) => outcomeOf(t.result));
+  const wins = closed.filter((t) => outcomeOf(t.result) === 'win').length;
+  const losses = closed.filter((t) => outcomeOf(t.result) === 'loss').length;
   const netR = closed.reduce((s, t) => s + tradeR(t), 0);
   const decided = wins + losses;
 
@@ -409,9 +407,10 @@ export function tradeStats(trades) {
     total: closed.length,
     wins,
     losses,
-    netR: Math.round(netR * 10) / 10,
+    netR: Math.round(netR * 100) / 100,
     avgR: closed.length ? Math.round((netR / closed.length) * 100) / 100 : 0,
     winrate: decided ? Math.round((wins / decided) * 100) : 0,
+    decided,
     clean: closed.length
       ? Math.round((closed.filter((t) => t.followed_plan && !t.has_mistake).length / closed.length) * 100)
       : 0,

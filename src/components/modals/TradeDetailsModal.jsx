@@ -24,7 +24,7 @@ import { T } from '../../lib/theme';
 import { inSandbox, isSharedView, withSandbox } from '../../lib/sandbox';
 import useImageAttach, { filesFromPaste, imageFiles } from '../../hooks/useImageAttach';
 import { t as tx } from '../../lib/lang';
-import { isReviewed, REVIEW_FIELDS, writeWithOptional } from '../../lib/tradeStats';
+import { isReviewed, REVIEW_FIELDS, writeWithOptional, signedR } from '../../lib/tradeStats';
 import { directionLabel, sessionLabel, resultTerm, resultTermFull, directionTerm, sessionTerm, exitReasonLabel } from '../../lib/tradeLabels';
 import Button from '../ui/Button';
 
@@ -951,7 +951,8 @@ export default function TradeDetailsModal({
   }, [d?.entry_price, d?.sl_price, d?.tp_price, d?.exit_price]);
 
   const profit = useMemo(() => {
-    const rr = parseFloat(d?.rr);
+    /* Знак — за спільним правилом signedR: ручний «Мінус» з R 2.5 — це −2.5R */
+    const rr = isNaN(parseFloat(d?.rr)) ? NaN : signedR(d);
     if (isNaN(rr)) return null;
     const s = String(d?.risk || '').trim();
     let riskValue = 0;
@@ -1135,7 +1136,7 @@ export default function TradeDetailsModal({
   if (!d) return null;
 
   const res = RESULT_OPTS.find((r) => r.value.toLowerCase() === d.result?.trim().toLowerCase());
-  const rr = parseFloat(d.rr);
+  const rr = isNaN(parseFloat(d.rr)) ? NaN : signedR(d);
   const rrColor = isNaN(rr) ? T.text4 : rr > 0 ? T.ok : rr < 0 ? T.bad : T.text3;
   const isLong = d.type === 'Long';
   const resultMap = Object.fromEntries(RESULT_OPTS.map((r) => [r.value, r]));
