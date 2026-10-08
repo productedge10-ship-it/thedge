@@ -19,13 +19,15 @@ import { supabase } from '../supabase';
    Формат файлу описано в vps/candles/edge_candles.py.
 ================================================================== */
 
+import { BETA_EMAILS } from '../betaAccess';
+
 /* Публічна адреса бакета — не секрет: файли й так віддаються всім, хто
    знає шлях. Змінна оточення — щоб перейти на свій домен без правок. */
 const BASE = (import.meta.env?.VITE_CANDLES_URL || 'https://pub-932a35494e194b20b15d06a26ba51abd.r2.dev/v1').replace(/\/$/, '');
 export const remoteEnabled = !!BASE;
 
 /* Поки сервер свічок у бета — бачать лише ці акаунти. */
-const BETA = (import.meta.env?.VITE_CANDLES_BETA || 'h1f3st@gmail.com').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
+const BETA = (import.meta.env?.VITE_CANDLES_BETA || BETA_EMAILS.join(',')).toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
 export const remoteAllowed = (email) => remoteEnabled && (BETA.includes('*') || BETA.includes(String(email || '').toLowerCase()));
 export const REMOTE_PREFIX = 'srv:';
 export const isRemote = (sym) => typeof sym === 'string' && sym.startsWith(REMOTE_PREFIX);
