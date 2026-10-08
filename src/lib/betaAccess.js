@@ -11,7 +11,7 @@ import { useAuth } from '../context/AuthContext';
    вона не охороняє: для цього потрібна політика RLS на
    backtest_sessions / backtest_trades (див. supabase/2026-10-08_backtest_beta.sql).
 ================================================================== */
-export const BETA_EMAILS = ['h1f3st@gmail.com', 'andreejdhh@gmail.com'];
+export const BETA_EMAILS = ['h1f3st@gmail.com', 'andreejdhh@gmail.com', 'zozuk.ruslana2006@gmail.com'];
 
 export const BETA_ROUTES = ['/backtest'];
 
