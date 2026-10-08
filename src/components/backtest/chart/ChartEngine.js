@@ -551,7 +551,20 @@ export default class ChartEngine {
     this.finishAnim();
     if (this.cut >= this.base.n) { this.pause(); this.emit(); return false; }
     const k = tfIndexOfBase(this.agg, this.cut);
-    const next = this.agg.s[k + 1];
+    /* Остання свічка історії: наступної немає — край і є кінець файлу.
+       Раніше тут виходив undefined, і «Пуск» далі крутився вхолосту. */
+    let next = this.agg.s[k + 1] ?? this.base.n;
+    /* Крок реплею окремо від таймфрейму графіка (як у FX Replay): на 1H
+       можна йти по 15 хвилин — свічка годинника росте частинами. Більший
+       крок за ТФ графіка — кілька свічок за раз. */
+    const sTf = this.stepTf ? tfById(this.stepTf) : null;
+    if (sTf && sTf.sec >= (this.base.baseSec || 60) && sTf.sec !== this.agg.sec) {
+      const sa = this.getAgg(sTf.id);
+      const sn = sa.s[tfIndexOfBase(sa, this.cut) + 1] ?? this.base.n;
+      if (sTf.sec > this.agg.sec) return this.advanceTo(sn, true);
+      next = Math.min(next, sn);
+    }
+    if (next <= this.cut) next = this.cut + 1;
     const from = this.cut;
     this.pushHist();
     /* lastK і cut рухаємо одразу: наступний крок не має повторити цей. */
@@ -691,9 +704,9 @@ export default class ChartEngine {
      на кожній хвилинці дорогою; якщо угода закрилась чи ордер
      спрацював — зупиняємось на кінці тієї свічки, щоб людина побачила
      подію, а не пролетіла її. */
-  advanceTo(target) {
+  advanceTo(target, keepPlaying = false) {
     if (!this.replay || !this.base || this.snap) return false;
-    this.pause();
+    if (!keepPlaying) this.pause();
     this.finishAnim();
     let to = Math.min(this.base.n, Math.max(this.cut + 1, Math.round(target)));
     if (to <= this.cut) return false;
@@ -946,22 +959,46 @@ export default class ChartEngine {
     this.emit();
   }
 
+  /* Перший крок — одразу після натискання, а не через інтервал: на
+     повільній швидкості здавалось, що «Пуск» не спрацював. Помилка в
+     кроці більше не зупиняє програвання намертво: перемальовуємо графік
+     і йдемо далі. */
   play(ms) {
     if (ms) this.speedMs = ms;
     if (!this.replay || this.snap) return;
     this.pause();
+    if (this.cut >= this.base.n) { this.emit(); return; }
     this.playing = true;
-    this.timer = setInterval(() => { if (!this.step()) this.pause(); }, this.speedMs);
+    this.emit();
+    const tick = () => {
+      if (!this.playing) return;
+      let ok;
+      try {
+        ok = this.step();
+      } catch (err) {
+        console.warn('[replay] step failed, redrawing', err);
+        this.anim = null;
+        try { this.useTf(this.tf); } catch { /* ок */ }
+        ok = this.cut < this.base.n;
+      }
+      if (!ok || !this.playing) { this.pause(); return; }
+      this.timer = setTimeout(tick, this.speedMs);
+    };
+    tick();
+  }
+
+  setStepTf(id) {
+    this.stepTf = id || null;
     this.emit();
   }
 
+  /* Наступний крок сам візьме нову швидкість — не перезапускаємо. */
   setSpeed(ms) {
     this.speedMs = ms;
-    if (this.playing) this.play(ms);
   }
 
   pause() {
-    if (this.timer) clearInterval(this.timer);
+    if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     if (this.playing) { this.playing = false; this.emit(); }
   }
@@ -1705,6 +1742,7 @@ export default class ChartEngine {
       selecting: this.selecting,
       cutting: !!this.cutFx,
       playing: this.playing,
+      stepTf: this.stepTf || null,
       atEnd: this.replay && this.cut >= this.base.n,
       time: this.base ? this.base.t[(this.replay ? this.cut : this.base.n) - 1] : null,
       price: now,

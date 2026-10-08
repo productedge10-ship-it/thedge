@@ -97,6 +97,13 @@ export default class DrawingManager {
     window.addEventListener('pointerup', this.up, true);
     host.addEventListener('dblclick', this.dbl, true);
     host.addEventListener('pointerleave', this.leave);
+    /* Ctrl/Cmd — тимчасовий магніт, як у TV: тримаєш — точки липнуть до
+       OHLC свічки; якщо магніт уже ввімкнено — навпаки, вимикає. */
+    this.ctrlKey = (ev) => { this.ctrlMag = !!(ev.ctrlKey || ev.metaKey); };
+    this.ctrlOff = () => { this.ctrlMag = false; };
+    window.addEventListener('keydown', this.ctrlKey, true);
+    window.addEventListener('keyup', this.ctrlKey, true);
+    window.addEventListener('blur', this.ctrlOff);
     this.applyCursor();
   }
 
@@ -109,6 +116,9 @@ export default class DrawingManager {
     window.removeEventListener('pointerup', this.up, true);
     this.host.removeEventListener('dblclick', this.dbl, true);
     this.host.removeEventListener('pointerleave', this.leave);
+    window.removeEventListener('keydown', this.ctrlKey, true);
+    window.removeEventListener('keyup', this.ctrlKey, true);
+    window.removeEventListener('blur', this.ctrlOff);
   }
 
   /* ---------------- стан ---------------- */
@@ -340,7 +350,8 @@ export default class DrawingManager {
     if (snapTime) abs = Math.round(abs);
     const t = this.timeOf(abs);
     let p = this.e.series.coordinateToPrice(py);
-    const mode = this.magnet;
+    let mode = this.magnet;
+    if (this.ctrlMag) mode = mode === 'off' ? 'strong' : 'off';
     if (magnet && mode !== 'off') {
       const k = Math.round(abs);
       if (k >= 0 && k <= this.e.lastK) {
@@ -382,6 +393,7 @@ export default class DrawingManager {
 
   down(ev) {
     this.ate = false;
+    this.ctrlMag = !!(ev.ctrlKey || ev.metaKey);
     if (!this.ready || this.e.selecting || ev.button !== 0 || this.readOnly) return;
     const m = this.local(ev);
     if (!this.inPlot(m)) return;
@@ -452,6 +464,7 @@ export default class DrawingManager {
 
   move(ev) {
     if (!this.ready) return;
+    this.ctrlMag = !!(ev.ctrlKey || ev.metaKey);
     const m = this.local(ev);
     this.mouse = m;
     if (this.marquee) {

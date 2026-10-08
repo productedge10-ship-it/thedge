@@ -40,7 +40,10 @@ import { listSets, loadSet, saveSet, deleteSet, parseFile } from '../lib/candles
 import {
   remoteAllowed, isRemote, remoteName, REMOTE_PREFIX, getCatalog, getManifest, openRemote, loadOlder, monthOf, shiftMonth,
 } from '../lib/candles/remote';
-import { TFS, DEFAULT_TF_FAV, isoDay, sessionOf, fmtTime } from '../lib/candles/agg';
+import { TFS, DEFAULT_TF_FAV, isoDay, sessionOf, fmtTime, tfById } from '../lib/candles/agg';
+
+/* Крок реплею (як у FX Replay): null — одна свічка поточного ТФ. */
+const STEP_TFS = [null, 'M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1'];
 import { fmtStamp } from '../lib/candles/timefmt';
 import { DEFAULT_PREFS, normalizePrefs } from '../lib/candles/chartPrefs';
 
@@ -757,6 +760,10 @@ export default function BacktestChart() {
     if (e.playing) e.pause(); else e.play(SPEEDS[speedIdx].ms);
   };
   const setSpeed = (i) => { setPrefs({ ...prefs, speed: i }); eng()?.setSpeed(SPEEDS[i].ms); setMenu(null); };
+  const stepTf = STEP_TFS.includes(prefs.replayStep) ? prefs.replayStep : null;
+  const setStepTf = (id) => { setPrefs({ ...prefs, replayStep: id }); eng()?.setStepTf(id); setMenu(null); };
+  const stepLabel = (id) => (id ? tfById(id).label : tx('ТФ', 'TF'));
+  useEffect(() => { if (st.ready) eng()?.setStepTf(stepTf); }, [st.ready, stepTf]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openPos = (side) => {
     const e = eng();
@@ -1782,6 +1789,24 @@ export default function BacktestChart() {
                       <button key={label} type="button" onClick={() => { setMenu(null); fn(); }} className="block w-full rounded-lg px-3 py-1.5 text-left text-[13px] hover:bg-white/10" style={{ color: T.text }}>{label}</button>
                     ))}
                     <p className="px-3 pb-1 pt-1.5 text-[11px] leading-snug" style={{ color: T.text3 }}>{tx('Якщо дорогою спрацює ордер чи закриється угода — зупинюсь на тій свічці.', 'Stops at the candle where an order fills or a trade closes.')}</p>
+                  </div>
+                )}
+              </div>
+              <div className="relative">
+                <ToolBtn title={tx('Крок перемотки: на скільки рухається графік за один крок', 'Replay step: how far one step moves')} onClick={() => setMenu(menu === 'step' ? null : 'step')} active={menu === 'step' || !!stepTf}>
+                  <span className="text-[11px]" style={{ color: T.text3 }}>{tx('крок', 'step')}</span>
+                  <span style={{ fontFamily: T.mono }}>{stepLabel(stepTf)}</span>
+                </ToolBtn>
+                {menu === 'step' && (
+                  <div className="absolute bottom-[calc(100%+6px)] left-0 z-50 w-[210px] rounded-xl p-1" style={{ background: T.surface3, border: `1px solid ${T.lineHi}` }}>
+                    <p className="px-3 pb-1 pt-1.5 text-[11px] leading-snug" style={{ color: T.text3 }}>{tx('Крок перемотки', 'Replay step')}</p>
+                    {STEP_TFS.map((id) => (
+                      <button key={id || 'tf'} type="button" onClick={() => setStepTf(id)} className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-[13px]" style={{ color: id === stepTf ? '#fff' : T.text2, background: id === stepTf ? act(0.3) : 'transparent' }}>
+                        <span>{id ? tx(tfById(id).uk, tfById(id).en) : tx('Як на графіку', 'Chart timeframe')}</span>
+                        <span style={{ fontFamily: T.mono, color: T.text3 }}>{id ? tfById(id).label : tfById(st.tf || prefs.tf || 'H1').label}</span>
+                      </button>
+                    ))}
+                    <p className="px-3 pb-1 pt-1.5 text-[11px] leading-snug" style={{ color: T.text3 }}>{tx('Наприклад, на 1H з кроком 15m свічка росте по чверті години. Діє на «Пуск» і «Крок вперед».', 'E.g. on 1H with a 15m step the candle grows a quarter-hour at a time. Applies to Play and Step.')}</p>
                   </div>
                 )}
               </div>
