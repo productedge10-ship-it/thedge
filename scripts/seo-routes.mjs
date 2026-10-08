@@ -46,6 +46,35 @@ const BLOG_META = {
   },
 };
 
+
+/* Текст статті секціями: кожен «## » стає H2 у HTML для робота.
+   Раніше вся стаття йшла одним <p>, і аудит бачив сторінку без жодного
+   H2 — хоча в самому блозі заголовки є. Обрізаємо сумарно до 6000
+   символів: для індексу досить, а HTML не роздувається. */
+const sectionsOf = (md, limit = 6000) => {
+  const out = [];
+  let cur = { h2: '', md: [] };
+  for (const line of String(md || '').split('\n')) {
+    const m = line.match(/^##\s+(.+)$/);
+    if (m) { out.push(cur); cur = { h2: m[1].trim(), md: [] }; } else cur.md.push(line);
+  }
+  out.push(cur);
+  let left = limit;
+  return out
+    .map((x) => ({ h2: x.h2, text: plainText(x.md.join('\n')).trim() }))
+    .filter((x) => x.h2 || x.text)
+    .map((x) => { const text = x.text.slice(0, Math.max(0, left)); left -= text.length; return { ...x, text }; })
+    .filter((x) => x.h2 || x.text);
+};
+
+/* hreflang x-default: куди слати тих, чия мова не серед наших.
+   Є англійська версія — на неї, інакше на ту, що є. */
+const withXDefault = (alts) => {
+  if (!alts?.length) return alts;
+  const def = alts.find((a) => a.lang === 'en') || alts[0];
+  return [...alts, { lang: 'x-default', href: def.href }];
+};
+
 const routes = {};
 const sitemap = [];
 const addUrl = (loc, priority, changefreq, lastmod) =>
@@ -66,12 +95,12 @@ routes['/'] = {
   lang: 'uk',
   body: {
     h1: 'Торговий журнал трейдера з автоімпортом угод з MetaTrader 5',
-    text: [
-      'THE EDGE — щоденник трейдера, який сам рахує статистику: R-мультиплікатор, win rate, profit factor, просадку, результати по сесіях (Азія, Лондон, Нью-Йорк), активах і сетапах.',
-      'Автоімпорт з MetaTrader 5: угоди приїжджають у журнал самі — зі стопами, тейками, свічками навколо входу й часом у ринку. Підтримуються проп-фірми FTMO, The5ers, Alpha Capital, Blue Guardian, FundingPips, CryptoFundTrader і будь-який стандартний MT5.',
-      'Журнал помилок показує, які звички зливають депозит; бектест проганяє стратегію по історії з тими самими метриками. Незабаром — AI-кіт, який розбиратиме твої угоди й шукатиме систематичні помилки.',
-      'Безкоштовна версія — назавжди. Pro — $15 на місяць, перші 14 днів безкоштовно, лише привʼязка картки.',
-    ].join(' '),
+    text: 'THE EDGE — щоденник трейдера, який сам рахує статистику: R-мультиплікатор, win rate, profit factor, просадку, результати по сесіях (Азія, Лондон, Нью-Йорк), активах і сетапах.',
+    sections: [
+      { h2: 'Автоімпорт угод з MetaTrader 5', text: 'Угоди приїжджають у журнал самі — зі стопами, тейками, свічками навколо входу й часом у ринку. Підтримуються проп-фірми FTMO, The5ers, Alpha Capital, Blue Guardian, FundingPips, CryptoFundTrader і будь-який стандартний MT5.' },
+      { h2: 'Журнал помилок і бектест', text: 'Журнал помилок показує, які звички зливають депозит; бектест проганяє стратегію по історії з тими самими метриками. Незабаром — AI-кіт, який розбиратиме твої угоди й шукатиме систематичні помилки.' },
+      { h2: 'Ціни', text: 'Безкоштовна версія — назавжди. Pro — $15 на місяць, перші 14 днів безкоштовно, лише привʼязка картки.' },
+    ],
     links: [
       { href: '/uk/blog', text: 'Блог: психологія, ризик і статистика трейдера' },
       ...postsFor('uk').slice(0, 5).map((p) => ({ href: `/uk/blog/${p.slug}`, text: p.title })),
@@ -94,7 +123,7 @@ routes['/'].alternates = HOME_ALTERNATES;
 
 routes['/en'] = {
   title: 'Trading Journal with MetaTrader 5 Auto-Import — THE EDGE',
-  description: 'Free trading journal for forex, crypto and prop firm traders. Automatic MetaTrader 5 trade import, R-multiple stats, win rate, session analytics and mistake tracking. Pro from $12/mo, 14-day free trial.',
+  description: 'Free trading journal with MetaTrader 5 auto-import: R-multiple stats, win rate, session analytics and mistake tracking. 14-day free Pro trial.',
   canonical: `${ORIGIN}/en`,
   lang: 'en',
   locale: 'en_US',
@@ -133,12 +162,12 @@ routes['/en'] = {
   },
   body: {
     h1: 'Trading journal with automatic MetaTrader 5 trade import',
-    text: [
-      'THE EDGE is a trading journal that does the math for you: R-multiple, win rate, profit factor, drawdown, and results by session (Asia, London, New York), asset and setup.',
-      'MetaTrader 5 auto-import: trades arrive in the journal on their own — with stops, targets, candles around the entry and time in the market. Works with prop firms such as FTMO, The5ers, Alpha Capital, Blue Guardian, FundingPips, CryptoFundTrader and any standard MT5 account. The connection uses the read-only investor password.',
-      'A mistakes log shows which habits drain the account; the backtester runs a strategy over history with the same metrics. Coming soon: an AI cat coach that reviews your trades and finds systematic mistakes.',
-      'Free plan — forever. Pro — $15 a month or $144 a year, with the first 14 days free.',
-    ].join(' '),
+    text: 'THE EDGE is a trading journal that does the math for you: R-multiple, win rate, profit factor, drawdown, and results by session (Asia, London, New York), asset and setup.',
+    sections: [
+      { h2: 'MetaTrader 5 auto-import', text: 'Trades arrive in the journal on their own — with stops, targets, candles around the entry and time in the market. Works with prop firms such as FTMO, The5ers, Alpha Capital, Blue Guardian, FundingPips, CryptoFundTrader and any standard MT5 account. The connection uses the read-only investor password.' },
+      { h2: 'Mistakes log and backtesting', text: 'A mistakes log shows which habits drain the account; the backtester runs a strategy over history with the same metrics. Coming soon: an AI cat coach that reviews your trades and finds systematic mistakes.' },
+      { h2: 'Pricing', text: 'Free plan — forever. Pro — $15 a month or $144 a year, with the first 14 days free.' },
+    ],
     links: [
       { href: '/en/blog', text: 'Blog: trading psychology, risk and journal statistics' },
       ...postsFor('en').slice(0, 5).map((p) => ({ href: `/en/blog/${p.slug}`, text: p.title })),
@@ -153,6 +182,11 @@ routes['/terms'] = {
   description: 'Публічна оферта Edge Journal: підписка, оплата, пробний період і повернення коштів, реквізити продавця.',
   canonical: `${ORIGIN}/terms`,
   lang: 'uk',
+  body: {
+    h1: 'Умови користування The Edge',
+    text: 'Публічна оферта Edge Journal: як працює підписка, оплата й пробний період, як скасувати підписку і повернути кошти, реквізити продавця.',
+    links: [{ href: '/', text: 'Головна: торговий журнал THE EDGE' }, { href: '/uk/blog', text: 'Блог' }],
+  },
 };
 addUrl('/terms', '0.3', 'yearly');
 
@@ -165,11 +199,20 @@ for (const lang of BLOG_LANGS) {
     ...meta,
     canonical: ORIGIN + listPath,
     lang,
-    alternates: BLOG_LANGS.map((l) => ({ lang: l, href: `${ORIGIN}/${l}/blog` })),
+    alternates: withXDefault(BLOG_LANGS.map((l) => ({ lang: l, href: `${ORIGIN}/${l}/blog` }))),
     body: {
       h1: meta.title,
       text: meta.description,
-      links: posts.map((p) => ({ href: `${listPath}/${p.slug}`, text: p.title })),
+      /* Категорії окремим блоком: раніше на них не вело жодне посилання,
+         і аудит показував їх «без вхідних посилань». */
+      groups: [
+        {
+          h2: lang === 'en' ? 'Categories' : 'Категорії',
+          links: CATEGORIES.filter((c) => (postsInCategory(lang, c.id) || []).length)
+            .map((c) => ({ href: `${listPath}/category/${c.slug}`, text: c.title[lang] || c.title.uk })),
+        },
+        { h2: lang === 'en' ? 'Articles' : 'Статті', links: posts.map((p) => ({ href: `${listPath}/${p.slug}`, text: p.title })) },
+      ],
     },
   };
   addUrl(listPath, '0.8', 'weekly', posts[0]?.date || today);
@@ -204,13 +247,15 @@ for (const lang of BLOG_LANGS) {
     }));
 
     routes[p] = {
-      title: `${title} — The Edge`,
-      description,
+      /* Google обрізає заголовок десь після 60 символів, і аудит лічить
+         довші як помилку. Назву бренду дописуємо, лише коли влазить. */
+      title: `${title} — The Edge`.length <= 60 ? `${title} — The Edge` : title,
+      description: description.length > 158 ? `${description.slice(0, 155).replace(/\s+\S*$/, '')}…` : description,
       canonical: ORIGIN + p,
       lang,
       type: 'article',
       published: post.date,
-      alternates,
+      alternates: withXDefault(alternates),
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'BlogPosting',
@@ -226,7 +271,12 @@ for (const lang of BLOG_LANGS) {
         text: post.excerpt,
         // Текст статті — щоб робот бачив зміст, а не лише заголовок.
         // Обрізаємо: для індексу вистачає, а HTML не роздувається.
-        article: plainText(post.body || '').slice(0, 6000),
+        sections: sectionsOf(post.body),
+        links: [
+          ...CATEGORIES.filter((c) => (postsInCategory(lang, c.id) || []).some((x) => x.slug === post.slug))
+            .map((c) => ({ href: `${listPath}/category/${c.slug}`, text: c.title[lang] || c.title.uk })),
+          { href: listPath, text: lang === 'en' ? 'All articles' : 'Усі статті блогу' },
+        ],
       },
     };
     addUrl(p, '0.7', 'monthly', post.date);

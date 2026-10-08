@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import zlib from 'node:zlib';
 
 /* ==================================================================
    Сервер для власного VPS.
@@ -210,7 +211,47 @@ const MIME = {
   '.map': 'application/json; charset=utf-8',
 };
 
-async function sendFile(res, file, { immutable = false } = {}) {
+/* ------------------------------------------------------------------
+   Стиснення.
+
+   Сервер віддавав CSS, JS і HTML як є: 160 КБ стилів замість ~27 КБ,
+   а бандл JS — у кілька разів більший, ніж треба. Перед ним немає
+   проксі, що стискав би сам, тож робимо це тут. Аудит саме це й
+   побачив як «CSS занадто великий».
+
+   Brotli, якщо браузер уміє (усі сучасні), інакше gzip. Файли з dist
+   не змінюються до наступного деплою, тому стиснуту версію тримаємо
+   в памʼяті: тиснемо один раз, далі віддаємо готові байти.
+------------------------------------------------------------------ */
+const COMPRESSIBLE = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.xml', '.webmanifest', '.map']);
+const packCache = new Map(); // file → { mtime, br, gz }
+
+const pickEncoding = (req) => {
+  const ae = String(req?.headers?.['accept-encoding'] || '');
+  if (/\bbr\b/.test(ae)) return 'br';
+  if (/\bgzip\b/.test(ae)) return 'gzip';
+  return null;
+};
+const compress = (buf, enc) => (enc === 'br'
+  ? zlib.brotliCompressSync(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 9, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: buf.length } })
+  : zlib.gzipSync(buf, { level: 9 }));
+
+/* HTML-сторінки збираються на кожен запит, кешувати їх нема як — тиснемо
+   швидким рівнем: різниця в розмірі мала, а час відповіді важливіший. */
+function sendHtml(req, res, html) {
+  const enc = pickEncoding(req);
+  res.setHeader('vary', 'Accept-Encoding');
+  if (!enc) { res.end(html); return; }
+  const buf = Buffer.from(html);
+  const out = enc === 'br'
+    ? zlib.brotliCompressSync(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } })
+    : zlib.gzipSync(buf, { level: 6 });
+  res.setHeader('content-encoding', enc);
+  res.setHeader('content-length', out.length);
+  res.end(out);
+}
+
+async function sendFile(res, file, { immutable = false, req = null } = {}) {
   const ext = path.extname(file).toLowerCase();
   res.setHeader('content-type', MIME[ext] || 'application/octet-stream');
   res.setHeader(
@@ -219,6 +260,21 @@ async function sendFile(res, file, { immutable = false } = {}) {
   );
 
   const stat = await fsp.stat(file);
+  const enc = COMPRESSIBLE.has(ext) && stat.size > 1024 ? pickEncoding(req) : null;
+
+  if (enc) {
+    let c = packCache.get(file);
+    if (!c || c.mtime !== stat.mtimeMs) { c = { mtime: stat.mtimeMs }; packCache.set(file, c); }
+    const key = enc === 'br' ? 'br' : 'gz';
+    if (!c[key]) c[key] = compress(await fsp.readFile(file), enc);
+    res.setHeader('vary', 'Accept-Encoding');
+    res.setHeader('content-encoding', enc);
+    res.setHeader('content-length', c[key].length);
+    res.end(c[key]);
+    return;
+  }
+
+  if (COMPRESSIBLE.has(ext)) res.setHeader('vary', 'Accept-Encoding');
   res.setHeader('content-length', stat.size);
 
   await new Promise((resolve, reject) => {
@@ -349,6 +405,12 @@ function renderPage(rawPath) {
         `<main style="max-width:720px;margin:12vh auto 0;padding:0 24px;color:#9a9aae;font:16px/1.6 system-ui,sans-serif"><h1 style="color:#ededf5;font-size:28px;line-height:1.2">${escText(b.h1)}</h1>`,
         b.text ? `<p>${escText(b.text)}</p>` : '',
         b.article ? `<article><p>${escText(b.article)}</p></article>` : '',
+        /* Секції з H2: без них робот бачив сторінку з одним H1 і суцільним
+           абзацом, а аудит писав «H2 відсутній» і «структура H1-H6». */
+        b.sections?.length
+          ? `<article>${b.sections.map((x) => `${x.h2 ? `<h2 style="color:#ededf5;font-size:20px">${escText(x.h2)}</h2>` : ''}${x.text ? `<p>${escText(x.text)}</p>` : ''}`).join('')}</article>`
+          : '',
+        ...(b.groups || []).map((g) => `<h2 style="color:#ededf5;font-size:20px">${escText(g.h2)}</h2><ul>${g.links.map((l) => `<li><a style="color:#b3a9ff" href="${escAttr(l.href)}">${escText(l.text)}</a></li>`).join('')}</ul>`),
         b.links?.length
           ? `<ul>${b.links.map((l) => `<li><a style="color:#b3a9ff" href="${escAttr(l.href)}">${escText(l.text)}</a></li>`).join('')}</ul>`
           : '',
@@ -444,7 +506,7 @@ const server = http.createServer(async (req, res) => {
     /* Статика, якщо такий файл є. */
     const file = safeFile(pathname);
     if (file && pathname !== '/' && fs.existsSync(file) && fs.statSync(file).isFile()) {
-      await sendFile(res, file, { immutable: pathname.startsWith('/assets/') });
+      await sendFile(res, file, { immutable: pathname.startsWith('/assets/'), req });
       return;
     }
 
@@ -491,7 +553,7 @@ const server = http.createServer(async (req, res) => {
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.setHeader('cache-control', 'no-cache');
     if (page.noindex) res.setHeader('x-robots-tag', 'noindex');
-    res.end(page.html);
+    sendHtml(req, res, page.html);
   } catch (e) {
     /* У лог — усе, у відповідь — нічого зайвого. Текст помилки може
        містити шляхи на сервері й шматки конфігурації. */

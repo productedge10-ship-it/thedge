@@ -160,3 +160,5 @@ export default function BreakdownPanels({ stats }) {
     </div>
   );
 }
+
+export { Panel, Rows };

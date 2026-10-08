@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
+import { isBetaEmail, BETA_ROUTES } from '../lib/betaAccess';
 import { useSettings } from '../context/SettingsContext';
 import { T, EASE, useEdgeFonts } from '../lib/theme';
 import useCloudState from '../hooks/useCloudState';
@@ -605,6 +606,7 @@ export default function Hub() {
 
   const navigate = useNavigate();
   const { user } = useAuth();
+  const beta = isBetaEmail(user?.email);
   const { nickname, goal } = useSettings();
 
   /* Палітра з термінала — на цій сторінці й у світлій темі */
@@ -702,8 +704,8 @@ export default function Hub() {
   const activeOrder = dragOrder || layout.order;
 
   const visible = useMemo(
-    () => activeOrder.filter((id) => !layout.hidden.includes(id) && TILES[id]),
-    [activeOrder, layout.hidden],
+    () => activeOrder.filter((id) => !layout.hidden.includes(id) && TILES[id] && (beta || !BETA_ROUTES.includes(id))),
+    [activeOrder, layout.hidden, beta],
   );
   const hiddenTiles = useMemo(
     () => layout.hidden.filter((id) => TILES[id]),

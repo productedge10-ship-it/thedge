@@ -22,6 +22,7 @@ import CatChat from './CatChat';
 import ThemeSweep from './ThemeSweep';
 import { openOnboarding } from '../../lib/onboarding';
 import { NAV, openSettings } from '../../lib/settings';
+import { useBetaAccess, BETA_ROUTES } from '../../lib/betaAccess';
 import { t as tx } from '../../lib/lang';
 import { useSettings } from '../../context/SettingsContext';
 import appVersion from '../../version.json';
@@ -897,6 +898,7 @@ const NAV_ICONS = {
 
 function SidebarContent({ collapsed, hasUncompleted, signOut }) {
   const { hiddenNav } = useSettings();
+  const beta = useBetaAccess();
 
   return (
     <div className="flex flex-col h-full relative z-10">
@@ -935,6 +937,7 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
         <div className="flex flex-col pb-4">
           {NAV.map((g) => {
             const items = g.items
+              .filter((it) => beta || !BETA_ROUTES.includes(it.to))
               .filter((it) => !hiddenNav.includes(it.to))
               .filter((it) => !inDemo() || DEMO_ROUTES.includes(it.to))
               .filter((it) => !isSharedView() || viewRoutes().includes(it.to));

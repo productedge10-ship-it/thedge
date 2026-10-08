@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Search, X, Loader2, FlaskConical, Trash2, Layers,
+  Plus, Search, X, Loader2, FlaskConical, Trash2, Layers, CandlestickChart,
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
@@ -17,6 +17,8 @@ import { t as tx } from '../lib/lang';
 import Button from '../components/ui/Button';
 import BacktestCard from '../components/backtest/BacktestCard';
 import NewBacktestModal from '../components/backtest/NewBacktestModal';
+import { insertSession, isChartSession, chartUrl, statsUrl } from '../lib/backtestMode';
+import { remoteAllowed, getCatalog, warmSymbol } from '../lib/candles/remote';
 
 /* «1 бектест», «3 бектести», «5 бектестів». Без цього виходило
    «3 бектестів» — рядок, що виглядає як помилка набору. Окремий
@@ -170,6 +172,24 @@ export default function Backtest() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [user]);
 
+  /* Поки людина дивиться на список — тихо готуємо графік: код сторінки
+     графіка, каталог і останні місяці свічок бектестів на графіку лягають
+     у кеш браузера. Клік по картці відкриває графік уже без очікування. */
+  useEffect(() => {
+    if (loading || !remoteAllowed(user?.email)) return undefined;
+    const pairs = [...new Set(sessions.filter((s) => !s.demo && isChartSession(s)).map((s) => String(s.pair || '').toUpperCase()).filter(Boolean))].slice(0, 3);
+    const run = () => {
+      import('./BacktestChart').catch(() => {});
+      getCatalog().catch(() => {});
+      pairs.reduce((p, name) => p.then(() => warmSymbol(name)), Promise.resolve());
+    };
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 600));
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const id = idle(run, { timeout: 2000 });
+    return () => cancel(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user?.email]);
+
   async function load() {
     setLoading(true);
     try {
@@ -222,17 +242,18 @@ export default function Backtest() {
   const createSession = async (f) => {
     setSaving(true);
     try {
-      const payload = {
+      const data = await insertSession({
         user_id: user?.id,
         name: f.name.trim(),
         pair: f.pair || 'EURUSD',
         strategy_name: f.strategy_name || null,
         initial_balance: Number(f.initial_balance) || 10000,
-      };
-      const { data, error } = await supabase.from('backtest_sessions').insert([payload]).select().single();
-      if (error) throw error;
+        mode: f.mode || 'manual',
+        settings: f.settings || {},
+      });
       setCreating(false);
-      navigate(`/backtest/${data.id}`);
+      /* Бектест на графіку — одразу на графік; журнал — на його сторінку. */
+      navigate(data.mode === 'chart' ? chartUrl(data) : statsUrl(data));
     } catch (e) {
       console.error(e);
       alert(e.message || tx('Не вдалось створити бектест', 'Couldn’t create the backtest'));
@@ -400,7 +421,14 @@ export default function Backtest() {
           {/* NewBacktestButton вище — панель і вибух за формулою
               «Add Account» з рахунків, перефарбовані під суть
               бектесту (деталі — у коментарі над компонентом). */}
-          <NewBacktestButton onClick={() => setCreating(true)} />
+          {/* Реальний графік — поруч із «Новим бектестом», а не в меню:
+              це другий спосіб вести бектест, а не його налаштування. */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button variant="secondary" icon={CandlestickChart} onClick={() => setCreating('chart')}>
+              {tx('Бектест на реальному графіку', 'Backtest on a real chart')}
+            </Button>
+            <NewBacktestButton onClick={() => setCreating(true)} />
+          </div>
         </motion.div>
 
         {loading ? (
@@ -524,7 +552,9 @@ export default function Backtest() {
                     <BacktestCard
                       key={s.id}
                       session={s}
-                      onOpen={(x) => navigate(`/backtest/${x.id}`)}
+                      onOpen={(x) => navigate(!x.demo && isChartSession(x) ? chartUrl(x) : statsUrl(x))}
+                      onStats={(x) => navigate(statsUrl(x))}
+                      chartMode={!s.demo && isChartSession(s)}
                       onDelete={(x) => setConfirm(x)}
                       onShare={shareSession}
                       sharing={sharingId === s.id}
@@ -556,6 +586,8 @@ export default function Backtest() {
             saving={saving}
             onClose={() => setCreating(false)}
             onCreate={createSession}
+            initialMode={creating === 'chart' ? 'chart' : null}
+            strategies={[...new Set(sessions.filter((x) => !x.demo).map((x) => x.strategy_name).filter(Boolean))]}
           />
         )}
       </AnimatePresence>

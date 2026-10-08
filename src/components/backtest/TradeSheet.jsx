@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Trash2, ImagePlus, Loader2, CalendarDays, Plus, Pencil, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react';
+import { X, Check, Trash2, ImagePlus, Loader2, CalendarDays, Plus, Pencil, TrendingUp, TrendingDown, ChevronDown, LineChart } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { SESSIONS, metaOf, pairOf, resultLabel, shotsOf } from '../../lib/backtestStats';
 import { ACT, act, actGradient, actGradientHover, segFill as fill, SEG_TONE } from './accent';
@@ -11,6 +12,7 @@ import AssetPicker from './AssetPicker';
 import AssetIcon from '../ui/AssetIcon';
 import { t as tx } from '../../lib/lang';
 import useImageAttach, { filesFromPaste } from '../../hooks/useImageAttach';
+import TradeSnapshot from './TradeSnapshot';
 
 /* ==================================================================
    Деталі угоди бектесту.
@@ -185,6 +187,14 @@ export default function TradeSheet({
   readOnly = false,
 }) {
   const meta = metaOf(initial);
+  const navigate = useNavigate();
+  /* Угода з графіка бектесту — її можна відкрити знімком на графіку:
+     той самий ТФ, вид і малюнки, що були на вході. */
+  const chartSnap = initial?.id && initial?.session_id && meta?.chart?.entry_time
+    ? `/backtest/chart?session=${initial.session_id}&snap=${initial.id}` : null;
+  /* Угода з графіка: замість картинки — живий знімок (графік, який
+     можна гортати). Скріншоти лишаються на другій вкладці. */
+  const [chartView, setChartView] = useState(meta?.chart?.entry_time && meta?.chart?.exit_time ? 'live' : 'shots');
   const [f, setF] = useState({
     id: initial?.id || null,
     date: initial?.date || new Date().toISOString().slice(0, 10),
@@ -423,6 +433,7 @@ export default function TradeSheet({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            {chartSnap && <IconBtn icon={LineChart} label={tx('Відкрити на графіку (знімок угоди)', 'Open on chart (trade snapshot)')} onClick={() => navigate(chartSnap)} />}
             {!readOnly && f.id && onDelete && <IconBtn icon={Trash2} label={tx('Видалити', 'Delete')} onClick={() => onDelete(f.id)} danger />}
             <IconBtn icon={X} label={tx('Закрити (Esc)', 'Close (Esc)')} onClick={onClose} />
           </div>
@@ -432,8 +443,22 @@ export default function TradeSheet({
         <div className="flex flex-col gap-5 px-6 pb-5 pt-[22px]" style={{ borderBottom: `1px solid ${T.line}` }}>
             <div>
               <Label
-                hint={locked ? null : tx('Ctrl+V, файл або посилання', 'Ctrl+V, a file or a link')}
-                right={f.shots.length > 1 ? (
+                hint={locked || chartView === 'live' ? null : tx('Ctrl+V, файл або посилання', 'Ctrl+V, a file or a link')}
+                right={meta?.chart?.entry_time ? (
+                  <span className="flex shrink-0 overflow-hidden rounded-lg" style={{ border: `1px solid ${T.line}` }}>
+                    {[['live', tx('Живий знімок', 'Live snapshot')], ['shots', `${tx('Скріншоти', 'Screenshots')}${f.shots.length ? ` · ${f.shots.length}` : ''}`]].map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setChartView(id)}
+                        className="px-2.5 py-1 text-[11.5px] font-semibold"
+                        style={{ fontFamily: T.sans, color: chartView === id ? T.text : T.text3, background: chartView === id ? 'rgba(255,255,255,0.08)' : 'transparent' }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </span>
+                ) : f.shots.length > 1 ? (
                   <span className="shrink-0 text-[11px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
                     {f.shots.length}
                   </span>
@@ -442,7 +467,9 @@ export default function TradeSheet({
                 {tx('Графік', 'Chart')}
               </Label>
 
-              {f.shots.length > 0 ? (
+              {chartView === 'live' && meta?.chart?.entry_time ? (
+                <TradeSnapshot row={initial} />
+              ) : f.shots.length > 0 ? (
                 /* Той самий слайдер, що в журналі: стрілки, лупа на
                    наведенні й фулскрін по кліку. Заводити для бектесту
                    власний перегляд не було сенсу — рівні на графіку

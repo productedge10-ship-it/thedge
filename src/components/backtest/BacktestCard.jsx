@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Trash2, Globe, Link2, Loader2 } from 'lucide-react';
+import { ArrowRight, Trash2, Globe, Link2, Loader2, CandlestickChart, BarChart3 } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { computeStats, sparkFromTrades, fmtPF, fmtR } from '../../lib/backtestStats';
 import { ACT, act } from './accent';
@@ -103,7 +103,7 @@ function Metric({ label, value, tone, last }) {
   );
 }
 
-export default function BacktestCard({ session, onOpen, onDelete, onShare, sharing }) {
+export default function BacktestCard({ session, onOpen, onDelete, onShare, sharing, onStats, chartMode = false }) {
   const trades = session.trades || [];
   const s = computeStats(trades, session.initial_balance || 10000);
   const spark = sparkFromTrades(s.trades);
@@ -137,6 +137,15 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
       <div style={{ padding: '18px 20px 0' }}>
         <div className="flex items-center justify-between" style={{ gap: 10 }}>
           <div className="flex min-w-0 items-center overflow-hidden" style={{ gap: 7 }}>
+            {chartMode && (
+              <span
+                title={tx('Бектест на реальному графіку — відкривається одразу графік', 'Real-chart backtest — opens the chart')}
+                className="grid shrink-0 place-items-center"
+                style={{ width: 26, height: 26, borderRadius: 7, color: '#fff', background: `linear-gradient(180deg, ${ACT.from}, ${ACT.to})` }}
+              >
+                <CandlestickChart size={13} strokeWidth={2.3} />
+              </span>
+            )}
             <Chip>{session.pair}</Chip>
             {session.strategy_name && <Chip soft>{session.strategy_name}</Chip>}
             {session.demo && <Chip soft>{tx('демо', 'demo')}</Chip>}
@@ -283,6 +292,18 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
             </button>
           )}
 
+          {chartMode && onStats && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onStats(session); }}
+              title={tx('Статистика й угоди', 'Stats & trades')}
+              className="mr-2 grid h-[26px] w-[26px] place-items-center rounded-lg transition-colors"
+              style={{ color: T.text3 }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = ACT.tint; e.currentTarget.style.background = act(0.12); }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = T.text3; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <BarChart3 size={13} strokeWidth={2.2} />
+            </button>
+          )}
           <ArrowRight
             size={16}
             strokeWidth={1.9}

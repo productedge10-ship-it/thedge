@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Loader2, Trash2, Share2, Globe, Link2Off } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2, Share2, Globe, Link2Off, CandlestickChart } from 'lucide-react';
+import Button from '../components/ui/Button';
 
 import { supabase } from '../lib/supabase';
 import { notify } from '../utils/notify';
@@ -11,11 +12,13 @@ import { computeStats, pairOf, tagsOf } from '../lib/backtestStats';
 import { isDemo, getDemoSession, addDemoTrade, updateDemoTrade, deleteDemoTrade } from '../lib/backtestDemo';
 import { setBacktestPublic } from '../lib/backtestShare';
 import QuickTradeBar from '../components/backtest/QuickTradeBar';
+import { isChartSession } from '../lib/backtestMode';
 import BacktestTable from '../components/backtest/BacktestTable';
 import TradeSheet from '../components/backtest/TradeSheet';
 import StatStrip from '../components/backtest/StatStrip';
 import EquityCurve from '../components/backtest/EquityCurve';
 import BreakdownPanels from '../components/backtest/BreakdownPanels';
+import ReportPanels from '../components/backtest/ReportPanels';
 import { ACT, act } from '../components/backtest/accent';
 import { t as tx, LOCALE } from '../lib/lang';
 import ErrorComposerModal from '../components/errors/ErrorComposerModal';
@@ -38,6 +41,10 @@ export default function BacktestSession() {
   const demo = isDemo(sessionId);
   const [session, setSession] = useState(null);
   const [trades, setTrades] = useState([]);
+  /* Бектест на графіку: угоди пише сам графік, тож рядок ручного
+     запису ховаємо за кнопкою, а головна дія — «Продовжити на графіку». */
+  const chartMode = !isDemo(sessionId) && !!session && isChartSession({ ...session, trades });
+  const [manualOpen, setManualOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sheet, setSheet] = useState(null);       // { trade } | { preset }
@@ -226,6 +233,10 @@ export default function BacktestSession() {
 
   const saveSheet = async (f) => {
     const payload = toPayload(f);
+    /* Угода з графіка несе в tda_data рівні й знімки (chart) — форма
+       їх не знає, тож не губимо: беремо все старе й накладаємо нове. */
+    const prev = f.id ? trades.find((t) => t.id === f.id) : null;
+    if (prev?.tda_data) payload.tda_data = { ...prev.tda_data, ...payload.tda_data };
     setSaving(true);
     try {
       if (demo) {
@@ -349,9 +360,19 @@ export default function BacktestSession() {
             </div>
           </div>
 
-          {/* Поділитись прогоном. Демо не ділиться — там нема чого показувати. */}
+          {/* Поділитись прогоном. Демо не ділиться — там нема чого показувати.
+              Реальний графік — і для демо теж: там угоди просто не пишуться. */}
+          <div className="mt-[22px] flex shrink-0 flex-wrap items-center gap-2.5">
+            <Button
+              variant="primary"
+              size="lg"
+              icon={CandlestickChart}
+              onClick={() => navigate(demo ? '/backtest/chart' : `/backtest/chart?session=${sessionId}`)}
+            >
+              {chartMode ? tx('Продовжити на графіку', 'Continue on chart') : tx('Відкрити на графіку', 'Open on chart')}
+            </Button>
           {!demo && (
-            <div className="mt-[22px] flex shrink-0 items-center gap-2.5">
+            <>
               <button
                 onClick={share}
                 className="flex h-11 items-center gap-2.5 rounded-xl px-5 text-[14px] font-semibold transition-all duration-200 active:scale-[0.98]"
@@ -384,8 +405,9 @@ export default function BacktestSession() {
                   <Link2Off size={16} strokeWidth={2.2} />
                 </button>
               )}
-            </div>
+            </>
           )}
+          </div>
         </motion.div>
 
         {/* ─────────── Підсумок прогону ─────────── */}
@@ -399,6 +421,8 @@ export default function BacktestSession() {
           <BreakdownPanels stats={stats} />
         </div>
 
+        <ReportPanels stats={stats} onOpen={(t) => setSheet({ trade: t })} />
+
         {/* ─────────── Робоча зона: запис і список ─────────── */}
         <div className="mb-4 mt-[34px]">
           <h2 className="text-[20px] font-bold" style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.025em' }}>
@@ -409,7 +433,24 @@ export default function BacktestSession() {
           </p>
         </div>
 
-        <div className="mb-4">
+        {chartMode && !manualOpen && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3.5" style={{ background: act(0.08), border: `1px solid ${act(0.3)}` }}>
+            <span className="flex items-center gap-2.5 text-[13.5px]" style={{ fontFamily: T.sans, color: T.text2 }}>
+              <CandlestickChart size={16} style={{ color: ACT.tint }} />
+              {tx('Цей бектест ведеться на графіку — угоди, скріни й знімки записуються самі.', 'This backtest runs on the chart — trades, screenshots and snapshots are recorded automatically.')}
+            </span>
+            <span className="flex items-center gap-2">
+              <button type="button" onClick={() => setManualOpen(true)} className="rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors hover:bg-white/5" style={{ color: T.text3 }}>
+                {tx('Додати угоду вручну', 'Add a trade manually')}
+              </button>
+              <button type="button" onClick={() => navigate(`/backtest/chart?session=${sessionId}`)} className="rounded-lg px-3.5 py-1.5 text-[12.5px] font-semibold text-white" style={{ background: `linear-gradient(180deg, ${ACT.from}, ${ACT.to})` }}>
+                {tx('Продовжити на графіку', 'Continue on chart')}
+              </button>
+            </span>
+          </div>
+        )}
+
+        <div className={chartMode && !manualOpen ? 'hidden' : 'mb-4'}>
           <QuickTradeBar
             saving={saving}
             sessionPair={session?.pair || ''}

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, ArrowRight } from 'lucide-react';
+import { X, Loader2, ArrowRight, ArrowLeft, CandlestickChart, NotebookPen, Check } from 'lucide-react';
 
 import { T, EASE } from '../../lib/theme';
 import { ACT } from './accent';
 import AssetPicker from './AssetPicker';
+import HistoryDatePicker from './HistoryDatePicker';
 import { t as tx } from '../../lib/lang';
 
 /* ==================================================================
@@ -60,7 +61,7 @@ const money = (n) => `$${Math.round(n).toLocaleString('en-US').replace(/,/g, ' '
 const FLOAT_EASE = 'cubic-bezier(.45,0,.15,1)';
 const FLOAT_MS = 380;
 
-function FloatField({ label, value, onChange, onKeyDown, placeholder, autoFocus, prefix, mono: isMono }) {
+function FloatField({ label, value, onChange, onKeyDown, placeholder, autoFocus, prefix, mono: isMono, list }) {
   const [focus, setFocus] = useState(false);
   const up = focus || !!String(value ?? '').length;
 
@@ -129,6 +130,7 @@ function FloatField({ label, value, onChange, onKeyDown, placeholder, autoFocus,
           </span>
         )}
         <input
+          list={list}
           autoFocus={autoFocus}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -162,12 +164,69 @@ function FloatField({ label, value, onChange, onKeyDown, placeholder, autoFocus,
 
 const PRESETS = ['1 000', '10 000', '50 000', '100 000'];
 
-export default function NewBacktestModal({ saving, onClose, onCreate }) {
+/* Ряд кнопок-варіантів з підписом (ризик, таймфрейм). */
+function Choice({ label, options, value, onChange }) {
+  return (
+    <div className="flex flex-col" style={{ gap: 7 }}>
+      <span className="uppercase" style={mono(9.5, { letterSpacing: '1.8px', fontWeight: 600, color: T.text3 })}>{label}</span>
+      <div className="flex flex-wrap" style={{ gap: 7 }}>
+        {options.map(([val, text]) => {
+          const on = value === val;
+          return (
+            <button
+              key={val}
+              type="button"
+              onClick={() => onChange(val)}
+              style={{
+                height: 36, minWidth: 52, padding: '0 12px', borderRadius: 9,
+                ...mono(11.5, { fontWeight: 600 }),
+                color: on ? T.text : T.text2,
+                background: on ? `rgba(${ACT.rgb},0.18)` : 'rgba(255,255,255,0.03)',
+                boxShadow: `inset 0 0 0 1px ${on ? `rgba(${ACT.rgb},0.47)` : T.line}`,
+                transition: 'all .16s',
+              }}
+            >
+              {text}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* Два способи вести бектест — перший крок форми. */
+const MODES = [
+  {
+    id: 'chart',
+    icon: CandlestickChart,
+    title: () => tx('На реальному графіку', 'On a real chart'),
+    desc: () => tx('Реплей справжніх свічок свічка за свічкою. Угоди, скріншоти й знімки входу пишуться самі.', 'Replay real candles bar by bar. Trades, screenshots and entry snapshots are saved for you.'),
+    points: () => [tx('Хвилинні свічки за роки історії', 'Years of 1-minute candles'), tx('Без підглядання в майбутнє', 'No peeking into the future'), tx('Продовжуєш з того місця, де зупинився', 'Resume where you stopped')],
+    badge: () => tx('Рекомендовано', 'Recommended'),
+  },
+  {
+    id: 'manual',
+    icon: NotebookPen,
+    title: () => tx('Ручний журнал', 'Manual log'),
+    desc: () => tx('Торгуєш у TradingView чи MT5, а угоди записуєш сюди. Статистика рахується так само.', 'Trade in TradingView or MT5 and log trades here. Stats are computed the same way.'),
+    points: () => [tx('Швидкий запис угоди в один рядок', 'One-line quick trade entry'), tx('Скріни з буфера чи посилання TV', 'Screenshots from clipboard or a TV link'), tx('Будь-який актив', 'Any asset')],
+  },
+];
+
+const TF_CHOICES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1'];
+const RISKS = ['0.5', '1', '2'];
+
+export default function NewBacktestModal({ saving, onClose, onCreate, initialMode = null, strategies = [] }) {
+  const [mode, setMode] = useState(initialMode);
   const [f, setF] = useState({
     name: '',
-    pair: 'EURUSD',
+    pair: initialMode === 'chart' ? 'XAUUSD' : 'EURUSD',
     strategy_name: '',
     initial_balance: '10000',
+    riskPct: '1',
+    tf: 'M15',
+    start: '',
   });
   const set = (p) => setF((s) => ({ ...s, ...p }));
 
@@ -180,13 +239,25 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
   }, [onClose]);
 
   const dep = Number(String(f.initial_balance).replace(/[^\d.]/g, '')) || 0;
-  const canSave = f.name.trim() && dep > 0;
-  const submit = () => { if (canSave && !saving) onCreate({ ...f, initial_balance: dep }); };
+  const risk = Number(f.riskPct) > 0 ? Number(f.riskPct) : 1;
+  const canSave = !!mode && f.name.trim() && dep > 0;
+  const submit = () => {
+    if (!canSave || saving) return;
+    const settings = mode === 'chart'
+      ? { riskPct: risk, tf: f.tf, ...(f.start ? { start: f.start } : {}) }
+      : { riskPct: risk };
+    onCreate({ name: f.name, pair: f.pair, strategy_name: f.strategy_name.trim(), initial_balance: dep, mode, settings });
+  };
+  const pickMode = (m) => { setMode(m); if (m === 'chart' && f.pair === 'EURUSD' && !f.name) set({ pair: 'XAUUSD' }); };
 
   const rows = [
-    { k: tx('Ризик на угоду', 'Risk per trade'), v: '1%', acc: true },
-    { k: tx('1R у грошах', '1R in cash'), v: money(dep / 100), acc: true },
+    { k: tx('Ризик на угоду', 'Risk per trade'), v: `${risk}%`, acc: true },
+    { k: tx('1R у грошах', '1R in cash'), v: money((dep * risk) / 100), acc: true },
     { k: tx('Депозит', 'Deposit'), v: money(dep) },
+    ...(mode === 'chart' ? [
+      { k: tx('Таймфрейм', 'Timeframe'), v: f.tf },
+      { k: tx('Старт реплею', 'Replay start'), v: f.start ? f.start.split('-').reverse().join('.') : tx('обереш на графіку', 'pick on chart') },
+    ] : []),
   ];
 
   /* Портал у body, а не рендер на місці: <main> сторінки має свій
@@ -232,11 +303,32 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
 
         <div className="flex shrink-0 items-center justify-between gap-4 px-4 pb-3.5 pt-3 sm:gap-5 sm:px-[26px] sm:py-[22px]">
           <div className="min-w-0">
-            <div
-              style={{ fontFamily: T.display, fontSize: 20, fontWeight: 600, letterSpacing: '-0.4px', color: T.text }}
-            >
-              {tx('Новий бектест', 'New backtest')}
+            <div className="flex items-center gap-2.5">
+              {mode && !initialMode && (
+                <button
+                  type="button"
+                  onClick={() => setMode(null)}
+                  aria-label={tx('Назад до вибору', 'Back')}
+                  className="grid h-8 w-8 place-items-center rounded-[10px] transition-colors hover:bg-white/10"
+                  style={{ color: T.text2 }}
+                >
+                  <ArrowLeft size={16} strokeWidth={2.2} />
+                </button>
+              )}
+              <div style={{ fontFamily: T.display, fontSize: 20, fontWeight: 600, letterSpacing: '-0.4px', color: T.text }}>
+                {tx('Новий бектест', 'New backtest')}
+              </div>
+              {mode && (
+                <span style={{ ...mono(10, { letterSpacing: '1.2px', fontWeight: 700 }), padding: '4px 8px', borderRadius: 7, color: 'var(--edge-acc)', background: `rgba(${ACT.rgb},0.16)`, border: `1px solid rgba(${ACT.rgb},0.35)`, textTransform: 'uppercase' }}>
+                  {mode === 'chart' ? tx('графік', 'chart') : tx('журнал', 'log')}
+                </span>
+              )}
             </div>
+            {!mode && (
+              <div style={{ fontFamily: T.sans, fontSize: 13, color: T.text3, marginTop: 4 }}>
+                {tx('Як будеш бектестити?', 'How will you backtest?')}
+              </div>
+            )}
           </div>
 
           <button
@@ -251,6 +343,54 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
           </button>
         </div>
 
+        {!mode && (
+          <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto p-4 sm:grid-cols-2 sm:gap-4 sm:p-[26px]" style={{ borderTop: `1px solid ${T.line}` }}>
+            {MODES.map((m) => {
+              const Icon = m.icon;
+              const hero = m.id === 'chart';
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => pickMode(m.id)}
+                  className="group relative flex flex-col items-start overflow-hidden text-left transition-all duration-200 active:scale-[0.99]"
+                  style={{
+                    padding: 22, borderRadius: 20, gap: 12,
+                    background: hero ? `linear-gradient(160deg, rgba(${ACT.rgb},0.16), ${T.surface} 60%)` : T.sunken,
+                    border: `1px solid ${hero ? `rgba(${ACT.rgb},0.45)` : T.line}`,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = `rgba(${ACT.rgb},0.75)`; e.currentTarget.style.boxShadow = `0 24px 50px -28px #000, 0 0 0 4px rgba(${ACT.rgb},0.08)`; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = hero ? `rgba(${ACT.rgb},0.45)` : T.line; e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  <div className="flex w-full items-center justify-between">
+                    <span className="grid place-items-center" style={{ width: 46, height: 46, borderRadius: 14, color: hero ? '#fff' : T.text, background: hero ? `linear-gradient(180deg, ${ACT.from}, ${ACT.to})` : 'rgba(255,255,255,0.05)', border: hero ? 'none' : `1px solid ${T.lineHi}` }}>
+                      <Icon size={22} strokeWidth={2} />
+                    </span>
+                    {m.badge && (
+                      <span style={{ ...mono(9.5, { letterSpacing: '1.4px', fontWeight: 700 }), textTransform: 'uppercase', padding: '5px 8px', borderRadius: 7, color: 'var(--edge-acc)', background: `rgba(${ACT.rgb},0.16)` }}>
+                        {m.badge()}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontFamily: T.display, fontSize: 18, fontWeight: 600, letterSpacing: '-0.3px', color: T.text, marginTop: 4 }}>{m.title()}</div>
+                  <div style={{ fontFamily: T.sans, fontSize: 13.5, lineHeight: 1.5, color: T.text2 }}>{m.desc()}</div>
+                  <ul className="flex flex-col" style={{ gap: 7, marginTop: 2 }}>
+                    {m.points().map((p) => (
+                      <li key={p} className="flex items-center" style={{ gap: 8, fontFamily: T.sans, fontSize: 12.5, color: T.text3 }}>
+                        <Check size={13} strokeWidth={2.6} style={{ color: hero ? 'var(--edge-acc)' : T.text3 }} /> {p}
+                      </li>
+                    ))}
+                  </ul>
+                  <span className="mt-auto flex items-center pt-2" style={{ gap: 6, fontFamily: T.sans, fontSize: 13.5, fontWeight: 600, color: hero ? 'var(--edge-acc)' : T.text }}>
+                    {tx('Обрати', 'Choose')} <ArrowRight size={15} strokeWidth={2.2} className="transition-transform duration-200 group-hover:translate-x-1" />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {mode && (
         <div className="grid min-h-0 flex-1 overflow-y-auto overscroll-contain sm:overflow-visible lg:grid-cols-[1fr_282px]" style={{ borderTop: `1px solid ${T.line}` }}>
 
           <div
@@ -272,11 +412,15 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
             <AssetPicker value={f.pair} onChange={(v) => set({ pair: v })} height={56} />
 
             <FloatField
-              label={tx('Стратегія · не обовʼязково', 'Strategy · optional')}
+              label={tx('Торгова система · не обовʼязково', 'Trading system · optional')}
               value={f.strategy_name}
               onChange={(v) => set({ strategy_name: v })}
               placeholder="SFP, ORB, Silver Bullet…"
+              list="edge-bt-strategies"
             />
+            <datalist id="edge-bt-strategies">
+              {[...new Set([...strategies, 'Silver Bullet', 'SFP', 'ORB', 'ICT 2022', 'Turtle Soup'])].map((x) => <option key={x} value={x} />)}
+            </datalist>
 
             <div>
               <FloatField
@@ -315,6 +459,26 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
                 })}
               </div>
             </div>
+
+            {/* Ризик на угоду — від нього рахується $ у кожній угоді. */}
+            <Choice
+              label={tx('Ризик на угоду', 'Risk per trade')}
+              options={RISKS.map((r) => [r, `${r}%`])}
+              value={f.riskPct}
+              onChange={(v) => set({ riskPct: v })}
+            />
+
+            {mode === 'chart' && (
+              <>
+                <Choice
+                  label={tx('Таймфрейм на старті', 'Starting timeframe')}
+                  options={TF_CHOICES.map((x) => [x, x])}
+                  value={f.tf}
+                  onChange={(v) => set({ tf: v })}
+                />
+                <HistoryDatePicker pair={f.pair} value={f.start} onChange={(v) => set({ start: v })} />
+              </>
+            )}
           </div>
 
           {/* ---------- підсумок ---------- */}
@@ -411,7 +575,9 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
             </p>
           </div>
         </div>
+        )}
 
+        {mode && (
         <div
           className="flex shrink-0 flex-wrap items-center justify-between gap-4 px-4 pb-[var(--sb)] pt-3 sm:px-[26px] sm:pb-[22px] sm:pt-[18px]"
           style={{ borderTop: `1px solid ${T.line}`, '--sb': 'max(16px, env(safe-area-inset-bottom))' }}
@@ -460,11 +626,12 @@ export default function NewBacktestModal({ saving, onClose, onCreate }) {
               }}
             >
               {saving ? <Loader2 size={15} className="animate-spin" /> : null}
-              {tx('Створити', 'Create')}
+              {mode === 'chart' ? tx('Створити й відкрити графік', 'Create & open chart') : tx('Створити', 'Create')}
               {!saving && <ArrowRight size={15} strokeWidth={2.2} />}
             </button>
           </div>
         </div>
+        )}
       </motion.div>
     </motion.div>,
     document.body,

@@ -12,6 +12,7 @@ import { EdgeMonogram, EdgeWordmark } from '../components/core/Layout';
 import StatStrip from '../components/backtest/StatStrip';
 import EquityCurve from '../components/backtest/EquityCurve';
 import BreakdownPanels from '../components/backtest/BreakdownPanels';
+import ReportPanels from '../components/backtest/ReportPanels';
 import BacktestTable from '../components/backtest/BacktestTable';
 import TradeSheet from '../components/backtest/TradeSheet';
 import { ACT, act, actGradient, actGradientHover } from '../components/backtest/accent';
@@ -256,6 +257,8 @@ export default function SharedBacktest() {
           <div className="mt-[18px]">
             <BreakdownPanels stats={stats} />
           </div>
+
+          <ReportPanels stats={stats} />
 
           {/* ─────────── Угоди ─────────── */}
           <div className="mb-4 mt-[34px]">

@@ -21,6 +21,7 @@ import ProtectedRoute from './components/core/ProtectedRoute';
    малюватись. Ліниво тягнути його означало б зайвий кадр із
    порожнечею перед кожним платним розділом. */
 import ProSection from './components/core/ProSection';
+import BetaOnly from './components/core/BetaOnly';
 import Landing from './pages/Landing';
 
 /* ==================================================================
@@ -78,6 +79,7 @@ const FAQ = lazy(() => import('./pages/FAQ'));
 const TradingSystem = lazy(() => import('./pages/TradingSystem'));
 const Backtest = lazy(() => import('./pages/Backtest'));
 const BacktestSession = lazy(() => import('./pages/BacktestSession'));
+const BacktestChart = lazy(() => import('./pages/BacktestChart'));
 const TwentyTrades = lazy(() => import('./pages/TwentyTrades'));
 const SharedPlan = lazy(() => import('./pages/SharedPlan'));
 const SharedReview = lazy(() => import('./pages/SharedReview'));
@@ -118,6 +120,10 @@ const page = (Comp) => (
    Ховати пункт узагалі — найгірший варіант з можливих: прихованого
    розділу для людини не існує, вона ніколи не дізнається, що продукт
    таке вміє, і ніколи за це не заплатить. */
+const betaPage = (Comp, feature) => (
+  <BetaOnly>{proPage(Comp, feature)}</BetaOnly>
+);
+
 const proPage = (Comp, feature) => (
   <Suspense fallback={Blank}>
     <ProSection feature={feature}>{createElement(Comp)}</ProSection>
@@ -236,8 +242,9 @@ const router = createBrowserRouter([
       { path: 'reviews', element: page(Reviews) },
       { path: 'faq', element: page(FAQ) },
       { path: 'system', element: page(TradingSystem) },
-      { path: 'backtest', element: proPage(Backtest, 'backtest') },
-      { path: 'backtest/:sessionId', element: proPage(BacktestSession, 'backtest') },
+      { path: 'backtest', element: betaPage(Backtest, 'backtest') },
+      { path: 'backtest/chart', element: betaPage(BacktestChart, 'backtest') },
+      { path: 'backtest/:sessionId', element: betaPage(BacktestSession, 'backtest') },
       { path: '20-trades', element: page(TwentyTrades) },
       { path: 'checklist', element: page(PreTradeChecklist) },
       { path: 'calculator', element: page(Calculator) },
