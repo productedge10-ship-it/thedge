@@ -278,6 +278,11 @@ export default function ChartSettings({ prefs, onChange, onClose }) {
         <Row label={tx('Тейк', 'Target')}><NumField value={p.rr} onChange={(v) => set({ rr: v })} suffix="R" min={0.1} max={50} step={0.5} /></Row>
         <Row label={tx('Ризик на угоду', 'Risk per trade')}><NumField value={p.riskPct ?? 1} onChange={(v) => set({ riskPct: v })} suffix={tx('% балансу', '% of balance')} min={0.01} max={100} step={0.25} /></Row>
         <Box on={p.oneClick} onChange={(v) => set({ oneClick: v })} label={tx('Вхід в один клік', 'One-click trading')} hint={tx('Buy / Sell одразу відкривають угоду, без чернетки на графіку.', 'Buy / Sell open at once, without a draft on the chart.')} />
+        <Head>{tx('Новини', 'News')}</Head>
+        <Box on={p.news !== false} onChange={(v) => set({ news: v })} label={tx('Економічні новини на графіку', 'Economic events on chart')} hint={tx('Значки внизу графіка на свічці виходу новини. У реплеї — лише ті, що вже вийшли; наведи, щоб побачити факт, прогноз і попереднє.', 'Icons at the bottom on the candle of the release. In replay only already released ones; hover for actual, forecast and previous.')} />
+        <Row label={tx('Важливість', 'Impact')}>
+          <Select value={p.newsImpact || 'medium'} onChange={(v) => set({ newsImpact: v })} options={[['high', tx('Лише висока', 'High only')], ['medium', tx('Висока й середня', 'High and medium')], ['all', tx('Усі', 'All')]]} width={180} />
+        </Row>
         <Head>{tx('Реплей', 'Replay')}</Head>
         <Box on={p.animCandles} onChange={(v) => set({ animCandles: v })} label={tx('Свічки формуються наживо', 'Candles build up live')} hint={tx('Нова свічка росте так, як рухалась ціна всередині неї.', 'Each new candle grows the way price moved inside it.')} />
         <Box on={p.animCut} onChange={(v) => set({ animCut: v })} label={tx('Анімація ножиць', 'Scissors animation')} />

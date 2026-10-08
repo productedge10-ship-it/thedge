@@ -14,7 +14,7 @@ import { fmtChartTime, fmtTick } from './timefmt';
    TradingView Lightweight Charts™
    Copyright (с) 2025 TradingView, Inc. https://www.tradingview.com/
    Якщо логотип на графіку вимкнено, посилання на tradingview.com
-   показує панель угоди — так вимога ліцензії виконана в обох станах.
+   стоїть на сторінці «Умови» (/terms) — так вимога ліцензії виконана.
 ================================================================== */
 
 /* Колір у налаштуваннях — рядок CSS: «#rrggbb» або «rgba(r,g,b,a)». */
@@ -121,6 +121,8 @@ export const DEFAULT_PREFS = {
   /* Торгівля */
   showPositions: true, showClosed: true, markerText: false, atrMult: 1, rr: 2,
   animCandles: true, animCut: true,
+  /* Новини на графіку: high | medium | all */
+  news: true, newsImpact: 'medium',
   /* Стан сторінки */
   tf: 'M15', speed: 2, symbol: '', panel: true,
 };

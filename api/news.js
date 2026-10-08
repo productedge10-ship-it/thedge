@@ -140,6 +140,10 @@ const titleOf = (e) => {
 
 async function tvWeek(offset) {
   const [from, to] = weekRange(offset);
+  return tvRange(from, to);
+}
+
+async function tvRange(from, to) {
   const url = `${TV}?from=${from.toISOString()}&to=${to.toISOString()}`;
 
   const res = await fetch(url, {
@@ -181,6 +185,27 @@ async function tvWeek(offset) {
       const same = (x) => `${x.date}|${x.country}|${x.title}`;
       return all.findIndex((x) => same(x) === same(e)) === i;
     });
+}
+
+/* ---------- довільний діапазон (історія для бектесту) ----------
+
+   /api/news?from=2024-03-01&to=2024-04-01 — новини за період, з
+   фактичними значеннями. Графік бектесту бере їх помісячно і показує
+   лише ті, що вже вийшли на момент реплею. Минуле не змінюється, тож
+   такі відповіді кешуємо надовго. */
+const MAX_RANGE = 40 * 86400000;
+
+async function range(fromStr, toStr) {
+  const from = new Date(fromStr);
+  const to = new Date(toStr);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from) throw new Error('bad range');
+  if (to - from > MAX_RANGE) throw new Error('range too long');
+  const key = `r:${from.toISOString()}|${to.toISOString()}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < TTL) return hit.rows;
+  const rows = await tvRange(from, to);
+  cache.set(key, { at: Date.now(), rows });
+  return rows;
 }
 
 /* Запасний шлях — єдиний живий файл faireconomy. Він знає лише
@@ -411,7 +436,18 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { week = 'this', desc, ccy = '' } = req.query || {};
+  const { week = 'this', desc, ccy = '', from, to } = req.query || {};
+
+  if (from && to) {
+    try {
+      const rows = await range(String(from), String(to));
+      const past = new Date(String(to)).getTime() < Date.now() - 2 * 86400000;
+      res.setHeader('Cache-Control', past ? 's-maxage=2592000, stale-while-revalidate=86400' : 's-maxage=1200, stale-while-revalidate=600');
+      return res.status(200).json(rows);
+    } catch (e) {
+      return res.status(502).json({ error: String(e?.message || e) });
+    }
+  }
 
   if (desc) {
     const found = await describe(String(desc), String(ccy));

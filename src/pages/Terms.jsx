@@ -182,6 +182,10 @@ export default function Terms() {
 
             <div className="mt-16 border-t pt-6 text-[13px] leading-[1.7]" style={{ borderColor: T.line, fontFamily: T.sans, color: T.text4 }}>
               {OWNER.name} · {OWNER.email} · редакція {TERMS_VERSION}
+              {/* Умова ліцензії бібліотеки графіків (Apache 2.0 + NOTICE). */}
+              <div className="mt-2">
+                Графіки: <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer" className="underline">TradingView Lightweight Charts™</a> · Copyright © 2025 TradingView, Inc.
+              </div>
             </div>
           </div>
         </div>

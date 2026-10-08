@@ -28,6 +28,9 @@ import DrawingSettings from '../components/backtest/chart/DrawingSettings';
 import IndicatorManager from '../components/backtest/chart/IndicatorManager';
 import LinkedPanes, { MAX_LINKED } from '../components/backtest/chart/LinkedPanes';
 import LinkedLegend from '../components/backtest/chart/LinkedLegend';
+import NewsMarks from '../components/backtest/chart/NewsMarks';
+import SymbolLogo from '../components/backtest/chart/SymbolLogo';
+import { assetInfo, GROUPS as ASSET_GROUPS } from '../lib/candles/assets';
 import TradePanel from '../components/backtest/chart/TradePanel';
 import SideChart from '../components/backtest/chart/SideChart';
 import FavoritesBar from '../components/backtest/chart/FavoritesBar';
@@ -130,6 +133,9 @@ function Menu({ open, onClose, children, align = 'left', width = 280 }) {
     </div>
   );
 }
+
+/* Панель реплею вбудована внизу графіка: з'являється знизу. */
+const RB_CSS = '@keyframes edgeBarIn{from{opacity:0;translate:0 100%}to{opacity:1;translate:0 0}}@keyframes edgeBarOut{from{opacity:1;translate:0 0}to{opacity:0;translate:0 100%}}';
 
 export default function BacktestChart() {
   useEdgeFonts();
@@ -786,6 +792,7 @@ export default function BacktestChart() {
     return () => clearTimeout(id);
   }, [barWanted]);
 
+
   /* Гортання вліво біля краю завантаженого: старші місяці з сервера.
      false — далі історії немає, графік більше не питатиме. */
   const loadOlderNow = async (count) => {
@@ -1006,10 +1013,11 @@ export default function BacktestChart() {
         {/* Символ */}
         <div className="relative">
           <ToolBtn title={tx('Інструмент', 'Symbol')} onClick={() => setMenu(menu === 'sym' ? null : 'sym')} active={menu === 'sym'}>
+            {symbol && <SymbolLogo symbol={remoteName(symbol)} size={18} />}
             <span className="text-[14px] font-bold" style={{ color: T.text }}>{remoteName(symbol) || tx('Свічки', 'Candles')}</span>
             <ChevronDown size={14} />
           </ToolBtn>
-          <Menu open={menu === 'sym'} onClose={() => setMenu(null)} width={300}>
+          <Menu open={menu === 'sym'} onClose={() => setMenu(null)} width={remoteEnabled && catalog ? Math.min(900, (typeof window !== 'undefined' ? window.innerWidth : 900) - 16) : 300}>
             {remoteEnabled && catalog && (() => {
               const q = symQuery.trim().toUpperCase();
               const core = catalog.core || [];
@@ -1018,21 +1026,47 @@ export default function BacktestChart() {
               return (
                 <div className="mb-1 pb-1" style={{ borderBottom: `1px solid ${T.line}` }}>
                   <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: T.text3 }}>{tx('Сервер EDGE', 'EDGE server')}</div>
-                  {core.filter((c) => !q || c.symbol.toUpperCase().includes(q)).map((c) => (
-                    <button key={c.symbol} type="button" onClick={() => pick(c.symbol)} className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left" style={{ background: symbol === REMOTE_PREFIX + c.symbol ? act(0.14) : 'transparent' }}>
-                      <span className="text-[13.5px] font-bold" style={{ color: T.text }}>{c.symbol}</span>
-                    </button>
-                  ))}
+                  {/* Інструменти по колонках: форекс, метали, індекси, крипта. */}
+                  {(() => {
+                    const shown = core.filter((c) => !q || c.symbol.toUpperCase().includes(q) || assetInfo(c.symbol).name.toUpperCase().includes(q));
+                    const cols = ASSET_GROUPS.map((g) => ({ ...g, items: shown.filter((c) => assetInfo(c.symbol).group === g.id) })).filter((g) => g.items.length);
+                    if (!cols.length) return null;
+                    return (
+                      <div className="grid max-h-[60vh] gap-x-1 overflow-y-auto" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(205px, 1fr))` }}>
+                        {cols.map((g) => (
+                          <div key={g.id} className="min-w-0">
+                            <div className="flex items-center justify-between px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: T.text3 }}>
+                              <span>{tx(g.uk, g.en)}</span>
+                              <span style={{ fontFamily: T.mono, opacity: 0.7 }}>{g.items.length}</span>
+                            </div>
+                            {g.items.map((c) => {
+                              const info = assetInfo(c.symbol);
+                              const on = symbol === REMOTE_PREFIX + c.symbol;
+                              return (
+                                <button key={c.symbol} type="button" onClick={() => pick(c.symbol)} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-white/5" style={{ background: on ? act(0.14) : undefined }}>
+                                  <SymbolLogo symbol={c.symbol} size={24} />
+                                  <span className="min-w-0">
+                                    <span className="block text-[13.5px] font-bold leading-tight" style={{ color: T.text }}>{c.symbol}</span>
+                                    {info.name && <span className="block truncate text-[11.5px] leading-tight" style={{ color: T.text3 }}>{info.name}</span>}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   {(catalog.onDemand || []).length > 0 && <input
                     value={symQuery}
                     onChange={(e) => setSymQuery(e.target.value)}
-                    placeholder={tx('Інший інструмент брокера…', 'Other broker symbol…')}
+                    placeholder={tx('Пошук або інший інструмент брокера…', 'Search or other broker symbol…')}
                     className="mx-1 mt-1 w-[calc(100%-8px)] rounded-lg px-2.5 py-2 text-[13px] outline-none"
                     style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text }}
                   />}
                   {extra.map((x) => (
                     <button key={x.symbol} type="button" onClick={() => pick(x.symbol)} className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left" style={{ background: symbol === REMOTE_PREFIX + x.symbol ? act(0.14) : 'transparent' }}>
-                      <span className="text-[13px] font-bold" style={{ color: T.text }}>{x.symbol}</span>
+                      <span className="flex items-center gap-2"><SymbolLogo symbol={x.symbol} size={18} /><span className="text-[13px] font-bold" style={{ color: T.text }}>{x.symbol}</span></span>
                       <span className="truncate text-[11.5px]" style={{ color: T.text3 }}>{x.desc}</span>
                     </button>
                   ))}
@@ -1278,7 +1312,7 @@ export default function BacktestChart() {
         {st.ready && <DrawingToolbar st={drawSt} act={drawAct} />}
         {/* ─────────── Графік ─────────── */}
         <div ref={chartWrapRef} className="relative min-w-0 flex-1 overflow-hidden" style={{ background: prefs.bg }}>
-          <div ref={boxRef} className="edge-chart-host absolute inset-0" data-selecting={st.selecting ? '1' : ''} />
+          <div ref={boxRef} className="edge-chart-host absolute inset-x-0 top-0" style={{ bottom: barWanted ? 44 : 0 }} data-selecting={st.selecting ? '1' : ''} />
           {st.ready && drawSt.favBar && (
             <FavoritesBar
               favs={drawSt.favs}
@@ -1668,6 +1702,11 @@ export default function BacktestChart() {
             />
           )}
 
+          {/* Економічні новини внизу графіка (лише ті, що вже вийшли). */}
+          {st.ready && prefs.news !== false && loadedSym && (
+            <NewsMarks eng={eng} prefs={prefs} symbol={remoteName(loadedSym)} />
+          )}
+
           {/* Підписи панелей з іншими інструментами. */}
           {st.ready && linkedSt.length > 0 && (
             <LinkedLegend
@@ -1688,11 +1727,7 @@ export default function BacktestChart() {
 
           {/* Посилання на бібліотеку, коли логотип прибрано, а панелі
               угоди немає (у панелі воно своє). Умова ліцензії. */}
-          {st.ready && !prefs.logo && !(prefs.panel && st.ready) && (
-            <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer" className="absolute bottom-1 left-2 z-[5] text-[10px] opacity-40 hover:opacity-80" style={{ color: prefs.text }}>
-              TradingView Lightweight Charts™
-            </a>
-          )}
+          {/* Атрибуція бібліотеки (умова ліцензії) — на сторінці «Умови». */}
 
           {/* Порожньо / вантажиться */}
           {sets && !hasSets && !(remoteEnabled && catalog) && importing == null && (
@@ -1758,93 +1793,116 @@ export default function BacktestChart() {
 
           {/* Панель реплею */}
           {(barWanted || barMounted) && (
-            <div className="absolute bottom-8 left-1/2 z-20 flex max-w-[calc(100%-16px)] -translate-x-1/2 items-center gap-1 rounded-xl p-1.5" style={{ background: T.surface3, border: `1px solid ${T.lineHi}`, boxShadow: '0 12px 32px rgba(0,0,0,0.45)', animation: barWanted ? 'edgeBarIn .16s ease-out' : 'edgeBarOut .16s ease-in forwards', pointerEvents: barWanted ? undefined : 'none' }}>
-              <style>{'@keyframes edgeBarIn{from{opacity:0;translate:0 8px}to{opacity:1;translate:0 0}}@keyframes edgeBarOut{from{opacity:1;translate:0 0}to{opacity:0;translate:0 10px}}'}</style>
-              <ToolBtn title={tx('Обрати іншу точку', 'Pick another point')} active={st.selecting} onClick={() => (st.selecting ? eng()?.cancelSelect() : eng()?.startSelect())}>
-                <Scissors size={16} />
-              </ToolBtn>
-              <ToolBtn title={tx('Крок назад (Shift+←)', 'Step back (Shift+←)')} onClick={() => eng()?.stepBack()} disabled={!st.replay || !st.canBack}>
-                <SkipBack size={17} />
-              </ToolBtn>
-              <ToolBtn title={st.playing ? tx('Пауза (Shift+↓)', 'Pause (Shift+↓)') : tx('Пуск (Shift+↓)', 'Play (Shift+↓)')} onClick={togglePlay} disabled={!st.replay || st.atEnd}>
-                {st.playing ? <Pause size={17} /> : <Play size={17} />}
-              </ToolBtn>
-              <ToolBtn title={tx('Крок вперед (Shift+→)', 'Step forward (Shift+→)')} onClick={() => { eng()?.pause(); eng()?.step(true); }} disabled={!st.replay || st.atEnd}>
-                <SkipForward size={17} />
-              </ToolBtn>
-              <div className="relative">
-                <ToolBtn title={tx('Стрибнути вперед', 'Jump forward')} onClick={() => setMenu(menu === 'jump' ? null : 'jump')} active={menu === 'jump'} disabled={!st.replay || st.atEnd}>
-                  <FastForward size={16} /><ChevronDown size={13} />
+            <div
+              className="absolute inset-x-0 bottom-0 z-20 flex h-11 items-center justify-center gap-1 overflow-visible px-2"
+              style={{ background: T.surface, borderTop: `1px solid ${T.line}`, animation: barWanted ? 'edgeBarIn .18s ease-out' : 'edgeBarOut .16s ease-in forwards', pointerEvents: barWanted ? undefined : 'none' }}
+            >
+              <style>{RB_CSS}</style>
+              <span className="flex items-center">
+                <ToolBtn title={tx('Обрати іншу точку', 'Pick another point')} active={st.selecting} onClick={() => (st.selecting ? eng()?.cancelSelect() : eng()?.startSelect())}>
+                  <Scissors size={16} />
                 </ToolBtn>
-                {menu === 'jump' && (
-                  <div className="absolute bottom-[calc(100%+6px)] left-0 z-50 w-[230px] rounded-xl p-1" style={{ background: T.surface3, border: `1px solid ${T.lineHi}` }}>
-                    {[
-                      [tx('+10 свічок', '+10 bars'), () => eng()?.jumpBars(10)],
-                      [tx('+50 свічок', '+50 bars'), () => eng()?.jumpBars(50)],
-                      [tx('До наступного дня', 'To next day'), () => eng()?.jumpDay()],
-                      [tx('До відкриття Азії', 'To Asia open'), () => eng()?.jumpSession('Asia')],
-                      [tx('До відкриття Лондона', 'To London open'), () => eng()?.jumpSession('London')],
-                      [tx('До відкриття Нью-Йорка', 'To New York open'), () => eng()?.jumpSession('New York')],
-                    ].map(([label, fn]) => (
-                      <button key={label} type="button" onClick={() => { setMenu(null); fn(); }} className="block w-full rounded-lg px-3 py-1.5 text-left text-[13px] hover:bg-white/10" style={{ color: T.text }}>{label}</button>
-                    ))}
-                    <p className="px-3 pb-1 pt-1.5 text-[11px] leading-snug" style={{ color: T.text3 }}>{tx('Якщо дорогою спрацює ордер чи закриється угода — зупинюсь на тій свічці.', 'Stops at the candle where an order fills or a trade closes.')}</p>
-                  </div>
-                )}
-              </div>
-              <div className="relative">
-                <ToolBtn title={tx('Крок перемотки: на скільки рухається графік за один крок', 'Replay step: how far one step moves')} onClick={() => setMenu(menu === 'step' ? null : 'step')} active={menu === 'step' || !!stepTf}>
-                  <span className="text-[11px]" style={{ color: T.text3 }}>{tx('крок', 'step')}</span>
-                  <span style={{ fontFamily: T.mono }}>{stepLabel(stepTf)}</span>
+              </span>
+              <span className="flex items-center">
+                <ToolBtn title={tx('Крок назад (Shift+←)', 'Step back (Shift+←)')} onClick={() => eng()?.stepBack()} disabled={!st.replay || !st.canBack}>
+                  <SkipBack size={17} />
                 </ToolBtn>
-                {menu === 'step' && (
-                  <div className="absolute bottom-[calc(100%+6px)] left-0 z-50 w-[210px] rounded-xl p-1" style={{ background: T.surface3, border: `1px solid ${T.lineHi}` }}>
-                    <p className="px-3 pb-1 pt-1.5 text-[11px] leading-snug" style={{ color: T.text3 }}>{tx('Крок перемотки', 'Replay step')}</p>
-                    {STEP_TFS.map((id) => (
-                      <button key={id || 'tf'} type="button" onClick={() => setStepTf(id)} className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-[13px]" style={{ color: id === stepTf ? '#fff' : T.text2, background: id === stepTf ? act(0.3) : 'transparent' }}>
-                        <span>{id ? tx(tfById(id).uk, tfById(id).en) : tx('Як на графіку', 'Chart timeframe')}</span>
-                        <span style={{ fontFamily: T.mono, color: T.text3 }}>{id ? tfById(id).label : tfById(st.tf || prefs.tf || 'H1').label}</span>
-                      </button>
-                    ))}
-                    <p className="px-3 pb-1 pt-1.5 text-[11px] leading-snug" style={{ color: T.text3 }}>{tx('Наприклад, на 1H з кроком 15m свічка росте по чверті години. Діє на «Пуск» і «Крок вперед».', 'E.g. on 1H with a 15m step the candle grows a quarter-hour at a time. Applies to Play and Step.')}</p>
-                  </div>
-                )}
-              </div>
-              <div className="relative">
-                <ToolBtn title={tx('Швидкість', 'Speed')} onClick={() => setMenu(menu === 'speed' ? null : 'speed')} active={menu === 'speed'}>
-                  <span style={{ fontFamily: T.mono }}>{tx(SPEEDS[speedIdx].label, SPEEDS[speedIdx].en)}</span>
+              </span>
+              <span className="flex items-center">
+                <ToolBtn title={st.playing ? tx('Пауза (Shift+↓)', 'Pause (Shift+↓)') : tx('Пуск (Shift+↓)', 'Play (Shift+↓)')} onClick={togglePlay} disabled={!st.replay || st.atEnd}>
+                  {st.playing ? <Pause size={17} /> : <Play size={17} />}
                 </ToolBtn>
-                {menu === 'speed' && (
-                  <div className="absolute bottom-[calc(100%+6px)] left-0 z-50 rounded-xl p-1" style={{ background: T.surface3, border: `1px solid ${T.lineHi}` }}>
-                    {SPEEDS.map((s, i) => (
-                      <button key={s.ms} type="button" onClick={() => setSpeed(i)} className="block w-full rounded-lg px-3 py-1.5 text-left text-[13px]" style={{ fontFamily: T.mono, color: i === speedIdx ? '#fff' : T.text2, background: i === speedIdx ? act(0.3) : 'transparent' }}>
-                        {tx(s.label, s.en)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {st.replay && st.time && (
-                <span className="hidden px-2 text-[12px] tabular-nums sm:inline" style={{ fontFamily: T.mono, color: T.text3 }}>{fmtStamp(st.time, prefs)}</span>
-              )}
-              {/* На телефоні бічної панелі немає — вхід і вихід тут. */}
-              {st.replay && (
-                <span className="flex gap-1 md:hidden">
-                  {pos ? (
-                    <button type="button" onClick={() => eng()?.closePosition('manual')} className="h-9 rounded-lg px-3 text-[13px] font-bold tabular-nums" style={{ background: T.sunken, color: pos.r >= 0 ? T.ok : T.bad, fontFamily: T.mono }}>
-                      {fmtR(pos.r)} ✕
-                    </button>
-                  ) : (
-                    <>
-                      <button type="button" onClick={() => openPos('SHORT')} className="h-9 rounded-lg px-3 text-[13px] font-bold text-white" style={{ background: '#f23645' }}>Sell</button>
-                      <button type="button" onClick={() => openPos('LONG')} className="h-9 rounded-lg px-3 text-[13px] font-bold text-white" style={{ background: '#2962ff' }}>Buy</button>
-                    </>
+              </span>
+              <span className="flex items-center">
+                <ToolBtn title={tx('Крок вперед (Shift+→)', 'Step forward (Shift+→)')} onClick={() => { eng()?.pause(); eng()?.step(true); }} disabled={!st.replay || st.atEnd}>
+                  <SkipForward size={17} />
+                </ToolBtn>
+              </span>
+              <span className="flex items-center">
+                <div className="relative">
+                  <ToolBtn title={tx('Стрибнути вперед', 'Jump forward')} onClick={() => setMenu(menu === 'jump' ? null : 'jump')} active={menu === 'jump'} disabled={!st.replay || st.atEnd}>
+                    <FastForward size={16} /><ChevronDown size={13} />
+                  </ToolBtn>
+                  {menu === 'jump' && (
+                    <div className={`absolute z-50 bottom-[calc(100%+6px)] left-0 w-[230px] rounded-xl p-1`} style={{ background: T.surface3, border: `1px solid ${T.lineHi}` }}>
+                      {[
+                        [tx('+10 свічок', '+10 bars'), () => eng()?.jumpBars(10)],
+                        [tx('+50 свічок', '+50 bars'), () => eng()?.jumpBars(50)],
+                        [tx('До наступного дня', 'To next day'), () => eng()?.jumpDay()],
+                        [tx('До відкриття Азії', 'To Asia open'), () => eng()?.jumpSession('Asia')],
+                        [tx('До відкриття Лондона', 'To London open'), () => eng()?.jumpSession('London')],
+                        [tx('До відкриття Нью-Йорка', 'To New York open'), () => eng()?.jumpSession('New York')],
+                      ].map(([label, fn]) => (
+                        <button key={label} type="button" onClick={() => { setMenu(null); fn(); }} className="block w-full rounded-lg px-3 py-1.5 text-left text-[13px] hover:bg-white/10" style={{ color: T.text }}>{label}</button>
+                      ))}
+                      <p className="px-3 pb-1 pt-1.5 text-[11px] leading-snug" style={{ color: T.text3 }}>{tx('Якщо дорогою спрацює ордер чи закриється угода — зупинюсь на тій свічці.', 'Stops at the candle where an order fills or a trade closes.')}</p>
+                    </div>
                   )}
-                </span>
-              )}
-              <ToolBtn title={tx('Вийти з реплею', 'Exit replay')} onClick={() => (st.selecting && !st.replay ? eng()?.cancelSelect() : exitReplay())}>
-                <X size={16} />
-              </ToolBtn>
+                </div>
+              </span>
+              <span className="flex items-center">
+                <div className="relative">
+                  <ToolBtn title={tx('Крок перемотки: на скільки рухається графік за один крок', 'Replay step: how far one step moves')} onClick={() => setMenu(menu === 'step' ? null : 'step')} active={menu === 'step' || !!stepTf}>
+                    <span className="text-[11px]" style={{ color: T.text3 }}>{tx('крок', 'step')}</span>
+                    <span style={{ fontFamily: T.mono }}>{stepLabel(stepTf)}</span>
+                  </ToolBtn>
+                  {menu === 'step' && (
+                    <div className={`absolute z-50 bottom-[calc(100%+6px)] left-0 w-[210px] rounded-xl p-1`} style={{ background: T.surface3, border: `1px solid ${T.lineHi}` }}>
+                      <p className="px-3 pb-1 pt-1.5 text-[11px] leading-snug" style={{ color: T.text3 }}>{tx('Крок перемотки', 'Replay step')}</p>
+                      {STEP_TFS.map((id) => (
+                        <button key={id || 'tf'} type="button" onClick={() => setStepTf(id)} className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-[13px]" style={{ color: id === stepTf ? '#fff' : T.text2, background: id === stepTf ? act(0.3) : 'transparent' }}>
+                          <span>{id ? tx(tfById(id).uk, tfById(id).en) : tx('Як на графіку', 'Chart timeframe')}</span>
+                          <span style={{ fontFamily: T.mono, color: T.text3 }}>{id ? tfById(id).label : tfById(st.tf || prefs.tf || 'H1').label}</span>
+                        </button>
+                      ))}
+                      <p className="px-3 pb-1 pt-1.5 text-[11px] leading-snug" style={{ color: T.text3 }}>{tx('Наприклад, на 1H з кроком 15m свічка росте по чверті години. Діє на «Пуск» і «Крок вперед».', 'E.g. on 1H with a 15m step the candle grows a quarter-hour at a time. Applies to Play and Step.')}</p>
+                    </div>
+                  )}
+                </div>
+              </span>
+              <span className="flex items-center">
+                <div className="relative">
+                  <ToolBtn title={tx('Швидкість', 'Speed')} onClick={() => setMenu(menu === 'speed' ? null : 'speed')} active={menu === 'speed'}>
+                    <span style={{ fontFamily: T.mono }}>{tx(SPEEDS[speedIdx].label, SPEEDS[speedIdx].en)}</span>
+                  </ToolBtn>
+                  {menu === 'speed' && (
+                    <div className={`absolute z-50 bottom-[calc(100%+6px)] left-0 rounded-xl p-1`} style={{ background: T.surface3, border: `1px solid ${T.lineHi}` }}>
+                      {SPEEDS.map((s, i) => (
+                        <button key={s.ms} type="button" onClick={() => setSpeed(i)} className="block w-full rounded-lg px-3 py-1.5 text-left text-[13px]" style={{ fontFamily: T.mono, color: i === speedIdx ? '#fff' : T.text2, background: i === speedIdx ? act(0.3) : 'transparent' }}>
+                          {tx(s.label, s.en)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </span>
+              <span className="flex items-center">
+                {st.replay && st.time && (
+                  <span className="hidden px-2 text-[12px] tabular-nums sm:inline" style={{ fontFamily: T.mono, color: T.text3 }}>{fmtStamp(st.time, prefs)}</span>
+                )}
+              </span>
+              <span className="flex items-center">
+                {/* На телефоні бічної панелі немає — вхід і вихід тут. */}
+                {st.replay && (
+                  <span className="flex gap-1 md:hidden">
+                    {pos ? (
+                      <button type="button" onClick={() => eng()?.closePosition('manual')} className="h-9 rounded-lg px-3 text-[13px] font-bold tabular-nums" style={{ background: T.sunken, color: pos.r >= 0 ? T.ok : T.bad, fontFamily: T.mono }}>
+                        {fmtR(pos.r)} ✕
+                      </button>
+                    ) : (
+                      <>
+                        <button type="button" onClick={() => openPos('SHORT')} className="h-9 rounded-lg px-3 text-[13px] font-bold text-white" style={{ background: '#f23645' }}>Sell</button>
+                        <button type="button" onClick={() => openPos('LONG')} className="h-9 rounded-lg px-3 text-[13px] font-bold text-white" style={{ background: '#2962ff' }}>Buy</button>
+                      </>
+                    )}
+                  </span>
+                )}
+              </span>
+              <span className="flex items-center">
+                <ToolBtn title={tx('Вийти з реплею', 'Exit replay')} onClick={() => (st.selecting && !st.replay ? eng()?.cancelSelect() : exitReplay())}>
+                  <X size={16} />
+                </ToolBtn>
+              </span>
             </div>
           )}
         </div>
@@ -1894,11 +1952,6 @@ export default function BacktestChart() {
               onResume={() => goTime(prefs.resume.t + 1, 'replay')}
               onHide={() => setPrefs({ ...prefs, panel: false })}
             />
-            {!prefs.logo && (
-              <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer" className="mt-auto px-4 pb-3 pt-2 text-[11px] transition-colors hover:underline" style={{ color: T.text4 }}>
-                {tx('Графіки', 'Charts by')} TradingView Lightweight Charts™
-              </a>
-            )}
           </aside>
         )}
       </div>
