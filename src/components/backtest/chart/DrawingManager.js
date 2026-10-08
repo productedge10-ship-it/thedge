@@ -99,8 +99,8 @@ export default class DrawingManager {
     host.addEventListener('pointerleave', this.leave);
     /* Ctrl/Cmd — тимчасовий магніт, як у TV: тримаєш — точки липнуть до
        OHLC свічки; якщо магніт уже ввімкнено — навпаки, вимикає. */
-    this.ctrlKey = (ev) => { this.ctrlMag = !!(ev.ctrlKey || ev.metaKey); };
-    this.ctrlOff = () => { this.ctrlMag = false; };
+    this.ctrlKey = (ev) => { this.setCtrl(!!(ev.ctrlKey || ev.metaKey)); };
+    this.ctrlOff = () => { this.setCtrl(false); };
     window.addEventListener('keydown', this.ctrlKey, true);
     window.addEventListener('keyup', this.ctrlKey, true);
     window.addEventListener('blur', this.ctrlOff);
@@ -171,11 +171,29 @@ export default class DrawingManager {
     this.setTool(null);
   }
 
+  /* Магніт з урахуванням Ctrl: тримаєш Ctrl — вмикає, якщо вимкнено, і
+     навпаки. */
+  effMagnet() {
+    const m = this.magnet || 'off';
+    return this.ctrlMag ? (m === 'off' ? 'strong' : 'off') : m;
+  }
+
+  setCtrl(on) {
+    if (on === !!this.ctrlMag) return;
+    this.ctrlMag = on;
+    this.applyCursor();
+  }
+
   applyCursor() {
     const c = this.tool ? 'cur-cross' : this.cursor;
     this.host.dataset.cursor = c;
-    /* Курсор «стрілка» — без перехрестя, як у TV. */
-    const mode = c === 'cur-arrow' ? CrosshairMode.Hidden : (this.e.prefs.crosshair === 'magnet' ? CrosshairMode.Magnet : CrosshairMode.Normal);
+    /* Курсор «стрілка» — без перехрестя, як у TV. З магнітом під час
+       малювання перехрестя саме липне до OHLC свічки, як у TV: видно,
+       куди стане точка. */
+    const snap = (this.tool || this.draft) && this.effMagnet() === 'strong';
+    const mode = c === 'cur-arrow' && !this.tool ? CrosshairMode.Hidden
+      : snap ? (CrosshairMode.MagnetOHLC ?? 3)
+        : (this.e.prefs.crosshair === 'magnet' ? CrosshairMode.Magnet : CrosshairMode.Normal);
     this.e.chart.applyOptions({ crosshair: { mode } });
   }
 
@@ -350,8 +368,7 @@ export default class DrawingManager {
     if (snapTime) abs = Math.round(abs);
     const t = this.timeOf(abs);
     let p = this.e.series.coordinateToPrice(py);
-    let mode = this.magnet;
-    if (this.ctrlMag) mode = mode === 'off' ? 'strong' : 'off';
+    const mode = this.effMagnet();
     if (magnet && mode !== 'off') {
       const k = Math.round(abs);
       if (k >= 0 && k <= this.e.lastK) {
@@ -393,7 +410,7 @@ export default class DrawingManager {
 
   down(ev) {
     this.ate = false;
-    this.ctrlMag = !!(ev.ctrlKey || ev.metaKey);
+    this.setCtrl(!!(ev.ctrlKey || ev.metaKey));
     if (!this.ready || this.e.selecting || ev.button !== 0 || this.readOnly) return;
     const m = this.local(ev);
     if (!this.inPlot(m)) return;
@@ -464,7 +481,7 @@ export default class DrawingManager {
 
   move(ev) {
     if (!this.ready) return;
-    this.ctrlMag = !!(ev.ctrlKey || ev.metaKey);
+    this.setCtrl(!!(ev.ctrlKey || ev.metaKey));
     const m = this.local(ev);
     this.mouse = m;
     if (this.marquee) {

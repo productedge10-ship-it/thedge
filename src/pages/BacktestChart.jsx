@@ -314,7 +314,8 @@ export default function BacktestChart() {
     dm.keep = !!prefs.drawStay;
     dm.lockAll = !!prefs.drawLock;
     dm.hideAll = !!prefs.drawHide;
-    if (dm.cursor !== (prefs.drawCursor || 'cur-cross')) { dm.cursor = prefs.drawCursor || 'cur-cross'; dm.applyCursor(); }
+    dm.cursor = prefs.drawCursor || 'cur-cross';
+    dm.applyCursor();
   }, [prefs.drawMagnet, prefs.drawStay, prefs.drawLock, prefs.drawHide, prefs.drawCursor]);
 
   const drawAct = {

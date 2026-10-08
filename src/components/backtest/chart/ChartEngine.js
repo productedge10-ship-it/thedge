@@ -1249,6 +1249,12 @@ export default class ChartEngine {
       entryIdx: i, entryT: b.t[i], bars: 0, tf: o.tf, note: o.note, meta: o.meta || null, kind: o.kind,
     };
     this.pos.snapEntry = this.captureSnap(b.t[i]);
+    /* Стоп у тій самій хвилинці, де спрацював ордер: порядку цін усередині
+       хвилинки не знаємо, тож вважаємо гірший варіант — стоп спрацював.
+       Тейк у цій же хвилинці не зараховуємо (це було б надто оптимістично). */
+    const p = this.pos;
+    const slHit = buy ? b.l[i] <= p.sl : b.h[i] >= p.sl;
+    if (slHit) this.finish('sl', p.sl, i);
   }
 
   /* Що зараз показувати ручками: позиція, ордер або чернетка. */
