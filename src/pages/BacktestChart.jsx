@@ -30,7 +30,7 @@ import LinkedPanes, { MAX_LINKED } from '../components/backtest/chart/LinkedPane
 import LinkedLegend from '../components/backtest/chart/LinkedLegend';
 import NewsMarks from '../components/backtest/chart/NewsMarks';
 import SymbolLogo from '../components/backtest/chart/SymbolLogo';
-import { assetInfo, GROUPS as ASSET_GROUPS } from '../lib/candles/assets';
+import SymbolSearch from '../components/backtest/chart/SymbolSearch';
 import TradePanel from '../components/backtest/chart/TradePanel';
 import SideChart from '../components/backtest/chart/SideChart';
 import FavoritesBar from '../components/backtest/chart/FavoritesBar';
@@ -157,7 +157,6 @@ export default function BacktestChart() {
   /* Свічки з сервера: каталог, стан підвантаження, що вже відкрито. */
   const [catalog, setCatalog] = useState(null);
   const [srvStatus, setSrvStatus] = useState(null); // null | 'request' | 'wait' | 'older'
-  const [symQuery, setSymQuery] = useState('');
   const remoteRef = useRef(null); // { name, manifest, firstYm }
   const remoteEnabled = remoteAllowed(user?.email);
   const olderRef = useRef(null);
@@ -169,6 +168,8 @@ export default function BacktestChart() {
   closedRef.current = closed;
   const [sessions, setSessions] = useState([]);
   const [menu, setMenu] = useState(null);
+  /* Пошук інструмента: null — закрито, рядок — з чого почати (літера, яку набрали на графіку). */
+  const [symSearch, setSymSearch] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dateVal, setDateVal] = useState('');
   const [leaving, setLeaving] = useState(false);
@@ -871,6 +872,30 @@ export default function BacktestChart() {
     else document.documentElement.requestFullscreen?.();
   };
 
+  /* Як у TradingView: почав набирати літери на графіку — відкривається
+     пошук інструмента з цією літерою. Беремо літеру з фізичної клавіші
+     (e.code), щоб на українській розкладці «Ч» теж дала «X». */
+  useEffect(() => {
+    const k = (e) => {
+      if (symSearch !== null || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      const t = e.target;
+      const tag = (t?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || t?.isContentEditable) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      if (e.shiftKey && (e.code === 'KeyB' || e.code === 'KeyS')) return; // Shift+B / Shift+S — угоди
+      const m = /^Key([A-Z])$/.exec(e.code) || /^Digit([0-9])$/.exec(e.code);
+      if (!m) return;
+      const en = engRef.current;
+      if (en?.snap) return;
+      if (dmRef.current?.editing) return;
+      e.preventDefault();
+      setMenu(null);
+      setSymSearch(m[1]);
+    };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [symSearch]);
+
   /* Гарячі клавіші як у TV: Shift+→ крок, Shift+↓ пуск/пауза,
      Alt+R — скинути масштаб, Esc — скасувати вибір точки. */
   useEffect(() => {
@@ -1013,102 +1038,22 @@ export default function BacktestChart() {
 
         {/* Символ */}
         <div className="relative">
-          <ToolBtn title={tx('Інструмент', 'Symbol')} onClick={() => setMenu(menu === 'sym' ? null : 'sym')} active={menu === 'sym'}>
+          <ToolBtn title={tx('Інструмент (або просто почни писати символ)', 'Symbol (or just start typing)')} onClick={() => { setMenu(null); setSymSearch(''); }} active={symSearch !== null}>
             {symbol && <SymbolLogo symbol={remoteName(symbol)} size={18} />}
             <span className="text-[14px] font-bold" style={{ color: T.text }}>{remoteName(symbol) || tx('Свічки', 'Candles')}</span>
             <ChevronDown size={14} />
           </ToolBtn>
-          <Menu open={menu === 'sym'} onClose={() => setMenu(null)} width={remoteEnabled && catalog ? Math.min(900, (typeof window !== 'undefined' ? window.innerWidth : 900) - 16) : 300}>
-            {remoteEnabled && catalog && (() => {
-              const q = symQuery.trim().toUpperCase();
-              const core = catalog.core || [];
-              const extra = q ? (catalog.onDemand || []).filter((x) => x.symbol.toUpperCase().includes(q) || (x.desc || '').toUpperCase().includes(q)).slice(0, 30) : [];
-              const pick = (name) => { setSymbol(REMOTE_PREFIX + name); setMenu(null); setSymQuery(''); };
-              return (
-                <div className="mb-1 pb-1" style={{ borderBottom: `1px solid ${T.line}` }}>
-                  <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: T.text3 }}>{tx('Сервер EDGE', 'EDGE server')}</div>
-                  {/* Інструменти по колонках: форекс, метали, індекси, крипта. */}
-                  {(() => {
-                    const shown = core.filter((c) => !q || c.symbol.toUpperCase().includes(q) || assetInfo(c.symbol, c).name.toUpperCase().includes(q));
-                    const cols = ASSET_GROUPS.map((g) => ({ ...g, items: shown.filter((c) => assetInfo(c.symbol, c).group === g.id) })).filter((g) => g.items.length);
-                    if (!cols.length) return null;
-                    return (
-                      <div className="grid max-h-[60vh] gap-x-1 overflow-y-auto" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(205px, 1fr))` }}>
-                        {cols.map((g) => (
-                          <div key={g.id} className="min-w-0">
-                            <div className="flex items-center justify-between px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: T.text3 }}>
-                              <span>{tx(g.uk, g.en)}</span>
-                              <span style={{ fontFamily: T.mono, opacity: 0.7 }}>{g.items.length}</span>
-                            </div>
-                            {g.items.map((c) => {
-                              const info = assetInfo(c.symbol, c);
-                              const on = symbol === REMOTE_PREFIX + c.symbol;
-                              return (
-                                <button key={c.symbol} type="button" onClick={() => pick(c.symbol)} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-white/5" style={{ background: on ? act(0.14) : undefined }}>
-                                  <SymbolLogo symbol={c.symbol} size={24} />
-                                  <span className="min-w-0">
-                                    <span className="block text-[13.5px] font-bold leading-tight" style={{ color: T.text }}>{c.symbol}</span>
-                                    {info.name && <span className="block truncate text-[11.5px] leading-tight" style={{ color: T.text3 }}>{info.name}</span>}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                  {(catalog.onDemand || []).length > 0 && <input
-                    value={symQuery}
-                    onChange={(e) => setSymQuery(e.target.value)}
-                    placeholder={tx('Пошук або інший інструмент брокера…', 'Search or other broker symbol…')}
-                    className="mx-1 mt-1 w-[calc(100%-8px)] rounded-lg px-2.5 py-2 text-[13px] outline-none"
-                    style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text }}
-                  />}
-                  {extra.map((x) => (
-                    <button key={x.symbol} type="button" onClick={() => pick(x.symbol)} className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left" style={{ background: symbol === REMOTE_PREFIX + x.symbol ? act(0.14) : 'transparent' }}>
-                      <span className="flex items-center gap-2"><SymbolLogo symbol={x.symbol} size={18} /><span className="text-[13px] font-bold" style={{ color: T.text }}>{x.symbol}</span></span>
-                      <span className="truncate text-[11.5px]" style={{ color: T.text3 }}>{x.desc}</span>
-                    </button>
-                  ))}
-                  {q && !extra.length && !core.some((c) => c.symbol.toUpperCase().includes(q)) && (
-                    <div className="px-2.5 py-1.5 text-[12px]" style={{ color: T.text3 }}>{tx('Нічого не знайшов', 'Nothing found')}</div>
-                  )}
-                  <div className="mx-1 mt-1.5 rounded-lg px-2.5 py-2" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
-                    <div className="text-[12px] leading-snug" style={{ color: T.text2 }}>{tx('Немає вашого активу? Будь ласка, напишіть нам у Telegram — додамо.', "Don't see your asset? Please message us on Telegram and we'll add it.")}</div>
-                    <a href="https://t.me/thedgesupport" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12.5px] font-semibold" style={{ background: act(0.14), color: ACT.tint }}>
-                      <Send size={13} /> {tx('Написати в Telegram', 'Message on Telegram')}
-                    </a>
-                  </div>
-                  {(sets || []).length > 0 && <div className="px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: T.text3 }}>{tx('Мої файли', 'My files')}</div>}
-                </div>
-              );
-            })()}
-            {(sets || []).map((s) => (
-              <div key={s.symbol} className="group flex items-center gap-1 rounded-lg" style={{ background: s.symbol === symbol ? act(0.14) : 'transparent' }}>
-                <button type="button" onClick={() => { setSymbol(s.symbol); setMenu(null); }} className="min-w-0 flex-1 px-2.5 py-2 text-left">
-                  <div className="text-[13.5px] font-bold" style={{ color: T.text }}>{s.symbol}</div>
-                  <div className="truncate text-[11.5px]" style={{ color: T.text3, fontFamily: T.mono }}>
-                    {fmtTime(s.from).slice(0, 10)} — {fmtTime(s.to).slice(0, 10)} · {s.n.toLocaleString(LOCALE)}
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  title={tx('Видалити з браузера', 'Remove from browser')}
-                  onClick={() => removeSet(s.symbol)}
-                  className="mr-1 grid h-8 w-8 place-items-center rounded-md opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
-                  style={{ color: T.text3 }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-            {!(remoteEnabled && catalog) && (
-              <button type="button" onClick={pickFile} className="mt-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-semibold" style={{ color: ACT.tint }}>
-                <UploadCloud size={15} /> {tx('Завантажити CSV з MT5', 'Load CSV from MT5')}
-              </button>
-            )}
-          </Menu>
+          <SymbolSearch
+            open={symSearch !== null}
+            initial={symSearch || ''}
+            onClose={() => setSymSearch(null)}
+            catalog={remoteEnabled ? catalog : null}
+            sets={sets}
+            current={symbol}
+            onPick={setSymbol}
+            onRemoveSet={removeSet}
+            onUpload={pickFile}
+          />
         </div>
 
         {/* Ще один інструмент у панелі під графіком — як «+» біля
