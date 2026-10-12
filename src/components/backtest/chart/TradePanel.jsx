@@ -231,10 +231,11 @@ export default function TradePanel({
 
   /* ---------- квиток ---------- */
   let ticket;
-  if (pos) {
+  let manage = null;
+  if (pos && !draft) {
     const long = pos.side === 'LONG';
     const usd = pos.r * riskUsd;
-    ticket = (
+    manage = (
       <div className="rounded-xl p-3" style={{ background: T.sunken, border: `1px solid ${long ? 'rgba(41,98,255,0.55)' : 'rgba(242,54,69,0.55)'}` }}>
         <div className="flex items-center justify-between">
           <span className="rounded-md px-2 py-0.5 text-[12px] font-bold text-white" style={{ background: long ? BUY : SELL }}>{long ? 'LONG' : 'SHORT'}</span>
@@ -277,9 +278,9 @@ export default function TradePanel({
         </div>
       </div>
     );
-  } else if (order) {
+  } else if (order && !draft) {
     const long = order.side === 'LONG';
-    ticket = (
+    manage = (
       <div className="rounded-xl p-3" style={{ background: T.sunken, border: `1px dashed ${long ? 'rgba(41,98,255,0.6)' : 'rgba(242,54,69,0.6)'}` }}>
         <div className="flex items-center justify-between">
           <span className="rounded-md px-2 py-0.5 text-[12px] font-bold text-white" style={{ background: long ? BUY : SELL }}>{long ? 'BUY' : 'SELL'} {order.kind === 'limit' ? 'LIMIT' : 'STOP'}</span>
@@ -294,7 +295,42 @@ export default function TradePanel({
         <button type="button" onClick={() => e?.cancelOrder()} className="mt-3 w-full rounded-lg py-2 text-[12.5px] font-semibold" style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text }}>{tx('Скасувати ордер', 'Cancel order')}</button>
       </div>
     );
-  } else {
+  }
+  /* Усі відкриті угоди й ордери: клік — вибрати (її ручки на графіку й
+     картка нижче), ✕ — закрити чи скасувати. */
+  const trades = st.trades || [];
+  const openList = trades.length > 1 && (
+    <div className="mt-3 rounded-xl p-1.5" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
+      <div className="flex items-center justify-between px-1.5 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: T.text3 }}>
+        <span>{tx('Відкриті', 'Open')} · {trades.length}</span>
+        {trades.filter((q) => q.type === 'pos').length > 1 && (
+          <button type="button" onClick={() => e?.closeAll('manual')} className="rounded-md px-1.5 py-0.5 normal-case tracking-normal hover:bg-white/10" style={{ color: T.text2 }}>{tx('Закрити всі', 'Close all')}</button>
+        )}
+      </div>
+      {trades.map((q) => {
+        const long = q.side === 'LONG';
+        return (
+          <div key={q.id} className="flex items-center gap-2 rounded-lg px-1.5 py-1" style={{ background: q.active ? act(0.16) : 'transparent' }}>
+            <button type="button" onClick={() => e?.selectTrade(q.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+              <span className="rounded px-1.5 py-0.5 text-[10.5px] font-bold text-white" style={{ background: long ? BUY : SELL, opacity: q.type === 'order' ? 0.7 : 1 }}>{long ? 'BUY' : 'SELL'}{q.type === 'order' ? ` ${q.kind === 'limit' ? 'LMT' : 'STP'}` : ''}</span>
+              <span className="truncate text-[12px] tabular-nums" style={{ fontFamily: T.mono, color: T.text2 }}>{fmtNum(q.entry, d)}</span>
+              {q.type === 'pos' && <span className="ml-auto text-[12px] font-bold tabular-nums" style={{ fontFamily: T.mono, color: q.r >= 0 ? T.ok : T.bad }}>{fmtR(q.r)}</span>}
+            </button>
+            <button
+              type="button"
+              onClick={() => (q.type === 'pos' ? e?.closePosition('manual', q.id) : e?.cancelOrder(q.id))}
+              title={q.type === 'pos' ? tx('Закрити по ринку', 'Close at market') : tx('Скасувати ордер', 'Cancel order')}
+              className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[13px] hover:bg-white/10"
+              style={{ color: T.text3 }}
+            >
+              ✕
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+  {
     const side = draft?.side;
     ticket = (
       <>
@@ -371,7 +407,9 @@ export default function TradePanel({
           </div>
         )}
 
-        {st.replay && !draft && (
+        {manage && <div className="mt-3">{manage}</div>}
+        {openList}
+        {st.replay && !draft && !trades.length && (
           <p className="mt-3 flex gap-2 text-[12px] leading-relaxed" style={{ color: T.text3 }}>
             <MousePointerClick size={15} className="mt-0.5 shrink-0" />
             {prefs.oneClick

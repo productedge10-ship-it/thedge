@@ -26,6 +26,9 @@ import { t as tx } from '../../../lib/lang';
 const CHUNK = 12000;
 const CUT_MS = 220;
 
+let idSeq = 0;
+const newId = (pfx) => `${pfx}${Date.now().toString(36)}${(idSeq += 1)}`;
+
 export default class ChartEngine {
   constructor(container, overlay, prefs, cb) {
     this.el = container;
@@ -40,6 +43,11 @@ export default class ChartEngine {
     this.win = 0;
     this.lastK = -1;
     this.pos = null;
+    /* Кілька угод одночасно: усі відкриті позиції й відкладені ордери.
+       pos / order — та, що зараз вибрана (її ручки на графіку й картка в
+       панелі); решта рахуються й закриваються так само. */
+    this.open = [];
+    this.pend = [];
     /* Чернетка угоди (видно на графіку до входу) і відкладений ордер. */
     this.draft = null;
     this.order = null;
@@ -185,6 +193,8 @@ export default class ChartEngine {
     this.olderBusy = false;
     this.cut = null;
     this.pos = null;
+    this.open = [];
+    this.pend = [];
     this.draft = null;
     this.order = null;
     this.closed = [];
@@ -215,13 +225,13 @@ export default class ChartEngine {
     this.aggCache.clear();
     if (this.cut != null) this.cut += k;
     if (this.cutFx) this.cutFx.cut += k;
-    if (this.pos) { this.pos.entryIdx += k; (this.pos.partials || []).forEach((q) => { q.idx += k; }); }
-    if (this.order?.placedIdx != null) this.order.placedIdx += k;
+    this.open.forEach((q0) => { q0.entryIdx += k; (q0.partials || []).forEach((q) => { q.idx += k; }); });
+    this.pend.forEach((o) => { if (o.placedIdx != null) o.placedIdx += k; });
     this.closed.forEach((c) => { c.entryIdx += k; c.exitIdx += k; (c.partials || []).forEach((q) => { q.idx += k; }); });
     (this.hist || []).forEach((h) => {
       h.cut += k;
-      if (h.pos) { h.pos.entryIdx += k; (h.pos.partials || []).forEach((q) => { q.idx += k; }); }
-      if (h.order?.placedIdx != null) h.order.placedIdx += k;
+      (h.open || []).forEach((q0) => { q0.entryIdx += k; (q0.partials || []).forEach((q) => { q.idx += k; }); });
+      (h.pend || []).forEach((o) => { if (o.placedIdx != null) o.placedIdx += k; });
     });
     if (this.snap?.saved?.cut != null) this.snap.saved.cut += k;
     if (this.snap?.saved?.hist) this.snap.saved.hist.forEach((h) => { h.cut += k; });
@@ -473,7 +483,13 @@ export default class ChartEngine {
   }
 
   onClick(param) {
-    if (!this.selecting) { this.pickClosed(param?.point); return; }
+    if (!this.selecting) {
+      const pt = param?.point;
+      const hitOther = pt && (this.otherBoxes || []).find((b0) => pt.x >= b0.x1 && pt.x <= b0.x2 && pt.y >= b0.y1 && pt.y <= b0.y2);
+      if (hitOther && !this.draft) { this.selectTrade(hitOther.id); return; }
+      this.pickClosed(pt);
+      return;
+    }
     if (param?.logical == null) return;
     const rel = Math.round(param.logical);
     const k = Math.max(1, Math.min(this.lastK, this.win + rel));
@@ -508,7 +524,8 @@ export default class ChartEngine {
   setCut(cut, keepView = false) {
     this.pause();
     this.finishAnim();
-    if (this.pos) this.closePosition('manual');
+    this.closeAll('manual');
+    this.pend = [];
     this.draft = null;
     this.order = null;
     const r = keepView ? this.chart.timeScale().getVisibleLogicalRange() : null;
@@ -532,7 +549,8 @@ export default class ChartEngine {
   exitReplay() {
     this.pause();
     this.finishAnim();
-    if (this.pos) this.closePosition('manual');
+    this.closeAll('manual');
+    this.pend = [];
     this.draft = null;
     this.order = null;
     this.selecting = false;
@@ -633,14 +651,11 @@ export default class ChartEngine {
      стопу не зʼявляється раніше, ніж ціна до нього «дійшла» на екрані. */
   settle(from, next) {
     const had = this.closed.length;
-    const hadPos = !!this.pos;
-    for (let i = from; i < next && (this.pos || this.order); i += 1) {
-      if (this.order) this.tryFill(i);
-      else this.checkPos(i);
-    }
-    if (!hadPos && this.pos) { this.syncPriceLines(); this.updateMarkers(); }
+    const hadN = this.open.length + this.pend.length;
+    for (let i = from; i < next && (this.open.length || this.pend.length); i += 1) this.stepBar(i);
+    if (this.open.length + this.pend.length !== hadN) { this.syncPriceLines(); this.updateMarkers(); }
     else if (this.draft || this.order || this.pos?.trail) this.syncPriceLines();
-    if (this.pos) this.pos.bars += 1;
+    this.open.forEach((q) => { q.bars += 1; });
     if (this.closed.length !== had) this.updateMarkers();
     this.updateAux();
     this.linked?.render();
@@ -656,7 +671,10 @@ export default class ChartEngine {
   pushHist() {
     if (!this.hist) this.hist = [];
     const cl = (o) => (o ? JSON.parse(JSON.stringify(o)) : null);
-    this.hist.push({ cut: this.cut, pos: cl(this.pos), order: cl(this.order), closedN: this.closed.length });
+    this.hist.push({
+      cut: this.cut, open: cl(this.open), pend: cl(this.pend), closedN: this.closed.length,
+      posId: this.pos?.id || null, orderId: this.order?.id || null,
+    });
     if (this.hist.length > 5000) this.hist.shift();
   }
 
@@ -691,8 +709,11 @@ export default class ChartEngine {
     if (this.closed.length > h.closedN) { this.cb.onNotice?.('back_closed'); return false; }
     this.hist.pop();
     this.moveCut(h.cut);
-    this.pos = h.pos;
-    this.order = h.order;
+    this.open = h.open || [];
+    this.pend = h.pend || [];
+    this.pos = this.open.find((q) => q.id === h.posId) || null;
+    this.order = this.pend.find((q) => q.id === h.orderId) || null;
+    this.pickActive();
     this.syncPriceLines();
     this.updateMarkers();
     this.updateAux();
@@ -713,16 +734,16 @@ export default class ChartEngine {
     this.pushHist();
     const from = this.cut;
     const k0 = this.lastK;
-    for (let i = from; i < to && (this.pos || this.order); i += 1) {
-      const hadPos = !!this.pos; const hadOrder = !!this.order;
-      if (this.order) this.tryFill(i); else this.checkPos(i);
-      if ((hadOrder && !this.order) || (hadPos && !this.pos)) {
+    for (let i = from; i < to && (this.open.length || this.pend.length); i += 1) {
+      const hadO = this.open.length; const hadP = this.pend.length; const hadC = this.closed.length;
+      this.stepBar(i);
+      if (this.pend.length !== hadP || this.closed.length !== hadC || this.open.length !== hadO) {
         const edge = this.agg.s[tfIndexOfBase(this.agg, i) + 1];
         to = Math.min(to, edge ?? to);
       }
     }
     this.moveCut(to);
-    if (this.pos) this.pos.bars += Math.max(1, this.lastK - k0);
+    this.open.forEach((q) => { q.bars += Math.max(1, this.lastK - k0); });
     this.syncPriceLines();
     this.updateMarkers();
     this.updateAux();
@@ -1017,7 +1038,7 @@ export default class ChartEngine {
   }
 
   openPosition(side, { rr = 2, sl = null, tp = null, note = '', meta = null } = {}) {
-    if (!this.replay || this.pos || this.snap) return;
+    if (!this.replay || this.snap) return;
     this.finishAnim();
     const entry = this.price();
     const d = this.defaultDistance() * (this.prefs.atrMult || 1);
@@ -1027,10 +1048,11 @@ export default class ChartEngine {
     const okTp = tp != null && Number.isFinite(tp) && (dir > 0 ? tp > entry : tp < entry);
     const s0 = okSl ? sl : entry - dir * d;
     this.pos = {
-      side, entry, sl: s0, sl0: s0, tp: okTp ? tp : entry + dir * Math.abs(entry - s0) * rr, size: 1, realized: 0,
+      id: newId('p'), side, entry, sl: s0, sl0: s0, tp: okTp ? tp : entry + dir * Math.abs(entry - s0) * rr, size: 1, realized: 0,
       entryIdx: this.cut - 1, entryT: this.base.t[this.cut - 1], bars: 0, tf: this.tf, note, meta: meta || null,
     };
     this.pos.snapEntry = this.captureSnap(this.pos.entryT);
+    this.open.push(this.pos);
     this.draft = null;
     this.order = null;
     this.syncPriceLines();
@@ -1087,7 +1109,7 @@ export default class ChartEngine {
 
   setDraft(d) {
     if (!d) { this.draft = null; this.syncPriceLines(); this.emit(); return; }
-    if (!this.replay || this.pos || this.snap) return;
+    if (!this.replay || this.snap) return;
     this.finishAnim();
     const prev = this.draft;
     const base = this.defaultDistance() * (this.prefs.atrMult || 1);
@@ -1111,7 +1133,7 @@ export default class ChartEngine {
 
   /* Довга / коротка позиція, намальована інструментом, — у чернетку. */
   draftFromTool(type, pts) {
-    if (!this.replay || this.pos || !pts?.length) return false;
+    if (!this.replay || !pts?.length) return false;
     const [en, tp, sl] = pts;
     const side = type === 'long' ? 'LONG' : 'SHORT';
     const near = Math.abs(en.p - this.price()) <= Math.max(this.minGap(), this.defaultDistance() * 0.1);
@@ -1173,8 +1195,8 @@ export default class ChartEngine {
   /* Ручка на графіку чи поле в панелі: рівень ціною. */
   moveLevel(key, price) {
     if (!Number.isFinite(price)) return;
-    if (this.pos) { if (key !== 'entry') this.setLevels({ [key]: price }); return; }
-    if (this.order) {
+    if (this.pos && !this.draft) { if (key !== 'entry') this.setLevels({ [key]: price }); return; }
+    if (this.order && !this.draft) {
       const o = this.order;
       const dir = o.side === 'LONG' ? 1 : -1;
       const g = this.minGap();
@@ -1207,25 +1229,30 @@ export default class ChartEngine {
   /* Підтвердження чернетки: ринок — одразу в позицію, інакше ордер. */
   confirmDraft({ note = '', meta = null } = {}) {
     const L = this.draftLevels();
-    if (!L || !this.replay || this.pos) return false;
+    if (!L || !this.replay) return false;
     if (L.type === 'market') {
       this.openPosition(L.side, { sl: L.sl, tp: L.tp, note, meta });
       return true;
     }
     this.finishAnim();
     this.order = {
-      side: L.side, entry: L.entry, sl: L.sl, tp: L.tp, kind: this.orderKind(L.side, L.entry),
+      id: newId('o'), side: L.side, entry: L.entry, sl: L.sl, tp: L.tp, kind: this.orderKind(L.side, L.entry),
       placedIdx: this.cut - 1, placedT: this.base.t[this.cut - 1], tf: this.tf, note, meta: meta || null,
     };
+    this.pend.push(this.order);
+    this.pos = null;
     this.draft = null;
     this.syncPriceLines();
     this.emit();
     return true;
   }
 
-  cancelOrder() {
-    if (!this.order) return;
-    this.order = null;
+  cancelOrder(id = null) {
+    const o = id ? this.pend.find((q) => q.id === id) : this.order;
+    if (!o) return;
+    this.pend = this.pend.filter((q) => q !== o);
+    if (this.order === o) this.order = null;
+    this.pickActive();
     this.syncPriceLines();
     this.emit();
   }
@@ -1233,8 +1260,7 @@ export default class ChartEngine {
   /* Хвилинка i: чи дійшла ціна до ордера. Геп через рівень — вхід по
      відкриттю хвилинки: для ліміту це краща ціна, для стопа гірша,
      як і в реальності. */
-  tryFill(i) {
-    const o = this.order;
+  tryFill(o, i) {
     if (!o || i <= o.placedIdx) return;
     const b = this.base;
     const buy = o.side === 'LONG';
@@ -1243,23 +1269,27 @@ export default class ChartEngine {
     const hit = down ? b.l[i] <= o.entry : b.h[i] >= o.entry;
     if (!hit) return;
     const px = down ? (b.o[i] <= o.entry ? b.o[i] : o.entry) : (b.o[i] >= o.entry ? b.o[i] : o.entry);
-    this.order = null;
-    this.pos = {
-      side: o.side, entry: px, sl: o.sl, sl0: o.sl, tp: o.tp, size: 1, realized: 0,
+    const active = this.order === o || (!this.pos && !this.order);
+    this.pend = this.pend.filter((q) => q !== o);
+    if (this.order === o) this.order = null;
+    const np = {
+      id: newId('p'), side: o.side, entry: px, sl: o.sl, sl0: o.sl, tp: o.tp, size: 1, realized: 0,
       entryIdx: i, entryT: b.t[i], bars: 0, tf: o.tf, note: o.note, meta: o.meta || null, kind: o.kind,
     };
-    this.pos.snapEntry = this.captureSnap(b.t[i]);
+    np.snapEntry = this.captureSnap(b.t[i]);
+    this.open.push(np);
+    if (active) this.pos = np;
     /* Стоп у тій самій хвилинці, де спрацював ордер: порядку цін усередині
        хвилинки не знаємо, тож вважаємо гірший варіант — стоп спрацював.
        Тейк у цій же хвилинці не зараховуємо (це було б надто оптимістично). */
-    const p = this.pos;
-    const slHit = buy ? b.l[i] <= p.sl : b.h[i] >= p.sl;
-    if (slHit) this.finish('sl', p.sl, i);
+    const slHit = buy ? b.l[i] <= np.sl : b.h[i] >= np.sl;
+    if (slHit) this.finish('sl', np.sl, i, np);
   }
 
   /* Що зараз показувати ручками: позиція, ордер або чернетка. */
   ticket() {
     if (this.snap) return null;
+    if (this.draft) { const L0 = this.draftLevels(); if (L0) return { kind: 'draft', ...L0 }; }
     if (this.pos) return { kind: 'pos', side: this.pos.side, entry: this.pos.entry, sl: this.pos.sl, tp: this.pos.tp };
     if (this.order) return { ...this.order, kind: 'order', orderKind: this.order.kind };
     const L = this.draftLevels();
@@ -1317,8 +1347,7 @@ export default class ChartEngine {
     this.emit();
   }
 
-  checkPos(i) {
-    const p = this.pos;
+  checkPos(p, i) {
     if (!p || i <= p.entryIdx) return;
     const b = this.base;
     const long = p.side === 'LONG';
@@ -1342,18 +1371,54 @@ export default class ChartEngine {
     else if (long ? o >= p.tp : o <= p.tp) { reason = 'tp'; px = o; }
     else if (hitSL) { reason = 'sl'; px = p.sl; }
     else { reason = 'tp'; px = p.tp; }
-    this.finish(reason, px, i);
+    this.finish(reason, px, i, p);
   }
 
-  closePosition(reason = 'manual') {
-    if (!this.pos) return;
+  closePosition(reason = 'manual', id = null) {
+    const find = () => (id ? this.open.find((q) => q.id === id) : this.pos);
+    if (!find()) return;
     this.finishAnim();
-    if (!this.pos) return;
-    this.finish(reason, this.price(), this.cut - 1);
+    const p = find();
+    if (!p) return;
+    this.finish(reason, this.price(), this.cut - 1, p);
   }
 
-  finish(reason, px, idx) {
-    const p = this.pos;
+  closeAll(reason = 'manual') {
+    if (!this.open.length) return;
+    this.finishAnim();
+    [...this.open].forEach((p) => this.finish(reason, this.price(), this.cut - 1, p));
+  }
+
+  /* Одна хвилинка для всіх угод: спершу ордери, потім позиції. */
+  stepBar(i) {
+    [...this.pend].forEach((o) => this.tryFill(o, i));
+    [...this.open].forEach((p) => this.checkPos(p, i));
+  }
+
+  /* Вибрати угоду чи ордер (ручки, картка в панелі). */
+  selectTrade(id) {
+    const p = this.open.find((q) => q.id === id);
+    const o = p ? null : this.pend.find((q) => q.id === id);
+    if (!p && !o) return;
+    this.pos = p || null;
+    this.order = o || null;
+    this.draft = null;
+    this.syncPriceLines();
+    this.emit();
+  }
+
+  /* Нічого не вибрано — беремо останню відкриту угоду, потім ордер. */
+  pickActive() {
+    if (this.pos && !this.open.includes(this.pos)) this.pos = null;
+    if (this.order && !this.pend.includes(this.order)) this.order = null;
+    if (!this.pos && !this.order) {
+      this.pos = this.open[this.open.length - 1] || null;
+      if (!this.pos) this.order = this.pend[this.pend.length - 1] || null;
+    }
+  }
+
+  finish(reason, px, idx, p = this.pos) {
+    if (!p) return;
     const r = this.posR(p, px);
     const result = Math.abs(r) < 0.05 ? 'BE' : r > 0 ? 'WIN' : 'LOSS';
     const trade = {
@@ -1365,7 +1430,9 @@ export default class ChartEngine {
       kind: p.kind || 'market', partials: p.partials || [], trail: !!p.trail,
       snaps: { entry: p.snapEntry || null, exit: this.captureSnap(this.base.t[idx]) },
     };
-    this.pos = null;
+    this.open = this.open.filter((q) => q !== p);
+    if (this.pos === p) this.pos = null;
+    this.pickActive();
     this.closed.push(trade);
     this.syncPriceLines();
     this.updateMarkers();
@@ -1512,9 +1579,11 @@ export default class ChartEngine {
         add(t.exitIdx, t.side, false, `${t.r > 0 ? '+' : ''}${t.r.toFixed(2)}R`);
       });
     }
-    if (this.pos && this.prefs.showPositions && !sn) {
-      add(this.pos.entryIdx, this.pos.side, true, this.pos.side === 'LONG' ? 'Buy' : 'Sell');
-      (this.pos.partials || []).forEach((q) => add(q.idx, this.pos.side, false, `½ ${q.r > 0 ? '+' : ''}${q.r.toFixed(2)}R`));
+    if (this.prefs.showPositions && !sn) {
+      this.open.forEach((op) => {
+        add(op.entryIdx, op.side, true, op.side === 'LONG' ? 'Buy' : 'Sell');
+        (op.partials || []).forEach((q) => add(q.idx, op.side, false, `½ ${q.r > 0 ? '+' : ''}${q.r.toFixed(2)}R`));
+      });
     }
     m.sort((a, b) => a.time - b.time);
     this.markers.setMarkers(m);
@@ -1676,6 +1745,34 @@ export default class ChartEngine {
       }
     }
 
+    /* Інші відкриті угоди й ордери (не вибрані) — бліді рамки з підписом.
+       Клік по рамці вибирає угоду. */
+    if (p.showPositions && !sn && this.replay) {
+      this.otherBoxes = [];
+      const xNow = this.xOfBase(this.cut - 1);
+      for (const q of [...this.open, ...this.pend]) {
+        if (q === this.pos || q === this.order) continue;
+        const isPos = this.open.includes(q);
+        const x1 = isPos ? this.xOfBase(q.entryIdx) : xNow;
+        const ye = this.series.priceToCoordinate(q.entry);
+        const ys = this.series.priceToCoordinate(q.sl);
+        const yt = this.series.priceToCoordinate(q.tp);
+        if (x1 == null || ye == null || xNow == null) continue;
+        const x2 = Math.max(xNow + 40, x1 + 40);
+        if (yt != null) zone(x1, x2, ye, yt, 'rgba(8,153,129,0.12)');
+        if (ys != null) zone(x1, x2, ye, ys, 'rgba(242,54,69,0.12)');
+        const long = q.side === 'LONG';
+        parts.push(`<line x1="${x1}" y1="${ye}" x2="${x2}" y2="${ye}" stroke="${long ? '#2962ff' : '#e91e63'}" stroke-width="1" ${isPos ? '' : 'stroke-dasharray="4 3"'}/>`);
+        const r = isPos ? this.posR(q, this.price()) : null;
+        const txt = isPos ? `${long ? 'Buy' : 'Sell'} ${r >= 0 ? '+' : '−'}${Math.abs(r).toFixed(2)}R` : `${long ? 'Buy' : 'Sell'} ${q.kind === 'limit' ? 'Limit' : 'Stop'}`;
+        const w = txt.length * 6.4 + 12;
+        const lx = Math.max(2, Math.min(plotW - w - 2, x1));
+        parts.push(`<rect x="${lx}" y="${ye - 18}" width="${w}" height="16" rx="3" fill="${isPos ? (r >= 0 ? '#089981' : '#f23645') : (long ? '#2962ff' : '#e91e63')}" opacity="0.85"/><text x="${lx + w / 2}" y="${ye - 6}" fill="#fff" font-size="11" font-weight="600" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Trebuchet MS',Roboto,sans-serif">${txt}</text>`);
+        const yy = [ye, ys ?? ye, yt ?? ye];
+        this.otherBoxes.push({ id: q.id, x1: Math.min(x1, x2), x2: Math.max(x1, x2), y1: Math.min(...yy, ye - 18), y2: Math.max(...yy) });
+      }
+    } else this.otherBoxes = [];
+
     /* Відкрита позиція — від входу до правого краю. */
     /* Під позицією — спершу індикатори, над ними малюнки: зони угоди
        мають лишатись читабельними, а лінія людини — над сесіями. */
@@ -1760,6 +1857,10 @@ export default class ChartEngine {
       pos: p ? { ...p, r: this.posR(p, now), rr: Math.abs(p.tp - p.entry) / (Math.abs(p.entry - p.sl0) || 1e-9) } : null,
       draft: this.draft && this.base ? this.draftLevels() : null,
       order: this.order ? { ...this.order, rr: Math.abs(this.order.tp - this.order.entry) / (Math.abs(this.order.entry - this.order.sl) || 1e-9) } : null,
+      trades: [
+        ...this.open.map((q) => ({ id: q.id, type: 'pos', side: q.side, entry: q.entry, sl: q.sl, tp: q.tp, r: this.posR(q, now), active: q === this.pos })),
+        ...this.pend.map((q) => ({ id: q.id, type: 'order', side: q.side, entry: q.entry, sl: q.sl, tp: q.tp, kind: q.kind, active: q === this.order })),
+      ],
     });
   }
 }

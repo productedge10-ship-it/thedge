@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Loader2, Trash2, Share2, Globe, Link2Off, CandlestickChart } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2, Share2, Globe, Link2Off, CandlestickChart, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { exportCsv, exportXlsx } from '../lib/backtestExport';
 import Button from '../components/ui/Button';
 
 import { supabase } from '../lib/supabase';
@@ -41,6 +42,7 @@ export default function BacktestSession() {
   const demo = isDemo(sessionId);
   const [session, setSession] = useState(null);
   const [trades, setTrades] = useState([]);
+  const [expOpen, setExpOpen] = useState(false);
   /* Бектест на графіку: угоди пише сам графік, тож рядок ручного
      запису ховаємо за кнопкою, а головна дія — «Продовжити на графіку». */
   const chartMode = !isDemo(sessionId) && !!session && isChartSession({ ...session, trades });
@@ -371,6 +373,39 @@ export default function BacktestSession() {
             >
               {chartMode ? tx('Продовжити на графіку', 'Continue on chart') : tx('Відкрити на графіку', 'Open on chart')}
             </Button>
+            {/* Експорт угод: Excel (.xlsx) з аркушем підсумку або CSV. */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setExpOpen((v) => !v)}
+                disabled={!trades.length}
+                title={trades.length ? tx('Завантажити угоди', 'Download trades') : tx('Ще немає угод', 'No trades yet')}
+                className="flex h-11 items-center gap-2.5 rounded-xl px-5 text-[14px] font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-40"
+                style={{ fontFamily: T.sans, background: expOpen ? act(0.15) : T.surface, border: `1px solid ${expOpen ? act(0.45) : T.line}`, color: expOpen ? T.text : T.text2 }}
+              >
+                <Download size={16} strokeWidth={2.1} />
+                {tx('Експорт', 'Export')}
+              </button>
+              {expOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setExpOpen(false)} />
+                  <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[230px] rounded-xl p-1.5" style={{ background: T.surface3, border: `1px solid ${T.lineHi}`, boxShadow: '0 16px 40px rgba(0,0,0,0.45)' }}>
+                    {[
+                      [FileSpreadsheet, 'Excel (.xlsx)', tx('Угоди + аркуш підсумку', 'Trades + summary sheet'), () => exportXlsx(session, trades)],
+                      [FileText, 'CSV', tx('Для Google Sheets та інших', 'For Google Sheets and others'), () => exportCsv(session, trades)],
+                    ].map(([Icon, label, hint, fn]) => (
+                      <button key={label} type="button" onClick={() => { setExpOpen(false); fn(); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/5">
+                        <Icon size={17} style={{ color: ACT.tint }} />
+                        <span>
+                          <span className="block text-[13.5px] font-semibold" style={{ color: T.text }}>{label}</span>
+                          <span className="block text-[11.5px]" style={{ color: T.text3 }}>{hint}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           {!demo && (
             <>
               <button

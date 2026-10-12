@@ -890,7 +890,7 @@ export default function BacktestChart() {
       else if (e.altKey && e.shiftKey && e.code === 'KeyR') { e.preventDefault(); dmRef.current?.setTool('rect'); }
       else if (e.altKey && (e.key === 'r' || e.key === 'R' || e.code === 'KeyR')) { e.preventDefault(); en.resetView(); }
       else if (e.key === 'Escape' && en.selecting) en.cancelSelect();
-      else if (e.shiftKey && !e.ctrlKey && !e.altKey && (e.code === 'KeyB' || e.code === 'KeyS') && en.replay && !en.pos && !en.order) {
+      else if (e.shiftKey && !e.ctrlKey && !e.altKey && (e.code === 'KeyB' || e.code === 'KeyS') && en.replay && !en.snap) {
         /* Shift+B / Shift+S: перше натискання — чернетка, друге — вхід. */
         e.preventDefault();
         const side = e.code === 'KeyB' ? 'LONG' : 'SHORT';
@@ -1365,7 +1365,7 @@ export default function BacktestChart() {
               const pt = { t: ctxMenu.t, p };
               const ps = p == null ? '' : fmtNum(p, d);
               const name = remoteName(symbol);
-              const canTrade = st.replay && !st.pos && !st.order && !st.snap && p != null;
+              const canTrade = st.replay && !st.snap && p != null;
               const kindOf = (side) => (en.orderKind(side, p) === 'limit' ? 'Limit' : 'Stop');
               const order = (side) => { en.setDraft({ side, type: 'pending', entry: p }); en.confirmDraft(); };
               const nDraw = dm.list.length;
@@ -1566,7 +1566,7 @@ export default function BacktestChart() {
                 const B = ({ onClick, bg, children, title }) => (
                   <button type="button" title={title} onClick={onClick} className="whitespace-nowrap rounded-md px-2.5 py-1 text-[12px] font-bold text-white transition-transform active:scale-95" style={{ background: bg || 'rgba(255,255,255,0.1)' }}>{children}</button>
                 );
-                if (st.pos) {
+                if (st.pos && !st.draft) {
                   return (
                     <>
                       <B onClick={() => eng()?.moveToBE()} title={tx('Стоп у беззбиток', 'Stop to breakeven')}>BE</B>
@@ -1574,7 +1574,7 @@ export default function BacktestChart() {
                     </>
                   );
                 }
-                if (st.order) {
+                if (st.order && !st.draft) {
                   return <B onClick={() => eng()?.cancelOrder()}>{tx('Скасувати ордер', 'Cancel order')}</B>;
                 }
                 if (st.draft) {
@@ -1615,11 +1615,12 @@ export default function BacktestChart() {
               className="absolute left-3 z-[6] flex overflow-hidden rounded-md text-white shadow-md"
               style={{ top: prefs.stTitle || prefs.stOhlc || prefs.stChange ? 30 : 10, fontFamily: T.mono }}
             >
-              {pos ? (
+              {pos && (
                 <button type="button" onClick={() => eng()?.closePosition('manual')} className="px-3 py-1 text-left text-[12px] font-bold" style={{ background: pos.r >= 0 ? '#089981' : '#f23645' }}>
                   {tx('Закрити', 'Close')} {fmtR(pos.r)}
                 </button>
-              ) : (
+              )}
+              {(
                 <>
                   <button type="button" onClick={() => openPos('SHORT')} className="px-3 py-1 text-left leading-tight transition-[filter] hover:brightness-110" style={{ background: '#f23645' }}>
                     <span className="block text-[13px] font-bold">{fmtNum(st.price, d)}</span>
@@ -1886,11 +1887,12 @@ export default function BacktestChart() {
                 {/* На телефоні бічної панелі немає — вхід і вихід тут. */}
                 {st.replay && (
                   <span className="flex gap-1 md:hidden">
-                    {pos ? (
+                    {pos && (
                       <button type="button" onClick={() => eng()?.closePosition('manual')} className="h-9 rounded-lg px-3 text-[13px] font-bold tabular-nums" style={{ background: T.sunken, color: pos.r >= 0 ? T.ok : T.bad, fontFamily: T.mono }}>
                         {fmtR(pos.r)} ✕
                       </button>
-                    ) : (
+                    )}
+                    {(
                       <>
                         <button type="button" onClick={() => openPos('SHORT')} className="h-9 rounded-lg px-3 text-[13px] font-bold text-white" style={{ background: '#f23645' }}>Sell</button>
                         <button type="button" onClick={() => openPos('LONG')} className="h-9 rounded-lg px-3 text-[13px] font-bold text-white" style={{ background: '#2962ff' }}>Buy</button>

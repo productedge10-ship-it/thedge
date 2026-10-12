@@ -6,6 +6,9 @@ import { X, Loader2, ArrowRight, ArrowLeft, CandlestickChart, NotebookPen, Check
 import { T, EASE } from '../../lib/theme';
 import { ACT } from './accent';
 import AssetPicker from './AssetPicker';
+import ServerAssetPicker from './ServerAssetPicker';
+import { remoteAllowed } from '../../lib/candles/remote';
+import { useAuth } from '../../context/AuthContext';
 import HistoryDatePicker from './HistoryDatePicker';
 import { t as tx } from '../../lib/lang';
 
@@ -218,6 +221,7 @@ const TF_CHOICES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1'];
 const RISKS = ['0.5', '1', '2'];
 
 export default function NewBacktestModal({ saving, onClose, onCreate, initialMode = null, strategies = [] }) {
+  const { user } = useAuth();
   const [mode, setMode] = useState(initialMode);
   const [f, setF] = useState({
     name: '',
@@ -409,7 +413,11 @@ export default function NewBacktestModal({ saving, onClose, onCreate, initialMod
             {/* Той самий вибір активу, що й у записі угоди: один
                 список і одні власні тікери, тому обраний тут актив
                 далі стоїть у формі за замовчуванням без сюрпризів. */}
-            <AssetPicker value={f.pair} onChange={(v) => set({ pair: v })} height={56} />
+            {mode === 'chart' && remoteAllowed(user?.email) ? (
+              <ServerAssetPicker value={f.pair} onChange={(v) => set({ pair: v })} height={56} fallback={<AssetPicker value={f.pair} onChange={(v) => set({ pair: v })} height={56} />} />
+            ) : (
+              <AssetPicker value={f.pair} onChange={(v) => set({ pair: v })} height={56} />
+            )}
 
             <FloatField
               label={tx('Торгова система · не обовʼязково', 'Trading system · optional')}
