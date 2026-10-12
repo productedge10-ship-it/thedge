@@ -30,6 +30,7 @@ const INDICES = {
   FRA40: ['Франція 40 (CAC)', 'France 40 (CAC)', 'fr'], UK100: ['Британія 100 (FTSE)', 'UK 100 (FTSE)', 'gb'], EU50: ['Єврозона 50', 'Euro Stoxx 50', 'eu'],
   JP225: ['Японія 225 (Nikkei)', 'Japan 225 (Nikkei)', 'jp'], JPN225: ['Японія 225 (Nikkei)', 'Japan 225 (Nikkei)', 'jp'], AUS200: ['Австралія 200', 'Australia 200', 'au'],
   NDX100: ['Nasdaq 100', 'Nasdaq 100', 'us'], NAS100: ['Nasdaq 100', 'Nasdaq 100', 'us'], USTEC: ['Nasdaq 100', 'Nasdaq 100', 'us'],
+  DXY: ['Індекс долара США', 'US Dollar Index', 'us'], USDX: ['Індекс долара США', 'US Dollar Index', 'us'],
   SPX500: ['S&P 500', 'S&P 500', 'us'], US500: ['S&P 500', 'S&P 500', 'us'], US30: ['Dow Jones 30', 'Dow Jones 30', 'us'],
 };
 
