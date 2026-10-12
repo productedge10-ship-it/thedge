@@ -15,7 +15,10 @@ export const BETA_EMAILS = ['h1f3st@gmail.com', 'andreejdhh@gmail.com', 'zozuk.r
 
 export const BETA_ROUTES = ['/backtest'];
 
-export const isBetaEmail = (email) => !!email && BETA_EMAILS.includes(String(email).trim().toLowerCase());
+/* true — бектести відкриті всім (платний доступ лишається через підписку). false — лише BETA_EMAILS. */
+export const BETA_OPEN = true;
+
+export const isBetaEmail = (email) => BETA_OPEN || !!email && BETA_EMAILS.includes(String(email).trim().toLowerCase());
 
 export const useBetaAccess = () => {
   const { user } = useAuth();
