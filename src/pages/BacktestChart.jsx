@@ -1029,8 +1029,8 @@ export default function BacktestChart() {
                   <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: T.text3 }}>{tx('Сервер EDGE', 'EDGE server')}</div>
                   {/* Інструменти по колонках: форекс, метали, індекси, крипта. */}
                   {(() => {
-                    const shown = core.filter((c) => !q || c.symbol.toUpperCase().includes(q) || assetInfo(c.symbol).name.toUpperCase().includes(q));
-                    const cols = ASSET_GROUPS.map((g) => ({ ...g, items: shown.filter((c) => assetInfo(c.symbol).group === g.id) })).filter((g) => g.items.length);
+                    const shown = core.filter((c) => !q || c.symbol.toUpperCase().includes(q) || assetInfo(c.symbol, c).name.toUpperCase().includes(q));
+                    const cols = ASSET_GROUPS.map((g) => ({ ...g, items: shown.filter((c) => assetInfo(c.symbol, c).group === g.id) })).filter((g) => g.items.length);
                     if (!cols.length) return null;
                     return (
                       <div className="grid max-h-[60vh] gap-x-1 overflow-y-auto" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(205px, 1fr))` }}>
@@ -1041,7 +1041,7 @@ export default function BacktestChart() {
                               <span style={{ fontFamily: T.mono, opacity: 0.7 }}>{g.items.length}</span>
                             </div>
                             {g.items.map((c) => {
-                              const info = assetInfo(c.symbol);
+                              const info = assetInfo(c.symbol, c);
                               const on = symbol === REMOTE_PREFIX + c.symbol;
                               return (
                                 <button key={c.symbol} type="button" onClick={() => pick(c.symbol)} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-white/5" style={{ background: on ? act(0.14) : undefined }}>

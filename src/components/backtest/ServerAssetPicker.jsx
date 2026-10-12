@@ -32,8 +32,8 @@ export default function ServerAssetPicker({ value, onChange, height = 56, fallba
 
   const needle = q.trim().toUpperCase();
   const core = catalog?.core || [];
-  const shown = core.filter((c) => !needle || c.symbol.toUpperCase().includes(needle) || assetInfo(c.symbol).name.toUpperCase().includes(needle));
-  const cols = GROUPS.map((g) => ({ ...g, items: shown.filter((c) => assetInfo(c.symbol).group === g.id) })).filter((g) => g.items.length);
+  const shown = core.filter((c) => !needle || c.symbol.toUpperCase().includes(needle) || assetInfo(c.symbol, c).name.toUpperCase().includes(needle));
+  const cols = GROUPS.map((g) => ({ ...g, items: shown.filter((c) => assetInfo(c.symbol, c).group === g.id) })).filter((g) => g.items.length);
   const pick = (s) => { onChange(s); setOpen(false); setQ(''); };
 
   return (
@@ -82,7 +82,7 @@ export default function ServerAssetPicker({ value, onChange, height = 56, fallba
                     <span style={{ fontFamily: T.mono, opacity: 0.7 }}>{g.items.length}</span>
                   </div>
                   {g.items.map((c) => {
-                    const info = assetInfo(c.symbol);
+                    const info = assetInfo(c.symbol, c);
                     const on = c.symbol === value;
                     return (
                       <button key={c.symbol} type="button" onClick={() => pick(c.symbol)} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-white/5" style={{ background: on ? act(0.18) : undefined }}>

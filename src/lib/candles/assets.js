@@ -39,6 +39,8 @@ export const GROUPS = [
   { id: 'metals', uk: 'Метали', en: 'Metals' },
   { id: 'indices', uk: 'Індекси', en: 'Indices' },
   { id: 'crypto', uk: 'Крипта', en: 'Crypto' },
+  { id: 'commodities', uk: 'Сировина', en: 'Commodities' },
+  { id: 'stocks', uk: 'Акції', en: 'Stocks' },
   { id: 'other', uk: 'Інше', en: 'Other' },
 ];
 
@@ -47,7 +49,7 @@ const ccyName = (c) => (CCY[c] ? tx(CCY[c][0], CCY[c][1]) : c);
 export const flagUrl = (code) => `https://flagcdn.com/${code}.svg`;
 
 /* { group, name, logo: { kind: 'pair'|'flag'|'coin', ... } } */
-export function assetInfo(symbol) {
+export function assetInfo(symbol, meta = null) {
   const s = String(symbol || '').toUpperCase().replace(/^SRV:/, '');
   const k = s.replace(/[^A-Z0-9]/g, '');
   if (INDICES[k]) {
@@ -68,5 +70,14 @@ export function assetInfo(symbol) {
   if (m && CCY[m[1]] && CCY[m[2]]) {
     return { group: 'forex', name: `${ccyName(m[1])} / ${ccyName(m[2])}`, logo: { kind: 'pair', a: CCY[m[1]][2], b: CCY[m[2]][2] } };
   }
-  return { group: 'other', name: '', logo: { kind: 'text', text: k.slice(0, 2) } };
+  /* Решту розкладаємо за теками брокера (catalog: path, desc). */
+  const p = String(meta?.path || '').toLowerCase();
+  const group = /crypto/.test(p) ? 'crypto'
+    : /metal/.test(p) ? 'metals'
+      : /forex|fx|currenc/.test(p) ? 'forex'
+        : /stock|equit|share/.test(p) ? 'stocks'
+          : /energ|commod|agri|soft|oil|gas/.test(p) ? 'commodities'
+            : /ind|cash/.test(p) ? 'indices'
+              : 'other';
+  return { group, name: meta?.desc || '', logo: { kind: 'text', text: k.slice(0, 2) } };
 }

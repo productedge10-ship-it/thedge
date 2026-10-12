@@ -12,6 +12,7 @@
     python edge_candles.py update             # дописати свіжі місяці
     python edge_candles.py catalog            # список усіх символів брокера
     python edge_candles.py serve              # постійно: черга з сайту + update
+    python edge_candles.py daily              # раз на добу о 00:05: учорашній день усім символам
 
 Налаштування — у C:\\mt\\.env (див. README.md поруч). Логін брокера
 скрипт не знає й не зберігає: у терміналі за MT5_PATH_CANDLES вхід
@@ -54,7 +55,9 @@ MAGIC = b"EDG1"
 HEADER = struct.Struct("<4sBBHIii12x")
 
 # Основні — повна історія наперед. Формат: НАЗВА_НА_САЙТІ=НАЗВА_У_БРОКЕРА
-DEFAULT_CORE = "EURUSD,GBPUSD,XAUUSD,GER40,DXY"
+# Порожньо: список інструментів сайту береться з symbols.json (усе, що
+# вже залито). CANDLES_CORE у .env лише додає нові чи задає символ брокера.
+DEFAULT_CORE = ""
 
 
 # ---------------------------------------------------------------- env
@@ -96,6 +99,49 @@ def core_map() -> dict:
 
 def safe_key(name: str) -> str:
     return "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in name)
+
+
+# Як той самий інструмент називають різні брокери. Перший, що знайдеться
+# в терміналі, і береться.
+ALIASES = {
+    "NDX100": ["NDX100", "US100", "USTEC", "NAS100"], "NAS100": ["NAS100", "US100", "USTEC", "NDX100"],
+    "SPX500": ["SPX500", "US500", "SP500"], "US500": ["US500", "SPX500", "SP500"],
+    "US30": ["US30", "DJ30", "WS30"], "GER30": ["GER30", "DE30", "GER40", "DE40"], "GER40": ["GER40", "DE40", "GER30", "DE30"],
+    "FRA40": ["FRA40", "FR40", "F40"], "JP225": ["JP225", "JPN225", "JPY225"], "UK100": ["UK100", "FTSE100"],
+    "DXY": ["DXY", "USDX", "USDIDX"], "USDX": ["USDX", "DXY"],
+    "XAUUSD": ["XAUUSD", "GOLD"], "XAGUSD": ["XAGUSD", "SILVER"],
+}
+
+
+def resolve_broker(name: str, hint: str | None = None) -> str:
+    """Символ брокера для назви на сайті. Спершу підказка (CANDLES_CORE
+    чи маніфест), далі сама назва й відомі синоніми — точно, а потім із
+    суфіксом брокера (DXY.cash, EURUSD.r, XAUUSDm)."""
+    m = mt5()
+    cands = [c for c in [hint, name, *ALIASES.get(name.upper(), [])] if c]
+    for c in cands:
+        if m.symbol_info(c) is not None:
+            return c
+    names = [s.name for s in (m.symbols_get() or [])]
+    for c in cands:
+        cu = c.upper()
+        for n in names:
+            nu = n.upper()
+            if nu.startswith(cu) and (len(nu) == len(cu) or not nu[len(cu)].isalnum() or len(nu) - len(cu) <= 2):
+                return n
+    raise RuntimeError(f"символ для {name} не знайдено в терміналі (додай у CANDLES_CORE: {name}=СИМВОЛ_БРОКЕРА)")
+
+
+def site_symbols() -> dict:
+    """Усі інструменти сайту: CANDLES_CORE + ті, що вже лежать у
+    symbols.json (зокрема залиті руками з CSV). {назва: підказка брокера}."""
+    out = {}
+    cat = get_json(f"{PREFIX}/symbols.json") or {}
+    for c in cat.get("core", []):
+        if c.get("symbol"):
+            out[c["symbol"]] = c.get("broker")
+    out.update(core_map())
+    return out
 
 
 # ---------------------------------------------------------------- R2
@@ -152,10 +198,16 @@ def mt5():
     global _mt5
     if _mt5 is None:
         import MetaTrader5 as m  # pip install MetaTrader5
-        path = need("MT5_PATH_CANDLES")
-        if not m.initialize(path=path, portable=True, timeout=60000):
-            sys.exit(f"MT5 не стартував: {m.last_error()} (термінал {path}). "
-                     "Відкрий його руками й увійди в будь-який рахунок брокера.")
+        # Той самий термінал FTMO, що й в автоімпорту (MT5_PATH_FTMO), якщо
+        # окремий MT5_PATH_CANDLES не задано. Вхід не робимо: беремо той
+        # рахунок, у якому термінал уже залогінений, — котирування однакові.
+        path = ENV.get("MT5_PATH_CANDLES") or need("MT5_PATH_FTMO")
+        ok = m.initialize(path=path, timeout=60000)
+        if ok and m.account_info() is None:
+            m.shutdown()
+            ok = m.initialize(path=path, portable=True, timeout=60000)
+        if not ok or m.account_info() is None:
+            sys.exit(f"MT5 без входу в рахунок: {m.last_error()} (термінал {path}).")
         _mt5 = m
     return _mt5
 
@@ -182,7 +234,27 @@ def shift_month(ym: str, d: int) -> str:
     return f"{y:04d}-{m % 12 + 1:02d}"
 
 
-def rates_month(broker: str, ym: str):
+def sync_recent(broker: str, until: int, wait: float = 45.0):
+    """Термінал тримає свою копію історії й докачує свіжі хвилинки лише
+    тоді, коли символ хтось відкриває. Запит за діапазоном цього не
+    запускає: віддає те, що вже лежить на диску (так BTCUSD «застряг» на
+    07.10). Тому спершу просимо останню свічку й чекаємо, поки термінал
+    докачає історію до потрібного часу або до свіжого тіка."""
+    m = mt5()
+    tick = m.symbol_info_tick(broker)
+    target = min(until - 60, int(tick.time) - 120) if tick and tick.time else until - 60
+    deadline = time.time() + wait
+    last = 0
+    while time.time() < deadline:
+        r = m.copy_rates_from_pos(broker, m.TIMEFRAME_M1, 0, 10)
+        last = int(r[-1]["time"]) if r is not None and len(r) else 0
+        if last >= target:
+            return
+        time.sleep(1.0)
+    print(f"  {broker}: термінал докачав лише до {datetime.fromtimestamp(last, tz=timezone.utc):%d.%m %H:%M}")
+
+
+def rates_month(broker: str, ym: str, until: int | None = None):
     """Свічки M1 місяця за ЧАСОМ БРОКЕРА. MT5 віддає час сервера як
     epoch, тож межі місяця рахуємо в тих самих «секундах брокера» і
     просимо з запасом у добу з обох боків."""
@@ -191,6 +263,8 @@ def rates_month(broker: str, ym: str):
         raise RuntimeError(f"символ {broker} не знайдено в терміналі")
     a, b = month_bounds(ym)
     lo, hi = int(a.timestamp()), int(b.timestamp())
+    if until is not None and lo < until <= hi + 86400:
+        sync_recent(broker, until)
     prev = -1
     rates = None
     # Термінал докачує історію з сервера не одразу — питаємо, доки
@@ -204,6 +278,8 @@ def rates_month(broker: str, ym: str):
         time.sleep(0.7)
     if rates is None or len(rates) == 0:
         return []
+    if until is not None:
+        hi = min(hi, until)
     return [r for r in rates if lo <= int(r["time"]) < hi]
 
 
@@ -276,9 +352,10 @@ def save_manifest(m: dict):
         "application/json", CACHE_MANIFEST)
 
 
-def build_month(m: dict, ym: str, digits: int) -> int:
-    """Один місяць у R2. Повертає кількість свічок (0 — історії немає)."""
-    rows = rates_month(m["broker"], ym)
+def build_month(m: dict, ym: str, digits: int, until: int | None = None) -> int:
+    """Один місяць у R2. Повертає кількість свічок (0 — історії немає).
+    until — не брати свічок від цього часу (секунди брокера)."""
+    rows = rates_month(m["broker"], ym, until)
     if not rows:
         return 0
     blob = encode(rows, digits)
@@ -336,6 +413,76 @@ def update_symbol(name: str, broker: str, log=print):
     log(f"  {name}: оновлено до {cur}")
 
 
+_now_cache = None
+
+
+def broker_now() -> int:
+    """«Зараз» за часом брокера. Беремо найсвіжіший тік серед символів,
+    які торгуються й у вихідні (крипта), — інакше в суботу о 00:05
+    останній тік був би п'ятничним і п'ятниця не вважалась би закритою."""
+    global _now_cache
+    if _now_cache:
+        return _now_cache
+    m = mt5()
+    best = 0
+    for name in ["BTCUSD", "ETHUSD", *site_symbols().keys()]:
+        try:
+            b = resolve_broker(name)
+            m.symbol_select(b, True)
+            t = m.symbol_info_tick(b)
+            if t and t.time:
+                best = max(best, int(t.time))
+        except Exception:  # noqa: BLE001
+            continue
+    if not best:
+        raise RuntimeError("немає жодного тіка — термінал не підключений до брокера?")
+    _now_cache = best
+    return best
+
+
+def broker_midnight() -> int:
+    """Початок поточної доби за часом брокера."""
+    now = broker_now()
+    return now - now % 86400
+
+
+def daily_symbol(name: str, hint: str | None, log=print):
+    """Дописати в R2 усі повні доби до сьогоднішньої (сьогоднішню — ні:
+    вона ще не закінчилась). Перебудовуємо місяць учорашнього дня, а якщо
+    вчора був інший місяць, ніж позавчора, то обидва — щоб пропущений
+    запуск не лишав дірок."""
+    old = get_json(manifest_key(name)) or {}
+    broker = resolve_broker(name, hint or old.get("broker"))
+    digits = old.get("digits") or symbol_digits(broker)
+    m = load_manifest(name, broker, digits)
+    m["broker"] = broker
+    cut = broker_midnight()
+    yday = datetime.fromtimestamp(cut - 86400, tz=timezone.utc).strftime("%Y-%m")
+    last_known = max(m["months"]) if m["months"] else yday
+    months = month_list(min(last_known, yday), yday)[-3:]
+    total = 0
+    for ym in months:
+        total += build_month(m, ym, digits, until=cut)
+    save_manifest(m)
+    day = datetime.fromtimestamp(cut - 86400, tz=timezone.utc).strftime("%d.%m.%Y")
+    log(f"  {name} ({broker}): до {day} включно, місяці {', '.join(months)}")
+    return total
+
+
+def daily(log=print):
+    ok, bad = 0, []
+    for name, hint in site_symbols().items():
+        try:
+            daily_symbol(name, hint, log)
+            ok += 1
+        except Exception as e:  # noqa: BLE001
+            bad.append(name)
+            log(f"  {name}: ПОМИЛКА {e}")
+    catalog(log)
+    log(f"Готово: {ok} оновлено, помилок {len(bad)}{' (' + ', '.join(bad) + ')' if bad else ''}")
+    return 1 if bad else 0
+
+
 def all_known():
     """Символи, які вже є в R2 (основні + колись запитані з сайту)."""
     pager = s3().get_paginator("list_objects_v2")
@@ -366,23 +513,140 @@ def update_all(log=print):
     catalog(log)
 
 
-def catalog(log=print):
-    core = core_map()
+def catalog(log=print, extra=None):
+    core = site_symbols()
+    for name, broker in (extra or {}).items():
+        core.setdefault(name, broker)
+    mans = {name: (get_json(manifest_key(name)) or {}) for name in core}
+    used = {(mans[n].get("broker") or core[n] or n) for n in core}
     syms = mt5().symbols_get() or []
     on_demand = []
     for s in syms:
-        if s.name in core.values():
+        if s.name in used:
             continue
         on_demand.append({"symbol": s.name, "desc": (s.description or "")[:60], "digits": int(s.digits),
                           "path": (s.path or "").split("\\")[0]})
     core_list = []
-    for name, broker in core.items():
-        m = get_json(manifest_key(name)) or {}
-        core_list.append({"symbol": name, "broker": broker, "digits": m.get("digits"),
-                          "first": m.get("first"), "last": m.get("last")})
+    for name in core:
+        m = mans[name]
+        if not m.get("months"):
+            continue  # ще не залитий — не показуємо порожній інструмент
+        b = m.get("broker") or core[name] or name
+        info = mt5().symbol_info(b)
+        core_list.append({"symbol": name, "broker": b, "digits": m.get("digits"),
+                          "first": m.get("first"), "last": m.get("last"),
+                          "path": ((info.path if info else "") or "").split("\\")[0],
+                          "desc": ((info.description if info else "") or "")[:60]})
+    # Дві назви на один символ брокера (GER30 і GER40 → GER40.cash) —
+    # лишаємо ту, в якої довша історія.
+    best = {}
+    for c in core_list:
+        k = c["broker"]
+        span = len((mans[c["symbol"]] or {}).get("months") or {})
+        if k not in best or span > best[k][0]:
+            best[k] = (span, c["symbol"])
+    keep = {v[1] for v in best.values()}
+    dropped = [c["symbol"] for c in core_list if c["symbol"] not in keep]
+    core_list = [c for c in core_list if c["symbol"] in keep]
+    if dropped:
+        log(f"  дублікати прибрано зі списку: {', '.join(dropped)}")
     body = {"v": 1, "updated": int(time.time()), "core": core_list, "onDemand": on_demand}
     put(f"{PREFIX}/symbols.json", json.dumps(body, separators=(",", ":")).encode(), "application/json", CACHE_MANIFEST)
     log(f"  каталог: {len(core_list)} основних, {len(on_demand)} на запит")
+
+
+def site_name_for(broker: str, taken: set) -> str:
+    """Назва на сайті для символу брокера: без хвоста .cash / .r тощо,
+    якщо таке ім'я ще вільне."""
+    base = broker.split(".")[0].upper()
+    base = "".join(ch for ch in base if ch.isalnum() or ch in "_-") or broker
+    return base if base not in taken else safe_key(broker)
+
+
+def purge_history(broker: str) -> int:
+    """Стерти скачану терміналом історію символу з диска VPS (вона вже в
+    R2). Повертає скільки МБ звільнено. Заблоковані файли пропускаємо —
+    термінал за потреби докачає історію сам."""
+    import shutil
+    m = mt5()
+    try:
+        ti = m.terminal_info()
+        acc = m.account_info()
+    except Exception:  # noqa: BLE001
+        return 0
+    if not ti or not acc:
+        return 0
+    root = Path(ti.data_path) / "bases" / acc.server
+    freed = 0
+    for sub in ("history", "ticks"):
+        d = root / sub / broker
+        if not d.is_dir():
+            continue
+        for f in d.rglob("*"):
+            if f.is_file():
+                try:
+                    size = f.stat().st_size
+                    f.unlink()
+                    freed += size
+                except OSError:
+                    pass
+        shutil.rmtree(d, ignore_errors=True)
+    return freed // (1024 * 1024)
+
+
+def backfill_all(years: int, log=print):
+    """Уся історія M1 усіх символів брокера (до `years` років). Можна
+    перервати й запустити знову: готові місяці пропускаються."""
+    m = mt5()
+    known = site_symbols()
+    used = {}
+    for name, hint in known.items():
+        old = get_json(manifest_key(name)) or {}
+        try:
+            used[resolve_broker(name, hint or old.get("broker"))] = name
+        except Exception:  # noqa: BLE001
+            pass
+    taken = set(known)
+    todo = []
+    for s in m.symbols_get() or []:
+        if s.name in used:
+            todo.append((used[s.name], s.name))
+            continue
+        name = site_name_for(s.name, taken)
+        taken.add(name)
+        todo.append((name, s.name))
+    log(f"Символів: {len(todo)}, глибина до {years} р. Можна перервати Ctrl+C і запустити знову.")
+    t0 = time.time()
+    extra = dict(todo)
+    for i, (name, broker) in enumerate(todo, 1):
+        info = m.symbol_info(broker)
+        was_selected = bool(info and info.select)
+        try:
+            m.symbol_select(broker, True)
+            log(f"[{i}/{len(todo)}] {name} ({broker})")
+            backfill(name, broker, years, log=lambda x: None)
+            man = get_json(manifest_key(name)) or {}
+            ks = sorted(man.get("months") or {})
+            log(f"    {len(ks)} міс., {ks[0] if ks else '-'} … {ks[-1] if ks else '-'}")
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:  # noqa: BLE001
+            log(f"    ПОМИЛКА {e}")
+        finally:
+            if not was_selected:
+                m.symbol_select(broker, False)  # не тримати 200 символів в «Огляді ринку»
+                # Історія вже в R2 — з диска VPS її прибираємо одразу, інакше
+                # 170 символів за 10 років не влізуть. Символи, відкриті в
+                # «Огляді ринку» (ними користуються автоімпорт і сайт щодня),
+                # не чіпаємо.
+                time.sleep(1.0)
+                mb = purge_history(broker)
+                if mb:
+                    log(f"    з диска VPS прибрано {mb} МБ")
+        if i % 10 == 0:
+            catalog(log, extra)
+    catalog(log, extra)
+    log(f"Готово за {int((time.time() - t0) / 60)} хв.")
 
 
 # ---------------------------------------------------------------- черга з сайту
@@ -462,17 +726,23 @@ def main():
     sub.add_parser("update")
     sub.add_parser("catalog")
     sub.add_parser("serve")
+    sub.add_parser("daily")
+    ba = sub.add_parser("backfill-all")
+    ba.add_argument("--years", type=int, default=10)
     a = ap.parse_args()
 
     if a.cmd == "check":
         m = mt5()
         acc = m.account_info()
         print("MT5:", "OK" if acc else "немає входу в рахунок", acc.server if acc else "")
-        for name, broker in core_map().items():
-            info = m.symbol_info(broker)
-            print(f"  {name:8} → {broker:12} {'OK, digits=' + str(info.digits) if info else 'НЕ ЗНАЙДЕНО'}")
         s3().head_bucket(Bucket=bucket())
         print("R2: OK, бакет", bucket())
+        for name, hint in site_symbols().items():
+            try:
+                b = resolve_broker(name, hint)
+                print(f"  {name:8} → {b:14} OK, digits={m.symbol_info(b).digits}")
+            except Exception as e:  # noqa: BLE001
+                print(f"  {name:8} → НЕ ЗНАЙДЕНО ({e})")
         return
     if a.cmd == "backfill":
         core = core_map()
@@ -492,6 +762,11 @@ def main():
         return
     if a.cmd == "serve":
         serve()
+    if a.cmd == "backfill-all":
+        backfill_all(a.years)
+        return
+    if a.cmd == "daily":
+        sys.exit(daily())
 
 
 if __name__ == "__main__":
