@@ -350,7 +350,11 @@ function renderPage(rawPath) {
   let html = INDEX_HTML || '<!doctype html><div id="root"></div>';
 
   const known = PUBLIC_EXACT.has(p) || underPrefix(p, PUBLIC_PREFIX)
-    || underPrefix(p, APP_PREFIX) || BLOG_RE.test(p);
+    || underPrefix(p, APP_PREFIX)
+    /* Блог — лише ті адреси, що є в карті seo-routes (статті, категорії,
+       сторінки блогу). Вигадана /uk/blog/щось раніше віддавала 200 з
+       canonical головної — для Google це «м'яка 404». */
+    || (BLOG_RE.test(p) && (!!SEO_ROUTES[p] || !Object.keys(SEO_ROUTES).length));
   const status = known ? 200 : 404;
   const privatePage = underPrefix(p, APP_PREFIX) || p === '/auth' || underPrefix(p, ['/view/', '/shared/']);
 
@@ -536,6 +540,13 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    /* /blog без мови — дубль головної. Ведемо на український блог. */
+    if (pathname === '/blog' || pathname === '/blog/') {
+      res.statusCode = 301;
+      res.setHeader('location', '/uk/blog' + url.search);
+      res.end();
+      return;
+    }
     /* Інакше — сторінка застосунку. Маршрутизація в React Router, і
        сервер про неї нічого не знає: /journal, /uk/blog/… і будь-що
        інше має віддати той самий index.html. */
