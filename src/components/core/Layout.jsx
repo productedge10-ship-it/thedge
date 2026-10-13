@@ -15,7 +15,6 @@ import { supabase } from '../../lib/supabase';
 import { onlyMine } from '../../lib/myId';
 import PlanBackdrop from '../trading/PlanBackdrop';
 import OnboardingModal from '../modals/OnboardingModal';
-import MaintenanceNotice from './MaintenanceNotice';
 import VerifyEmailModal from '../modals/VerifyEmailModal';
 import SettingsModal from '../modals/SettingsModal';
 import Tour from './Tour';
@@ -1237,7 +1236,6 @@ export default function Layout() {
       {!isSharedView() && (
       <>
       <OnboardingModal />
-      <MaintenanceNotice />
       {/* Нагадування підтвердити пошту. Теж живе тут, а не на сторінці
           входу: з вимкненим «Confirm email» реєстрація одразу видає
           сесію, і людина потрапляє в застосунок, не побачивши жодного
