@@ -346,15 +346,19 @@ export const letter = (title, lines, cta) => `<!doctype html><html><body style="
 <tr><td style="padding:16px 32px 0;color:#b4b4bd;font-size:15px;line-height:1.6">${lines.map((l) => `<p style="margin:0 0 12px">${l}</p>`).join('')}</td></tr>
 <tr><td style="padding:12px 32px 32px"><a href="${cta.href}" style="display:inline-block;background:#8b7bff;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 26px;border-radius:12px">${cta.text}</a></td></tr>
 </table>
-<p style="color:#4a4a52;font-size:12px;margin:18px 0 0">Лист надіслано, бо ти оформив підписку на theedgecat.com</p>
+<p style="color:#4a4a52;font-size:12px;line-height:1.6;margin:18px 0 0">Лист надіслано, бо ти оформив підписку на theedgecat.com<br>Питання по оплаті? Пиши нам у Telegram: <a href="https://t.me/thedgesupport" style="color:#8b7bff;text-decoration:none">@thedgesupport</a></p>
 </td></tr></table></body></html>`;
 
-async function thankYou(db, userId, kind, { nextCharge, amount, currency }) {
+const planWord = (planId) => (planId === 'pro_yearly' ? 'річну' : 'місячну');
+const moneyOf = (amount, currency) => (currency === 'UAH' ? `${Number(amount).toLocaleString('uk-UA')} ₴` : `$${amount}`);
+
+async function thankYou(db, userId, kind, { nextCharge, amount, currency, plan }) {
   const { data } = await db.auth.admin.getUserById(userId).catch(() => ({ data: null }));
   const email = data?.user?.email;
   if (!email) return;
   const app = `${site()}/app`;
-  const money = currency === 'UAH' ? `${Number(amount).toLocaleString('uk-UA')} ₴` : `$${amount}`;
+  const money = moneyOf(amount, currency);
+  const word = planWord(plan);
 
   if (kind === 'verify') {
     await sendMail(email, 'Pro активовано — 14 днів безкоштовно', letter(
@@ -365,14 +369,57 @@ async function thankYou(db, userId, kind, { nextCharge, amount, currency }) {
       ],
       { href: app, text: 'Відкрити журнал' },
     ));
-  } else {
-    await sendMail(email, 'Дякуємо за підписку на The Edge Pro', letter(
-      'Дякуємо за підписку!',
+  } else if (kind === 'renew') {
+    await sendMail(email, `Підписку Pro продовжено — ${money}`, letter(
+      'Підписку продовжено',
       [
-        `Оплату ${money} отримано, Pro активовано.`,
+        `Ми списали ${money} за ${word} підписку Pro, доступ продовжено. Дякуємо, що ти з нами!`,
         `Наступне списання — <b style="color:#fafafa">${fmtDay(nextCharge)}</b>. Керувати підпискою можна в налаштуваннях.`,
       ],
       { href: app, text: 'Відкрити журнал' },
+    ));
+  } else {
+    await sendMail(email, `Дякуємо за придбання ${word} підписки Pro`, letter(
+      'Дякуємо за придбання!',
+      [
+        `Оплату ${money} за ${word} підписку Pro отримано, усе активовано.`,
+        `Наступне списання — <b style="color:#fafafa">${fmtDay(nextCharge)}</b>. Керувати підпискою можна в налаштуваннях.`,
+      ],
+      { href: app, text: 'Відкрити журнал' },
+    ));
+  }
+}
+
+/* Чергове списання не пройшло. Доступ ще діє, але людина має знати
+   зараз, а не коли Pro згасне: найчастіше це ліміт чи баланс на
+   картці, і вона виправляє це за хвилину. */
+async function failedPayment(db, order, attempts, validUntil) {
+  const { data } = await db.auth.admin.getUserById(order.user_id).catch(() => ({ data: null }));
+  const email = data?.user?.email;
+  if (!email) return;
+  const money = moneyOf(order.amount, order.currency);
+  const word = planWord(order.plan);
+  const href = `${site()}/app?settings=billing`;
+
+  if (attempts < MAX_ATTEMPTS) {
+    await sendMail(email, 'Не вдалося списати оплату за Pro', letter(
+      'Не вдалося списати оплату',
+      [
+        `Банк відхилив списання ${money} за ${word} підписку Pro. Доступ поки діє, і ми спробуємо ще раз завтра (спроба ${attempts} з ${MAX_ATTEMPTS}).`,
+        'Перевір на картці баланс і ліміти на онлайн-платежі. Щоб не чекати, можна оплатити вручну.',
+      ],
+      { href, text: 'Оплатити вручну' },
+    ));
+  } else {
+    await sendMail(email, 'Автосписання вимкнено — онови оплату Pro', letter(
+      'Автосписання вимкнено',
+      [
+        `Банк відхилив ${MAX_ATTEMPTS} спроби списати ${money} за ${word} підписку Pro, тому автоматичні списання ми зупинили.`,
+        validUntil
+          ? `Pro працює до <b style="color:#fafafa">${fmtDay(validUntil)}</b>. Щоб не втратити автоімпорт, бота й бектест, оплати підписку вручну.`
+          : 'Щоб не втратити автоімпорт, бота й бектест, оплати підписку вручну.',
+      ],
+      { href, text: 'Оплатити підписку' },
     ));
   }
 }
@@ -508,6 +555,7 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
       valid_until: new Date(next.getTime() + GRACE_MS).toISOString(),
       charge_attempts: 0,
       charge_lock: null,
+      remind_sent_at: null,
       wallet_id: sub?.wallet_id || order.user_id,
       ...(wd?.cardToken && wd.status === 'created' ? { card_token: wd.cardToken } : {}),
       last_order: order.reference,
@@ -544,11 +592,9 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
       }).catch((e) => console.error('mono: перевірочну гривню не повернуто —', order.reference, e.message));
     }
 
-    if (order.kind !== 'renew') {
-      await thankYou(db, order.user_id, order.kind, {
-        nextCharge: next, amount: order.amount, currency: order.currency,
-      });
-    }
+    await thankYou(db, order.user_id, order.kind, {
+      nextCharge: next, amount: order.amount, currency: order.currency, plan: order.plan,
+    });
     return { ok: true, reason: 'applied' };
   }
 
@@ -560,7 +606,7 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
          згасне сам із valid_until. Пробуємо ще раз через добу, до
          MAX_ATTEMPTS разів, і чесно показуємо past_due. */
       const { data: sub } = await db.from('subscriptions')
-        .select('charge_attempts,status').eq('user_id', order.user_id).maybeSingle();
+        .select('charge_attempts,status,valid_until').eq('user_id', order.user_id).maybeSingle();
       const attempts = (sub?.charge_attempts || 0) + 1;
       if (sub?.status !== 'canceled') {
         must(await db.from('subscriptions').update({
@@ -570,6 +616,7 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
           next_charge_at: attempts < MAX_ATTEMPTS ? new Date(Date.now() + GRACE_MS).toISOString() : null,
           updated_at: new Date().toISOString(),
         }).eq('user_id', order.user_id), 'subscriptions');
+        await failedPayment(db, order, attempts, sub?.valid_until);
       }
     }
     return { ok: true, reason: 'declined' };
@@ -718,5 +765,77 @@ async function chargeOne(db, s) {
       modifiedDate: out.modifiedDate || new Date().toISOString(),
       failureReason: out.failureReason,
     });
+  }
+}
+
+
+/* ==================================================================
+   Нагадування за 3 дні до списання.
+
+   Іде з того самого тіку, що й списання. Позначку remind_sent_at
+   ставимо ДО листа (краще не надіслати, ніж надіслати двічі), а
+   скидає її успішна оплата — тож на кожен період рівно один лист.
+   Скасовані підписки сюди не потрапляють: вибираємо лише active і
+   trialing. Для тріалу лист каже, що це перше списання, і що до
+   нього ще можна скасувати.
+================================================================== */
+const REMIND_DAYS = 3;
+
+export async function runChargeReminders() {
+  if (!process.env.MONO_TOKEN || process.env.MONO_BILLING_OFF === '1') return;
+  const db = admin();
+  const now = new Date();
+  const soon = new Date(now.getTime() + REMIND_DAYS * 24 * 3600 * 1000);
+
+  const { data: subs, error } = await db.from('subscriptions')
+    .select('user_id,plan_id,status,next_charge_at')
+    .eq('provider', 'mono')
+    .in('status', ['active', 'trialing'])
+    .is('remind_sent_at', null)
+    .gt('next_charge_at', now.toISOString())
+    .lte('next_charge_at', soon.toISOString())
+    .limit(50);
+  if (error) { console.error('mono remind:', error.message); return; }
+
+  for (const s of subs || []) {
+    try {
+      const { data: claimed } = await db.from('subscriptions')
+        .update({ remind_sent_at: now.toISOString() })
+        .eq('user_id', s.user_id).is('remind_sent_at', null).select('user_id');
+      if (!claimed?.length) continue;
+
+      const { data } = await db.auth.admin.getUserById(s.user_id).catch(() => ({ data: null }));
+      const email = data?.user?.email;
+      if (!email) continue;
+
+      const planId = PLANS[s.plan_id] ? s.plan_id : 'pro_monthly';
+      const terms = await referralTerms(db, s.user_id, await priceFor(planId), await promoFor(db, s.user_id));
+      const money = moneyOf(terms.price.amount, terms.price.currency);
+      const word = planWord(planId);
+      const day = fmtDay(s.next_charge_at);
+      const href = `${site()}/app?settings=billing`;
+
+      if (s.status === 'trialing') {
+        await sendMail(email, 'Пробний період Pro скоро закінчується', letter(
+          'Пробний період закінчується',
+          [
+            `<b style="color:#fafafa">${day}</b> закінчується безкоштовний період, і ми спишемо ${money} за ${word} підписку Pro з привʼязаної картки.`,
+            'Не хочеш продовжувати? Скасуй підписку в налаштуваннях до цієї дати, і гроші не знімуться.',
+          ],
+          { href, text: 'Керувати підпискою' },
+        ));
+      } else {
+        await sendMail(email, 'Скоро оплата підписки Pro', letter(
+          'Скоро оплата підписки',
+          [
+            `<b style="color:#fafafa">${day}</b> ми спишемо ${money} за ${word} підписку Pro з привʼязаної картки.`,
+            'Нічого робити не треба. Щоб скасувати підписку чи змінити тариф, зайди в налаштування до цієї дати.',
+          ],
+          { href, text: 'Керувати підпискою' },
+        ));
+      }
+    } catch (e) {
+      console.error('mono remind:', s.user_id, e.message);
+    }
   }
 }

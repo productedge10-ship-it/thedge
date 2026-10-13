@@ -607,6 +607,7 @@ const billingTick = async () => {
   try {
     const m = await import('./netlify/functions/_mono.mjs');
     await m.runDueCharges();
+    await m.runChargeReminders();
     /* Той самий тік нагадує крипто-підписникам продовжити: окремий
        таймер тут не дав би нічого, крім ще однієї речі, що може впасти. */
     const n = await import('./netlify/functions/_np.mjs');
