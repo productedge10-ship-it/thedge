@@ -1,4 +1,6 @@
 import useSubscription from '../../hooks/useSubscription';
+import { useAuth } from '../../context/AuthContext';
+import { hasFreeBacktest } from '../../lib/betaAccess';
 import ProGate from '../modals/ProGate';
 import { startCheckout } from '../../lib/billing';
 
@@ -30,6 +32,9 @@ import { startCheckout } from '../../lib/billing';
 ================================================================== */
 export default function ProSection({ feature, children }) {
   const sub = useSubscription();
+  const { user } = useAuth();
+  /* Точковий виняток: бектести без Pro для окремих пошт (betaAccess.js). */
+  if (feature === 'backtest' && hasFreeBacktest(user?.email)) return children;
 
   if (!sub.ready) {
     /* Висота приблизно як у вмісту — щоб сторінка не стрибала, коли

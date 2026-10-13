@@ -24,3 +24,8 @@ export const useBetaAccess = () => {
   const { user } = useAuth();
   return isBetaEmail(user?.email);
 };
+
+/* Бектести без Pro — точкові винятки (тестувальники, партнери).
+   Решта функцій Pro для них лишаються закритими. */
+export const BACKTEST_FREE_EMAILS = ['topochkanovalexandr@gmail.com'];
+export const hasFreeBacktest = (email) => !!email && BACKTEST_FREE_EMAILS.includes(String(email).trim().toLowerCase());
