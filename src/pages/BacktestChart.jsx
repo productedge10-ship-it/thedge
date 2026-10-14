@@ -31,6 +31,7 @@ import LinkedLegend from '../components/backtest/chart/LinkedLegend';
 import NewsMarks from '../components/backtest/chart/NewsMarks';
 import SymbolLogo from '../components/backtest/chart/SymbolLogo';
 import SymbolSearch from '../components/backtest/chart/SymbolSearch';
+import TfDialog from '../components/backtest/chart/TfDialog';
 import TradePanel from '../components/backtest/chart/TradePanel';
 import SideChart from '../components/backtest/chart/SideChart';
 import FavoritesBar from '../components/backtest/chart/FavoritesBar';
@@ -170,6 +171,7 @@ export default function BacktestChart() {
   const [menu, setMenu] = useState(null);
   /* Пошук інструмента: null — закрито, рядок — з чого почати (літера, яку набрали на графіку). */
   const [symSearch, setSymSearch] = useState(null);
+  const [tfDlg, setTfDlg] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dateVal, setDateVal] = useState('');
   const [leaving, setLeaving] = useState(false);
@@ -877,24 +879,27 @@ export default function BacktestChart() {
      (e.code), щоб на українській розкладці «Ч» теж дала «X». */
   useEffect(() => {
     const k = (e) => {
-      if (symSearch !== null || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (symSearch !== null || tfDlg !== null || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       const t = e.target;
       const tag = (t?.tagName || '').toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select' || t?.isContentEditable) return;
       if (document.querySelector('[role="dialog"]')) return;
       if (e.shiftKey && (e.code === 'KeyB' || e.code === 'KeyS')) return; // Shift+B / Shift+S — угоди
-      const m = /^Key([A-Z])$/.exec(e.code) || /^Digit([0-9])$/.exec(e.code);
-      if (!m) return;
+      const d = /^(?:Digit|Numpad)([0-9])$/.exec(e.code);
+      const m = /^Key([A-Z])$/.exec(e.code);
+      if (!m && !d) return;
       const en = engRef.current;
       if (en?.snap) return;
       if (dmRef.current?.editing) return;
       e.preventDefault();
       setMenu(null);
-      setSymSearch(m[1]);
+      /* Цифра — вікно інтервалу (як у TV), літера — пошук символу. */
+      if (d) setTfDlg(d[1]);
+      else setSymSearch(m[1]);
     };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
-  }, [symSearch]);
+  }, [symSearch, tfDlg]);
 
   /* Гарячі клавіші як у TV: Shift+→ крок, Shift+↓ пуск/пауза,
      Alt+R — скинути масштаб, Esc — скасувати вибір точки. */
@@ -1054,6 +1059,7 @@ export default function BacktestChart() {
             onRemoveSet={removeSet}
             onUpload={pickFile}
           />
+          <TfDialog open={tfDlg !== null} initial={tfDlg || ''} onClose={() => setTfDlg(null)} onPick={setTf} />
         </div>
 
         {/* Ще один інструмент у панелі під графіком — як «+» біля

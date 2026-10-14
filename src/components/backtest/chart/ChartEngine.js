@@ -85,6 +85,8 @@ export default class ChartEngine {
     this.vDown = this.vDown.bind(this);
     this.vMove = this.vMove.bind(this);
     this.vUp = this.vUp.bind(this);
+    this.axisWheel = this.axisWheel.bind(this);
+    container.addEventListener('wheel', this.axisWheel, { passive: false, capture: true });
     container.addEventListener('pointerdown', this.vDown);
     container.addEventListener('dblclick', this.vUp);
     container.addEventListener('wheel', this.vUp, { passive: true });
@@ -138,6 +140,35 @@ export default class ChartEngine {
     requestAnimationFrame(() => this.syncAuto());
   }
 
+  /* Колесо / два пальці на тачпаді над шкалою ціни — масштаб по
+     вертикалі (свічки вищі / нижчі), як потягнути шкалу мишкою.
+     Ловимо в capture, щоб бібліотека не зумила час. Над графіком
+     колесо працює як раніше. */
+  axisWheel(ev) {
+    const ps = this.chart.priceScale('right');
+    const pane = this.chart.panes()[0]?.getHTMLElement?.();
+    if (!pane) return;
+    const r = pane.getBoundingClientRect();
+    const plotR = r.right - ps.width();
+    if (ev.clientX <= plotR || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    let dy = ev.deltaY;
+    if (ev.deltaMode === 1) dy *= 16;
+    else if (ev.deltaMode === 2) dy *= r.height;
+    if (!dy) return;
+    const range = ps.getVisibleRange();
+    if (!range) return;
+    /* Вниз — стискаємо (діапазон більший), вгору — розтягуємо. */
+    const k = Math.exp(Math.max(-0.5, Math.min(0.5, dy * 0.0025)));
+    const mid = (range.from + range.to) / 2;
+    const half = ((range.to - range.from) / 2) * k;
+    if (!(half > 0) || !Number.isFinite(half)) return;
+    if (ps.options().autoScale) ps.setAutoScale(false);
+    ps.setVisibleRange({ from: mid - half, to: mid + half });
+    this.syncAuto();
+  }
+
   syncAuto() {
     const on = !!this.chart.priceScale('right').options().autoScale;
     if (on !== this.autoScale) { this.autoScale = on; this.emit(); }
@@ -174,6 +205,7 @@ export default class ChartEngine {
     this.chart.timeScale().unsubscribeVisibleLogicalRangeChange(this.onRange);
     this.chart.unsubscribeCrosshairMove(this.onMove);
     this.chart.unsubscribeClick(this.onClick);
+    this.host.removeEventListener('wheel', this.axisWheel, { capture: true });
     this.host.removeEventListener('pointerdown', this.vDown);
     this.host.removeEventListener('dblclick', this.vUp);
     this.host.removeEventListener('wheel', this.vUp);
