@@ -5,6 +5,7 @@ import { C, F, A, Cat, useInView, reducedMotion, SHELL } from './base';
 import DemoTransition from './DemoTransition';
 import { useLang, useTx, pick } from './lang';
 import Button from '../../ui/Button';
+import { track } from '../../../lib/analytics';
 
 /* ==================================================================
    Герой — живий журнал, а не картинка.
@@ -45,8 +46,30 @@ const lerp = (a, b, t) => a + (b - a) * t;
    значення — з ним порівнює підсвітка «FOMO / Тілт» нижче. */
 const MOOD_EN = { 'Спокій': 'Calm', 'Нудьга': 'Boredom', FOMO: 'FOMO', 'Фокус': 'Focus', 'Тілт': 'Tilt' };
 
+/* A/B героя. Варіант закріплюється за браузером, щоб людина не бачила
+   то один заголовок, то інший, і пишеться в аналітику подією
+   hero_variant — порівнюємо частку реєстрацій, що підключили MT5.
+
+   Варіант B («скільки лишилось до ліміту») обіцяє контроль правил
+   пропу, якого ще немає. Тому він вимкнений, поки ця функція не
+   вийде: тоді постав HERO_B_LIVE = true. */
+const HERO_B_LIVE = false;
+const HERO_KEY = 'edge_hero_v';
+function heroVariant() {
+  if (!HERO_B_LIVE) return 'A';
+  try {
+    const q = new URLSearchParams(window.location.search).get('hero');
+    if (q === 'A' || q === 'B') return q;
+    let v = localStorage.getItem(HERO_KEY);
+    if (v !== 'A' && v !== 'B') { v = Math.random() < 0.5 ? 'A' : 'B'; localStorage.setItem(HERO_KEY, v); }
+    return v;
+  } catch { return 'A'; }
+}
+
 export default function Hero() {
   const tx = useTx();
+  const [variant] = useState(heroVariant);
+  useEffect(() => { track('hero_variant', { v: variant }); }, [variant]);
   const lang = useLang();
   const [ref, inView] = useInView(0.15);
   const reduced = reducedMotion();
@@ -163,7 +186,7 @@ export default function Hero() {
               color: C.accSoft, marginBottom: 28,
             }}
           >
-            {tx('Робочий простір · Аналітика · AI-коуч', 'Workspace · Analytics · AI coach')}
+            {tx('Торговий журнал для проп-трейдерів', 'A trading journal for prop traders')}
           </div>
 
           <h1
@@ -176,13 +199,15 @@ export default function Hero() {
               letterSpacing: '-1.9px', margin: '0 0 24px', color: '#fff', textWrap: 'balance',
             }}
           >
-            {tx('Не шукай ідеальну стратегію', 'Stop hunting for the perfect strategy')}{' '}
+            {variant === 'B'
+              ? tx('Знай, скільки лишилось до ліміту.', 'Know how much is left before the limit.')
+              : tx('Пройди челендж', 'Pass the challenge')}{' '}
             <br />
             {/* Друга половина заголовка — тим самим білим, без градієнта.
                 Градієнт «білий → сірий» — найупізнаваніший прийом
                 шаблонних AI-лендінгів, а кінець фрази в ньому ще й
                 вицвітав до 6:1. Фразу тримає сама думка й розрив рядка. */}
-            {tx('Зрозумій свою', 'Understand yours')}{' '}
+            {variant === 'B' ? tx('Завжди', 'Always') : tx('без зливу на емоціях', 'without blowing it on emotions')}{' '}
             {/* Описовий рядок у самому <h1>: несе ключі (журнал, угод,
                 MetaTrader, аналітика), яких немає в поетичному заголовку.
                 Дрібніший і приглушений — читається як підзаголовок. */}
@@ -200,15 +225,17 @@ export default function Hero() {
           </h1>
 
           <p style={{ fontFamily: F.sans, fontSize: 'clamp(16.5px,1.05vw,21px)', lineHeight: 1.5, color: C.text3, margin: '0 0 34px', maxWidth: 560 }}>
-            {tx('Журнал, який рахує за тебе і каже, де саме ти втрачаєш гроші', 'A journal that does the math for you and shows exactly where you lose money')}
+            {variant === 'B'
+              ? tx('Підключи MT5 за 2 хвилини: угоди, результат у R і правила челенджу в одному місці.', 'Connect MT5 in 2 minutes: trades, results in R and challenge rules in one place.')
+              : tx('Журнал сам тягне угоди з MT5 і показує, які звички з\'їдають твій денний ліміт.', 'The journal pulls trades from MT5 on its own and shows which habits eat your daily limit.')}
           </p>
 
           <div style={{ display: 'flex', gap: 13, flexWrap: 'wrap', marginBottom: 20 }}>
             {/* Спільна кнопка застосунку: суцільний акцент і темний напис
                 (6:1) замість градієнта з білим (3.3:1) і фіолетової
                 заграви. Головну дію видно за кольором — цього досить. */}
-            <Button as="a" href="/auth" variant="primary" size="lg" iconRight={ArrowRight}>
-              {tx('Почати безкоштовно', 'Start free')}
+            <Button as="a" href="/auth" variant="primary" size="lg" iconRight={ArrowRight} data-track={`hero.cta.${variant}`}>
+              {tx('Підключити MT5 безкоштовно', 'Connect MT5 for free')}
             </Button>
 
             <Button
@@ -244,7 +271,7 @@ export default function Hero() {
               кошти, і це властивість самого терміналу, а не наша
               обіцянка. Розгорнуто — там же, у FAQ. */}
           <div style={{ fontFamily: F.mono, fontSize: 13, lineHeight: 1.6, color: C.text4 }}>
-            {tx('Без картки · MT5 лише на читання · Кожна таблиця замкнена на твій акаунт', 'No card · MT5 read-only · Every table locked to your account')}
+            {tx('Доступ лише на читання · 14 днів Pro безкоштовно · українською', 'Read-only access · 14 days of Pro free · in Ukrainian')}
           </div>
         </div>
 

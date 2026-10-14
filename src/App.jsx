@@ -63,6 +63,7 @@ const lazy = (load) => reactLazy(() => load()
 
 const Auth = lazy(() => import('./pages/Auth'));
 const Terms = lazy(() => import('./pages/Terms'));
+const Privacy = lazy(() => import('./pages/Privacy'));
 const DemoShell = lazy(() => import('./pages/DemoShell'));
 const ViewShell = lazy(() => import('./pages/ViewShell'));
 const Hub = lazy(() => import('./pages/Hub'));
@@ -201,6 +202,7 @@ const router = createBrowserRouter([
      реєстрації, а погодитись із тим, чого не можеш прочитати, —
      це не погодження. */
   { path: '/terms', element: page(Terms) },
+  { path: '/privacy', element: page(Privacy) },
 
   { path: '/shared/plan/:id', element: page(SharedPlan) },
   { path: '/shared/review/:id', element: page(SharedReview) },

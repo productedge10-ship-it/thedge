@@ -18,14 +18,14 @@ import { useLang, pick, useTx } from './lang';
 
 const STEPS = {
   uk: [
-    { n: '1', title: 'Імпорт', sub: 'Підключаєш MetaTrader 5 — закриті позиції лягають у журнал самі', at: 0.06 },
-    { n: '2', title: 'Запис', sub: 'Дописуєш половину, якої не експортує брокер: план, стан, порушене правило', at: 0.45 },
-    { n: '3', title: 'Знайди перевагу', sub: 'Аналітика ранжує сесії, сетапи й настрої за тим, скільки вони платять', at: 0.82 },
+    { n: '1', title: 'Підключи MT5', sub: '2 хвилини, інвесторський пароль: угоди відкривати ним неможливо', at: 0.06 },
+    { n: '2', title: 'Угоди приходять самі', sub: 'Ти додаєш одне речення: чому зайшов і в якому стані', at: 0.45 },
+    { n: '3', title: 'Дивишся правду', sub: 'Результат у R, сесії й помилки, які коштують найдорожче', at: 0.82 },
   ],
   en: [
-    { n: '1', title: 'Import', sub: 'Connect MetaTrader 5 — closed positions land in the journal by themselves', at: 0.06 },
-    { n: '2', title: 'Log', sub: 'Add the half no broker exports: the plan, your state, the rule you broke', at: 0.45 },
-    { n: '3', title: 'Find your edge', sub: 'Analytics ranks sessions, setups and moods by how much they pay you', at: 0.82 },
+    { n: '1', title: 'Connect MT5', sub: '2 minutes, investor password: it cannot open trades', at: 0.06 },
+    { n: '2', title: 'Trades arrive on their own', sub: 'You add one sentence: why you entered and in what state', at: 0.45 },
+    { n: '3', title: 'See the truth', sub: 'Results in R, sessions and the mistakes that cost the most', at: 0.82 },
   ],
 };
 
@@ -86,7 +86,7 @@ export default function Steps() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 30 }}>
         <span style={{ width: 26, height: 1, background: C.accDeep, display: 'block' }} />
-        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.text3 }}>{tx('ТРИ КРОКИ', 'THREE STEPS')}</span>
+        <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2.2px', color: C.text3 }}>{tx('ЯК ПРАЦЮЄ', 'HOW IT WORKS')}</span>
       </div>
 
       <div className="ln-steps-outer">

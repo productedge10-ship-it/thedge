@@ -190,6 +190,19 @@ routes['/terms'] = {
 };
 addUrl('/terms', '0.3', 'yearly');
 
+routes['/privacy'] = {
+  title: 'Політика конфіденційності — The Edge',
+  description: 'Які дані збирає торговий журнал THE EDGE, навіщо, кому передає і як їх видалити. Пароль MT5 інвесторський і зберігається зашифрованим.',
+  canonical: `${ORIGIN}/privacy`,
+  lang: 'uk',
+  body: {
+    h1: 'Політика конфіденційності The Edge',
+    text: 'Які дані збирає THE EDGE, навіщо, кому передає, як довго зберігає і як їх видалити.',
+    links: [{ href: '/', text: 'Головна: торговий журнал THE EDGE' }, { href: '/terms', text: 'Умови користування' }],
+  },
+};
+addUrl('/privacy', '0.3', 'yearly');
+
 for (const lang of BLOG_LANGS) {
   const posts = postsFor(lang);
   const meta = BLOG_META[lang] || BLOG_META.uk;

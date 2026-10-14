@@ -4,7 +4,8 @@ import Difference from './Difference';
 import AutoImport from './AutoImport';
 import Product from './Product';
 import Coach from './Coach';
-import { Rhythm, NotDoing, Pricing, FinalFaq } from './Closing';
+import { NotDoing, Pricing, FinalFaq } from './Closing';
+import { Problem, Props, Proof, Security, Compare, Read } from './Trust';
 import { OWNER } from '../../../lib/terms';
 import { useLang, useTx, pick } from './lang';
 
@@ -38,14 +39,14 @@ const FOOTER_COLS = {
   /* Окрема колонка, а не рядок дрібним шрифтом унизу. Умови шукають
      тоді, коли вже щось сталося, — і знаходити їх мають там, де
      шукають решту посилань, а не в підвалі підвалу. */
-  { title: 'ПРАВО', links: [['/terms', 'Публічна оферта'], ['/terms#billing', 'Оплата і повернення коштів'], ['/terms#contacts', 'Контакти']] },
+  { title: 'ПРАВО', links: [['/terms', 'Публічна оферта'], ['/privacy', 'Конфіденційність'], ['/terms#billing', 'Оплата і повернення коштів'], ['/terms#contacts', 'Контакти']] },
   ],
   /* Умови поки лише українською — підпис чесно каже про це. */
   en: [
     { title: 'PRODUCT', links: [['#product', 'What’s inside'], ['#autoimport', 'Auto-import'], ['#coach', 'AI coach']] },
     { title: 'PLANS', links: [['#pricing', 'Pricing'], ['#pricing', 'Free'], ['#pricing', 'Pro']] },
     { title: 'HELP', links: [['#faq', 'FAQ'], ['/en/blog', 'Blog'], ['#autoimport', 'Your data'], ['#faq', 'Connecting MT5']] },
-    { title: 'LEGAL', links: [['/terms', 'Terms of service (UA)'], ['/terms#billing', 'Payments and refunds (UA)'], ['/terms#contacts', 'Contacts']] },
+    { title: 'LEGAL', links: [['/terms', 'Terms of service (UA)'], ['/privacy', 'Privacy policy (UA)'], ['/terms#billing', 'Payments and refunds (UA)'], ['/terms#contacts', 'Contacts']] },
   ],
 };
 
@@ -200,17 +201,26 @@ function Footer() {
   );
 }
 
+/* Порядок — з документа «Позиціонування»: проблема → як працює →
+   пропи → докази → ціна й тріал. Безпека MT5 стоїть одразу за
+   автоімпортом: питання «а це безпечно?» виникає саме там. Блок
+   «Ритм» прибрано: його текст був зібраний на шаблоні «не X, а Y». */
 export default function BelowFold() {
   return (
     <>
+      <Problem />
       <Steps />
-      <Difference />
       <AutoImport />
+      <Security />
+      <Props />
       <Product />
+      <Difference />
+      <Proof />
+      <Compare />
       <Coach />
-      <Rhythm />
       <NotDoing />
       <Pricing />
+      <Read />
       <FinalFaq />
       <Footer />
     </>

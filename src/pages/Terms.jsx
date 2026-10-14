@@ -17,11 +17,11 @@ import { TERMS, TERMS_VERSION, OWNER } from '../lib/terms';
    сторінці.
 ================================================================== */
 
-export default function Terms() {
+export function LegalPage({ sections = TERMS, version = TERMS_VERSION, title = 'Умови користування', summary }) {
   useEdgeFonts();
-  const [active, setActive] = useState(TERMS[0].id);
+  const [active, setActive] = useState(sections[0].id);
 
-  const ids = useMemo(() => TERMS.map((s) => s.id), []);
+  const ids = useMemo(() => sections.map((s) => s.id), [sections]);
 
   /* Підсвічування поточного розділу. IntersectionObserver, а не
      розрахунок на кожен скрол: другий варіант рахує геометрію
@@ -77,10 +77,10 @@ export default function Terms() {
           className="mb-3 text-[32px] font-bold leading-none sm:text-[44px]"
           style={{ fontFamily: T.display, color: T.text, letterSpacing: '-0.03em' }}
         >
-          Умови користування
+          {title}
         </h1>
         <p className="mb-10 text-[14px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-          Чинна редакція від {TERMS_VERSION}
+          Чинна редакція від {version}
         </p>
 
         {/* Головне — вгорі й окремо. Пункт про те, що ми не даємо
@@ -96,9 +96,7 @@ export default function Terms() {
               Коротко, якщо читати немає часу
             </div>
             <p className="text-[14.5px] leading-[1.65]" style={{ fontFamily: T.sans, color: T.text2 }}>
-              Edge Journal — щоденник, а не порадник. Ми не даємо фінансових рекомендацій, не торгуємо
-              за вас і не відповідаємо за ваші рішення. Відповіді штучного інтелекту можуть бути
-              помилковими. Торгівля може коштувати вам усього депозиту.
+              {summary || 'Edge Journal — щоденник, а не порадник. Ми не даємо фінансових рекомендацій, не торгуємо за вас і не відповідаємо за ваші рішення. Відповіді штучного інтелекту можуть бути помилковими. Торгівля може коштувати вам усього депозиту.'}
             </p>
           </div>
         </div>
@@ -114,7 +112,7 @@ export default function Terms() {
                 Розділи
               </div>
               <div className="flex flex-col">
-                {TERMS.map((s, i) => {
+                {sections.map((s, i) => {
                   const on = s.id === active;
                   return (
                     <a
@@ -138,7 +136,7 @@ export default function Terms() {
 
           {/* текст */}
           <div className="order-1 min-w-0 flex-1 lg:order-2">
-            {TERMS.map((s, i) => (
+            {sections.map((s, i) => (
               <section key={s.id} id={s.id} className="mb-12" style={{ scrollMarginTop: 80 }}>
                 <div className="mb-4 flex items-baseline gap-3">
                   <span className="text-[13px] tabular-nums" style={{ fontFamily: T.mono, color: T.text4 }}>
@@ -181,7 +179,7 @@ export default function Terms() {
             ))}
 
             <div className="mt-16 border-t pt-6 text-[13px] leading-[1.7]" style={{ borderColor: T.line, fontFamily: T.sans, color: T.text4 }}>
-              {OWNER.name} · {OWNER.email} · редакція {TERMS_VERSION}
+              {OWNER.name} · {OWNER.email} · редакція {version}
               {/* Умова ліцензії бібліотеки графіків (Apache 2.0 + NOTICE). */}
               <div className="mt-2">
                 Графіки: <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer" className="underline">TradingView Lightweight Charts™</a> · Copyright © 2025 TradingView, Inc.
@@ -192,4 +190,8 @@ export default function Terms() {
       </div>
     </div>
   );
+}
+
+export default function Terms() {
+  return <LegalPage />;
 }

@@ -87,6 +87,7 @@ const NODE_ROUTES = {
   '/api/rate': './api/rate.js',
   '/api/ev': './api/ev.js',
   '/api/unsub': './api/unsub.js',
+  '/api/stats': './api/stats.js',
 };
 
 /* ------------------------------------------------------------------
@@ -322,7 +323,7 @@ loadPageTemplates();
 /* Адреси, які існують у застосунку (див. src/App.jsx). Усе інше — 404.
    Приватні розділи існують, але в індекс їм не треба: там або форма
    входу, або чужі дані. Новий розділ у App.jsx — додай і сюди. */
-const PUBLIC_EXACT = new Set(['/', '/en', '/auth', '/terms', '/blog']);
+const PUBLIC_EXACT = new Set(['/', '/en', '/auth', '/terms', '/privacy', '/blog']);
 const PUBLIC_PREFIX = ['/demo', '/view/', '/shared/'];
 const APP_PREFIX = [
   '/app', '/notes', '/analyses', '/plan', '/accounts', '/journal', '/error',
