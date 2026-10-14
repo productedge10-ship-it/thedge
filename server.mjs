@@ -86,6 +86,7 @@ const NODE_ROUTES = {
   '/api/img': './api/img.js',
   '/api/rate': './api/rate.js',
   '/api/ev': './api/ev.js',
+  '/api/unsub': './api/unsub.js',
 };
 
 /* ------------------------------------------------------------------
@@ -608,6 +609,14 @@ const billingTick = async () => {
     const m = await import('./netlify/functions/_mono.mjs');
     await m.runDueCharges();
     await m.runChargeReminders();
+    /* Нагадування новим юзерам без угод (онбординг, 24 год / 3 дні).
+       Окремий try: збій тут не має зупиняти крипто-нагадування нижче. */
+    try {
+      const o = await import('./netlify/functions/_onboard.mjs');
+      await o.runOnboardingReminders();
+    } catch (e) {
+      console.error('onboard cron:', e.message);
+    }
     /* Той самий тік нагадує крипто-підписникам продовжити: окремий
        таймер тут не дав би нічого, крім ще однієї речі, що може впасти. */
     const n = await import('./netlify/functions/_np.mjs');

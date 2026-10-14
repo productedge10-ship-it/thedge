@@ -9,6 +9,7 @@ import { STEPS } from '../components/demo/steps';
 import { resetDemoDb } from '../lib/demoDb';
 import { C, F, A } from '../components/landing/v3/base';
 import { t as tx } from '../lib/lang';
+import { DEMO_FROM_KEY, markDemoSeen } from '../lib/onboard';
 
 /* ==================================================================
    Оболонка демо.
@@ -38,7 +39,23 @@ function readHintsOn() {
   } catch { return true; }
 }
 
+/* Прийшов із застосунку (чекліст, порожній стан): тоді демо — приклад
+   «як виглядатиме твій журнал», і смуга веде назад до своїх угод, а не
+   на реєстрацію. Позначку тримаємо в sessionStorage: переходи всередині
+   демо гублять ?from=app з адреси. */
+function readFromApp() {
+  try {
+    if (new URLSearchParams(window.location.search).get('from') === 'app') {
+      sessionStorage.setItem(DEMO_FROM_KEY, '1');
+      markDemoSeen();
+      return true;
+    }
+    return sessionStorage.getItem(DEMO_FROM_KEY) === '1';
+  } catch { return false; }
+}
+
 export default function DemoShell() {
+  const [fromApp] = useState(readFromApp);
   const [hints, setHintsState] = useState(readHintsOn);
   const setHints = useCallback((next) => {
     setHintsState((prev) => {
@@ -133,12 +150,14 @@ export default function DemoShell() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <a href="/" className="demo-bar-btn" style={btn(false)} title={tx('На сайт', 'Back to site')}>
+          <a href={fromApp ? '/app' : '/'} className="demo-bar-btn" style={btn(false)} title={fromApp ? tx('У мій журнал', 'Back to my journal') : tx('На сайт', 'Back to site')}>
             <ArrowLeft size={14} strokeWidth={2.2} />
-            <span className="demo-bar-label">{tx('На сайт', 'Back to site')}</span>
+            <span className="demo-bar-label">{fromApp ? tx('У мій журнал', 'My journal') : tx('На сайт', 'Back to site')}</span>
           </a>
           <span className="demo-bar-desc" style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: '1.6px', color: C.accSoft, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {tx('ДЕМО · ДАНІ ВИГАДАНІ Й ЖИВУТЬ ЛИШЕ В ЦЬОМУ БРАУЗЕРІ', 'DEMO · THE DATA IS MADE UP AND LIVES ONLY IN THIS BROWSER')}
+            {fromApp
+              ? tx('ЦЕ ПРИКЛАД · ДОДАЙ СВОЇ УГОДИ, І ТУТ БУДЕ ТВОЯ СТАТИСТИКА', 'THIS IS AN EXAMPLE · ADD YOUR TRADES TO SEE YOUR OWN STATS')
+              : tx('ДЕМО · ДАНІ ВИГАДАНІ Й ЖИВУТЬ ЛИШЕ В ЦЬОМУ БРАУЗЕРІ', 'DEMO · THE DATA IS MADE UP AND LIVES ONLY IN THIS BROWSER')}
           </span>
           <span className="demo-bar-badge" style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 700, letterSpacing: '1px', color: C.accSoft, flexShrink: 0 }}>
             {tx('ДЕМО', 'DEMO')}
@@ -163,7 +182,7 @@ export default function DemoShell() {
           </button>
 
           <a
-            href="/auth"
+            href={fromApp ? '/journal?new=1' : '/auth'}
             className="demo-bar-cta"
             style={{
               fontFamily: F.sans, fontSize: 12.5, fontWeight: 700, color: '#fff',
@@ -171,8 +190,8 @@ export default function DemoShell() {
               padding: '7px 14px', whiteSpace: 'nowrap',
             }}
           >
-            <span className="demo-bar-label">{tx('Почати безкоштовно', 'Start for free')}</span>
-            <span className="demo-bar-badge">{tx('Почати', 'Start')}</span>
+            <span className="demo-bar-label">{fromApp ? tx('Додати свої угоди', 'Add my trades') : tx('Почати безкоштовно', 'Start for free')}</span>
+            <span className="demo-bar-badge">{fromApp ? tx('Додати', 'Add') : tx('Почати', 'Start')}</span>
           </a>
         </div>
       </div>

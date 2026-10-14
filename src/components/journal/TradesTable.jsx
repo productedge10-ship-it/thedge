@@ -356,7 +356,7 @@ function Pagination({ page, totalPages, onChange }) {
 
 export default function TradesTable({
   trades, accountsMap, getProfit, onOpen, onDelete,
-  loading, page, totalPages, onPageChange, pageSize = 10,
+  loading, page, totalPages, onPageChange, pageSize = 10, empty = null,
 }) {
   const [sort, setSort] = useState({ key: 'plan_date', dir: 'desc' });
   /* R і профіт — та сама угода в двох мірках, не два незалежних
@@ -400,6 +400,8 @@ export default function TradesTable({
       </div>
     );
   }
+
+  if (!rows.length && empty) return empty;
 
   if (!rows.length) {
     return (

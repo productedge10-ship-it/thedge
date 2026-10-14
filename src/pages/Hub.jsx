@@ -18,6 +18,7 @@ import { loadHubState, daysSince, greeting } from '../lib/hubData';
 import { DEFAULT_LAYOUT, normalizeLayout, move } from '../lib/launchpad';
 import { goalById } from '../lib/settings';
 import useTerminalSkin from '../hooks/useTerminalSkin';
+import StartChecklist from '../components/onboard/StartChecklist';
 import { t as tx, LOCALE, pluralUk } from '../lib/lang';
 
 
@@ -1228,6 +1229,9 @@ export default function Hub() {
             </motion.button>
           </AnimatePresence>
         </motion.header>
+
+        {/* ─────────── Перший запуск ─────────── */}
+        <StartChecklist />
 
         {/* ─────────── Стан дня ─────────── */}
         <motion.section

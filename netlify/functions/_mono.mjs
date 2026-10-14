@@ -338,7 +338,7 @@ export const fmtDay = (d) => new Date(d).toLocaleDateString('uk-UA', { day: 'num
 /* Лист у кольорах застосунку. Табличною версткою й інлайн-стилями:
    поштові клієнти (особливо Gmail і Outlook) викидають <style> і
    половину сучасного CSS. */
-export const letter = (title, lines, cta) => `<!doctype html><html><body style="margin:0;background:#0a0a0c;padding:32px 12px;font-family:Arial,Helvetica,sans-serif">
+export const letter = (title, lines, cta, foot = 'Лист надіслано, бо ти оформив підписку на theedgecat.com<br>Питання по оплаті?') => `<!doctype html><html><body style="margin:0;background:#0a0a0c;padding:32px 12px;font-family:Arial,Helvetica,sans-serif">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table role="presentation" width="100%" style="max-width:520px;background:#111116;border:1px solid #26262c;border-radius:18px" cellpadding="0" cellspacing="0">
 <tr><td style="padding:32px 32px 8px;color:#8b7bff;font-size:12px;font-weight:bold;letter-spacing:3px">THE EDGE</td></tr>
@@ -346,7 +346,7 @@ export const letter = (title, lines, cta) => `<!doctype html><html><body style="
 <tr><td style="padding:16px 32px 0;color:#b4b4bd;font-size:15px;line-height:1.6">${lines.map((l) => `<p style="margin:0 0 12px">${l}</p>`).join('')}</td></tr>
 <tr><td style="padding:12px 32px 32px"><a href="${cta.href}" style="display:inline-block;background:#8b7bff;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 26px;border-radius:12px">${cta.text}</a></td></tr>
 </table>
-<p style="color:#4a4a52;font-size:12px;line-height:1.6;margin:18px 0 0">Лист надіслано, бо ти оформив підписку на theedgecat.com<br>Питання по оплаті? Пиши нам у Telegram: <a href="https://t.me/thedgesupport" style="color:#8b7bff;text-decoration:none">@thedgesupport</a></p>
+<p style="color:#4a4a52;font-size:12px;line-height:1.6;margin:18px 0 0">${foot} Пиши нам у Telegram: <a href="https://t.me/thedgesupport" style="color:#8b7bff;text-decoration:none">@thedgesupport</a></p>
 </td></tr></table></body></html>`;
 
 const planWord = (planId) => (planId === 'pro_yearly' ? 'річну' : 'місячну');

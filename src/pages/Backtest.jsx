@@ -523,7 +523,7 @@ export default function Backtest() {
                 </div>
                 <p className="mb-7 max-w-[440px] text-[14.5px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.7 }}>
                   {sessions.length === 0
-                    ? tx('Створи бектест під конкретну гіпотезу — і прожени по ній 50–100 угод. Статистика покаже, чи варта вона реальних грошей.', 'Create a backtest for a specific hypothesis and run 50–100 trades through it. The stats will show if it’s worth real money.')
+                    ? tx('Перевір стратегію на реальних хвилинках FTMO. Угоди з бектесту йдуть в окрему статистику і не змішуються з журналом.', 'Test your strategy on real FTMO minute data. Backtest trades go into separate stats and never mix with your journal.')
                     : tx('Спробуй інші слова в пошуку.', 'Try different search words.')}
                 </p>
                 <button
@@ -536,7 +536,7 @@ export default function Backtest() {
                     boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2)`,
                   }}
                 >
-                  {sessions.length === 0 ? <><Plus size={15} strokeWidth={3} /> {tx('Створити перший', 'Create your first')}</> : tx('Скинути пошук', 'Clear search')}
+                  {sessions.length === 0 ? <><Plus size={15} strokeWidth={3} /> {tx('Новий бектест', 'New backtest')}</> : tx('Скинути пошук', 'Clear search')}
                 </button>
               </div>
             ) : (

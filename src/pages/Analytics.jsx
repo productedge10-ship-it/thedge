@@ -17,7 +17,9 @@ import Simulator from '../components/analytics/Simulator';
 import AiLab from '../components/analytics/AiLab';
 import { EMOTION_LABEL } from '../components/analytics/data';
 import ExportStats from '../components/analytics/ExportStats';
-import { withSandbox } from '../lib/sandbox';
+import { withSandbox, inSandbox } from '../lib/sandbox';
+import { demoUrl, markDemoSeen } from '../lib/onboard';
+import { track } from '../lib/analytics';
 import { t as tx, LOCALE, isEn } from '../lib/lang';
 import Button from '../components/ui/Button';
 
@@ -583,16 +585,28 @@ export default function Analytics() {
             >
               {failed
                 ? tx('Спробуй оновити сторінку. Якщо повториться — це вже на нашому боці.', "Try refreshing the page. If it happens again, it's on our side.")
-                : tx('Аналітика читає твій журнал угод. Приблизно з двадцятої угоди вона починає казати щось, чого ти про себе не знав — до того вибірка замала, щоб їй вірити.', "Analytics reads your trade journal. From around your twentieth trade it starts telling you things you didn't know about yourself — before that, the sample is too small to trust.")}
+                : tx('Після 5 угод покажемо результат у R по сесіях і активах. Що більше угод, то точніші висновки.', 'After 5 trades we will show your result in R by session and asset. The more trades, the more reliable the conclusions.')}
             </p>
             {!failed && (
+              <div className="flex flex-wrap justify-center gap-2">
               <Link
-                to={withSandbox('/journal')}
+                to={inSandbox() ? withSandbox('/journal') : '/journal?new=1'}
                 className="flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-bold"
                 style={{ fontFamily: T.sans, background: T.acc, color: 'var(--edge-on-acc, #0A0A0C)' }}
               >
-                <BookOpen size={15} strokeWidth={2.6} /> {tx('Записати угоду', 'Log a trade')}
+                <BookOpen size={15} strokeWidth={2.6} /> {tx('Внести угоду', 'Log a trade')}
               </Link>
+              {!inSandbox() && (
+                <Link
+                  to={demoUrl('analytics')}
+                  onClick={() => { markDemoSeen(); track('demo_opened', { from: 'analytics_empty' }); }}
+                  className="flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-bold"
+                  style={{ fontFamily: T.sans, border: `1px solid ${T.lineHi}`, color: T.text }}
+                >
+                  {tx('Демо', 'Demo')}
+                </Link>
+              )}
+              </div>
             )}
           </div>
         )}

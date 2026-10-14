@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { withSandbox } from '../lib/sandbox';
 import {
   Plus, Loader2, Search,
 } from 'lucide-react';
@@ -36,6 +38,7 @@ function ErrorCta({ onClick, children, className = '' }) {
 export default function ErrorLog() {
   useEdgeFonts();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -401,13 +404,17 @@ export default function ErrorLog() {
               {tx('Тут поки порожньо', 'Nothing here yet')}
             </div>
             <p className="relative mt-3 max-w-[430px] text-[15px]" style={{ fontFamily: T.sans, color: 'var(--edge-text2)', lineHeight: 1.65 }}>
-              {tx('Перший запис завжди найважчий — і саме він найцінніший.', 'The first entry is always the hardest — and the most valuable.')}
-              {' '}{tx('Зафіксуй помилку, поки памʼятаєш, що саме відчував.', 'Log a mistake while you still remember exactly how it felt.')}
+              {tx('Відмічай помилку в угоді, і тут видно, яка звичка коштує найдорожче.', 'Mark mistakes in your trades and this page shows which habit costs you the most.')}
             </p>
 
-            <ErrorCta onClick={() => setComposerOpen(true)} className="mt-6">
-              {tx('Зафіксувати першу', 'Log the first one')}
-            </ErrorCta>
+            <div className="relative mt-6 flex flex-wrap items-center justify-center gap-2">
+              <Button variant="primary" onClick={() => navigate(withSandbox('/journal'))}>
+                {tx('Відкрити журнал', 'Open the journal')}
+              </Button>
+              <Button variant="secondary" icon={Plus} onClick={() => setComposerOpen(true)}>
+                {tx('Зафіксувати помилку', 'Log a mistake')}
+              </Button>
+            </div>
           </motion.div>
         ) : filteredEntries.length === 0 ? (
           <motion.div

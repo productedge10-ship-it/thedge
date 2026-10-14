@@ -34,6 +34,7 @@ import { t as tx } from "../lib/lang";
 import TradesTable from "../components/journal/TradesTable";
 import SharePeriodButton from "../components/journal/SharePeriod";
 import { inSandbox } from "../lib/sandbox";
+import JournalEmpty from "../components/onboard/JournalEmpty";
 import AssetIcon from "../components/ui/AssetIcon";
 
 const PAGE_SIZES = [10, 20, 30, 40];
@@ -744,6 +745,21 @@ export default function TradingJournal() {
 
   const [tradeToDelete, setTradeToDelete] = useState(null);
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
+  /* null — ще не знаємо; false — у журналі взагалі жодної угоди
+     (тоді замість «нічого не знайдено» показуємо перші кроки). */
+  const [hasAnyTrade, setHasAnyTrade] = useState(null);
+
+  /* /journal?new=1 — з чекліста чи порожнього стану: одразу форма
+     нової угоди. Параметр прибираємо, щоб F5 не відкривав її знову. */
+  useEffect(() => {
+    if (inSandbox()) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("new") === "1") {
+      setIsTradeModalOpen(true);
+      url.searchParams.delete("new");
+      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    }
+  }, []);
 
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [pairCategories, setPairCategories] = useState({});
@@ -781,6 +797,7 @@ export default function TradingJournal() {
 
     (async () => {
       const { data } = await mine(supabase.from("trades").select("plan_pair"));
+      if (data) setHasAnyTrade(data.length > 0);
       if (data)
         setUniquePairs([
           "All",
@@ -1411,6 +1428,9 @@ export default function TradingJournal() {
             page={page}
             totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
             onPageChange={setPage}
+            empty={hasAnyTrade === false && trades.length === 0 && !inSandbox() ? (
+              <JournalEmpty onAdd={() => setIsTradeModalOpen(true)} />
+            ) : null}
           />
         </motion.div>
       </motion.div>
