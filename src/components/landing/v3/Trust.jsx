@@ -108,12 +108,12 @@ function Counter() {
     <div style={{ display: 'flex', gap: 'clamp(24px,5vw,64px)', flexWrap: 'wrap', marginTop: 28 }}>
       <div>
         <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(34px,3.4vw,56px)', color: '#fff', letterSpacing: '-1.5px' }}>{fmt(s.trades, lang)}</div>
-        <div style={{ fontFamily: F.sans, fontSize: 14, color: C.text3 }}>{tx('угод записано в журналах THE EDGE', 'trades logged in THE EDGE journals')}</div>
+        <div style={{ fontFamily: F.sans, fontSize: 14, color: C.text3 }}>{tx('угод записано в THE EDGE: журнал і бектест', 'trades logged in THE EDGE: journal and backtest')}</div>
       </div>
       {s.traders >= 20 && (
         <div>
           <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(34px,3.4vw,56px)', color: '#fff', letterSpacing: '-1.5px' }}>{fmt(s.traders, lang)}</div>
-          <div style={{ fontFamily: F.sans, fontSize: 14, color: C.text3 }}>{tx('трейдерів ведуть журнал', 'traders keep a journal')}</div>
+          <div style={{ fontFamily: F.sans, fontSize: 14, color: C.text3 }}>{tx('трейдерів зареєструвались', 'traders signed up')}</div>
         </div>
       )}
     </div>

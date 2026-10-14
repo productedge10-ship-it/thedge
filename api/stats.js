@@ -9,19 +9,22 @@ let cache = null;
 
 async function compute() {
   const db = admin();
-  const { count: trades } = await db.from('trades').select('id', { count: 'exact', head: true });
-  /* Трейдери з хоча б однією угодою — через RPC не йдемо, тягнемо лише
-     колонку user_id. Поки угод десятки тисяч, це дешево. */
-  const ids = new Set();
-  let from = 0;
-  for (;;) {
-    const { data, error } = await db.from('trades').select('user_id').range(from, from + 9999);
-    if (error || !data?.length) break;
-    data.forEach((r) => ids.add(r.user_id));
-    if (data.length < 10000) break;
-    from += 10000;
+  /* Угоди — журнал плюс бектест: обидва справжні записи людей. */
+  const [{ count: journal }, { count: backtest }] = await Promise.all([
+    db.from('trades').select('id', { count: 'exact', head: true }),
+    db.from('backtest_trades').select('id', { count: 'exact', head: true }),
+  ]);
+  /* Зареєстровані акаунти. Юзерів сотні, тож одна сторінка listUsers;
+     коли перевалить за 1000 — гортати далі. */
+  let users = 0;
+  for (let page = 1; page < 50; page += 1) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) break;
+    const n = data?.users?.length || 0;
+    users += n;
+    if (n < 1000) break;
   }
-  return { trades: trades || 0, traders: ids.size, at: new Date().toISOString() };
+  return { trades: (journal || 0) + (backtest || 0), traders: users, at: new Date().toISOString() };
 }
 
 export default async function handler(req, res) {
