@@ -98,7 +98,7 @@ function Counter() {
   const [s, setS] = useState(null);
   useEffect(() => {
     let alive = true;
-    fetch('/api/stats').then((r) => r.json()).then((d) => { if (alive) setS(d); }).catch(() => {});
+    fetch('/api/stats', { cache: 'no-cache' }).then((r) => r.json()).then((d) => { if (alive) setS(d); }).catch(() => {});
     return () => { alive = false; };
   }, []);
   /* Поки цифр немає або вони скромні — не показуємо зовсім:
@@ -139,6 +139,44 @@ function Review({ r, lang }) {
   );
 }
 
+/* Живий екран аналітики замість скріна: справжня сторінка застосунку
+   на демо-угодах (/demo/analytics) у вбудованому вікні — можна
+   перемикати вкладки, наводити на графіки, відкривати угоди. Вантажимо
+   лише коли блок підʼїхав до екрана: iframe тягне весь застосунок. */
+function LiveDemo() {
+  const tx = useTx();
+  const [ref, setRef] = useState(null);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    if (!ref || on) return undefined;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setOn(true); io.disconnect(); } }, { rootMargin: '400px' });
+    io.observe(ref);
+    return () => io.disconnect();
+  }, [ref, on]);
+  return (
+    <figure ref={setRef} style={{ margin: '30px 0 0', ...card, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: 'min(78vh, 820px)', minHeight: 520, background: C.bg }}>
+        {on ? (
+          <iframe
+            src="/demo/analytics"
+            title={tx('Демо аналітики THE EDGE', 'THE EDGE analytics demo')}
+            loading="lazy"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+          />
+        ) : (
+          <img src="/blog/guide/analytics.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+        )}
+      </div>
+      <figcaption style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '12px 16px', fontFamily: F.sans, fontSize: 13, color: C.text3, borderTop: '1px solid rgba(255,255,255,.06)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <BarChart3 size={15} /> {tx('Живе демо на вигаданих угодах: перемикай вкладки, наводь на графіки, відкривай угоди.', 'A live demo on made-up trades: switch tabs, hover the charts, open trades.')}
+        </span>
+        <a href="/demo/analytics" style={{ color: C.accSoft, fontWeight: 700 }}>{tx('Відкрити на весь екран', 'Open full screen')} →</a>
+      </figcaption>
+    </figure>
+  );
+}
+
 export function Proof() {
   const lang = useLang();
   const tx = useTx();
@@ -149,17 +187,7 @@ export function Proof() {
       <H2>{tx('Твоя статистика замість здогадок', 'Your stats instead of guesses')}</H2>
       <Counter />
 
-      <figure style={{ margin: '30px 0 0', ...card, overflow: 'hidden' }}>
-        <img
-          src="/blog/guide/analytics.jpg"
-          alt={tx('Екран аналітики THE EDGE: результат у R, сесії, активи', 'THE EDGE analytics screen: results in R, sessions, assets')}
-          loading="lazy"
-          style={{ display: 'block', width: '100%', height: 'auto' }}
-        />
-        <figcaption style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', fontFamily: F.sans, fontSize: 13, color: C.text3, borderTop: '1px solid rgba(255,255,255,.06)' }}>
-          <BarChart3 size={15} /> {tx('Екран аналітики в застосунку. Так виглядатиме твоя статистика після перших угод.', 'The analytics screen in the app. This is how your stats will look after your first trades.')}
-        </figcaption>
-      </figure>
+      <LiveDemo />
 
       {CASE && (
         <div style={{ ...card, padding: 'clamp(20px,3.5vw,32px)', marginTop: 18 }}>

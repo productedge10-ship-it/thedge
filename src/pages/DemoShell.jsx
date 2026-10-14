@@ -54,8 +54,14 @@ function readFromApp() {
   } catch { return false; }
 }
 
+/* Демо всередині iframe на лендингу («живий» екран аналітики): без
+   смуги, без туру й без завіси — тільки сам застосунок. Визначаємо за
+   тим, що нас вбудовано, а не за параметром адреси: переходи всередині
+   демо параметр губили б. */
+const EMBED = typeof window !== 'undefined' && window.self !== window.top;
+
 export default function DemoShell() {
-  const [fromApp] = useState(readFromApp);
+  const [fromApp] = useState(() => !EMBED && readFromApp());
   const [hints, setHintsState] = useState(readHintsOn);
   const setHints = useCallback((next) => {
     setHintsState((prev) => {
@@ -70,6 +76,7 @@ export default function DemoShell() {
      того самого темного шару — перехід читається як одна дія, а не
      як дві сторінки поспіль. */
   const [entering, setEntering] = useState(() => {
+    if (EMBED) return false;
     try {
       const flag = sessionStorage.getItem('edge.demo.enter') === '1';
       if (flag) sessionStorage.removeItem('edge.demo.enter');
@@ -86,7 +93,7 @@ export default function DemoShell() {
   const nav = useNavigate();
   const { pathname } = useLocation();
 
-  const step = hints && stepIdx < STEPS.length ? STEPS[stepIdx] : null;
+  const step = !EMBED && hints && stepIdx < STEPS.length ? STEPS[stepIdx] : null;
 
   /* Крок сам приводить людину туди, де живе його ціль: інакше
      підказка вказувала б на елемент з іншої сторінки. */
@@ -138,6 +145,7 @@ export default function DemoShell() {
         }
       `}</style>
 
+      {!EMBED && (
       <div
         style={{
           /* z-index нижче за будь-яку модалку застосунку (найменша — 500):
@@ -196,10 +204,12 @@ export default function DemoShell() {
         </div>
       </div>
 
+      )}
+
       {/* Застосунок цілком: сайдбар, шапка, сторінки, модалки */}
       <div
         style={{
-          paddingTop: BAR_H, height: '100dvh', boxSizing: 'border-box',
+          paddingTop: EMBED ? 0 : BAR_H, height: '100dvh', boxSizing: 'border-box',
           opacity: entering ? 0 : 1,
           transform: entering ? 'scale(.985)' : 'none',
           transition: 'opacity .5s ease .1s, transform .6s cubic-bezier(.22,1,.36,1) .1s',

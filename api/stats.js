@@ -28,7 +28,7 @@ async function compute() {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('cache-control', 'public, max-age=600');
+  res.setHeader('cache-control', 'no-cache');
   try {
     if (!cache || Date.now() - cache.t > TTL) cache = { t: Date.now(), v: await compute() };
     res.status(200).json(cache.v);
