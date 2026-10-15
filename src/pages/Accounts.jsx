@@ -118,6 +118,15 @@ function AccCard({ children, hue = T.accRgb, onClick, hoverable = false, classNa
   );
 }
 
+/* Типові 2-етапні челенджі: денний / загальний ліміт, %. Підставляються
+   при виборі фірми, лише якщо поля ще порожні — умови в людини можуть
+   бути інші (1-етапні, інстант), тож поля лишаються редагованими. */
+const PROP_TEMPLATES = {
+  FTMO: { daily: 5, total: 10 },
+  'Funding Pips': { daily: 5, total: 10 },
+  FundedNext: { daily: 5, total: 10 },
+};
+
 export default function Accounts() {
   const { user } = useAuth();
   const sub = useSubscription();
@@ -820,7 +829,11 @@ return (
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.97 }}
                         type="button" 
-                        onClick={() => setNewFirm(firm)}
+                        onClick={() => {
+                          setNewFirm(firm);
+                          const tpl = PROP_TEMPLATES[firm];
+                          if (tpl && newDailyLoss === '' && newTotalLoss === '') { setNewDailyLoss(String(tpl.daily)); setNewTotalLoss(String(tpl.total)); }
+                        }}
                         className={`flex min-w-0 items-center gap-3 p-3.5 rounded-xl border transition-colors duration-300 group text-left ${
                           isSelected 
                             ? 'bg-[var(--edge-acc)]/10 border-[var(--edge-acc)]/40' 
@@ -949,13 +962,19 @@ return (
                 </div>
               </div>
 
-              {/* Секція: Ліміти проп-фірми — просто зберігаємо, як у
-                  кабінеті брокера (FTMO і подібні: 5% денний, 10%
-                  загальний). Поки що ніде не рахується автоматично. */}
+              {/* Секція: Ліміти проп-фірми. Рахуються в «Контролі правил»
+                  на сторінці рахунку, а для Pro з MT5 — ще й алертами в
+                  Telegram. Шаблони — типові 2-етапні челенджі; у людини
+                  можуть бути інші умови, тож поля лишаються редагованими. */}
               <div className="flex flex-col gap-4">
                 <label className="text-[10px] font-black tracking-widest text-[var(--edge-text3)] uppercase">
                   {tx('Ліміти ризику', 'Risk limits')} <span className="normal-case font-medium tracking-normal text-[var(--edge-text4)]">{tx('(необовʼязково, з правил твого пропа)', "(optional, from your prop's rules)")}</span>
                 </label>
+                {PROP_TEMPLATES[newFirm] && (
+                  <div className="-mt-1 text-[11.5px] text-[var(--edge-text3)]">
+                    {tx(`Підставили типовий 2-етапний челендж ${newFirm} (${PROP_TEMPLATES[newFirm].daily}% / ${PROP_TEMPLATES[newFirm].total}%). Перевір свої умови.`, `Filled in a typical ${newFirm} 2-step challenge (${PROP_TEMPLATES[newFirm].daily}% / ${PROP_TEMPLATES[newFirm].total}%). Check your own terms.`)}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="relative group">
                     <input

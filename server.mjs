@@ -617,8 +617,17 @@ const billingTick = async () => {
     try {
       const o = await import('./netlify/functions/_onboard.mjs');
       await o.runOnboardingReminders();
+      await o.runWinback();
     } catch (e) {
       console.error('onboard cron:', e.message);
+    }
+    /* Службові листи: привітання, кінець доступу, тижневий підсумок,
+       зупинка MT5 (_mails.mjs). Вимкнути: MAIL_JOBS_OFF=1. */
+    try {
+      const ml = await import('./netlify/functions/_mails.mjs');
+      await ml.runMailJobs();
+    } catch (e) {
+      console.error('mail jobs:', e.message);
     }
     /* Той самий тік нагадує крипто-підписникам продовжити: окремий
        таймер тут не дав би нічого, крім ще однієї речі, що може впасти. */
@@ -632,6 +641,29 @@ const billingTick = async () => {
 };
 setTimeout(billingTick, 60_000).unref();
 setInterval(billingTick, BILLING_EVERY).unref();
+
+/* ------------------------------------------------------------------
+   Автоконтроль правил пропфірми: денний ліміт і загальна просадка
+   проти equity з MT5, попередження в Telegram на 70% і 90% (Pro).
+   Частіше за біллінг: денний ліміт зливається за хвилини, а не за
+   чверть години. Вимкнути без деплою: PROP_ALERTS_OFF=1.
+------------------------------------------------------------------ */
+const PROP_EVERY = 3 * 60_000;
+let propBusy = false;
+const propTick = async () => {
+  if (propBusy) return;
+  propBusy = true;
+  try {
+    const p = await import('./netlify/functions/_prop.mjs');
+    await p.runPropAlerts();
+  } catch (e) {
+    console.error('prop cron:', e.message);
+  } finally {
+    propBusy = false;
+  }
+};
+setTimeout(propTick, 90_000).unref();
+setInterval(propTick, PROP_EVERY).unref();
 
 /* Коректне завершення. Coolify під час деплою шле SIGTERM і чекає;
    без цього обробника процес помирає миттєво разом із запитом, який

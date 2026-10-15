@@ -15,6 +15,7 @@
 
 import { json, admin, mono } from './_mono.mjs';
 import wfpCancel from './wfp-cancel.mjs';
+import { sendCanceledMail } from './_mails.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
@@ -30,7 +31,7 @@ export default async (req) => {
   if (authErr || !user) return json({ error: 'Сесія застаріла' }, 401);
 
   const { data: sub } = await db.from('subscriptions')
-    .select('provider,status,valid_until,card_token')
+    .select('provider,status,valid_until,card_token,plan,plan_id')
     .eq('user_id', user.id).maybeSingle();
 
   /* Крипта — передоплата: автосписань немає, скасовувати нічого.
@@ -63,6 +64,8 @@ export default async (req) => {
     await mono('/api/merchant/wallet/card', { method: 'DELETE', query: { cardToken: sub.card_token } })
       .catch((e) => console.error('billing cancel: токен не видалено —', e.message));
   }
+
+  await sendCanceledMail(db, user, sub);
 
   return json({ ok: true, validUntil: sub.valid_until });
 };

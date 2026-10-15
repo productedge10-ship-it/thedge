@@ -60,9 +60,9 @@ export function Problem() {
 export function Props() {
   const tx = useTx();
   const rows = [
-    [tx('Денна і загальна просадка по твоїх угодах', 'Daily and overall drawdown from your trades'), true],
-    [tx('Шаблони FTMO, FundingPips, The5ers', 'FTMO, FundingPips, The5ers templates'), true],
-    [tx('Повідомлення в Telegram, коли до ліміту лишається 30%', 'A Telegram alert when 30% of the limit is left'), true],
+    [tx('Денна і загальна просадка: «до порушення лишилось $X»', 'Daily and overall drawdown: “$X left before a breach”'), false],
+    [tx('Ліміти FTMO, Funding Pips, FundedNext підставляються самі', 'FTMO, Funding Pips, FundedNext limits filled in for you'), false],
+    [tx('Повідомлення в Telegram на 70% і 90% ліміту (Pro)', 'Telegram alerts at 70% and 90% of the limit (Pro)'), false],
     [tx('Бектест на реальних хвилинках FTMO', 'Backtesting on real FTMO minute data'), false],
     [tx('Результат у R і статистика по сесіях', 'Results in R and stats by session'), false],
   ];
@@ -71,7 +71,7 @@ export function Props() {
       <div style={{ ...card, padding: 'clamp(22px,4vw,40px)', borderColor: A(0.3), background: `linear-gradient(150deg, ${A(0.1)}, ${C.panel} 55%)` }}>
         <Eyebrow>{tx('Для проп-трейдерів', 'For prop traders')}</Eyebrow>
         <H2 style={{ fontSize: 'clamp(26px,2.3vw,44px)' }}>{tx('Правила челенджу завжди перед очима', 'Your challenge rules always in sight')}</H2>
-        <Sub>{tx('Обираєш фірму й етап, а журнал рахує денну й загальну просадку по твоїх угодах. Частина вже працює, контроль правил у розробці.', 'Pick the firm and the phase, and the journal tracks daily and overall drawdown from your trades. Part of it works today; rule tracking is in development.')}</Sub>
+        <Sub>{tx('Обираєш шаблон фірми, а журнал показує, скільки ще можна втратити сьогодні і до зливу рахунку. З Pro і MT5 бот попередить у Telegram, поки не пізно.', 'Pick your firm template and the journal shows how much you can still lose today and before a breach. With Pro and MT5 the bot warns you in Telegram before it is too late.')}</Sub>
         <div style={{ display: 'grid', gap: 10, marginTop: 26, maxWidth: 640 }}>
           {rows.map(([label, soon]) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

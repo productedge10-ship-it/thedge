@@ -14,6 +14,7 @@ import {
 import SubscriptionScene from './SubscriptionScene';
 import { useAuth } from '../../context/AuthContext';
 import { openVerifyEmail } from '../../lib/emailGate';
+import { supabase } from '../../lib/supabase';
 import { t as tx, LOCALE, isEn } from '../../lib/lang';
 import Button from '../ui/Button';
 
@@ -482,6 +483,15 @@ function PromoBox({ discount, onDone }) {
   );
 }
 
+const CANCEL_REASONS = [
+  ['price', tx('Дорого', 'Too expensive')],
+  ['not_using', tx('Не користуюсь', 'Not using it')],
+  ['missing', tx('Бракує функції', 'Missing a feature')],
+  ['bugs', tx('Баги', 'Bugs')],
+  ['pause', tx('Пауза в торгівлі', 'Taking a break')],
+  ['other', tx('Інше', 'Other')],
+];
+
 export default function SubscriptionTab({ sub, onChanged, planHint }) {
   const { emailVerified } = useAuth();
   /* Тариф і період окремо: план = тариф × період. Тариф з адреси
@@ -510,6 +520,10 @@ export default function SubscriptionTab({ sub, onChanged, planHint }) {
      заразом дає місце сказати найважливіше: доступ не зникає зараз. */
   const [confirming, setConfirming] = useState(false);
   const [canceling, setCanceling] = useState(false);
+  /* Чому йде — необовʼязково, але це найцінніший відгук, який ми
+     можемо отримати: людина вже вирішила і відповідає чесно. */
+  const [why, setWhy] = useState('');
+  const [whyText, setWhyText] = useState('');
 
   /* Вийшли з перегляду — згорнули й підтвердження. Інакше після
      повернення в реальний стан на екрані висить «Скасувати
@@ -521,6 +535,11 @@ export default function SubscriptionTab({ sub, onChanged, planHint }) {
     setErr('');
     setCanceling(true);
     try {
+      if (why || whyText.trim()) {
+        await supabase.from('feedback').insert({
+          kind: 'cancel', reason: why || null, comment: whyText.trim().slice(0, 2000) || null, plan: view.tier || null,
+        }).then(() => {}, () => {});
+      }
       await cancelSubscription();
       setConfirming(false);
       await onChanged?.();
@@ -923,6 +942,36 @@ export default function SubscriptionTab({ sub, onChanged, planHint }) {
               {tx(`Доступ працюватиме до ${fmtDate(view.validUntil)} — гроші за цей період уже сплачені, і забирати його ми не будемо. Далі списань не буде.`, `Access stays until ${fmtDate(view.validUntil)} — you've already paid for this period and we won't take it away. No further charges.`)}
             </div>
 
+            <div className="mt-3 text-[12px] font-semibold" style={{ fontFamily: T.sans, color: T.text2 }}>
+              {tx('Чому скасовуєш? (необовʼязково)', 'Why are you canceling? (optional)')}
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {CANCEL_REASONS.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setWhy(why === id ? '' : id)}
+                  className="h-8 rounded-lg px-2.5 text-[12px] font-semibold"
+                  style={{
+                    fontFamily: T.sans,
+                    color: why === id ? T.text : T.text3,
+                    background: why === id ? `rgba(${T.accRgb},0.18)` : 'transparent',
+                    border: `1px solid ${why === id ? T.acc : T.line}`,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={whyText}
+              onChange={(e) => setWhyText(e.target.value)}
+              rows={2}
+              placeholder={tx('Що могло б тебе втримати?', 'What would have kept you?')}
+              className="mt-2 w-full resize-none rounded-lg px-3 py-2 text-[12.5px] outline-none"
+              style={{ fontFamily: T.sans, color: T.text, background: T.surface, border: `1px solid ${T.line}` }}
+            />
+
             <div className="mt-3.5 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -1153,7 +1202,7 @@ export default function SubscriptionTab({ sub, onChanged, planHint }) {
       </Stage>
 
       <p className="text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-        {tx('Free назавжди: журнал без обмежень на кількість угод, аналітика, калькулятор і 2 бектести. Lite — бектести без обмежень і Telegram-бот. Pro — ще й автоімпорт з MT5 і до 5 рахунків.', 'Free forever: unlimited journal, analytics, calculator and 2 backtests. Lite — unlimited backtests and the Telegram bot. Pro — plus MT5 auto-import and up to 5 accounts.')}
+        {tx('Free назавжди: журнал без обмежень на кількість угод, аналітика, калькулятор, ручні бектести і 2 на реальному графіку. Lite — графік без обмежень і Telegram-бот. Pro — ще й автоімпорт з MT5 і до 5 рахунків.', 'Free forever: unlimited journal, analytics, calculator, manual backtests and 2 on the real chart. Lite — unlimited real-chart backtests and the Telegram bot. Pro — plus MT5 auto-import and up to 5 accounts.')}
       </p>
 
       {!preview && <PromoBox discount={view.discount} onDone={onChanged} />}

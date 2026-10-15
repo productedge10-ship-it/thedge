@@ -151,14 +151,14 @@ export function NotDoing() {
 /* ---------- ціни ---------- */
 
 const FREE = {
-  uk: ['Журнал без обмежень', 'Уся аналітика в R', 'План на день і чекліст', 'Калькулятор ризику', '2 бектести на реальних даних', '1 рахунок'],
-  en: ['Unlimited journal', 'Full analytics in R', 'Daily plan and checklist', 'Risk calculator', '2 backtests on real data', '1 account'],
+  uk: ['Журнал без обмежень', 'Уся аналітика в R', 'План на день і чекліст', 'Калькулятор ризику', 'Ручні бектести без обмежень', '2 бектести на реальному графіку', '1 рахунок'],
+  en: ['Unlimited journal', 'Full analytics in R', 'Daily plan and checklist', 'Risk calculator', 'Unlimited manual backtests', '2 real-chart backtests', '1 account'],
 };
 /* Lite — для тих, хто ще вчиться чи йде до пропу: бектест і бот без
    автоімпорту. Перелік короткий навмисно: «усе з Free» + своє. */
 const LITE = {
-  uk: ['Усе з Free', 'Бектести без обмежень', 'Telegram-бот: план, нагадування, підсумки'],
-  en: ['Everything in Free', 'Unlimited backtests', 'Telegram bot: plan, reminders, summaries'],
+  uk: ['Усе з Free', 'Реальний графік без обмежень', 'Telegram-бот: план, нагадування, підсумки'],
+  en: ['Everything in Free', 'Unlimited real-chart backtests', 'Telegram bot: plan, reminders, summaries'],
 };
 /* `soon` — це не позначка «колись». Поки функції немає, вона не має
    виглядати частиною того, за що людина платить сьогодні: інакше
@@ -168,8 +168,8 @@ const PRO = {
     'Усе з Lite',
     'Автоімпорт угод з MT5',
     'До 5 рахунків: пропи, реал, демо окремо',
-    { text: 'Автоконтроль правил пропфірми', soon: true },
-    { text: 'Алерти ліміту просадки в Telegram', soon: true },
+    { text: 'Автоконтроль правил пропфірми' },
+    { text: 'Алерти ліміту просадки в Telegram' },
     { text: 'Бот після угоди: «чому зайшов»', soon: true },
     { text: 'Тижневий розбір з найдорожчою помилкою', soon: true },
     { text: 'AI-коуч на твоїх угодах', soon: true },
@@ -178,8 +178,8 @@ const PRO = {
     'Everything in Lite',
     'MT5 trade auto-import',
     'Up to 5 accounts: prop, live, demo apart',
-    { text: 'Automatic prop firm rules tracking', soon: true },
-    { text: 'Drawdown limit alerts in Telegram', soon: true },
+    { text: 'Automatic prop firm rules tracking' },
+    { text: 'Drawdown limit alerts in Telegram' },
     { text: 'Bot after a trade: “why did you enter”', soon: true },
     { text: 'Weekly review with your costliest mistake', soon: true },
     { text: 'AI coach on your trades', soon: true },

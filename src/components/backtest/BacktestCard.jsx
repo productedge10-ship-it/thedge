@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Trash2, Globe, Link2, Loader2, CandlestickChart, BarChart3 } from 'lucide-react';
+import { ArrowRight, Trash2, Globe, Link2, Loader2, CandlestickChart, BarChart3, Lock } from 'lucide-react';
 import { T, EASE } from '../../lib/theme';
 import { computeStats, sparkFromTrades, fmtPF, fmtR } from '../../lib/backtestStats';
 import { ACT, act } from './accent';
@@ -103,7 +103,7 @@ function Metric({ label, value, tone, last }) {
   );
 }
 
-export default function BacktestCard({ session, onOpen, onDelete, onShare, sharing, onStats, chartMode = false }) {
+export default function BacktestCard({ session, onOpen, onDelete, onShare, sharing, onStats, chartMode = false, locked = false }) {
   const trades = session.trades || [];
   const s = computeStats(trades, session.initial_balance || 10000);
   const spark = sparkFromTrades(s.trades);
@@ -144,6 +144,15 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
                 style={{ width: 26, height: 26, borderRadius: 7, color: '#fff', background: `linear-gradient(180deg, ${ACT.from}, ${ACT.to})` }}
               >
                 <CandlestickChart size={13} strokeWidth={2.3} />
+              </span>
+            )}
+            {locked && (
+              <span
+                title={tx('Безкоштовні бектести на графіку використано — потрібен Lite', 'Free chart backtests used up — Lite needed')}
+                className="grid shrink-0 place-items-center"
+                style={{ width: 26, height: 26, borderRadius: 7, color: T.warn, background: `rgba(${T.warnRgb},0.12)`, border: `1px solid rgba(${T.warnRgb},0.3)` }}
+              >
+                <Lock size={13} strokeWidth={2.3} />
               </span>
             )}
             <Chip>{session.pair}</Chip>

@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import {
   BookOpen, Plus, TrendingUp, TrendingDown, Minus, AlertTriangle, X,
-  Filter, Calendar, ChevronDown, Check, Search, ShieldAlert, AlertOctagon, Zap, Hand,
+  Filter, Calendar, ChevronDown, Check, Search, ShieldAlert, AlertOctagon, Zap, Hand, Upload,
 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
@@ -35,6 +35,7 @@ import TradesTable from "../components/journal/TradesTable";
 import SharePeriodButton from "../components/journal/SharePeriod";
 import { inSandbox } from "../lib/sandbox";
 import JournalEmpty from "../components/onboard/JournalEmpty";
+import ImportTradesModal, { IMPORT_EVENT } from '../components/journal/ImportTradesModal';
 import AssetIcon from "../components/ui/AssetIcon";
 
 const PAGE_SIZES = [10, 20, 30, 40];
@@ -749,13 +750,24 @@ export default function TradingJournal() {
      (тоді замість «нічого не знайдено» показуємо перші кроки). */
   const [hasAnyTrade, setHasAnyTrade] = useState(null);
 
+  /* Хто прийшов по ?new=1 без жодної угоди, отримує швидку форму в
+     порожньому журналі, а не повну модалку з розбором. */
+  const [wantNew, setWantNew] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
+  useEffect(() => {
+    if (!wantNew || hasAnyTrade === null) return;
+    setWantNew(false);
+    if (hasAnyTrade) setIsTradeModalOpen(true);
+    else setQuickOpen(true);
+  }, [wantNew, hasAnyTrade]);
+
   /* /journal?new=1 — з чекліста чи порожнього стану: одразу форма
      нової угоди. Параметр прибираємо, щоб F5 не відкривав її знову. */
   useEffect(() => {
     if (inSandbox()) return;
     const url = new URL(window.location.href);
     if (url.searchParams.get("new") === "1") {
-      setIsTradeModalOpen(true);
+      setWantNew(true);
       url.searchParams.delete("new");
       window.history.replaceState({}, "", url.pathname + url.search + url.hash);
     }
@@ -1205,6 +1217,18 @@ export default function TradingJournal() {
                 Вигадка гарна, але це найчастіша дія в журналі, і сцена на
                 кожному наведенні — шум. edge-owner-only ховає кнопку в
                 перегляді за посиланням. */}
+            {/* Історія з файлу: звіт MT5 (HTML) або CSV з інших платформ. */}
+            {!inSandbox() && (
+              <Button
+                variant="secondary"
+                size="lg"
+                icon={Upload}
+                onClick={() => window.dispatchEvent(new Event(IMPORT_EVENT))}
+                className="edge-owner-only w-full sm:w-auto"
+              >
+                {tx('Імпорт', 'Import')}
+              </Button>
+            )}
             <Button
               variant="primary"
               size="lg"
@@ -1429,7 +1453,12 @@ export default function TradingJournal() {
             totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
             onPageChange={setPage}
             empty={hasAnyTrade === false && trades.length === 0 && !inSandbox() ? (
-              <JournalEmpty onAdd={() => setIsTradeModalOpen(true)} />
+              <JournalEmpty
+                key={quickOpen ? 'quick' : 'empty'}
+                onAdd={() => setIsTradeModalOpen(true)}
+                quickOpen={quickOpen}
+                onSaved={() => { tradesCache.current = {}; fetchGlobalData(); fetchTradesList(1, { force: true }); setPage(1); }}
+              />
             ) : null}
           />
         </motion.div>
@@ -1533,6 +1562,12 @@ export default function TradingJournal() {
 
       {/* TradeModal сам не сигналить про успіх — просто перечитуємо
           дані щоразу при закритті */}
+      {!inSandbox() && (
+        <ImportTradesModal
+          onDone={() => { tradesCache.current = {}; fetchGlobalData(); fetchTradesList(1, { force: true }); setPage(1); }}
+        />
+      )}
+
       <TradeModal
         isOpen={isTradeModalOpen}
         onClose={() => {

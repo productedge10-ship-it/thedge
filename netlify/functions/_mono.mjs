@@ -344,18 +344,47 @@ export async function sendMail(to, subject, html) {
 
 export const fmtDay = (d) => new Date(d).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
 
-/* Лист у кольорах застосунку. Табличною версткою й інлайн-стилями:
-   поштові клієнти (особливо Gmail і Outlook) викидають <style> і
-   половину сучасного CSS. */
-export const letter = (title, lines, cta, foot = 'Лист надіслано, бо ти оформив підписку на theedgecat.com<br>Питання по оплаті?') => `<!doctype html><html><body style="margin:0;background:#0a0a0c;padding:32px 12px;font-family:Arial,Helvetica,sans-serif">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-<table role="presentation" width="100%" style="max-width:520px;background:#111116;border:1px solid #26262c;border-radius:18px" cellpadding="0" cellspacing="0">
-<tr><td style="padding:32px 32px 8px;color:#8b7bff;font-size:12px;font-weight:bold;letter-spacing:3px">THE EDGE</td></tr>
-<tr><td style="padding:8px 32px 0;color:#fafafa;font-size:24px;font-weight:bold;line-height:1.25">${title}</td></tr>
-<tr><td style="padding:16px 32px 0;color:#b4b4bd;font-size:15px;line-height:1.6">${lines.map((l) => `<p style="margin:0 0 12px">${l}</p>`).join('')}</td></tr>
-<tr><td style="padding:12px 32px 32px"><a href="${cta.href}" style="display:inline-block;background:#8b7bff;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 26px;border-radius:12px">${cta.text}</a></td></tr>
+/* Лист у кольорах темної теми сайту (T у src/lib/theme.js).
+
+   Табличною версткою й інлайн-стилями: Gmail і Outlook викидають
+   більшість CSS. Темний лист у Gmail на iPhone «інвертується» в
+   світлий: кольори тла він перефарбовує, а background-image — ні.
+   Тому кожне тло задане ще й градієнтом з одного кольору, а текст
+   загорнутий у пару blend-шарів (прийом Rémi Parmentier: u + .body
+   існує лише в Gmail), які повертають інвертований текст назад.
+   Apple Mail і решта бачать color-scheme: dark і нічого не чіпають. */
+export const BG = (c) => `background-color:${c};background-image:linear-gradient(${c},${c});`;
+export const blend = (html) => `<div class="gs"><div class="gd">${html}</div></div>`;
+
+export const letter = (title, lines, cta, foot = 'Лист надіслано, бо ти оформив підписку на theedgecat.com<br>Питання по оплаті?') => `<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>${title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;600;700&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+<style>:root{color-scheme:dark;supported-color-schemes:dark}u + .body .gs{background:#000;mix-blend-mode:screen}u + .body .gd{background:#000;mix-blend-mode:difference}</style></head>
+<body class="body" style="margin:0;padding:0;${BG('#0A0A0C')}font-family:'Golos Text',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${String(typeof lines[0] === 'string' ? lines[0] : '').replace(/<[^>]+>/g, '').slice(0, 120)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#0A0A0C" style="${BG('#0A0A0C')}"><tr><td align="center" style="padding:36px 14px 28px;${BG('#0A0A0C')}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
+<tr><td style="padding:0 4px 18px;${BG('#0A0A0C')}">${blend(`<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td style="vertical-align:middle"><img src="${site()}/icon-192.png" width="32" height="32" alt="" style="display:block;border:0;border-radius:9px"></td>
+<td style="vertical-align:middle;padding-left:10px;color:#FAFAFA;font-family:Unbounded,'Golos Text',Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:3px">THE EDGE</td>
+</tr></table>`)}</td></tr>
+<tr><td bgcolor="#131316" style="${BG('#131316')}border:1px solid #2E2E36;border-radius:20px;overflow:hidden">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+<tr><td height="3" bgcolor="#8b7bff" style="height:3px;line-height:3px;font-size:0;${BG('#8b7bff')}">&nbsp;</td></tr>
+<tr><td style="padding:32px 34px 8px;${BG('#131316')}">${blend(`
+<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="${BG('#1C1A2B')}border:1px solid #3A3463;border-radius:999px;padding:6px 12px;color:#A498FF;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase">Торговий журнал</td></tr></table>
+<h1 style="margin:18px 0 0;color:#FAFAFA;font-family:Unbounded,'Golos Text',Arial,sans-serif;font-size:24px;line-height:1.3;font-weight:700">${title}</h1>`)}</td></tr>
+<tr><td style="padding:18px 34px 4px;${BG('#131316')}">${lines.map((l) => (l && typeof l === 'object' ? l.html : blend(`<p style="margin:0 0 16px;color:#B4B4BD;font-size:16px;line-height:1.65">${l}</p>`))).join('')}</td></tr>
+<tr><td style="padding:8px 34px 32px;${BG('#131316')}">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr><td bgcolor="#8b7bff" style="${BG('#8b7bff')}border-radius:12px">
+<a href="${cta.href}" style="display:inline-block;padding:14px 28px;color:#0A0A0C;text-decoration:none;font-weight:700;font-size:15px;border-radius:12px">${cta.text}&nbsp;&nbsp;→</a>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:0 34px;${BG('#131316')}"><div style="height:1px;line-height:1px;font-size:0;${BG('#2E2E36')}">&nbsp;</div></td></tr>
+<tr><td style="padding:18px 34px 26px;${BG('#131316')}">${blend(`<div style="color:#8E8E99;font-size:14px;line-height:1.6">Гарних угод і спокійних рук<br><span style="color:#FAFAFA;font-weight:700">Команда THE EDGE</span></div>`)}</td></tr>
 </table>
-<p style="color:#4a4a52;font-size:12px;line-height:1.6;margin:18px 0 0">${foot} Пиши нам у Telegram: <a href="https://t.me/thedgesupport" style="color:#8b7bff;text-decoration:none">@thedgesupport</a></p>
+</td></tr>
+<tr><td align="center" style="padding:22px 18px 0;${BG('#0A0A0C')}">${blend(`<div style="color:#8E8E99;font-size:12px;line-height:1.7">${foot} Пиши нам у Telegram: <a href="https://t.me/thedgesupport" style="color:#A498FF;text-decoration:none">@thedgesupport</a><br><a href="${site()}" style="color:#8E8E99;text-decoration:none">theedgecat.com</a></div>`)}</td></tr>
+</table>
 </td></tr></table></body></html>`;
 
 const planWord = (planId) => (PLANS[planId]?.period === 'yearly' ? 'річну' : 'місячну');

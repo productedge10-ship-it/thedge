@@ -16,6 +16,7 @@ import { onlyMine } from '../../lib/myId';
 import PlanBackdrop from '../trading/PlanBackdrop';
 import OnboardingModal from '../modals/OnboardingModal';
 import OnboardSurvey from '../onboard/OnboardSurvey';
+import FeedbackPulse from '../onboard/FeedbackPulse';
 import VerifyEmailModal from '../modals/VerifyEmailModal';
 import SettingsModal from '../modals/SettingsModal';
 import Tour from './Tour';
@@ -1240,6 +1241,8 @@ export default function Layout() {
       {/* Три питання після першого входу (платформа, ціль, угод на
           тиждень). У демо їх немає: там нема акаунта, куди писати. */}
       {!inSandbox() && <OnboardSurvey />}
+      {/* Відгук на 3-й день: що подобається, що ні, чи платив би за Lite. */}
+      {!inSandbox() && <FeedbackPulse />}
       {/* Нагадування підтвердити пошту. Теж живе тут, а не на сторінці
           входу: з вимкненим «Confirm email» реєстрація одразу видає
           сесію, і людина потрапляє в застосунок, не побачивши жодного

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Scissors, Play, Pause, SkipForward, SkipBack, FastForward, X, Settings2, CalendarDays, ChevronDown,
-  UploadCloud, Trash2, RotateCcw, PanelRight, Columns2, Maximize2, Check, Loader2, CircleDot, Send, Plus,
+  UploadCloud, Trash2, RotateCcw, PanelRight, Columns2, Maximize2, Check, Loader2, CircleDot, Send, Plus, Lock,
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
@@ -15,6 +15,9 @@ import { notify } from '../utils/notify';
 import { uploadImage } from '../lib/imageStore';
 import { sessionMeta, insertSession, updateSessionSettings } from '../lib/backtestMode';
 import { openSettings } from '../lib/settings';
+import useSubscription from '../hooks/useSubscription';
+import { chartAccess } from '../lib/billing';
+import { hasFreeBacktest } from '../lib/betaAccess';
 import { setupsOfTags } from '../lib/backtestTags';
 import { isDemo } from '../lib/backtestDemo';
 import { ACT, act } from '../components/backtest/accent';
@@ -139,7 +142,7 @@ function Menu({ open, onClose, children, align = 'left', width = 280 }) {
 /* Панель реплею вбудована внизу графіка: з'являється знизу. */
 const RB_CSS = '@keyframes edgeBarIn{from{opacity:0;translate:0 100%}to{opacity:1;translate:0 0}}@keyframes edgeBarOut{from{opacity:1;translate:0 0}to{opacity:0;translate:0 100%}}';
 
-export default function BacktestChart() {
+function BacktestChartInner() {
   useEdgeFonts();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -1957,4 +1960,63 @@ export default function BacktestChart() {
   );
 
   return createPortal(page, document.body);
+}
+
+
+/* ==================================================================
+   Вхід у графік.
+
+   Ручні бектести безкоштовні без обмежень, а реальний графік у Free —
+   лише 2 свої сесії (+1 за чекліст). Далі без Lite графік закритий:
+   і новий бектест, і старі сесії поза квотою, і просто відкрити
+   /backtest/chart без сесії. Рішення приймає база (`chart_access`),
+   тут лише екран «відкрито / закрито». */
+function ChartGate() {
+  const navigate = useNavigate();
+  return (
+    <div className="grid min-h-[70vh] place-items-center px-6 py-16">
+      <div className="w-full max-w-[460px] rounded-3xl p-7 text-center" style={{ background: T.surface, border: `1px solid ${T.line}` }}>
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl" style={{ background: `rgba(${T.accRgb},0.14)`, border: `1px solid rgba(${T.accRgb},0.3)` }}>
+          <Lock size={20} style={{ color: T.acc }} />
+        </span>
+        <div className="mt-4 text-[20px] font-bold" style={{ fontFamily: T.display, color: T.text }}>
+          {tx('Реальний графік — у Lite', 'The real chart is in Lite')}
+        </div>
+        <p className="m-0 mt-2 text-[14px] leading-[1.6]" style={{ fontFamily: T.sans, color: T.text3 }}>
+          {tx('Безкоштовні бектести на реальному графіку використано. Lite відкриває їх без обмежень за $5 на місяць. Ручний бектест — де завгодно записуєш угоди сам — лишається безкоштовним.', 'Your free real-chart backtests are used up. Lite unlocks them without limits for $5 a month. The manual backtest — where you log trades yourself — stays free.')}
+        </p>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <button type="button" onClick={() => openSettings('billing', { plan: 'lite' })} className="edge-add-btn h-11 rounded-xl px-5 text-[14px] font-bold">
+            {tx('Lite · $5/міс', 'Lite · $5/mo')}
+          </button>
+          <button type="button" onClick={() => navigate('/backtest')} className="h-11 rounded-xl px-5 text-[14px] font-semibold" style={{ fontFamily: T.sans, color: T.text2, border: `1px solid ${T.line}` }}>
+            {tx('До моїх бектестів', 'My backtests')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function BacktestChart() {
+  const { user } = useAuth();
+  const sub = useSubscription();
+  const [params] = useSearchParams();
+  const sessionId = params.get('session') || '';
+  const [res, setRes] = useState({ key: '', ok: null });
+
+  const bypass = sub.hasLite || hasFreeBacktest(user?.email) || isDemo(sessionId);
+  const key = `${user?.id || ''}:${sessionId}`;
+
+  useEffect(() => {
+    if (bypass || !user?.id || !sub.ready) return undefined;
+    let alive = true;
+    chartAccess(sessionId).then((v) => { if (alive) setRes({ key, ok: v }); });
+    return () => { alive = false; };
+  }, [bypass, user?.id, sub.ready, sessionId, key]);
+
+  if (bypass) return <BacktestChartInner />;
+  if (res.key !== key || res.ok === null) return <div className="grid min-h-[70vh] place-items-center"><Loader2 size={28} className="animate-spin" style={{ color: ACT.tint }} /></div>;
+  if (!res.ok) return <ChartGate />;
+  return <BacktestChartInner />;
 }

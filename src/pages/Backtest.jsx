@@ -170,7 +170,7 @@ export default function Backtest() {
   const [sort, setSort] = useState('recent');
   const [confirm, setConfirm] = useState(null);
 
-  /* Free: 2 бектести, далі Lite. Лічильник — з бази (рахує створені,
+  /* Free: ручні без обмежень, на реальному графіку 2 (+1), далі Lite. Лічильник — з бази (рахує створені,
      а не наявні: видалений бектест слот не повертає). */
   const sub = useSubscription();
   const [freeLeft, setFreeLeft] = useState(null);
@@ -183,6 +183,15 @@ export default function Backtest() {
   }, [user?.id, sessions.length]);
   const limited = sub.ready && !sub.hasLite && freeLeft != null && !hasFreeBacktest(user?.email);
   const toLite = () => openSettings('billing', { plan: 'lite' });
+  /* Сесії-графіки поза безкоштовною квотою: рахуємо від найстаріших, як
+     і база (backtest_session_open). Вони лишаються видимими, але в графік
+     без Lite не пускають. */
+  const lockedIds = useMemo(() => {
+    if (!limited) return new Set();
+    const charts = sessions.filter((x) => !x.demo && isChartSession(x))
+      .slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+    return new Set(charts.slice(freeLimit).map((x) => x.id));
+  }, [limited, sessions, freeLimit]);
 
   /* Перезавантажуємо список тільки коли змінюється користувач.
      load() оголошена в тілі компонента й пересоздається щорендера —
@@ -261,9 +270,10 @@ export default function Backtest() {
   }
 
   const createSession = async (f) => {
-    if (limited && freeLeft <= 0) {
+    /* Ручний бектест безкоштовний завжди; обмежений лише реальний графік. */
+    if (limited && freeLeft <= 0 && f.mode === 'chart') {
       setCreating(false);
-      notify.error(tx('Безкоштовні бектести використано', 'Free backtests used up'), tx('Lite відкриває бектести без обмежень — $5 на місяць.', 'Lite unlocks unlimited backtests — $5 a month.'));
+      notify.error(tx('Безкоштовні бектести на графіку використано', 'Free chart backtests used up'), tx('Lite відкриває графік без обмежень — $5 на місяць. Ручний бектест лишається безкоштовним.', 'Lite unlocks the chart without limits — $5 a month. The manual backtest stays free.'));
       toLite();
       return;
     }
@@ -452,8 +462,8 @@ export default function Backtest() {
             {limited && (
               <p style={{ fontFamily: T.sans, marginTop: 8, fontSize: 13, color: freeLeft > 0 ? T.text3 : T.warn }}>
                 {freeLeft > 0
-                  ? tx(`Безкоштовно: лишилось ${freeLeft} з ${freeLimit} бектестів. `, `Free plan: ${freeLeft} of ${freeLimit} backtests left. `)
-                  : tx(`Безкоштовні бектести використано (${freeLimit} з ${freeLimit}). `, `Free backtests used up (${freeLimit} of ${freeLimit}). `)}
+                  ? tx(`Ручні бектести — без обмежень. На реальному графіку безкоштовно лишилось ${freeLeft} з ${freeLimit}. `, `Manual backtests are unlimited. Real-chart backtests left on Free: ${freeLeft} of ${freeLimit}. `)
+                  : tx(`Ручні бектести — без обмежень. Безкоштовні бектести на графіку використано (${freeLimit} з ${freeLimit}). `, `Manual backtests are unlimited. Free real-chart backtests used up (${freeLimit} of ${freeLimit}). `)}
                 <button type="button" onClick={toLite} style={{ color: T.acc, textDecoration: 'underline', textUnderlineOffset: 3, fontWeight: 600 }}>
                   {tx('Lite — без обмежень за $5/міс', 'Lite — unlimited for $5/mo')}
                 </button>
@@ -595,7 +605,8 @@ export default function Backtest() {
                     <BacktestCard
                       key={s.id}
                       session={s}
-                      onOpen={(x) => navigate(!x.demo && isChartSession(x) ? chartUrl(x) : statsUrl(x))}
+                      onOpen={(x) => navigate(!x.demo && isChartSession(x) && !lockedIds.has(x.id) ? chartUrl(x) : statsUrl(x))}
+                      locked={lockedIds.has(s.id)}
                       onStats={(x) => navigate(statsUrl(x))}
                       chartMode={!s.demo && isChartSession(s)}
                       onDelete={(x) => setConfirm(x)}

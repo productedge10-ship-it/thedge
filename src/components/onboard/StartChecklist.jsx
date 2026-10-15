@@ -132,7 +132,7 @@ export default function StartChecklist() {
         <div className="flex items-start gap-3">
           <Gift size={22} style={{ color: T.ok, marginTop: 2 }} />
           <div>
-            <div className="text-[17px] font-bold" style={{ fontFamily: T.display, color: T.text }}>{tx('Готово! +1 безкоштовний бектест', 'Done! +1 free backtest')}</div>
+            <div className="text-[17px] font-bold" style={{ fontFamily: T.display, color: T.text }}>{tx('Готово! +1 безкоштовний бектест на графіку', 'Done! +1 free real-chart backtest')}</div>
             <div className="mt-0.5 text-[13.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>{tx('Перевір стратегію на реальних хвилинках FTMO.', 'Test your strategy on real FTMO minute data.')}</div>
           </div>
         </div>
@@ -165,7 +165,7 @@ export default function StartChecklist() {
   const locked = [
     !sub.isPro && { id: 'mt5', tier: 'Pro', icon: Plug, title: tx('Автоімпорт з MT5', 'MT5 auto-import'), sub: tx('Угоди підтягуються самі, без ручного вводу.', 'Trades sync on their own, no manual entry.'), go: () => openSettings('connect') },
     !sub.hasLite && { id: 'bot', tier: 'Lite', icon: Send, title: tx('Telegram-бот', 'Telegram bot'), sub: tx('План, нагадування і підсумок дня в чат.', 'Plan, reminders and daily wrap in your chat.'), go: () => openSettings('telegram') },
-    !sub.hasLite && { id: 'bt', tier: 'Lite', icon: FlaskConical, title: tx('Бектести без обмежень', 'Unlimited backtests'), sub: tx('Безкоштовно — 2, за цей чекліст ще +1.', 'Free plan — 2, plus 1 for this checklist.'), go: () => openSettings('billing', { plan: 'lite' }) },
+    !sub.hasLite && { id: 'bt', tier: 'Lite', icon: FlaskConical, title: tx('Графік без обмежень', 'Unlimited real chart'), sub: tx('Безкоштовно — 2 на графіку, за цей чекліст ще +1. Ручні — без обмежень.', 'Free plan — 2 on the chart, plus 1 for this checklist. Manual ones are unlimited.'), go: () => openSettings('billing', { plan: 'lite' }) },
   ].filter(Boolean);
 
   const Item = ({ step, title, sub, children }) => (
@@ -218,7 +218,7 @@ export default function StartChecklist() {
             {tx(`Залишилось ${left} ${left === 1 ? 'крок' : 'кроки'}`, `${left} ${left === 1 ? 'step' : 'steps'} left`)}
           </div>
           <div className="mt-1 text-[13.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            {tx('і отримаєш +1 безкоштовний бектест', 'and get +1 free backtest')}
+            {tx('і отримаєш +1 безкоштовний бектест на графіку', 'and get +1 free real-chart backtest')}
           </div>
         </div>
         <span className="flex items-center gap-2 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>

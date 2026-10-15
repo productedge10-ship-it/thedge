@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Inbox, Plug, PenLine, Eye } from 'lucide-react';
+import { Inbox, Plug, PenLine, Eye, Zap, Upload } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import useOnboardAnswers from '../../hooks/useOnboardAnswers';
@@ -9,14 +9,16 @@ import { t as tx } from '../../lib/lang';
 import { track } from '../../lib/analytics';
 import { noAutoImport, platformName, demoUrl, markDemoSeen } from '../../lib/onboard';
 import Button from '../ui/Button';
+import QuickTrade from './QuickTrade';
 
 /* Журнал без жодної угоди: замість «нічого не знайдено» — перша дія.
    Для MT5 головна кнопка «Підключити», для інших платформ — ручне
    внесення. Якщо MT5 уже підключено, чесно кажемо, що угоди їдуть. */
-export default function JournalEmpty({ onAdd }) {
+export default function JournalEmpty({ onAdd, onSaved, quickOpen = false }) {
   const { user } = useAuth();
   const answers = useOnboardAnswers();
   const [mt5, setMt5] = useState(0);
+  const [quick, setQuick] = useState(quickOpen);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -41,9 +43,15 @@ export default function JournalEmpty({ onAdd }) {
       <p className="m-0 max-w-[440px] text-[14px] leading-[1.6]" style={{ fontFamily: T.sans, color: T.text3 }}>{text}</p>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         {mt5First && <Button variant="primary" icon={Plug} onClick={() => openSettings('connect')}>{tx('Підключити MT5', 'Connect MT5')}</Button>}
-        <Button variant={mt5First ? 'secondary' : 'primary'} icon={PenLine} onClick={onAdd}>{tx('Внести вручну', 'Log manually')}</Button>
+        {/* Без MT5 швидка форма — головна дія: повна форма з розбором
+            для першої угоди занадто довга. */}
+        {!quick && <Button variant={mt5First ? 'secondary' : 'primary'} icon={Zap} onClick={() => setQuick(true)}>{tx('Швидка угода', 'Quick trade')}</Button>}
+        <Button variant="ghost" icon={PenLine} onClick={onAdd}>{tx('Повна форма', 'Full form')}</Button>
+        {/* Хто вже вів журнал деінде — переносить історію файлом. */}
+        <Button variant="ghost" icon={Upload} onClick={() => window.dispatchEvent(new Event('edge:import-trades'))}>{tx('Імпорт з файлу', 'Import from file')}</Button>
         <Button variant="ghost" icon={Eye} onClick={demo}>{tx('Подивитись приклад', 'See an example')}</Button>
       </div>
+      {quick && <QuickTrade onSaved={onSaved} />}
     </div>
   );
 }

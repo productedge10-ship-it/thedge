@@ -92,7 +92,7 @@ function nextStep(a) {
   if (isWarmingUp(a)) {
     return {
       title: tx('Почни з бектесту', 'Start with a backtest'),
-      text: tx('Поки темп не склався, тренуйся на історії: 2 бектести на реальних хвилинках FTMO безкоштовно. Угоди в журнал додаси, коли почнеш торгувати.', 'Until you find your pace, practise on history: 2 free backtests on real FTMO minute data. Add trades to the journal once you start trading.'),
+      text: tx('Поки темп не склався, тренуйся на історії: 2 бектести на реальних хвилинках FTMO безкоштовно, а ручні без обмежень. Угоди в журнал додаси, коли почнеш торгувати.', 'Until you find your pace, practise on history: 2 free backtests on real FTMO minute data. Add trades to the journal once you start trading.'),
       primary: { icon: FlaskConical, label: tx('Спробувати бектест', 'Try a backtest'), go: 'backtest' },
       secondary: { icon: Eye, label: tx('Подивитись приклад', 'See an example'), go: 'demo' },
     };

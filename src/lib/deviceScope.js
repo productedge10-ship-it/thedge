@@ -17,9 +17,10 @@
 ================================================================== */
 
 const OWNER = 'edge_device_owner';
+const DEVICE_ID = 'edge_device_id';
 
 const KEEP = [
-  OWNER,
+  OWNER, DEVICE_ID,
   'edge_lang', 'edge_blog_reader', 'edge_fontlab', 'edge_flags_v1',
   'edge-sidebar-collapsed', 'edge.voice.lang', 'edge:chunk-reload',
 ];
@@ -48,6 +49,35 @@ export function claimDevice(uid) {
     }
     if (prev !== uid) localStorage.setItem(OWNER, uid);
   } catch { /* приватний режим — зберігати й нема чого */ }
+  noteDevice(uid);
+}
+
+/* Мітка браузера для безкоштовних бектестів.
+
+   Два безкоштовні бектести — на людину, а не на акаунт: інакше новий
+   акаунт з тієї самої вкладки знову дає два. Тому браузер має свій
+   випадковий id (переживає зміну акаунта — він у KEEP), а в базу йде
+   лише його sha256 (`note_device`). Акаунти з однією міткою ділять
+   лічильник у `backtest_free_left()`. Нічого про сам пристрій ми не
+   збираємо; очистив сховище — отримав новий id, і це нормально:
+   мета — прибрати найлегший обхід, а не стежити. */
+let noted = null;
+function noteDevice(uid) {
+  if (!uid || noted === uid) return;
+  noted = uid;
+  (async () => {
+    try {
+      let id = localStorage.getItem(DEVICE_ID);
+      if (!id) {
+        id = (crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`).replace(/-/g, '');
+        localStorage.setItem(DEVICE_ID, id);
+      }
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`edge-device:${id}`));
+      const mark = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+      const { supabase } = await import('./supabase');
+      await supabase.rpc('note_device', { p_mark: mark });
+    } catch { /* не критично: без мітки ліміт просто рахується по пошті */ }
+  })();
 }
 
 /* Чи можна вважати безіменні локальні дані даними цього акаунта. */

@@ -6,11 +6,11 @@ import { admin } from '../netlify/functions/_mono.mjs';
 import { checkUnsub } from '../netlify/functions/_onboard.mjs';
 
 const page = (title, text) => `<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title></head>
-<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0c;font-family:Arial,Helvetica,sans-serif;padding:24px">
-<div style="max-width:440px;background:#111116;border:1px solid #26262c;border-radius:18px;padding:32px;color:#b4b4bd;line-height:1.6">
+<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0A0A0C;font-family:Arial,Helvetica,sans-serif;padding:24px">
+<div style="max-width:440px;background:#131316;border:1px solid #2E2E36;border-radius:18px;padding:32px;color:#b4b4bd;line-height:1.6">
 <div style="color:#8b7bff;font-size:12px;font-weight:bold;letter-spacing:3px">THE EDGE</div>
 <h1 style="color:#fafafa;font-size:22px;margin:10px 0 12px">${title}</h1><p style="margin:0 0 18px">${text}</p>
-<a href="/app" style="display:inline-block;background:#8b7bff;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:12px">Відкрити журнал</a></div></body></html>`;
+<a href="/app" style="display:inline-block;background:#8b7bff;color:#0A0A0C;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:12px">Відкрити журнал</a></div></body></html>`;
 
 export default async function handler(req, res) {
   const uid = String(req.query?.u || '');
@@ -24,8 +24,13 @@ export default async function handler(req, res) {
   }
   try {
     const db = admin();
+    if (String(req.query?.k || '') === 'digest') {
+      await db.from('onboard_mail').upsert({ user_id: uid, digest_off: true }, { onConflict: 'user_id' });
+      res.status(200).send(page('Підсумки вимкнено', 'Тижневий підсумок більше не надсилатимемо. Статистика тижня завжди є в Аналітиці.'));
+      return;
+    }
     await db.from('onboard_mail').upsert({ user_id: uid, unsubscribed: true }, { onConflict: 'user_id' });
-    res.status(200).send(page('Нагадування вимкнено', 'Більше не надсилатимемо листів-нагадувань. Листи про оплату підписки, якщо вона є, приходитимуть як і раніше.'));
+    res.status(200).send(page('Нагадування вимкнено', 'Більше не надсилатимемо листів-нагадувань і тижневих підсумків. Листи про оплату підписки, якщо вона є, приходитимуть як і раніше.'));
   } catch (e) {
     console.error('unsub:', e.message);
     res.status(500).send(page('Не вдалось', 'Спробуй ще раз трохи пізніше або напиши нам у Telegram @thedgesupport.'));

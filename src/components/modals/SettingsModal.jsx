@@ -678,6 +678,18 @@ export default function SettingsModal() {
                       />
                     </div>
 
+                    <div>
+                      <Label>{t('Відгук', 'Feedback')}</Label>
+                      <button
+                        type="button"
+                        onClick={() => { setOpen(false); window.dispatchEvent(new Event('edge:feedback')); }}
+                        className="w-full text-left"
+                        style={{ fontFamily: T.sans, marginTop: 12, padding: '14px 18px', borderRadius: 14, border: `1px solid ${T.line}`, background: T.surfaceHi, color: T.text2, fontSize: 14.5 }}
+                      >
+                        {t('Що подобається, що бісить, чого бракує — 30 секунд →', 'What you like, what annoys you, what is missing — 30 seconds →')}
+                      </button>
+                    </div>
+
                     {/* Місце для тих, хто закрив модалку підтвердження й
                         повернувся до неї пізніше. Без цієї секції єдиним
                         способом підтвердитись лишалось би натиснути

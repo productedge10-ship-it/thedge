@@ -18,6 +18,7 @@ import {
 import DateField from '../ui/DateField';
 import BalanceChart from './BalanceChart';
 import Survival from './Survival';
+import RulesGuard from './RulesGuard';
 import { listMt5Snapshots, listMt5AccountTrades } from '../../lib/mt5Store';
 import { supabase as sb } from '../../lib/supabase';
 
@@ -1217,6 +1218,13 @@ export default function AccountDetails({ account, onClose, onUpdate }) {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ─────────── Контроль правил пропфірми ─────────── */}
+            {!isClosed && !loading && (
+              <div className="mb-5">
+                <RulesGuard account={acc} phase={currentPhase} trades={phaseTrades} balance={balance} initial={initial} />
               </div>
             )}
 

@@ -26,6 +26,8 @@ const secret = () => process.env.UNSUB_SECRET || process.env.SUPABASE_SERVICE_KE
 export const unsubToken = (uid) => crypto.createHmac('sha256', secret()).update(`unsub:${uid}`).digest('hex').slice(0, 32);
 export const unsubUrl = (uid) => `${site()}/api/unsub?u=${encodeURIComponent(uid)}&t=${unsubToken(uid)}`;
 
+export const digestUnsubUrl = (uid) => `${unsubUrl(uid)}&k=digest`;
+
 export function checkUnsub(uid, token) {
   if (!uid || !token || !secret()) return false;
   const a = Buffer.from(unsubToken(uid));
@@ -39,12 +41,12 @@ function mail24(platform, uid) {
   const manual = platform && platform !== 'mt5';
   const lines = manual
     ? [
-      'Привіт! Це Валера, я роблю THE EDGE.',
+      'Привіт! Це розробник THE EDGE.',
       `Твій журнал досі порожній. Автоімпорту з ${PLATFORM[platform] || 'твоєї платформи'} поки немає, тож внеси першу угоду вручну: це хвилина.`,
       'Після кількох угод журнал покаже результат у R, сесії і помилки, які коштують найдорожче. Щось незрозуміло — просто відповідай на цей лист.',
     ]
     : [
-      'Привіт! Це Валера, я роблю THE EDGE.',
+      'Привіт! Це розробник THE EDGE.',
       'Твій журнал досі порожній. Підключи MT5: це 2 хвилини, доступ лише на читання, і угоди підтягнуться самі.',
       'Після цього журнал покаже win rate, результат у R і помилки, які коштують найдорожче. Щось незрозуміло — просто відповідай на цей лист.',
     ];
@@ -56,7 +58,7 @@ function mail24(platform, uid) {
       manual
         ? { href: `${site()}/journal?new=1`, text: 'Внести першу угоду' }
         : { href: `${site()}/app?settings=connect`, text: 'Підключити MT5' },
-      `Лист надіслано, бо ти зареєструвався на theedgecat.com. <a href="${unsubUrl(uid)}" style="color:#6b6b75">Не надсилати нагадувань</a><br>Питання?`,
+      `Лист надіслано, бо ти зареєструвався на theedgecat.com. <a href="${unsubUrl(uid)}" style="color:#8E8E99">Не надсилати нагадувань</a><br>Питання?`,
     ),
   };
 }
@@ -71,7 +73,7 @@ function mail3d(uid) {
         'Внеси хоча б одну, вручну або через MT5, і подивись, як виглядає статистика. Не хочеш поки своїх — відкрий приклад на демо-угодах.',
       ],
       { href: `${site()}/app`, text: 'Відкрити журнал' },
-      `Лист надіслано, бо ти зареєструвався на theedgecat.com. <a href="${unsubUrl(uid)}" style="color:#6b6b75">Не надсилати нагадувань</a><br>Питання?`,
+      `Лист надіслано, бо ти зареєструвався на theedgecat.com. <a href="${unsubUrl(uid)}" style="color:#8E8E99">Не надсилати нагадувань</a><br>Питання?`,
     ),
   };
 }
@@ -157,3 +159,98 @@ export async function runOnboardingReminders() {
     }
   }
 }
+
+/* ==================================================================
+   Листи повернення колишнім платникам.
+
+   14 днів після кінця доступу — «що змінилось + чому пішов» (відповідь
+   на лист іде просто розробнику). 30 днів — нагадування, що журнал і
+   статистика нікуди не ділись, Free працює, а бектести й бот є в Lite
+   за $5. Знижок не обіцяємо: промокоди видаються вручну.
+
+   Лише ті, у кого доступ скінчився не раніше ніж 60 днів тому: перший
+   деплой не розсилає листи всім, хто пішов колись. Знову оплатив або
+   відписався — тиша. Кожен лист рівно один раз (claim як вище).
+================================================================== */
+
+function mailWb14(uid) {
+  return {
+    subject: 'Що змінилось у THE EDGE',
+    html: letter(
+      'Що змінилось у THE EDGE',
+      [
+        'Привіт! Це розробник THE EDGE. Два тижні тому закінчився твій доступ до платних розділів, і мені важливо зрозуміти, чому ти не лишився.',
+        'Відтоді зʼявились тариф Lite за $5 (бектести без ліміту + Telegram-бот), нова анкета й чекліст старту. Журнал, аналітика й калькулятор на Free лишились безкоштовними, твої угоди на місці.',
+        'Якщо чогось бракувало або щось бісило — просто відповідай на цей лист одним реченням. Я читаю кожен.',
+      ],
+      { href: `${site()}/app`, text: 'Відкрити журнал' },
+      `Лист надіслано, бо в тебе був платний доступ на theedgecat.com. <a href="${unsubUrl(uid)}" style="color:#8E8E99">Не надсилати таких листів</a><br>Питання?`,
+    ),
+  };
+}
+
+function mailWb30(uid) {
+  return {
+    subject: 'Твій журнал на місці',
+    html: letter(
+      'Твій журнал на місці',
+      [
+        'Місяць тому скінчився твій доступ до платних розділів THE EDGE. Нічого не зникло: угоди, плани й статистика лежать там, де були, і журнал працює на Free.',
+        'Якщо повертаєшся до тестування стратегій — Lite за $5/міс відкриває бектести без ліміту і Telegram-бота. Автоімпорт MT5 і кілька рахунків — у Pro.',
+      ],
+      { href: `${site()}/app?settings=billing&plan=lite`, text: 'Подивитись тарифи' },
+      `Лист надіслано, бо в тебе був платний доступ на theedgecat.com. <a href="${unsubUrl(uid)}" style="color:#8E8E99">Не надсилати таких листів</a><br>Питання?`,
+    ),
+  };
+}
+
+export async function runWinback() {
+  if (process.env.WINBACK_MAIL_OFF === '1' || !process.env.RESEND_API_KEY) return;
+  const db = admin();
+  const now = Date.now();
+  const since = new Date(now - 60 * 24 * H).toISOString();
+  const until = new Date(now - 14 * 24 * H).toISOString();
+
+  const { data: subs, error } = await db.from('subscriptions')
+    .select('user_id,status,valid_until,trial_used_at')
+    .gte('valid_until', since).lte('valid_until', until);
+  if (error) { console.error('winback:', error.message); return; }
+  /* Ті, у кого був платний доступ (оплата чи тріал) і хто не
+     продовжив. Тріал теж рахуємо: людина спробувала й пішла — саме
+     її відповідь «чому» нам найцікавіша. Тому й тексти нейтральні:
+     «закінчився доступ», а не «ти платив». */
+  const gone = (subs || []).filter((s) => ['canceled', 'past_due', 'inactive', 'expired'].includes(s.status));
+  if (!gone.length) return;
+
+  for (const s of gone) {
+    try {
+      const age = now - new Date(s.valid_until).getTime();
+      const kind = age >= 30 * 24 * H ? 'wb30' : 'wb14';
+      const col = kind === 'wb30' ? 'sent_wb30_at' : 'sent_wb14_at';
+      const { data: row } = await db.from('onboard_mail').select('sent_wb14_at,sent_wb30_at,unsubscribed').eq('user_id', s.user_id).maybeSingle();
+      if (row?.unsubscribed || row?.[col]) continue;
+      /* Два листи в один день — ні: хто не отримав 14-денний вчасно,
+         отримає 30-денний не раніше ніж за тиждень після нього. */
+      if (kind === 'wb30' && row?.sent_wb14_at && now - new Date(row.sent_wb14_at).getTime() < 7 * 24 * H) continue;
+      if (!(await claim(db, s.user_id, col))) continue;
+
+      const { data: u } = await db.auth.admin.getUserById(s.user_id);
+      const email = u?.user?.email;
+      if (!email) continue;
+      const m = kind === 'wb30' ? mailWb30(s.user_id) : mailWb14(s.user_id);
+      await sendMail(email, m.subject, m.html);
+      console.log(`winback: ${kind} → ${s.user_id}`);
+    } catch (e) {
+      console.error('winback:', s.user_id, e.message);
+    }
+  }
+}
+
+/* Для ручної перевірки листів (scripts/test-mail.mjs): усі шаблони
+   без будь-якої логіки відбору. */
+export const sampleMails = (uid = '00000000-0000-0000-0000-000000000000') => ({
+  onboard24: mail24('mt5', uid),
+  onboard3d: mail3d(uid),
+  winback14: mailWb14(uid),
+  winback30: mailWb30(uid),
+});

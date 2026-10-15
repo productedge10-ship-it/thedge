@@ -189,7 +189,7 @@ export const PRO_FEATURES = {
   },
   backtest: {
     tier: 'lite',
-    title: tx('Бектест', 'Backtest'),
+    title: tx('Бектест на реальному графіку', 'Real-chart backtest'),
     hint: tx('Прогін стратегії по історії з тими самими метриками, що й у журналі', 'Run your strategy on historical data with the same metrics as your journal'),
   },
   /* soon — функції ще немає. Екран підписки показує її окремим рядком
@@ -199,14 +199,12 @@ export const PRO_FEATURES = {
   props: {
     tier: 'pro',
     title: tx('Контроль правил пропфірми', 'Prop firm rules control'),
-    hint: tx('Шаблони FTMO, FundingPips, The5ers: денний і загальний ліміт просадки, «до порушення лишилось $X»', 'FTMO, FundingPips, The5ers templates: daily and max drawdown, “$X left before a breach”'),
-    soon: true,
+    hint: tx('Денний і загальний ліміт по equity з MT5: «до порушення лишилось $X»', 'Daily and max drawdown on MT5 equity: “$X left before a breach”'),
   },
   propAlerts: {
     tier: 'pro',
     title: tx('Алерти ліміту в Telegram', 'Limit alerts in Telegram'),
     hint: tx('Повідомлення, коли використано 70% і 90% денного чи загального ліміту', 'A message when 70% and 90% of the daily or max limit is used'),
-    soon: true,
   },
   tradeBot: {
     tier: 'pro',
@@ -257,6 +255,17 @@ export async function backtestFreeLimit() {
     const { data, error } = await supabase.rpc('backtest_free_limit');
     return error ? null : Number(data);
   } catch { return null; }
+}
+
+/* Чи можна зараз відкрити реальний графік (сесія — необовʼязково).
+   Lite/Pro — завжди; Free — лише в свою сесію-графік у межах квоти або,
+   без сесії, поки квота не скінчилась. Функції може ще не бути (SQL не
+   виконано) — тоді true, щоб не зачинити графік усім через збій. */
+export async function chartAccess(sessionId) {
+  try {
+    const { data, error } = await supabase.rpc('chart_access', { p_session: sessionId || null });
+    return error ? true : !!data;
+  } catch { return true; }
 }
 
 export async function backtestFreeLeft() {
