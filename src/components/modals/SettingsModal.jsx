@@ -230,6 +230,7 @@ export default function SettingsModal() {
      в застосунок і не зрозуміла, куди подівся новий пароль. */
   const [open, setOpen] = useState(ARRIVED_FOR_PASSWORD);
   const [tab, setTab] = useState('profile');
+  const [planHint, setPlanHint] = useState(null);
   const [armed, setArmed] = useState(ARRIVED_FOR_PASSWORD);
   const [confirmReset, setConfirmReset] = useState(false);
 
@@ -252,6 +253,7 @@ export default function SettingsModal() {
          в «AutoImport MT5», і змушувати шукати її очима було б дивно. */
       const want = e?.detail?.tab;
       if (want) setTab(want);
+      setPlanHint(e?.detail?.plan ? { tier: e.detail.plan, n: Date.now() } : null);
       setOpen(true);
     };
     window.addEventListener(OPEN_EVENT, onOpen);
@@ -911,7 +913,7 @@ export default function SettingsModal() {
                   : <ProGate feature="mt5" upgrade={sub.hasLite} onStart={() => startCheckout('pro_monthly', { trial: !sub.hasLite }).then(() => sub.refresh())} />)}
 
                 {/* ================= Telegram ================= */}
-                {safeTab === 'billing' && (sub.ready ? <SubscriptionTab sub={sub} onChanged={sub.refresh} /> : null)}
+                {safeTab === 'billing' && (sub.ready ? <SubscriptionTab sub={sub} onChanged={sub.refresh} planHint={planHint} /> : null)}
 
                 {safeTab === 'share' && <ShareTab />}
                 {safeTab === 'referral' && <ReferralTab />}

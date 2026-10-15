@@ -14,7 +14,7 @@ import { t as tx } from '../../lib/lang';
 import { track } from '../../lib/analytics';
 import {
   LIST_KEY, LIST_EMPTY, normalizeList, CHECKLIST_DAYS, noAutoImport, platformName,
-  demoUrl, markDemoSeen, demoSeen,
+  demoUrl, markDemoSeen, demoSeen, isWarmingUp,
 } from '../../lib/onboard';
 
 /* ==================================================================
@@ -165,7 +165,7 @@ export default function StartChecklist() {
   const locked = [
     !sub.isPro && { id: 'mt5', tier: 'Pro', icon: Plug, title: tx('Автоімпорт з MT5', 'MT5 auto-import'), sub: tx('Угоди підтягуються самі, без ручного вводу.', 'Trades sync on their own, no manual entry.'), go: () => openSettings('connect') },
     !sub.hasLite && { id: 'bot', tier: 'Lite', icon: Send, title: tx('Telegram-бот', 'Telegram bot'), sub: tx('План, нагадування і підсумок дня в чат.', 'Plan, reminders and daily wrap in your chat.'), go: () => openSettings('telegram') },
-    !sub.hasLite && { id: 'bt', tier: 'Lite', icon: FlaskConical, title: tx('Бектести без обмежень', 'Unlimited backtests'), sub: tx('Безкоштовно — 2, за цей чекліст ще +1.', 'Free plan — 2, plus 1 for this checklist.'), go: () => openSettings('billing') },
+    !sub.hasLite && { id: 'bt', tier: 'Lite', icon: FlaskConical, title: tx('Бектести без обмежень', 'Unlimited backtests'), sub: tx('Безкоштовно — 2, за цей чекліст ще +1.', 'Free plan — 2, plus 1 for this checklist.'), go: () => openSettings('billing', { plan: 'lite' }) },
   ].filter(Boolean);
 
   const Item = ({ step, title, sub, children }) => (
@@ -250,6 +250,10 @@ export default function StartChecklist() {
                   : tx('Хвилина: інструмент, результат, причина входу.', 'A minute: instrument, result, reason for entry.')}
               >
                 <Btn primary={steps[1].done} icon={PenLine} onClick={addManual}>{tx('Внести вручну', 'Log manually')}</Btn>
+                {/* Ще не торгує регулярно — даємо потренуватись на історії. */}
+                {isWarmingUp(answers) && (
+                  <Btn icon={FlaskConical} onClick={() => navigate('/backtest')}>{tx('Спершу бектест', 'Backtest first')}</Btn>
+                )}
               </Item>
 
               <Item step={steps[3]} title={tx('Подивитись приклад статистики', 'See an example of the stats')} sub={tx('Журнал на демо-угодах: крива в R, сесії, помилки.', 'The journal on demo trades: R curve, sessions, mistakes.')}>

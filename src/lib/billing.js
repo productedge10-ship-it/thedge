@@ -252,6 +252,13 @@ export const FREE_LIMITS = {
 
 /* Скільки безкоштовних бектестів лишилось. Функції може ще не бути
    (SQL не виконано) — тоді null, і інтерфейс просто не показує лічильник. */
+export async function backtestFreeLimit() {
+  try {
+    const { data, error } = await supabase.rpc('backtest_free_limit');
+    return error ? null : Number(data);
+  } catch { return null; }
+}
+
 export async function backtestFreeLeft() {
   try {
     const { data, error } = await supabase.rpc('backtest_free_left');

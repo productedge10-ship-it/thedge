@@ -243,5 +243,5 @@ export const OPEN_EVENT = 'edge:settings';
    коли в налаштування ведуть не з меню, а з конкретного місця: з
    «Accounts» логічно потрапити одразу в «AutoImport MT5», а не шукати
    потрібну вкладку самому. */
-export const openSettings = (tab) =>
-  window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: tab ? { tab } : null }));
+export const openSettings = (tab, opts) =>
+  window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: tab ? { tab, ...(opts || {}) } : null }));

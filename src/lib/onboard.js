@@ -57,7 +57,12 @@ export const TPW = [
   ['1-5', '1–5'],
   ['5-15', '5–15'],
   ['15+', '15+'],
+  ['unknown', tx('Не знаю', 'Not sure')],
 ];
+
+/* Ще не торгує регулярно: не знає темпу або вчиться. Таким головна
+   дія — бектест і приклад, а не «внеси угоду», якої ще немає. */
+export const isWarmingUp = (s) => s?.tpw === 'unknown' || s?.goal === 'learning';
 
 export const platformName = (id) => (PLATFORMS.find((p) => p[0] === id) || [])[1] || '';
 

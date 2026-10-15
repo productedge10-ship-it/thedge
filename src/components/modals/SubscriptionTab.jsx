@@ -482,13 +482,14 @@ function PromoBox({ discount, onDone }) {
   );
 }
 
-export default function SubscriptionTab({ sub, onChanged }) {
+export default function SubscriptionTab({ sub, onChanged, planHint }) {
   const { emailVerified } = useAuth();
   /* Тариф і період окремо: план = тариф × період. Тариф з адреси
      (?plan=lite з лендингу), інакше Pro — він відкриває найбільше. */
   const [tier, setTier] = useState(() => (
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('plan') === 'lite' ? 'lite' : 'pro'
   ));
+  useEffect(() => { if (planHint?.tier === 'lite' || planHint?.tier === 'pro') setTier(planHint.tier); }, [planHint]);
   const [periodKind, setPeriodKind] = useState('monthly');
   const period = planFor(tier, periodKind);
   /* Повідомлення після зміни тарифу без оплати. */

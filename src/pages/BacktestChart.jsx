@@ -748,7 +748,7 @@ export default function BacktestChart() {
     } catch (e) {
       notify.error(tx('Не вдалось створити бектест', 'Couldn’t create the backtest'), e.message);
       /* Безкоштовні скінчились — одразу показуємо тарифи. */
-      if (e?.code === 'backtest_limit') openSettings('billing');
+      if (e?.code === 'backtest_limit') openSettings('billing', { plan: 'lite' });
     } finally {
       setCreatingSession(false);
     }

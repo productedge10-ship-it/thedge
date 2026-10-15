@@ -20,7 +20,7 @@ import NewBacktestModal from '../components/backtest/NewBacktestModal';
 import { insertSession, isChartSession, chartUrl, statsUrl } from '../lib/backtestMode';
 import { remoteAllowed, getCatalog, warmSymbol } from '../lib/candles/remote';
 import useSubscription from '../hooks/useSubscription';
-import { backtestFreeLeft, FREE_LIMITS } from '../lib/billing';
+import { backtestFreeLeft, backtestFreeLimit, FREE_LIMITS } from '../lib/billing';
 import { hasFreeBacktest } from '../lib/betaAccess';
 import { openSettings } from '../lib/settings';
 
@@ -174,12 +174,15 @@ export default function Backtest() {
      а не наявні: видалений бектест слот не повертає). */
   const sub = useSubscription();
   const [freeLeft, setFreeLeft] = useState(null);
+  const [freeLimit, setFreeLimit] = useState(FREE_LIMITS.backtests);
   useEffect(() => {
     if (!user?.id) return;
     backtestFreeLeft().then(setFreeLeft);
+    /* Ліміт разом із бонусом за чекліст: 2 + 1 = «з 3», а не «з 2». */
+    backtestFreeLimit().then((n) => { if (n) setFreeLimit(n); });
   }, [user?.id, sessions.length]);
   const limited = sub.ready && !sub.hasLite && freeLeft != null && !hasFreeBacktest(user?.email);
-  const toLite = () => openSettings('billing');
+  const toLite = () => openSettings('billing', { plan: 'lite' });
 
   /* Перезавантажуємо список тільки коли змінюється користувач.
      load() оголошена в тілі компонента й пересоздається щорендера —
@@ -227,9 +230,12 @@ export default function Backtest() {
         .order('created_at', { ascending: false });
       if (error) throw error;
 
+      /* Своїх бектестів ще немає — порожній стан з кнопкою, а не чужі
+         демо-прогони: вони плутали, особливо поруч із лічильником
+         безкоштовних бектестів. Демо лишається лише для гостя. */
       if (!rows || rows.length === 0) {
-        setSessions(DEMO_SESSIONS);
-        setUsingDemo(true);
+        setSessions([]);
+        setUsingDemo(false);
       } else {
         const ids = rows.map((r) => r.id);
         const { data: trades } = await supabase
@@ -247,8 +253,8 @@ export default function Backtest() {
       }
     } catch (e) {
       console.error(e);
-      setSessions(DEMO_SESSIONS);
-      setUsingDemo(true);
+      setSessions([]);
+      setUsingDemo(false);
     } finally {
       setLoading(false);
     }
@@ -446,8 +452,8 @@ export default function Backtest() {
             {limited && (
               <p style={{ fontFamily: T.sans, marginTop: 8, fontSize: 13, color: freeLeft > 0 ? T.text3 : T.warn }}>
                 {freeLeft > 0
-                  ? tx(`Безкоштовно: лишилось ${freeLeft} з ${FREE_LIMITS.backtests} бектестів. `, `Free plan: ${freeLeft} of ${FREE_LIMITS.backtests} backtests left. `)
-                  : tx('Безкоштовні бектести використано. ', 'Free backtests used up. ')}
+                  ? tx(`Безкоштовно: лишилось ${freeLeft} з ${freeLimit} бектестів. `, `Free plan: ${freeLeft} of ${freeLimit} backtests left. `)
+                  : tx(`Безкоштовні бектести використано (${freeLimit} з ${freeLimit}). `, `Free backtests used up (${freeLimit} of ${freeLimit}). `)}
                 <button type="button" onClick={toLite} style={{ color: T.acc, textDecoration: 'underline', textUnderlineOffset: 3, fontWeight: 600 }}>
                   {tx('Lite — без обмежень за $5/міс', 'Lite — unlimited for $5/mo')}
                 </button>
