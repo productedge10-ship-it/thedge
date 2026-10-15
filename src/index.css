@@ -20,7 +20,7 @@
 body {
   background-color: #111111;
   color: #ededed;
-  font-family: var(--edge-sans, "Golos Text"), system-ui, sans-serif;
+  font-family: var(--edge-sans, "Golos Text"), "Golos Fallback", system-ui, sans-serif;
   margin: 0;
 }
 
@@ -645,7 +645,7 @@ input.edge-page-title { line-height: 1.15 !important; }
   gap: 8px;
   flex-shrink: 0;
   border: 1px solid transparent;
-  font-family: var(--edge-sans, "Golos Text"), system-ui, sans-serif;
+  font-family: var(--edge-sans, "Golos Text"), "Golos Fallback", system-ui, sans-serif;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
@@ -1461,7 +1461,7 @@ input.edge-page-title { line-height: 1.15 !important; }
   /* Основний шрифт застосунку, а не дисплейний. Space Grotesk у
      нас — шрифт знака й великих чисел; у тілі тексту він читається
      як цитата з іншого продукту. */
-  font-family: var(--edge-sans, 'Golos Text', system-ui, sans-serif);
+  font-family: var(--edge-sans, 'Golos Text', 'Golos Fallback', system-ui, sans-serif);
   font-size: 13.5px;
   line-height: 1.4;
   color: rgba(var(--edge-text-rgb, 242,244,243), .88);

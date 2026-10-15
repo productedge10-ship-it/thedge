@@ -55,11 +55,20 @@ const GRACE_MS = 24 * 3600 * 1000;
 export const MAX_ATTEMPTS = 3;
 
 /* Дзеркало src/lib/billing.js — ціна в доларах. Сервер бере суму
-   звідси, а не з браузера. */
+   звідси, а не з браузера.
+
+   tier — що відкриває оплата: subscriptions.plan = 'lite' | 'pro'.
+   Lite — бектести й Telegram-бот, Pro — усе з Lite плюс MT5 і рахунки. */
 export const PLANS = {
-  pro_monthly: { title: 'The Edge Pro — місяць', usd: 15, period: 'monthly' },
-  pro_yearly: { title: 'The Edge Pro — рік', usd: 144, period: 'yearly' },
+  lite_monthly: { title: 'The Edge Lite — місяць', usd: 5, period: 'monthly', tier: 'lite' },
+  lite_yearly: { title: 'The Edge Lite — рік', usd: 48, period: 'yearly', tier: 'lite' },
+  pro_monthly: { title: 'The Edge Pro — місяць', usd: 15, period: 'monthly', tier: 'pro' },
+  pro_yearly: { title: 'The Edge Pro — рік', usd: 144, period: 'yearly', tier: 'pro' },
 };
+
+export const tierOf = (planId) => PLANS[planId]?.tier || 'pro';
+export const tierName = (planId) => (tierOf(planId) === 'lite' ? 'Lite' : 'Pro');
+export const PERIOD_MS = { monthly: 30 * 24 * 3600 * 1000, yearly: 365 * 24 * 3600 * 1000 };
 
 export const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status,
@@ -349,7 +358,7 @@ export const letter = (title, lines, cta, foot = 'Лист надіслано, �
 <p style="color:#4a4a52;font-size:12px;line-height:1.6;margin:18px 0 0">${foot} Пиши нам у Telegram: <a href="https://t.me/thedgesupport" style="color:#8b7bff;text-decoration:none">@thedgesupport</a></p>
 </td></tr></table></body></html>`;
 
-const planWord = (planId) => (planId === 'pro_yearly' ? 'річну' : 'місячну');
+const planWord = (planId) => (PLANS[planId]?.period === 'yearly' ? 'річну' : 'місячну');
 const moneyOf = (amount, currency) => (currency === 'UAH' ? `${Number(amount).toLocaleString('uk-UA')} ₴` : `$${amount}`);
 
 async function thankYou(db, userId, kind, { nextCharge, amount, currency, plan }) {
@@ -359,30 +368,34 @@ async function thankYou(db, userId, kind, { nextCharge, amount, currency, plan }
   const app = `${site()}/app`;
   const money = moneyOf(amount, currency);
   const word = planWord(plan);
+  const tn = tierName(plan);
+  const what = tierOf(plan) === 'lite'
+    ? 'бектести без обмежень і Telegram-бот'
+    : 'автоімпорт з MetaTrader 5, Telegram-бот, бектест і до 5 рахунків';
 
   if (kind === 'verify') {
-    await sendMail(email, 'Pro активовано — 14 днів безкоштовно', letter(
+    await sendMail(email, `${tn} активовано — 14 днів безкоштовно`, letter(
       'Дякуємо, що з нами!',
       [
-        'Картку привʼязано, Pro уже працює: автоімпорт з MetaTrader 5, Telegram-бот, бектест і до 5 рахунків.',
+        `Картку привʼязано, ${tn} уже працює: ${what}.`,
         `Наступні ${TRIAL_DAYS} днів безкоштовні: 1 ₴ за перевірку картки ми вже повернули. Перше списання — <b style="color:#fafafa">${fmtDay(nextCharge)}</b>. Скасувати можна будь-коли в налаштуваннях, до цієї дати гроші не знімаються.`,
       ],
       { href: app, text: 'Відкрити журнал' },
     ));
   } else if (kind === 'renew') {
-    await sendMail(email, `Підписку Pro продовжено — ${money}`, letter(
+    await sendMail(email, `Підписку ${tn} продовжено — ${money}`, letter(
       'Підписку продовжено',
       [
-        `Ми списали ${money} за ${word} підписку Pro, доступ продовжено. Дякуємо, що ти з нами!`,
+        `Ми списали ${money} за ${word} підписку ${tn}, доступ продовжено. Дякуємо, що ти з нами!`,
         `Наступне списання — <b style="color:#fafafa">${fmtDay(nextCharge)}</b>. Керувати підпискою можна в налаштуваннях.`,
       ],
       { href: app, text: 'Відкрити журнал' },
     ));
   } else {
-    await sendMail(email, `Дякуємо за придбання ${word} підписки Pro`, letter(
+    await sendMail(email, `Дякуємо за придбання ${word} підписки ${tn}`, letter(
       'Дякуємо за придбання!',
       [
-        `Оплату ${money} за ${word} підписку Pro отримано, усе активовано.`,
+        `Оплату ${money} за ${word} підписку ${tn} отримано, усе активовано.`,
         `Наступне списання — <b style="color:#fafafa">${fmtDay(nextCharge)}</b>. Керувати підпискою можна в налаштуваннях.`,
       ],
       { href: app, text: 'Відкрити журнал' },
@@ -399,25 +412,26 @@ async function failedPayment(db, order, attempts, validUntil) {
   if (!email) return;
   const money = moneyOf(order.amount, order.currency);
   const word = planWord(order.plan);
+  const tn = tierName(order.plan);
   const href = `${site()}/app?settings=billing`;
 
   if (attempts < MAX_ATTEMPTS) {
-    await sendMail(email, 'Не вдалося списати оплату за Pro', letter(
+    await sendMail(email, `Не вдалося списати оплату за ${tn}`, letter(
       'Не вдалося списати оплату',
       [
-        `Банк відхилив списання ${money} за ${word} підписку Pro. Доступ поки діє, і ми спробуємо ще раз завтра (спроба ${attempts} з ${MAX_ATTEMPTS}).`,
+        `Банк відхилив списання ${money} за ${word} підписку ${tn}. Доступ поки діє, і ми спробуємо ще раз завтра (спроба ${attempts} з ${MAX_ATTEMPTS}).`,
         'Перевір на картці баланс і ліміти на онлайн-платежі. Щоб не чекати, можна оплатити вручну.',
       ],
       { href, text: 'Оплатити вручну' },
     ));
   } else {
-    await sendMail(email, 'Автосписання вимкнено — онови оплату Pro', letter(
+    await sendMail(email, `Автосписання вимкнено — онови оплату ${tn}`, letter(
       'Автосписання вимкнено',
       [
-        `Банк відхилив ${MAX_ATTEMPTS} спроби списати ${money} за ${word} підписку Pro, тому автоматичні списання ми зупинили.`,
+        `Банк відхилив ${MAX_ATTEMPTS} спроби списати ${money} за ${word} підписку ${tn}, тому автоматичні списання ми зупинили.`,
         validUntil
-          ? `Pro працює до <b style="color:#fafafa">${fmtDay(validUntil)}</b>. Щоб не втратити автоімпорт, бота й бектест, оплати підписку вручну.`
-          : 'Щоб не втратити автоімпорт, бота й бектест, оплати підписку вручну.',
+          ? `${tn} працює до <b style="color:#fafafa">${fmtDay(validUntil)}</b>. Щоб не втратити доступ, оплати підписку вручну.`
+          : 'Щоб не втратити доступ, оплати підписку вручну.',
       ],
       { href, text: 'Оплатити підписку' },
     ));
@@ -522,7 +536,7 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
 
     const now = new Date();
     const period = order.kind === 'verify' ? 'trial'
-      : (order.plan === 'pro_yearly' ? 'yearly' : 'monthly');
+      : (PLANS[order.plan]?.period === 'yearly' ? 'yearly' : 'monthly');
 
     /* Чергове списання продовжує від запланованої дати, а не від
        «зараз»: якщо планувальник спізнився на годину, людина не має
@@ -547,7 +561,9 @@ export async function applyInvoice(db, body, { trusted = false } = {}) {
 
     must(await db.from('subscriptions').upsert({
       user_id: order.user_id,
-      plan: 'pro',
+      /* Тариф — з оплаченого замовлення: так перехід Pro → Lite, що
+         чекав на чергове списання, вмикається саме тут. */
+      plan: tierOf(order.plan),
       provider: 'mono',
       plan_id: order.plan,
       status: order.kind === 'verify' ? 'trialing' : 'active',
@@ -812,23 +828,24 @@ export async function runChargeReminders() {
       const terms = await referralTerms(db, s.user_id, await priceFor(planId), await promoFor(db, s.user_id));
       const money = moneyOf(terms.price.amount, terms.price.currency);
       const word = planWord(planId);
+      const tn = tierName(planId);
       const day = fmtDay(s.next_charge_at);
       const href = `${site()}/app?settings=billing`;
 
       if (s.status === 'trialing') {
-        await sendMail(email, 'Пробний період Pro скоро закінчується', letter(
+        await sendMail(email, `Пробний період ${tn} скоро закінчується`, letter(
           'Пробний період закінчується',
           [
-            `<b style="color:#fafafa">${day}</b> закінчується безкоштовний період, і ми спишемо ${money} за ${word} підписку Pro з привʼязаної картки.`,
+            `<b style="color:#fafafa">${day}</b> закінчується безкоштовний період, і ми спишемо ${money} за ${word} підписку ${tn} з привʼязаної картки.`,
             'Не хочеш продовжувати? Скасуй підписку в налаштуваннях до цієї дати, і гроші не знімуться.',
           ],
           { href, text: 'Керувати підпискою' },
         ));
       } else {
-        await sendMail(email, 'Скоро оплата підписки Pro', letter(
+        await sendMail(email, `Скоро оплата підписки ${tn}`, letter(
           'Скоро оплата підписки',
           [
-            `<b style="color:#fafafa">${day}</b> ми спишемо ${money} за ${word} підписку Pro з привʼязаної картки.`,
+            `<b style="color:#fafafa">${day}</b> ми спишемо ${money} за ${word} підписку ${tn} з привʼязаної картки.`,
             'Нічого робити не треба. Щоб скасувати підписку чи змінити тариф, зайди в налаштування до цієї дати.',
           ],
           { href, text: 'Керувати підпискою' },

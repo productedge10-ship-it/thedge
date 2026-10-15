@@ -10,6 +10,7 @@
 import {
   PLANS, TRIAL_DAYS, TRIAL_CHECK_UAH, json, site, admin, newReference, mono, priceFor,
   promoFor, referralTerms, referralFields, emailMark, isDisposable, markTakenByOther, claimMark,
+  tierOf, PERIOD_MS,
 } from './_mono.mjs';
 
 export default async (req) => {
@@ -44,17 +45,62 @@ export default async (req) => {
   }
 
   const { data: sub } = await db.from('subscriptions')
-    .select('trial_used_at,status,valid_until,plan')
+    .select('trial_used_at,status,valid_until,plan,plan_id,provider,next_charge_at')
     .eq('user_id', user.id).maybeSingle();
 
-  /* Уже є діючий Pro — другий рахунок не виставляємо: інакше подвійний
-     клік чи друга вкладка дають дві підписки й два списання. */
-  const live = sub?.plan === 'pro'
+  /* Діюча підписка (Lite чи Pro). Другий рахунок на той самий тариф не
+     виставляємо: подвійний клік чи друга вкладка дали б два списання.
+     Зміна тарифу — окремі гілки нижче. */
+  const want = tierOf(planId);
+  const live = ['lite', 'pro'].includes(sub?.plan)
     && ['active', 'trialing', 'past_due'].includes(sub?.status)
     && (!sub.valid_until || Date.parse(sub.valid_until) > Date.now());
-  if (live) return json({ error: 'Підписка вже активна' }, 409);
+  const isMono = sub?.provider === 'mono';
+  /* Апгрейд Lite → Pro з оплаченого місяця: залишок Lite зараховуємо. */
+  let upgradeCredit = 0;
 
-  let trial = body?.trial === true && !sub?.trial_used_at;
+  if (live) {
+    const nowTier = sub.plan;
+    const pendingTier = PLANS[sub.plan_id] ? tierOf(sub.plan_id) : nowTier;
+
+    if (want === nowTier) {
+      /* Pro з відкладеним переходом на Lite і людина передумала —
+         просто повертаємо Pro на наступне списання. */
+      if (isMono && pendingTier !== nowTier) {
+        await db.from('subscriptions').update({ plan_id: planId, updated_at: new Date().toISOString() }).eq('user_id', user.id);
+        return json({ ok: true, switched: true });
+      }
+      return json({ error: 'Підписка вже активна' }, 409);
+    }
+
+    /* Pro → Lite. Гроші за Pro вже сплачені — доступ до кінця періоду
+       лишається, а з наступного списання картка платить ціну Lite. */
+    if (nowTier === 'pro' && want === 'lite') {
+      if (!isMono || sub.status === 'past_due') {
+        return json({ error: 'Змінити тариф можна після завершення поточного періоду' }, 409);
+      }
+      await db.from('subscriptions').update({ plan_id: planId, updated_at: new Date().toISOString() }).eq('user_id', user.id);
+      return json({ ok: true, scheduled: true, at: sub.next_charge_at });
+    }
+
+    /* Lite → Pro на пробному періоді — просто міняємо тариф: картка вже
+       привʼязана, а платити ще нічого. */
+    if (nowTier === 'lite' && want === 'pro' && sub.status === 'trialing' && isMono) {
+      await db.from('subscriptions').update({ plan: 'pro', plan_id: planId, updated_at: new Date().toISOString() }).eq('user_id', user.id);
+      return json({ ok: true, switched: true });
+    }
+
+    /* Lite → Pro з оплаченого періоду: платимо Pro зараз, а невикористані
+       дні Lite віднімаємо від суми. Новий період Pro рахується від сьогодні. */
+    if (nowTier === 'lite' && want === 'pro' && isMono && sub.next_charge_at && PLANS[sub.plan_id]) {
+      const cur = PLANS[sub.plan_id];
+      const leftMs = Math.max(0, Date.parse(sub.next_charge_at) - Date.now());
+      const share = Math.min(1, leftMs / (PERIOD_MS[cur.period] || PERIOD_MS.monthly));
+      upgradeCredit = Math.round(cur.usd * share * 100) / 100;
+    }
+  }
+
+  let trial = body?.trial === true && !sub?.trial_used_at && !live;
 
   /* Тріал на одноразову скриньку чи на пошту, з якої його вже брали
      (з точністю до крапок і +тегів у Gmail), — не даємо. Не мовчки
@@ -97,6 +143,15 @@ export default async (req) => {
          перевірочну гривню (див. referralTerms у _mono.mjs). */
       terms = await referralTerms(db, user.id, await priceFor(planId), promo);
       ({ price, promo } = terms);
+      /* Залишок Lite — пропорційно в тій самій валюті, що й рахунок.
+         Мінімум 10% від суми: рахунок на нуль mono не створить. */
+      if (upgradeCredit > 0) {
+        const factor = Math.max(0.1, 1 - upgradeCredit / PLANS[planId].usd);
+        const amount = price.currency === 'UAH'
+          ? Math.round(price.amount * factor)
+          : Math.round(price.amount * factor * 100) / 100;
+        price = { ...price, amount, minor: Math.round(amount * 100) };
+      }
     }
   } catch (e) {
     console.error('mono pay: курс —', e.message);

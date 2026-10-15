@@ -105,7 +105,7 @@ export async function applyIpn(db, body) {
     must(await patch({ status: 'approved', paid_at: new Date().toISOString() }), 'payment_orders');
     must(await db.from('subscriptions').upsert({
       user_id: order.user_id,
-      plan: 'pro',
+      plan: PLANS[order.plan]?.tier || 'pro',
       provider: 'crypto',
       plan_id: order.plan,
       status: 'active',

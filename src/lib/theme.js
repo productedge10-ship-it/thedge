@@ -79,8 +79,8 @@ export const T = {
      місці — і його підхоплять усі тисячі inline-стилів, не змінюючи
      жодного з них. Значення за замовчуванням лишається в fallback,
      тому без перемикача поводиться рівно як раніше. */
-  display: "var(--edge-display, 'Unbounded', system-ui, -apple-system, sans-serif)",
-  sans:    "var(--edge-sans, 'Golos Text', system-ui, -apple-system, sans-serif)",
+  display: "var(--edge-display, 'Unbounded', 'Unbounded Fallback', system-ui, -apple-system, sans-serif)",
+  sans:    "var(--edge-sans, 'Golos Text', 'Golos Fallback', system-ui, -apple-system, sans-serif)",
   /* JetBrains Mono — першим: його вантажать Layout, вхід і лендінг.
      Без нього в стеку на Windows ui-monospace не працює, SF Mono й
      Menlo немає, і браузер доходив до загального monospace — тобто

@@ -164,7 +164,7 @@ function LiveDemo() {
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
           />
         ) : (
-          <img src="/blog/guide/analytics.jpg" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+          <img src="/blog/guide/analytics.webp" alt="" loading="lazy" decoding="async" width="1175" height="824" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
         )}
       </div>
       <figcaption style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '12px 16px', fontFamily: F.sans, fontSize: 13, color: C.text3, borderTop: '1px solid rgba(255,255,255,.06)' }}>
@@ -254,6 +254,7 @@ export const PRICES_CHECKED = '2026-10-14';
 
 const COMPARE = [
   { name: 'THE EDGE Pro', year: 144, month: 15, free: true, mt5: true, bt: true, uk: true, us: true },
+  { name: 'THE EDGE Lite', year: 48, month: 5, free: true, mt5: false, bt: true, uk: true, us: true },
   { name: 'Edgewonk', year: 197, month: null, free: false, mt5: true, bt: false, uk: false },
   { name: 'TradeZella Basic', year: 288, month: 29, free: false, mt5: true, bt: 'part', uk: false },
   { name: 'TradeZella Pro', year: 399, month: 49, free: false, mt5: true, bt: true, uk: false },

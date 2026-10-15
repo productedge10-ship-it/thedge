@@ -151,29 +151,44 @@ export function NotDoing() {
 /* ---------- ціни ---------- */
 
 const FREE = {
-  uk: ['План на день', 'Журнал без обмежень', 'Діагностика перед сесією', 'Задачі й чекліст', 'Документи торгової системи'],
-  en: ['Daily plan', 'Unlimited journal', 'Pre-session check-in', 'Tasks and checklist', 'Trading system docs'],
+  uk: ['Журнал без обмежень', 'Уся аналітика в R', 'План на день і чекліст', 'Калькулятор ризику', '2 бектести на реальних даних', '1 рахунок'],
+  en: ['Unlimited journal', 'Full analytics in R', 'Daily plan and checklist', 'Risk calculator', '2 backtests on real data', '1 account'],
+};
+/* Lite — для тих, хто ще вчиться чи йде до пропу: бектест і бот без
+   автоімпорту. Перелік короткий навмисно: «усе з Free» + своє. */
+const LITE = {
+  uk: ['Усе з Free', 'Бектести без обмежень', 'Telegram-бот: план, нагадування, підсумки'],
+  en: ['Everything in Free', 'Unlimited backtests', 'Telegram bot: plan, reminders, summaries'],
 };
 /* `soon` — це не позначка «колись». Поки функції немає, вона не має
    виглядати частиною того, за що людина платить сьогодні: інакше
    перший же тиждень підписки закінчується питанням «а де AI». */
 const PRO = {
   uk: [
-    'Повна аналітика',
-    'Бектести',
-    'Автоімпорт MT5',
-    'Пропрахунки з виплатами',
-    'Картки статистики',
+    'Усе з Lite',
+    'Автоімпорт угод з MT5',
+    'До 5 рахунків: пропи, реал, демо окремо',
+    { text: 'Автоконтроль правил пропфірми', soon: true },
+    { text: 'Алерти ліміту просадки в Telegram', soon: true },
+    { text: 'Бот після угоди: «чому зайшов»', soon: true },
+    { text: 'Тижневий розбір з найдорожчою помилкою', soon: true },
     { text: 'AI-коуч на твоїх угодах', soon: true },
   ],
   en: [
-    'Full analytics',
-    'Backtests',
-    'MT5 auto-import',
-    'Prop accounts with payouts',
-    'Stats cards',
+    'Everything in Lite',
+    'MT5 trade auto-import',
+    'Up to 5 accounts: prop, live, demo apart',
+    { text: 'Automatic prop firm rules tracking', soon: true },
+    { text: 'Drawdown limit alerts in Telegram', soon: true },
+    { text: 'Bot after a trade: “why did you enter”', soon: true },
+    { text: 'Weekly review with your costliest mistake', soon: true },
     { text: 'AI coach on your trades', soon: true },
   ],
+};
+/* Ціни — дзеркало src/lib/billing.js (PLANS). */
+const PRICES = {
+  lite: { month: 5, yearMonth: 4, year: 48, save: 12 },
+  pro: { month: 15, yearMonth: 12, year: 144, save: 36 },
 };
 const COMPARE = {
   uk: [
@@ -201,8 +216,7 @@ export function Pricing() {
   const tx = useTx();
   const [yearly, setYearly] = useState(false);
   const rate = useUahRate();
-  const uahMonth = toUah(yearly ? 12 : 15, rate);
-  const uahYear = toUah(144, rate);
+  const uah = (usd) => toUah(usd, rate);
   const reduced = reducedMotion();
 
   /* Кнопка більше не має власного фону. Підсвітка — одна плашка, що
@@ -238,6 +252,72 @@ export function Pricing() {
     </div>
   );
 
+  /* Платна картка: Lite і Pro однакові за будовою, Pro лише виділена.
+     Намір несемо в адресі (?next=lite|pro), а не в localStorage:
+     реєстрація буває в другій вкладці чи на іншому пристрої. */
+  const paidCard = (tier) => {
+    const pr = PRICES[tier];
+    const hot = tier === 'pro';
+    const uahM = uah(yearly ? pr.yearMonth : pr.month);
+    const uahY = uah(pr.year);
+    return (
+      <div style={{ position: 'relative', background: hot ? 'linear-gradient(160deg,#12121c,#0c0c14)' : C.panel, border: `1px solid ${hot ? A(0.42) : A(0.2)}`, borderRadius: 22, padding: 'clamp(20px,5vw,30px) clamp(18px,4.5vw,28px)', display: 'flex', flexDirection: 'column', transform: hot ? 'translateY(-6px)' : 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginBottom: 16, minHeight: 30 }}>
+          <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2px', color: C.accSoft }}>{hot ? 'PRO' : 'LITE'}</span>
+          {hot ? (
+            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.2px', color: '#fff', background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, borderRadius: 999, padding: '7px 14px', whiteSpace: 'nowrap' }}>
+              {tx('НАЙКОРИСНІШЕ', 'MOST VALUE')}
+            </span>
+          ) : (
+            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.2px', color: C.accSoft, border: `1px solid ${A(0.3)}`, borderRadius: 999, padding: '6px 12px', whiteSpace: 'nowrap' }}>
+              {tx('ДЛЯ СТАРТУ', 'TO START')}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 10, flexWrap: 'wrap' }}>
+          <PriceRoll
+            value={`$${yearly ? pr.yearMonth : pr.month}`}
+            size={46}
+            style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}
+          />
+          <span style={{ fontFamily: F.sans, fontSize: 15, color: '#7d7d90' }}>
+            {tx('/ місяць', '/ month')}
+            {/* Гривня за курсом НБУ на сьогодні — довідково. На англійській
+                сторінці гривня нікому не допомагає. */}
+            {uahM && lang !== 'en' ? <span style={{ color: '#82829a' }}> · ≈ {fmtUah(uahM)}</span> : null}
+          </span>
+        </div>
+
+        <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22, minHeight: 42 }}>
+          {/* key перемонтовує рядок, і анімація програється разом із
+              ціною; minHeight тримає висоту, щоб кнопка не стрибала. */}
+          <span
+            key={yearly ? 'y' : 'm'}
+            style={{ display: 'inline-block', animation: reduced ? 'none' : 'lnSubIn .42s cubic-bezier(.4,0,.2,1) .16s both' }}
+          >
+            {lang === 'en'
+              ? (yearly ? `$${pr.year} a year — $${pr.save} cheaper` : `${TRIAL_DAYS} days free · card required, cancel before the charge`)
+              : (yearly
+                ? `$${pr.year} на рік${uahY ? ` (≈ ${fmtUah(uahY)})` : ''} — на $${pr.save} дешевше`
+                : `${TRIAL_DAYS} днів безкоштовно · потрібна картка, скасувати можна до списання`)}
+          </span>
+        </div>
+
+        {feat(pick(lang, hot ? PRO : LITE), C.acc, '#dcdce8')}
+
+        <a
+          href={`/auth?next=${tier}`}
+          style={hot
+            ? { marginTop: 'auto', width: '100%', background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff', fontFamily: F.sans, fontSize: 14.5, fontWeight: 700, padding: 14, borderRadius: 13, cursor: 'pointer', textAlign: 'center', transition: 'box-shadow .2s' }
+            : { marginTop: 'auto', width: '100%', background: A(0.12), border: `1px solid ${A(0.4)}`, color: '#fff', fontFamily: F.sans, fontSize: 14.5, fontWeight: 700, padding: 14, borderRadius: 13, cursor: 'pointer', textAlign: 'center', transition: 'all .2s' }}
+        >
+          {tx(`${TRIAL_DAYS} днів безкоштовно`, `${TRIAL_DAYS} days free`)}
+        </a>
+      </div>
+    );
+  };
+
   return (
     <section id="pricing" style={{ ...SHELL, paddingTop: '0', paddingBottom: '72px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 28, flexWrap: 'wrap', marginBottom: 30 }}>
@@ -270,14 +350,14 @@ export function Pricing() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(320px,100%),1fr))', gap: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(290px,100%),1fr))', gap: 20, alignItems: 'stretch' }}>
         <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 22, padding: 'clamp(20px,5vw,30px) clamp(18px,4.5vw,28px)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2px', color: C.text4, marginBottom: 16 }}>FREE</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 10 }}>
             <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}>$0</span>
             <span style={{ fontFamily: F.sans, fontSize: 15, color: '#7d7d90' }}>{tx('назавжди', 'forever')}</span>
           </div>
-          <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22 }}>{tx('Усе, щоб виробити звичку', 'Everything to build the habit')}</div>
+          <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22, minHeight: 42 }}>{tx('Усе, щоб виробити звичку. Без картки', 'Everything to build the habit. No card')}</div>
           {feat(pick(lang, FREE), C.text4, '#b8b8c8')}
           <a
             href="/auth"
@@ -289,85 +369,19 @@ export function Pricing() {
           </a>
         </div>
 
-        <div style={{ position: 'relative', background: 'linear-gradient(160deg,#12121c,#0c0c14)', border: `1px solid ${A(0.42)}`, borderRadius: 22, padding: 'clamp(20px,5vw,30px) clamp(18px,4.5vw,28px)', display: 'flex', flexDirection: 'column', transform: 'translateY(-6px)' }}>
+        {paidCard('lite')}
+        {paidCard('pro')}
+      </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginBottom: 16 }}>
-            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '2px', color: C.accSoft }}>PRO</span>
-            <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 700, letterSpacing: '1.2px', color: '#fff', background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, borderRadius: 999, padding: '7px 14px', whiteSpace: 'nowrap' }}>
-              {tx('НАЙКОРИСНІШЕ', 'MOST VALUE')}
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 10 }}>
-            <PriceRoll
-              value={yearly ? '$12' : '$15'}
-              size={46}
-              style={{ fontFamily: F.display, fontWeight: 700, fontSize: 46, letterSpacing: '-2.2px', color: '#fff' }}
-            />
-            <span style={{ fontFamily: F.sans, fontSize: 15, color: '#7d7d90' }}>
-              {tx('/ місяць', '/ month')}
-              {/* Гривня за курсом НБУ на сьогодні — довідково, поруч із
-                  доларом. На англійській сторінці гривня нікому не
-                  допомагає, тому там лише долар. */}
-              {uahMonth && lang !== 'en' ? <span style={{ color: '#5d5d70' }}> · ≈ {fmtUah(uahMonth)}</span> : null}
-            </span>
-          </div>
-
-          <div style={{ fontFamily: F.sans, fontSize: 14.5, color: '#8a8a9c', marginBottom: 22, minHeight: 21 }}>
-            {/* `key` змушує React перемонтувати рядок, і анімація
-                програється заново. Без нього текст міняється миттєво
-                посеред того, як ціна ще котиться — і два різні темпи в
-                одному русі виглядають як збій.
-
-                `minHeight` тримає висоту: рядки різної довжини на
-                вузькій картці переносяться по-різному, і без нього
-                кнопка внизу підстрибувала б на кожен клік. */}
-            <span
-              key={yearly ? 'y' : 'm'}
-              style={{
-                display: 'inline-block',
-                animation: reduced ? 'none' : 'lnSubIn .42s cubic-bezier(.4,0,.2,1) .16s both',
-              }}
-            >
-              {lang === 'en'
-                ? (yearly
-                  ? '$144 a year — $36 cheaper'
-                  : `${TRIAL_DAYS} days free · card link only, the tiny verification charge is refunded instantly`)
-                : (yearly
-                  ? `$144 на рік${uahYear ? ` (≈ ${fmtUah(uahYear)})` : ''} — на $36 дешевше`
-                  : `${TRIAL_DAYS} днів безкоштовно · лише привʼязка картки, 1 ₴ одразу повертаємо`)}
-            </span>
-          </div>
-
-          {feat(pick(lang, PRO), C.acc, '#dcdce8')}
-
-          {/* Намір несемо в адресі, а не в localStorage.
-
-              Людина може зареєструватись у другій вкладці, з іншого
-              пристрою або перейти за посиланням, надісланим собі в
-              чат. Прапорець у сховищі цього не переживе, а ?next=
-              переживе — і після входу ми знаємо, що вона прийшла не
-              «подивитись», а по підписку. */}
-          <a
-            href="/auth?next=pro"
-            style={{ marginTop: 'auto', width: '100%', background: `linear-gradient(135deg,${C.acc},${C.accDeep})`, border: 0, color: '#fff', fontFamily: F.sans, fontSize: 14.5, fontWeight: 700, padding: 14, borderRadius: 13, cursor: 'pointer', textAlign: 'center', transition: 'box-shadow .2s' }}
-          >
-            {tx('Почати безкоштовно', 'Start free')}
-          </a>
-
-          {/* Обіцянка раннім підписникам. Стоїть під кнопкою, а не над
-              ціною: спершу людина вирішує, чи вартий продукт грошей, і
-              лише потім дізнається, що отримає ще й бонус. Навпаки це
-              читалось би як спроба доплатити за недоробленість. */}
-          <div style={{ marginTop: 14, display: 'flex', gap: 9, alignItems: 'flex-start', borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: 14 }}>
-            <Gift size={15} strokeWidth={2.2} color={C.accSoft} style={{ flexShrink: 0, marginTop: 2 }} />
-            <span style={{ fontFamily: F.sans, fontSize: 13, lineHeight: 1.5, color: '#9a9ab0' }}>
-              {tx('Оформив підписку до виходу AI-коуча — отримаєш', 'Subscribe before the AI coach launches and get')}{' '}
-              <b style={{ color: '#fff' }}>{tx('два тижні нейромережі в подарунок', 'two weeks of the AI coach as a gift')}</b>{' '}
-              {tx('у день запуску', 'on launch day')}
-            </span>
-          </div>
-        </div>
+      {/* Обіцянка раннім підписникам — під картками, а не в одній із
+          них: стосується і Lite, і Pro. */}
+      <div style={{ marginTop: 16, display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+        <Gift size={15} strokeWidth={2.2} color={C.accSoft} style={{ flexShrink: 0, marginTop: 2 }} />
+        <span style={{ fontFamily: F.sans, fontSize: 13, lineHeight: 1.5, color: '#9a9ab0' }}>
+          {tx('Оформив Pro до виходу AI-коуча — отримаєш', 'Get Pro before the AI coach launches and receive')}{' '}
+          <b style={{ color: '#fff' }}>{tx('два тижні нейромережі в подарунок', 'two weeks of the AI coach as a gift')}</b>{' '}
+          {tx('у день запуску', 'on launch day')}
+        </span>
       </div>
 
       <div style={{ marginTop: 26, border: '1px solid rgba(255,255,255,.07)', borderRadius: 18, overflow: 'hidden' }}>
@@ -408,7 +422,7 @@ const FAQ = {
   { chip: 'КОУЧ', q: 'Чим коуч відрізняється від ChatGPT?', a: 'Він не радить абстрактно, а працює з твоєю вибіркою: дисципліна, час входів, серії після стопу, ціна кожної звички в R. Порада завжди привʼязана до конкретних угод, які можна відкрити й перевірити' },
   { chip: 'ПРОП', q: 'А якщо я торгую на пропфірмі?', a: 'Проп-рахунки ведуться окремо: ліміт денної просадки, загальна просадка, прогрес до виплати й історія самих виплат. Один журнал тримає особисті й проп-рахунки одночасно' },
   { chip: 'ДАНІ', q: 'Мої угоди йдуть на навчання моделей?', a: 'Ні. Дані замкнені на твій акаунт на рівні бази й не використовуються для тренування. Публічним стає лише те, на що ти сам створиш посилання' },
-  { chip: 'ОПЛАТА', q: 'Що буде, якщо я перестану платити?', a: 'Журнал і вся історія лишаються на безкоштовному плані — вимикаються тільки можливості Pro. Експорт у CSV доступний завжди, в один клік' },
+  { chip: 'ОПЛАТА', q: 'Що буде, якщо я перестану платити?', a: 'Журнал і вся історія лишаються на безкоштовному плані — вимикаються тільки платні можливості Lite чи Pro. Експорт у CSV доступний завжди, в один клік' },
   ],
   en: [
     { chip: 'SECURITY', q: 'Is the investor login safe?', a: 'Yes. The investor login is read-only: it can see history and balance. Trading, withdrawing funds or changing settings with it is technically impossible — that’s how MetaTrader itself works' },
@@ -416,7 +430,7 @@ const FAQ = {
     { chip: 'COACH', q: 'How is the coach different from ChatGPT?', a: 'It doesn’t give abstract advice — it works with your sample: discipline, entry times, streaks after a stop, the R cost of each habit. Every tip is tied to specific trades you can open and check' },
     { chip: 'PROP', q: 'What if I trade a prop firm account?', a: 'Prop accounts are tracked separately: daily drawdown limit, max drawdown, progress to payout and the payout history itself. One journal holds personal and prop accounts at the same time' },
     { chip: 'DATA', q: 'Are my trades used to train models?', a: 'No. Your data is locked to your account at the database level and is not used for training. Only what you create a link for becomes public' },
-    { chip: 'BILLING', q: 'What happens if I stop paying?', a: 'The journal and all your history stay on the free plan — only Pro features switch off. CSV export is always available, in one click' },
+    { chip: 'BILLING', q: 'What happens if I stop paying?', a: 'The journal and all your history stay on the free plan — only paid Lite or Pro features switch off. CSV export is always available, in one click' },
   ],
 };
 

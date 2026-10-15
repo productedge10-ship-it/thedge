@@ -199,7 +199,7 @@ export default function AutoImport() {
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: F.mono, fontSize: 11.5 }}>
                   <span style={{ color: C.text3, width: 54 }}>{m.sym}</span>
                   <span style={{ fontWeight: 700, width: 32, color: m.side === 'BUY' ? C.ok : C.bad }}>{m.side}</span>
-                  <span style={{ color: '#3f3f4e', flex: 1 }}>{m.lot}</span>
+                  <span style={{ color: '#7c7c90', flex: 1 }}>{m.lot}</span>
                   <span style={{ fontWeight: 700, color: m.r.startsWith('−') ? C.bad : C.ok }}>{m.r}</span>
                 </div>
               ))}
@@ -285,7 +285,7 @@ export default function AutoImport() {
               ))}
 
               {!landed.length && (
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F.sans, fontSize: 12, color: '#3f3f4e' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F.sans, fontSize: 12, color: '#7c7c90' }}>
                   {tx('чекаю першу позицію…', 'waiting for the first position…')}
                 </div>
               )}

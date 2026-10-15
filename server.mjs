@@ -367,6 +367,8 @@ function renderPage(rawPath) {
       .replace(/<title>[\s\S]*?<\/title>/, `<title>${escText(r.title)}</title>`)
       .replace(/<link rel="canonical" href="[^"]*"\s*\/?>/, `<link rel="canonical" href="${escAttr(r.canonical)}" />`);
     html = setMeta(html, 'name', 'description', r.description);
+    /* Сторінка є, але індексувати її поки рано (порожній /en/blog). */
+    if (r.noindex) html = html.replace(/<meta name="robots" content="[^"]*"\s*\/?>/, '<meta name="robots" content="noindex, follow" />');
     html = setMeta(html, 'property', 'og:type', r.type || 'website');
     html = setMeta(html, 'property', 'og:url', r.canonical);
     html = setMeta(html, 'property', 'og:title', r.title);
@@ -432,7 +434,7 @@ function renderPage(rawPath) {
       .replace(/<meta name="robots" content="[^"]*"\s*\/?>/, '<meta name="robots" content="noindex, follow" />');
   }
 
-  return { html, status, noindex: status === 404 || privatePage };
+  return { html, status, noindex: status === 404 || privatePage || !!r?.noindex };
 }
 
 /* ------------------------------------------------------------------

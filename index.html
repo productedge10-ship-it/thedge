@@ -15,7 +15,7 @@
     <title>Торговий журнал трейдера з автоімпортом з MT5 — THE EDGE</title>
     <meta
       name="description"
-      content="Торговий журнал трейдера безкоштовно. Автоімпорт угод з MetaTrader 5 (Pro, 14 днів безкоштовно), статистика в R, win rate, аналітика по сесіях і розбір помилок."
+      content="Торговий журнал трейдера безкоштовно: автоімпорт угод з MetaTrader 5, статистика в R, win rate, аналітика по сесіях і розбір помилок. 14 днів Pro."
     />
     <meta name="author" content="THE EDGE" />
     <link rel="canonical" href="https://theedgecat.com/" />
@@ -30,13 +30,14 @@
     <meta property="og:title" content="Торговий журнал трейдера з автоімпортом з MT5 — THE EDGE" />
     <meta
       property="og:description"
-      content="Торговий журнал трейдера безкоштовно. Автоімпорт угод з MetaTrader 5 (Pro, 14 днів безкоштовно), статистика в R, win rate, аналітика по сесіях і розбір помилок."
+      content="Торговий журнал трейдера безкоштовно: автоімпорт угод з MetaTrader 5, статистика в R, win rate, аналітика по сесіях і розбір помилок. 14 днів Pro."
     />
-    <!-- TODO: замінити на банер 1200×630 (public/og-cover.png). Зараз — квадратний логотип 512×512. -->
-    <meta property="og:image" content="https://theedgecat.com/edge-logo.png" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="512" />
-    <meta property="og:image:height" content="512" />
+    <!-- Банер 1200×630: Telegram, Facebook і X показують його великою
+         карткою. Квадратний логотип вони обрізали або ставили крихітним. -->
+    <meta property="og:image" content="https://theedgecat.com/og-cover.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="THE EDGE — журнал угод для трейдера" />
 
     <!-- Twitter -->
@@ -44,9 +45,9 @@
     <meta name="twitter:title" content="Торговий журнал трейдера з автоімпортом з MT5 — THE EDGE" />
     <meta
       name="twitter:description"
-      content="Торговий журнал трейдера безкоштовно. Автоімпорт угод з MetaTrader 5 (Pro, 14 днів безкоштовно), статистика в R, win rate, аналітика по сесіях і розбір помилок."
+      content="Торговий журнал трейдера безкоштовно: автоімпорт угод з MetaTrader 5, статистика в R, win rate, аналітика по сесіях і розбір помилок. 14 днів Pro."
     />
-    <meta name="twitter:image" content="https://theedgecat.com/edge-logo.png" />
+    <meta name="twitter:image" content="https://theedgecat.com/og-cover.jpg" />
 
     <!-- Іконки -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -67,12 +68,12 @@
             "name": "THE EDGE",
             "url": "https://theedgecat.com/",
             "logo": "https://theedgecat.com/edge-logo.png",
-            "email": "edge95944@gmail.com",
+            "email": "support@theedgecat.com",
             "sameAs": ["https://www.instagram.com/theedge.space/", "https://t.me/theedgejournal"],
             "contactPoint": {
               "@type": "ContactPoint",
               "contactType": "customer support",
-              "email": "edge95944@gmail.com",
+              "email": "support@theedgecat.com",
               "availableLanguage": ["Ukrainian", "English"]
             }
           },
@@ -132,6 +133,16 @@
          потрібен свідомо (експорт картинки, примірочна шрифтів),
          підвантажують його самі.
     ================================================================= -->
+    <!-- Запасні гарнітури з підігнаними метриками. Поки Unbounded і
+         Golos не довантажились, текст малюється системним шрифтом —
+         без підгонки він на 30% вужчий, і після підміни заголовок
+         героя ставав вищим та штовхав усе нижче (CLS 0,16 у
+         PageSpeed). size-adjust і ascent/descent виміряні в Chrome
+         проти справжніх шрифтів. -->
+    <style>
+      @font-face { font-family: 'Unbounded Fallback'; src: local('Arial'), local('Helvetica'), local('Roboto'); size-adjust: 131.6%; ascent-override: 76%; descent-override: 19%; line-gap-override: 0%; }
+      @font-face { font-family: 'Golos Fallback'; src: local('Arial'), local('Helvetica'), local('Roboto'); size-adjust: 104.6%; ascent-override: 93.7%; descent-override: 21%; line-gap-override: 0%; }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

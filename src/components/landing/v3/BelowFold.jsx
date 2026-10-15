@@ -34,7 +34,7 @@ import { useLang, useTx, pick } from './lang';
 const FOOTER_COLS = {
   uk: [
   { title: 'ПРОДУКТ', links: [['#product', 'Що всередині'], ['#autoimport', 'Автоімпорт'], ['#coach', 'AI-коуч']] },
-  { title: 'ТАРИФИ', links: [['#pricing', 'Ціни'], ['#pricing', 'Free'], ['#pricing', 'Pro']] },
+  { title: 'ТАРИФИ', links: [['#pricing', 'Ціни'], ['#pricing', 'Free'], ['#pricing', 'Lite'], ['#pricing', 'Pro']] },
   { title: 'ДОВІДКА', links: [['#faq', 'Питання'], ['/uk/blog', 'Блог'], ['#autoimport', 'Твої дані'], ['#faq', 'Підключення MT5']] },
   /* Окрема колонка, а не рядок дрібним шрифтом унизу. Умови шукають
      тоді, коли вже щось сталося, — і знаходити їх мають там, де
@@ -44,7 +44,7 @@ const FOOTER_COLS = {
   /* Умови поки лише українською — підпис чесно каже про це. */
   en: [
     { title: 'PRODUCT', links: [['#product', 'What’s inside'], ['#autoimport', 'Auto-import'], ['#coach', 'AI coach']] },
-    { title: 'PLANS', links: [['#pricing', 'Pricing'], ['#pricing', 'Free'], ['#pricing', 'Pro']] },
+    { title: 'PLANS', links: [['#pricing', 'Pricing'], ['#pricing', 'Free'], ['#pricing', 'Lite'], ['#pricing', 'Pro']] },
     { title: 'HELP', links: [['#faq', 'FAQ'], ['/en/blog', 'Blog'], ['#autoimport', 'Your data'], ['#faq', 'Connecting MT5']] },
     { title: 'LEGAL', links: [['/terms', 'Terms of service (UA)'], ['/privacy', 'Privacy policy (UA)'], ['/terms#billing', 'Payments and refunds (UA)'], ['/terms#contacts', 'Contacts']] },
   ],
@@ -186,7 +186,7 @@ function Footer() {
           на сайті перед підключенням, а покупцю вони потрібні, щоб
           знати, з ким укладає договір. Показуємо лише заповнене:
           заглушка {{…}} на сайті гірша за відсутній рядок. */}
-      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 28px', fontFamily: F.sans, fontSize: 12, lineHeight: 1.7, color: '#5d5d70' }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px 28px', fontFamily: F.sans, fontSize: 12, lineHeight: 1.7, color: '#82829a' }}>
         {[
           OWNER.name,
           OWNER.code && `${tx('РНОКПП', 'Tax ID')} ${OWNER.code}`,

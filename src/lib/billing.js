@@ -31,8 +31,30 @@ export const CURRENCY = 'USD';
    «−20%» вимагає рахувати. Повну річну суму все одно називаємо
    поруч — рахунок прийде саме на неї, і ховати це не можна. */
 export const PLANS = {
+  lite_monthly: {
+    id: 'lite_monthly',
+    tier: 'lite',
+    title: tx('Lite · місяць', 'Lite · monthly'),
+    amount: 5,
+    currency: CURRENCY,
+    period: 'monthly',
+    perMonth: '$5',
+    label: tx('$5 / місяць', '$5 / month'),
+  },
+  lite_yearly: {
+    id: 'lite_yearly',
+    tier: 'lite',
+    title: tx('Lite · рік', 'Lite · yearly'),
+    amount: 48,
+    currency: CURRENCY,
+    period: 'yearly',
+    perMonth: '$4',
+    label: tx('$4 / місяць', '$4 / month'),
+    note: tx('$48 на рік — на $12 дешевше', '$48 per year — save $12'),
+  },
   pro_monthly: {
     id: 'pro_monthly',
+    tier: 'pro',
     title: tx('Pro · місяць', 'Pro · monthly'),
     amount: 15,
     currency: CURRENCY,
@@ -42,6 +64,7 @@ export const PLANS = {
   },
   pro_yearly: {
     id: 'pro_yearly',
+    tier: 'pro',
     title: tx('Pro · рік', 'Pro · yearly'),
     amount: 144,
     currency: CURRENCY,
@@ -51,6 +74,15 @@ export const PLANS = {
     note: tx('$144 на рік — на $36 дешевше', '$144 per year — save $36'),
   },
 };
+
+/* Тарифи як сходинки: Free → Lite → Pro. Кожен наступний містить
+   усе з попереднього. */
+export const TIERS = {
+  lite: { id: 'lite', name: 'Lite', monthly: 'lite_monthly', yearly: 'lite_yearly' },
+  pro: { id: 'pro', name: 'Pro', monthly: 'pro_monthly', yearly: 'pro_yearly' },
+};
+export const tierOfPlan = (planId) => PLANS[planId]?.tier || (String(planId || '').startsWith('lite') ? 'lite' : 'pro');
+export const planFor = (tier, period = 'monthly') => TIERS[tier]?.[period] || 'pro_monthly';
 
 /* Пробний період — безкоштовний: людина лише привʼязує картку, а
    перше списання відбувається через TRIAL_DAYS днів. Рішення команди:
@@ -141,25 +173,55 @@ export const fmtMoney = (amount, currency = CURRENCY) => {
 ================================================================== */
 export const PRO_FEATURES = {
   mt5: {
+    tier: 'pro',
     title: tx('Підключення MetaTrader', 'MetaTrader connection'),
     hint: tx('Угоди приїжджають із термінала самі — разом зі свічками, стопами й часом у ринку', 'Trades flow in from the terminal on their own — with candles, stops and time in the market'),
   },
   telegram: {
+    tier: 'lite',
     title: tx('Telegram-бот', 'Telegram bot'),
-    hint: tx('Нова угода, підсумок дня, таймери з плану — у чат', 'New trades, daily summary, plan timers — right in your chat'),
+    hint: tx('Підсумок дня, таймери з плану й нагадування — у чат. З Pro ще й кожна нова угода з MT5', 'Daily summary, plan timers and reminders — right in your chat. With Pro, every new MT5 trade too'),
   },
   accounts: {
+    tier: 'pro',
     title: tx('До 5 рахунків', 'Up to 5 accounts'),
     hint: tx('Проп-челенджі, реал і демо окремо — з власною статистикою на кожному', 'Prop challenges, live and demo kept apart — each with its own stats'),
   },
   backtest: {
+    tier: 'lite',
     title: tx('Бектест', 'Backtest'),
     hint: tx('Прогін стратегії по історії з тими самими метриками, що й у журналі', 'Run your strategy on historical data with the same metrics as your journal'),
   },
   /* soon — функції ще немає. Екран підписки показує її окремим рядком
      «Скоро», а не серед відкритого: обіцяти за гроші те, чого людина
      не отримає після оплати, не можна. Дат не називаємо. */
+  /* Заплановане для Pro. Показуються лише рядком «Скоро». */
+  props: {
+    tier: 'pro',
+    title: tx('Контроль правил пропфірми', 'Prop firm rules control'),
+    hint: tx('Шаблони FTMO, FundingPips, The5ers: денний і загальний ліміт просадки, «до порушення лишилось $X»', 'FTMO, FundingPips, The5ers templates: daily and max drawdown, “$X left before a breach”'),
+    soon: true,
+  },
+  propAlerts: {
+    tier: 'pro',
+    title: tx('Алерти ліміту в Telegram', 'Limit alerts in Telegram'),
+    hint: tx('Повідомлення, коли використано 70% і 90% денного чи загального ліміту', 'A message when 70% and 90% of the daily or max limit is used'),
+    soon: true,
+  },
+  tradeBot: {
+    tier: 'pro',
+    title: tx('Бот після кожної угоди', 'Bot after every trade'),
+    hint: tx('Закрилась угода з MT5 — бот питає «чому зайшов» і зберігає відповідь у нотатку', 'An MT5 trade closes — the bot asks “why did you enter” and saves the answer to notes'),
+    soon: true,
+  },
+  weekly: {
+    tier: 'pro',
+    title: tx('Тижневий розбір', 'Weekly review'),
+    hint: tx('R за тиждень, найдорожча помилка і одне правило на наступний тиждень', 'Weekly R, your costliest mistake and one rule for next week'),
+    soon: true,
+  },
   ai: {
+    tier: 'pro',
     title: tx('AI-коуч', 'AI coach'),
     hint: tx('Розбір твоїх угод: що повторюється, де втрачаєш і що робити завтра', 'A breakdown of your trades: what repeats, where you lose, and what to do tomorrow'),
     soon: true,
@@ -183,7 +245,19 @@ export const isProFeature = (key) => key in PRO_FEATURES;
 ------------------------------------------------------------------ */
 export const FREE_LIMITS = {
   accounts: 1,
+  /* Бектести, які можна СТВОРИТИ без підписки (рахує база:
+     backtest_quota + backtest_free_left()). */
+  backtests: 2,
 };
+
+/* Скільки безкоштовних бектестів лишилось. Функції може ще не бути
+   (SQL не виконано) — тоді null, і інтерфейс просто не показує лічильник. */
+export async function backtestFreeLeft() {
+  try {
+    const { data, error } = await supabase.rpc('backtest_free_left');
+    return error ? null : Number(data);
+  } catch { return null; }
+}
 
 /* Поточний стан доступу.
 
@@ -202,7 +276,7 @@ const readSubRow = async () => {
 };
 
 export async function readSubscription() {
-  const [{ data: sub }, { data: pro }, { data: orders }, { data: promos }, { data: block }] = await Promise.all([
+  const [{ data: sub }, { data: pro }, { data: orders }, { data: promos }, { data: block }, lite] = await Promise.all([
     readSubRow(),
     supabase.rpc('is_pro'),
     /* Історія платежів — щоб екран підписки показував факти, а не
@@ -228,6 +302,8 @@ export async function readSubscription() {
        а не весь стан підписки. */
     onlyMine(supabase.from('subscriptions').select('trial_block').maybeSingle())
       .catch(() => ({ data: null })),
+    /* Lite або Pro. Функції може ще не бути — тоді вважаємо як is_pro. */
+    supabase.rpc('has_lite').then((r) => (r.error ? null : r.data === true)).catch(() => null),
   ]);
 
   /* Знижка запрошеного за реферальним посиланням — лише на першу
@@ -282,6 +358,12 @@ export async function readSubscription() {
        уже використаний на пробному з іншого акаунта. */
     trialBlock: block?.trial_block || null,
     isPro: pro === true,
+    /* Відкрито все, що входить у Lite (у Pro — теж). */
+    hasLite: lite == null ? pro === true : lite === true,
+    tier: pro === true ? 'pro' : (lite === true ? 'lite' : 'free'),
+    /* Тариф наступного списання: Pro з відкладеним переходом на Lite
+       має plan = 'pro', а plan_id — уже lite_*. */
+    nextTier: sub?.plan_id && PLANS[sub.plan_id] ? PLANS[sub.plan_id].tier : null,
     /* { percent, left } — знижка, яку сервер застосує до наступних оплат. */
     discount: promo ? { percent: promo.percent, left: promo.charges_left } : null,
 
@@ -361,9 +443,13 @@ export async function startCheckout(planId, { trial = false } = {}) {
   });
 
   const out = await r.json().catch(() => ({}));
+  /* Зміна тарифу без оплати (Pro → Lite з наступного списання, Lite →
+     Pro на тріалі) — сервер відповідає без посилання. */
+  if (r.ok && out.ok && !out.url) return out;
   if (!r.ok || !out.url) throw checkoutError(out);
 
   window.location.assign(out.url);
+  return out;
 }
 
 /* Помилка оплати з кодом від сервера. Окремо обробляємо непідтверджену

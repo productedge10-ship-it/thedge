@@ -874,12 +874,14 @@ export default function Auth() {
 
      Порядок важливий: місце, звідки людину розвернув ProtectedRoute,
      головніше за намір — вона йшла на конкретну сторінку. */
-  const wantsPro = new URLSearchParams(location.search).get('next') === 'pro';
+  const nextPlan = new URLSearchParams(location.search).get('next');
+  /* lite — та сама логіка, лише одразу на тарифі Lite. */
+  const wantsPro = nextPlan === 'pro' || nextPlan === 'lite';
   /* Разом із параметрами: без них `/app?settings=billing`, перерваний
      входом, повертав людину просто в застосунок, а не на оплату. */
   const back = location.state?.from;
   const from = (back?.pathname && `${back.pathname}${back.search || ''}${back.hash || ''}`)
-    || (wantsPro ? '/app?settings=billing' : '/app');
+    || (wantsPro ? `/app?settings=billing${nextPlan === 'lite' ? '&plan=lite' : ''}` : '/app');
   const canvasRef = useRef(null);
   useCandlestickChart(canvasRef);
 

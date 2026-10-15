@@ -908,7 +908,7 @@ export default function SettingsModal() {
                     акаунті — образливо. */}
                 {safeTab === 'connect' && (!sub.ready ? null : sub.isPro
                   ? <ConnectTab />
-                  : <ProGate feature="mt5" onStart={() => startCheckout('pro_monthly', { trial: true })} />)}
+                  : <ProGate feature="mt5" upgrade={sub.hasLite} onStart={() => startCheckout('pro_monthly', { trial: !sub.hasLite }).then(() => sub.refresh())} />)}
 
                 {/* ================= Telegram ================= */}
                 {safeTab === 'billing' && (sub.ready ? <SubscriptionTab sub={sub} onChanged={sub.refresh} /> : null)}
@@ -916,9 +916,10 @@ export default function SettingsModal() {
                 {safeTab === 'share' && <ShareTab />}
                 {safeTab === 'referral' && <ReferralTab />}
 
-                {safeTab === 'telegram' && (!sub.ready ? null : sub.isPro
+                {/* Бот — з Lite (і в Pro теж). */}
+                {safeTab === 'telegram' && (!sub.ready ? null : sub.hasLite
                   ? <TelegramTab />
-                  : <ProGate feature="telegram" onStart={() => startCheckout('pro_monthly', { trial: true })} />)}
+                  : <ProGate feature="telegram" onStart={() => startCheckout('lite_monthly', { trial: true })} />)}
 
                 {/* ================= Тема ================= */}
                 {safeTab === 'look' && (

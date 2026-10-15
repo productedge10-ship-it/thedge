@@ -391,7 +391,7 @@ const MethodScreen = ({ tx, lang }) => (
                   animationDelay: `${i * 26}ms`,
                 }}
               >
-                <div style={{ fontFamily: F.mono, fontSize: 10, color: done ? C.text4 : '#3f3f4e', marginBottom: 6 }}>
+                <div style={{ fontFamily: F.mono, fontSize: 10, color: done ? C.text4 : '#7c7c90', marginBottom: 6 }}>
                   {String(i + 1).padStart(2, '0')}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>

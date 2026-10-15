@@ -29,6 +29,8 @@ import {
   BLOG_LANGS, CATEGORIES, postsFor, postsInCategory, langsForPost,
 } from '../src/lib/blogContent.js';
 import { plainText } from '../src/lib/blogMd.js';
+import { TERMS } from '../src/lib/terms.js';
+import { PRIVACY } from '../src/lib/privacy.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
@@ -38,10 +40,12 @@ const today = new Date().toISOString().slice(0, 10);
 const BLOG_META = {
   uk: {
     title: 'Блог The Edge — психологія, ризик і статистика трейдера',
+    h1: 'Статті для трейдерів: психологія, ризик-менеджмент і пропфірми',
     description: 'Статті про торгову психологію, ризик-менеджмент, пропфірми й статистику журналу угод. Без води, з прикладами.',
   },
   en: {
     title: 'The Edge blog — trading psychology, risk and journal stats',
+    h1: 'Articles for traders: psychology, risk management and prop firms',
     description: 'Articles on trading psychology, risk management, prop firms and trade-journal statistics. No filler, with examples.',
   },
 };
@@ -75,6 +79,10 @@ const withXDefault = (alts) => {
   return [...alts, { lang: 'x-default', href: def.href }];
 };
 
+/* Юридична сторінка для робота: назви розділів — H2, під кожним перший
+   абзац. Повний текст лишається в застосунку. */
+const legalSections = (doc) => doc.map((x) => ({ h2: x.title, text: String(x.blocks?.[0] || '').slice(0, 400) }));
+
 const routes = {};
 const sitemap = [];
 const addUrl = (loc, priority, changefreq, lastmod) =>
@@ -90,7 +98,7 @@ addUrl('/', '1.0', 'weekly', today);
    без обіцянок, яких там немає. */
 routes['/'] = {
   title: 'Торговий журнал трейдера з автоімпортом з MT5 — THE EDGE',
-  description: 'Торговий журнал трейдера безкоштовно. Автоімпорт угод з MetaTrader 5 (Pro, 14 днів безкоштовно), статистика в R, win rate, аналітика по сесіях і розбір помилок.',
+  description: 'Торговий журнал трейдера безкоштовно: автоімпорт угод з MetaTrader 5, статистика в R, win rate, аналітика по сесіях і розбір помилок. 14 днів Pro.',
   canonical: `${ORIGIN}/`,
   lang: 'uk',
   body: {
@@ -178,43 +186,53 @@ routes['/en'] = {
 addUrl('/en', '1.0', 'weekly', today);
 
 routes['/terms'] = {
-  title: 'Умови користування — The Edge',
-  description: 'Публічна оферта Edge Journal: підписка, оплата, пробний період і повернення коштів, реквізити продавця.',
+  title: 'Умови користування і публічна оферта — THE EDGE журнал',
+  description: 'Публічна оферта THE EDGE: як працює підписка Pro, оплата, 14 днів пробного періоду, скасування й повернення коштів, реквізити продавця.',
   canonical: `${ORIGIN}/terms`,
   lang: 'uk',
   body: {
     h1: 'Умови користування The Edge',
     text: 'Публічна оферта Edge Journal: як працює підписка, оплата й пробний період, як скасувати підписку і повернути кошти, реквізити продавця.',
-    links: [{ href: '/', text: 'Головна: торговий журнал THE EDGE' }, { href: '/uk/blog', text: 'Блог' }],
+    /* Розділи оферти — підзаголовками: аудит бачив сторінку без H2. */
+    sections: legalSections(TERMS),
+    links: [{ href: '/', text: 'Головна: торговий журнал THE EDGE' }, { href: '/privacy', text: 'Політика конфіденційності' }, { href: '/uk/blog', text: 'Блог' }],
   },
 };
 addUrl('/terms', '0.3', 'yearly');
 
 routes['/privacy'] = {
-  title: 'Політика конфіденційності — The Edge',
+  title: 'Політика конфіденційності — THE EDGE журнал трейдера',
   description: 'Які дані збирає торговий журнал THE EDGE, навіщо, кому передає і як їх видалити. Пароль MT5 інвесторський і зберігається зашифрованим.',
   canonical: `${ORIGIN}/privacy`,
   lang: 'uk',
   body: {
     h1: 'Політика конфіденційності The Edge',
     text: 'Які дані збирає THE EDGE, навіщо, кому передає, як довго зберігає і як їх видалити.',
+    sections: legalSections(PRIVACY),
     links: [{ href: '/', text: 'Головна: торговий журнал THE EDGE' }, { href: '/terms', text: 'Умови користування' }],
   },
 };
 addUrl('/privacy', '0.3', 'yearly');
 
+/* Мови, у яких блог справді має статті. Порожній /en/blog аудит
+   показував як тонку сторінку: поки англійських статей немає, він не
+   йде ні в sitemap, ні в hreflang, і має noindex. */
+const LIVE_LANGS = BLOG_LANGS.filter((l) => postsFor(l).length);
+
 for (const lang of BLOG_LANGS) {
   const posts = postsFor(lang);
   const meta = BLOG_META[lang] || BLOG_META.uk;
   const listPath = `/${lang}/blog`;
+  const live = posts.length > 0;
 
   routes[listPath] = {
     ...meta,
     canonical: ORIGIN + listPath,
     lang,
-    alternates: withXDefault(BLOG_LANGS.map((l) => ({ lang: l, href: `${ORIGIN}/${l}/blog` }))),
+    noindex: !live,
+    alternates: live ? withXDefault(LIVE_LANGS.map((l) => ({ lang: l, href: `${ORIGIN}/${l}/blog` }))) : [],
     body: {
-      h1: meta.title,
+      h1: meta.h1,
       text: meta.description,
       /* Категорії окремим блоком: раніше на них не вело жодне посилання,
          і аудит показував їх «без вхідних посилань». */
@@ -228,22 +246,32 @@ for (const lang of BLOG_LANGS) {
       ],
     },
   };
-  addUrl(listPath, '0.8', 'weekly', posts[0]?.date || today);
+  if (live) addUrl(listPath, '0.8', 'weekly', posts[0]?.date || today);
 
   for (const cat of CATEGORIES) {
     const inCat = postsInCategory(lang, cat.id) || [];
     if (!inCat.length) continue;
     const p = `${listPath}/category/${cat.slug}`;
     const title = cat.title[lang] || cat.title.uk;
+    /* Аудит рахував заголовки категорій закороткими (26–40 символів)
+       і без жодного H2. Дописуємо, про що категорія, і групуємо статті
+       під підзаголовком. */
+    const blurb = cat.blurb[lang] || cat.blurb.uk;
+    const longTitle = lang === 'en' ? `${title}: articles for traders — The Edge blog` : `${title}: статті для трейдерів — блог The Edge`;
+    const catDesc = blurb.length >= 110 ? blurb : `${blurb} ${lang === 'en' ? `${inCat.length} articles with examples from a trader's journal.` : `${inCat.length} статей з прикладами з журналу трейдера.`}`;
     routes[p] = {
-      title: `${title} — блог The Edge`,
-      description: cat.blurb[lang] || cat.blurb.uk,
+      title: longTitle.length <= 60 ? longTitle : `${title} — статті блогу The Edge`,
+      description: catDesc.length > 158 ? `${catDesc.slice(0, 155).replace(/\s+\S*$/, '')}…` : catDesc,
       canonical: ORIGIN + p,
       lang,
       body: {
         h1: title,
-        text: cat.blurb[lang] || cat.blurb.uk,
-        links: inCat.map((x) => ({ href: `${listPath}/${x.slug}`, text: x.title })),
+        text: blurb,
+        groups: [
+          { h2: lang === 'en' ? 'Articles in this category' : 'Статті в цій категорії', links: inCat.map((x) => ({ href: `${listPath}/${x.slug}`, text: x.title })) },
+          { h2: lang === 'en' ? 'Other categories' : 'Інші категорії', links: CATEGORIES.filter((c) => c.id !== cat.id && (postsInCategory(lang, c.id) || []).length).map((c) => ({ href: `${listPath}/category/${c.slug}`, text: c.title[lang] || c.title.uk })) },
+        ],
+        links: [{ href: listPath, text: lang === 'en' ? 'All articles' : 'Усі статті блогу' }, { href: lang === 'en' ? '/en' : '/', text: 'THE EDGE' }],
       },
     };
     addUrl(p, '0.5', 'weekly');

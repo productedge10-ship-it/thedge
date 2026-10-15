@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  AlertTriangle, Bitcoin, Check, Eye, Loader2, Send, TerminalSquare, Ticket, X,
+  AlertTriangle, Bitcoin, Check, Eye, FlaskConical, Layers, Loader2, Send, TerminalSquare, Ticket, X,
+  ArrowUpRight, BookOpen,
 } from 'lucide-react';
 import { T } from '../trading/planTheme';
 import { EdgeMonogram, EdgeWordmark } from '../core/Layout';
 import {
-  PLANS, PRO_FEATURES, TRIAL_DAYS, fmtMoney, startCheckout, cancelSubscription, startCryptoCheckout,
+  PLANS, PRO_FEATURES, TIERS, planFor, TRIAL_DAYS, fmtMoney, startCheckout, cancelSubscription, startCryptoCheckout,
   redeemPromo,
   useUahRate, toUah, fmtUah,
 } from '../../lib/billing';
@@ -63,7 +64,21 @@ const plural = (n) => (
    смуга показує «скільки ще лишилось», а не бухгалтерію. */
 const periodDays = (plan) => (String(plan).includes('year') ? 365 : 30);
 
-const FEATURE_ICON = { mt5: TerminalSquare, telegram: Send };
+const FEATURE_ICON = { mt5: TerminalSquare, telegram: Send, backtest: FlaskConical, accounts: Layers, base: BookOpen };
+
+/* Що показати в списку «що входить» для тарифу.
+
+   Lite — першим рядком «усе з Free», далі лише своє: так видно, за що
+   саме $5. Pro — усе відкрите поіменно: людина, яка платить більше,
+   має бачити повний список, а не «усе з Lite + ще трохи». */
+const tierFeatures = (tier) => {
+  const own = Object.entries(PRO_FEATURES).filter(([, f]) => !f.soon && (tier === 'pro' || f.tier === 'lite'));
+  if (tier !== 'lite') return own;
+  return [['base', {
+    title: tx('Усе з Free', 'Everything in Free'),
+    hint: tx('Журнал без обмежень, уся аналітика, калькулятор, 1 рахунок', 'Unlimited journal, full analytics, calculator, 1 account'),
+  }], ...own];
+};
 
 /* Текст на акцентній кнопці.
 
@@ -135,7 +150,7 @@ function Stage({ children, tone = 'acc' }) {
    шрифтом: поруч зі словесним знаком це має читатись як його
    продовження, а не як заголовок.
 ------------------------------------------------------------------ */
-function Brand({ tone = 'acc', badge }) {
+function Brand({ tone = 'acc', badge, label = 'PRO' }) {
   const rgb = tone === 'ok' ? T.okRgb : T.accRgb;
 
   return (
@@ -159,7 +174,7 @@ function Brand({ tone = 'acc', badge }) {
               textShadow: 'none',
             }}
           >
-            PRO
+            {label}
           </span>
 
           {badge && (
@@ -469,7 +484,15 @@ function PromoBox({ discount, onDone }) {
 
 export default function SubscriptionTab({ sub, onChanged }) {
   const { emailVerified } = useAuth();
-  const [period, setPeriod] = useState('pro_monthly');
+  /* Тариф і період окремо: план = тариф × період. Тариф з адреси
+     (?plan=lite з лендингу), інакше Pro — він відкриває найбільше. */
+  const [tier, setTier] = useState(() => (
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('plan') === 'lite' ? 'lite' : 'pro'
+  ));
+  const [periodKind, setPeriodKind] = useState('monthly');
+  const period = planFor(tier, periodKind);
+  /* Повідомлення після зміни тарифу без оплати. */
+  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [preview, setPreview] = useState(false);
@@ -522,13 +545,37 @@ export default function SubscriptionTab({ sub, onChanged }) {
     setErr('');
     setBusy(true);
     try {
-      await startCheckout(period, { trial });
+      const out = await startCheckout(period, { trial });
+      if (out?.ok && !out.url) { setBusy(false); await onChanged?.(); }
     } catch (e) {
       setErr(e.message || tx('Не вдалось відкрити оплату', 'Couldn\'t open checkout'));
       setBusy(false);
       /* Сервер міг щойно відмовити в тріалі — перечитуємо стан, щоб
          кнопка стала звичайною оплатою, а не пропонувала тріал знову. */
       onChanged?.();
+    }
+  };
+
+  /* Зміна тарифу для вже підписаного: Lite → Pro (оплата з заліком
+     залишку або миттєво на тріалі), Pro → Lite (з наступного списання),
+     скасування відкладеного переходу. Що саме — вирішує сервер. */
+  const switchTo = async (planId) => {
+    if (preview) return;
+    setErr('');
+    setNote('');
+    setBusy(true);
+    try {
+      const out = await startCheckout(planId, { trial: false });
+      if (out?.ok && !out.url) {
+        setNote(out.scheduled
+          ? tx(`Готово: з ${fmtDate(out.at)} тариф зміниться на Lite. До того працює Pro.`, `Done: your plan switches to Lite on ${fmtDate(out.at)}. Pro works until then.`)
+          : tx('Готово, тариф змінено.', 'Done, plan changed.'));
+        setBusy(false);
+        await onChanged?.();
+      }
+    } catch (e) {
+      setErr(e.message || tx('Не вдалось змінити тариф', 'Couldn\'t change the plan'));
+      setBusy(false);
     }
   };
 
@@ -592,7 +639,8 @@ export default function SubscriptionTab({ sub, onChanged }) {
   );
 
   /* ---------- уже підписаний ---------- */
-  if (view.isPro) {
+  if (view.hasLite || view.isPro) {
+    const curTier = view.isPro ? 'pro' : 'lite';
     const trialing = view.status === 'trialing';
     const tone = trialing ? 'acc' : 'ok';
     const rgb = trialing ? T.accRgb : T.okRgb;
@@ -609,7 +657,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
         <Stage tone={tone}>
           <div className="relative">
             <SubscriptionScene height={168} tone={tone} />
-            <Brand tone={tone} badge={
+            <Brand tone={tone} label={curTier === 'lite' ? 'LITE' : 'PRO'} badge={
               /* Статуси англійською — як Take/Stop у журналі й
                  Daily/Weekly у плані. Це службові мітки стану, а не
                  текст для читання, і в застосунку вони скрізь такі. */
@@ -671,11 +719,76 @@ export default function SubscriptionTab({ sub, onChanged }) {
           >
             {tx('Відкрито', 'Unlocked')}
           </div>
-          {Object.entries(PRO_FEATURES).filter(([, f]) => !f.soon).map(([k, f]) => (
+          {tierFeatures(curTier).map(([k, f]) => (
             <Feature key={k} k={k} title={f.title} hint={f.hint} tone={tone} />
           ))}
-          <SoonFeatures />
+          {curTier === 'pro' && <SoonFeatures />}
         </div>
+
+        {/* Зміна тарифу. Лише для mono-підписки: у промо й крипти немає
+            картки, з якої можна списати різницю чи наступний місяць. */}
+        {!isPromo && !isCrypto && view.status !== 'canceled' && (
+          <div className="rounded-2xl p-5" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
+            <div className="mb-3 text-[10px] font-bold uppercase" style={{ fontFamily: T.mono, letterSpacing: '0.2em', color: T.text4 }}>
+              {tx('Тариф', 'Plan')}
+            </div>
+            {curTier === 'lite' ? (
+              <>
+                <div className="text-[13.5px] font-semibold" style={{ fontFamily: T.sans, color: T.text }}>
+                  {tx('Pro: автоімпорт з MT5 і до 5 рахунків', 'Pro: MT5 auto-import and up to 5 accounts')}
+                </div>
+                <div className="mt-1 text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                  {trialing
+                    ? tx('На пробному періоді перехід безкоштовний: картка вже привʼязана, перше списання — за ціною Pro.', 'During the trial switching is free: your card is linked, the first charge will be at the Pro price.')
+                    : tx('Залишок оплаченого Lite зарахуємо в ціну, новий період Pro почнеться сьогодні.', 'Unused Lite days are credited, the new Pro period starts today.')}
+                </div>
+                <Button
+                  variant="primary"
+                  size="md"
+                  icon={ArrowUpRight}
+                  loading={busy}
+                  disabled={preview}
+                  onClick={() => switchTo(planFor('pro', PLANS[view.planId]?.period === 'yearly' ? 'yearly' : 'monthly'))}
+                  className="mt-3.5"
+                >
+                  {tx('Перейти на Pro', 'Upgrade to Pro')}
+                </Button>
+              </>
+            ) : view.nextTier === 'lite' ? (
+              <>
+                <div className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.text2 }}>
+                  {tx(`З ${fmtDate(chargeAt)} тариф зміниться на Lite: бектести й бот лишаться, автоімпорт MT5 зупиниться.`, `On ${fmtDate(chargeAt)} your plan switches to Lite: backtests and the bot stay, MT5 auto-import stops.`)}
+                </div>
+                <button
+                  type="button"
+                  disabled={busy || preview}
+                  onClick={() => switchTo(planFor('pro', PLANS[view.planId]?.period === 'yearly' ? 'yearly' : 'monthly'))}
+                  className="mt-3 text-[12.5px] font-semibold underline underline-offset-4"
+                  style={{ fontFamily: T.sans, color: T.acc }}
+                >
+                  {tx('Лишити Pro', 'Keep Pro')}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.text3 }}>
+                  {tx('Не потрібен автоімпорт? Lite — бектести й Telegram-бот за $5 на місяць. Перехід — з наступного списання, до нього працює Pro.', 'Don’t need auto-import? Lite — backtests and the Telegram bot for $5 a month. Switches at the next charge, Pro works until then.')}
+                </div>
+                <button
+                  type="button"
+                  disabled={busy || preview}
+                  onClick={() => switchTo(planFor('lite', PLANS[view.planId]?.period === 'yearly' ? 'yearly' : 'monthly'))}
+                  className="mt-3 text-[12.5px] font-semibold underline underline-offset-4"
+                  style={{ fontFamily: T.sans, color: T.text2 }}
+                >
+                  {busy ? tx('Змінюємо…', 'Switching…') : tx('Перейти на Lite', 'Switch to Lite')}
+                </button>
+              </>
+            )}
+            {note && <p className="mt-2.5 text-[12.5px]" style={{ fontFamily: T.sans, color: T.ok }}>{note}</p>}
+            {err && <p className="mt-2.5 text-[12.5px]" style={{ fontFamily: T.sans, color: T.bad }}>{err}</p>}
+          </div>
+        )}
 
         {/* Факти про підписку.
 
@@ -783,7 +896,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
         ) : view.status === 'canceled' ? (
           <div className="rounded-xl px-3.5 py-3" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>
             <span className="text-[13px] leading-[19px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-              {tx(`Підписку скасовано. Доступ працює до ${fmtDate(view.validUntil)} — далі розділи MetaTrader і Telegram закриються, але журнал, аналітика й калькулятор лишаться.`, `Subscription canceled. Access works until ${fmtDate(view.validUntil)} — after that MetaTrader and Telegram lock, but the journal, analytics and calculator stay.`)}
+              {tx(`Підписку скасовано. Доступ працює до ${fmtDate(view.validUntil)} — далі платні розділи закриються, але журнал, аналітика, калькулятор і всі бектести лишаться.`, `Subscription canceled. Access works until ${fmtDate(view.validUntil)} — after that paid sections lock, but the journal, analytics, calculator and all backtests stay.`)}
             </span>
           </div>
         ) : !confirming ? (
@@ -858,10 +971,39 @@ export default function SubscriptionTab({ sub, onChanged }) {
       <Stage tone="acc">
         <div className="relative">
           <SubscriptionScene height={168} tone="acc" />
-          <Brand tone="acc" />
+          <Brand tone="acc" label={tier === 'lite' ? 'LITE' : 'PRO'} />
         </div>
 
         <div className="px-6 pb-7 pt-5">
+          {/* Тариф. Lite першим — сходинки йдуть від дешевшого. */}
+          <div
+            className="mb-2.5 flex w-fit rounded-xl p-1"
+            style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${T.line}` }}
+          >
+            {Object.values(TIERS).map((tr) => {
+              const on = tr.id === tier;
+              return (
+                <button
+                  key={tr.id}
+                  type="button"
+                  onClick={() => setTier(tr.id)}
+                  className="relative rounded-lg px-4 py-1.5 text-[12.5px] font-bold transition-colors duration-200"
+                  style={{ fontFamily: T.sans, color: on ? T.text : T.text3 }}
+                >
+                  {on && (
+                    <motion.span
+                      layoutId="sub-tier"
+                      className="absolute inset-0 rounded-lg"
+                      style={{ background: `rgba(${T.accRgb},0.2)`, border: `1px solid rgba(${T.accRgb},0.34)` }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative">{tr.name} · {PLANS[tr.monthly].perMonth}</span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Перемикач періоду. Річний першим не ставимо: спершу
               людина має зрозуміти місячну ціну, і тільки маючи її в
               голові — оцінити знижку. */}
@@ -869,13 +1011,13 @@ export default function SubscriptionTab({ sub, onChanged }) {
             className="flex w-fit rounded-xl p-1"
             style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${T.line}` }}
           >
-            {Object.values(PLANS).map((p) => {
+            {[PLANS[planFor(tier, 'monthly')], PLANS[planFor(tier, 'yearly')]].map((p) => {
               const on = p.id === period;
               return (
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => setPeriod(p.id)}
+                  onClick={() => setPeriodKind(p.period)}
                   className="relative rounded-lg px-4 py-1.5 text-[12.5px] font-bold transition-colors duration-200"
                   style={{ fontFamily: T.sans, color: on ? T.text : T.text3 }}
                 >
@@ -925,10 +1067,10 @@ export default function SubscriptionTab({ sub, onChanged }) {
           <div className="my-5 h-px w-full" style={{ background: T.line }} />
 
           <div className="flex flex-col gap-4">
-            {Object.entries(PRO_FEATURES).filter(([, f]) => !f.soon).map(([k, f]) => (
+            {tierFeatures(tier).map(([k, f]) => (
               <Feature key={k} k={k} title={f.title} hint={f.hint} />
             ))}
-            <SoonFeatures />
+            {tier === 'pro' && <SoonFeatures />}
           </div>
 
           {/* Кнопка оплати — спільний Button, primary lg на всю ширину.
@@ -1010,7 +1152,7 @@ export default function SubscriptionTab({ sub, onChanged }) {
       </Stage>
 
       <p className="text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-        {tx('Журнал, аналітика й калькулятор лишаються безкоштовними назавжди, без обмежень на кількість угод. Платне — те, що працює, поки ти спиш.', 'The journal, analytics and calculator stay free forever, with no limit on trades. You pay for what works while you sleep.')}
+        {tx('Free назавжди: журнал без обмежень на кількість угод, аналітика, калькулятор і 2 бектести. Lite — бектести без обмежень і Telegram-бот. Pro — ще й автоімпорт з MT5 і до 5 рахунків.', 'Free forever: unlimited journal, analytics, calculator and 2 backtests. Lite — unlimited backtests and the Telegram bot. Pro — plus MT5 auto-import and up to 5 accounts.')}
       </p>
 
       {!preview && <PromoBox discount={view.discount} onDone={onChanged} />}

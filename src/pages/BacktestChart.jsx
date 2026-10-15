@@ -14,6 +14,7 @@ import { t as tx, LOCALE } from '../lib/lang';
 import { notify } from '../utils/notify';
 import { uploadImage } from '../lib/imageStore';
 import { sessionMeta, insertSession, updateSessionSettings } from '../lib/backtestMode';
+import { openSettings } from '../lib/settings';
 import { setupsOfTags } from '../lib/backtestTags';
 import { isDemo } from '../lib/backtestDemo';
 import { ACT, act } from '../components/backtest/accent';
@@ -746,6 +747,8 @@ export default function BacktestChart() {
       notify.success?.(tx('Бектест створено', 'Backtest created'), name);
     } catch (e) {
       notify.error(tx('Не вдалось створити бектест', 'Couldn’t create the backtest'), e.message);
+      /* Безкоштовні скінчились — одразу показуємо тарифи. */
+      if (e?.code === 'backtest_limit') openSettings('billing');
     } finally {
       setCreatingSession(false);
     }

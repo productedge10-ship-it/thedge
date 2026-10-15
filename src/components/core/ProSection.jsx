@@ -2,7 +2,7 @@ import useSubscription from '../../hooks/useSubscription';
 import { useAuth } from '../../context/AuthContext';
 import { hasFreeBacktest } from '../../lib/betaAccess';
 import ProGate from '../modals/ProGate';
-import { startCheckout } from '../../lib/billing';
+import { startCheckout, PRO_FEATURES, planFor } from '../../lib/billing';
 
 /* ==================================================================
    Обгортка платного розділу.
@@ -35,6 +35,10 @@ export default function ProSection({ feature, children }) {
   const { user } = useAuth();
   /* Точковий виняток: бектести без Pro для окремих пошт (betaAccess.js). */
   if (feature === 'backtest' && hasFreeBacktest(user?.email)) return children;
+  /* Бектести відкриті й на Free: 2 безкоштовні, далі Lite. Ліміт рахує
+     база (backtest_free_left), сторінка лише показує лічильник. */
+  if (feature === 'backtest') return children;
+  const tier = PRO_FEATURES[feature]?.tier || 'pro';
 
   if (!sub.ready) {
     /* Висота приблизно як у вмісту — щоб сторінка не стрибала, коли
@@ -42,12 +46,13 @@ export default function ProSection({ feature, children }) {
     return <div style={{ minHeight: 420 }} />;
   }
 
-  if (sub.isPro) return children;
+  if (tier === 'lite' ? sub.hasLite : sub.isPro) return children;
 
   return (
     <ProGate
       feature={feature}
-      onStart={() => startCheckout('pro_monthly', { trial: true })}
+      upgrade={tier === 'pro' && sub.hasLite}
+      onStart={() => startCheckout(planFor(tier), { trial: !sub.hasLite }).then(() => sub.refresh())}
     />
   );
 }

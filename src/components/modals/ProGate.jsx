@@ -23,7 +23,7 @@ import BacktestScene from './BacktestScene';
 ================================================================== */
 /* Кнопка старту пробного періоду. Окремо, бо тепер вона стоїть у двох
    розкладках: звичайній і повноекранній для бектесту. */
-function TrialButton({ onStart, className = '' }) {
+function TrialButton({ onStart, className = '', upgrade = false }) {
   const { emailVerified } = useAuth();
   const [busy, setBusy] = useState(false);
 
@@ -49,13 +49,24 @@ function TrialButton({ onStart, className = '' }) {
      читає в тексті поруч, а не ловить курсором. */
   return (
     <Button variant="primary" size="lg" loading={busy} onClick={start} className={className}>
-      {tx(`${TRIAL_DAYS} днів безкоштовно`, `${TRIAL_DAYS} days free`)}
+      {upgrade ? tx('Перейти на Pro', 'Upgrade to Pro') : tx(`${TRIAL_DAYS} днів безкоштовно`, `${TRIAL_DAYS} days free`)}
     </Button>
   );
 }
 
-export default function ProGate({ feature, onStart }) {
+/* Під кнопкою: який тариф відкриває розділ і умови тріалу. */
+function GateNote({ tier, upgrade, color }) {
+  const text = upgrade
+    ? tx('Залишок оплаченого Lite зарахуємо в ціну Pro', 'Unused Lite days are credited towards Pro')
+    : tier === 'lite'
+      ? tx(`Входить у Lite ($5/міс) і Pro · ${TRIAL_DAYS} днів безкоштовно, потрібна картка: 1 ₴ на перевірку, одразу повертаємо · скасувати до списання`, `Included in Lite ($5/mo) and Pro · ${TRIAL_DAYS} days free, card required: small verification charge, refunded instantly · cancel before the charge`)
+      : tx(`Pro · ${TRIAL_DAYS} днів безкоштовно, потрібна картка: 1 ₴ на перевірку, одразу повертаємо · скасувати до списання`, `Pro · ${TRIAL_DAYS} days free, card required: small verification charge, refunded instantly · cancel before the charge`);
+  return text && <span className="mt-3 block text-center text-[12.5px] leading-[18px]" style={{ fontFamily: T.sans, color }}>{text}</span>;
+}
+
+export default function ProGate({ feature, onStart, upgrade = false }) {
   const f = PRO_FEATURES[feature] || {};
+  const tier = f.tier || 'pro';
 
   /* Бектест — окрема сторінка, а не вкладка в налаштуваннях, тож замок
      тут займає весь екран. Замість картинки — справжній програвач
@@ -80,7 +91,7 @@ export default function ProGate({ feature, onStart }) {
               className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.18em]"
               style={{ fontFamily: T.sans, color: T.acc, background: `rgba(${T.accRgb},0.14)` }}
             >
-              Pro
+              {tier === 'lite' ? 'Lite' : 'Pro'}
             </span>
             <h3
               className="mt-3 text-[26px] font-bold leading-tight"
@@ -91,10 +102,8 @@ export default function ProGate({ feature, onStart }) {
             <p className="mt-2 text-[14px] leading-[21px]" style={{ fontFamily: T.sans, color: 'rgba(237,236,247,0.62)' }}>
               {f.hint}. {tx('Спробуй прямо тут — натисни Long або Short.', 'Try it right here — hit Long or Short.')}
             </p>
-            <TrialButton onStart={onStart} className="mt-5 w-full" />
-            <div className="mt-2.5 text-center text-[12px]" style={{ fontFamily: T.sans, color: 'rgba(237,236,247,0.45)' }}>
-              {tx('1 ₴ на перевірку картки, одразу повертаємо · скасувати будь-коли', 'Small card verification charge, refunded instantly · cancel anytime')}
-            </div>
+            <TrialButton onStart={onStart} upgrade={upgrade} className="mt-5 w-full" />
+            <GateNote tier={tier} upgrade={upgrade} color="rgba(237,236,247,0.5)" />
           </div>
         </BacktestScene>
       </div>
@@ -123,13 +132,12 @@ export default function ProGate({ feature, onStart }) {
         {f.hint}
       </p>
 
-      <TrialButton onStart={onStart} className="mt-7" />
+      {/* Тариф над заголовком: людина має знати, ЩО саме відкриє кнопка. */}
+      <TrialButton onStart={onStart} upgrade={upgrade} className="mt-7" />
 
       {/* Умови списання лишаються: саме цей рядок вирішує, чи буде
           потім повернення й чарджбек. */}
-      <span className="mt-3 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-        {tx('1 ₴ на перевірку картки, одразу повертаємо · скасувати можна будь-коли', 'Small card verification charge, refunded instantly · cancel anytime')}
-      </span>
+      <span className="max-w-[440px]"><GateNote tier={tier} upgrade={upgrade} color={T.text3} /></span>
     </div>
   );
 }

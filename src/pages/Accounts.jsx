@@ -773,7 +773,7 @@ return (
                 Тепер так само, як у налаштуваннях: замок і кнопка пробного періоду. */}
             {addMode === 'mt5' && !editingId && sub.ready && !sub.isPro && (
               <div className="overflow-y-auto p-5 sm:p-6">
-                <ProGate feature="mt5" onStart={() => startCheckout('pro_monthly', { trial: true })} />
+                <ProGate feature="mt5" upgrade={sub.hasLite} onStart={() => startCheckout('pro_monthly', { trial: !sub.hasLite }).then(() => sub.refresh())} />
               </div>
             )}
             {addMode === 'mt5' && !editingId && sub.ready && sub.isPro && (

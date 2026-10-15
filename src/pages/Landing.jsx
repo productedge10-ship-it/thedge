@@ -366,6 +366,9 @@ function LandingPage() {
       `}</style>
 
       <Header />
+      {/* <main> — орієнтир для читалок екрана (PageSpeed: «документ не
+          містить основного орієнтира»). */}
+      <main>
       <Hero />
       <Ticker />
 
@@ -377,6 +380,7 @@ function LandingPage() {
           <BelowFold />
         </Suspense>
       )}
+      </main>
     </div>
   );
 }

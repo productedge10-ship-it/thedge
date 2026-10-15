@@ -19,6 +19,10 @@ import BacktestCard from '../components/backtest/BacktestCard';
 import NewBacktestModal from '../components/backtest/NewBacktestModal';
 import { insertSession, isChartSession, chartUrl, statsUrl } from '../lib/backtestMode';
 import { remoteAllowed, getCatalog, warmSymbol } from '../lib/candles/remote';
+import useSubscription from '../hooks/useSubscription';
+import { backtestFreeLeft, FREE_LIMITS } from '../lib/billing';
+import { hasFreeBacktest } from '../lib/betaAccess';
+import { openSettings } from '../lib/settings';
 
 /* «1 бектест», «3 бектести», «5 бектестів». Без цього виходило
    «3 бектестів» — рядок, що виглядає як помилка набору. Окремий
@@ -166,6 +170,17 @@ export default function Backtest() {
   const [sort, setSort] = useState('recent');
   const [confirm, setConfirm] = useState(null);
 
+  /* Free: 2 бектести, далі Lite. Лічильник — з бази (рахує створені,
+     а не наявні: видалений бектест слот не повертає). */
+  const sub = useSubscription();
+  const [freeLeft, setFreeLeft] = useState(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    backtestFreeLeft().then(setFreeLeft);
+  }, [user?.id, sessions.length]);
+  const limited = sub.ready && !sub.hasLite && freeLeft != null && !hasFreeBacktest(user?.email);
+  const toLite = () => openSettings('billing');
+
   /* Перезавантажуємо список тільки коли змінюється користувач.
      load() оголошена в тілі компонента й пересоздається щорендера —
      у deps її не тягнемо навмисно. */
@@ -240,6 +255,12 @@ export default function Backtest() {
   }
 
   const createSession = async (f) => {
+    if (limited && freeLeft <= 0) {
+      setCreating(false);
+      notify.error(tx('Безкоштовні бектести використано', 'Free backtests used up'), tx('Lite відкриває бектести без обмежень — $5 на місяць.', 'Lite unlocks unlimited backtests — $5 a month.'));
+      toLite();
+      return;
+    }
     setSaving(true);
     try {
       const data = await insertSession({
@@ -256,7 +277,13 @@ export default function Backtest() {
       navigate(data.mode === 'chart' ? chartUrl(data) : statsUrl(data));
     } catch (e) {
       console.error(e);
-      alert(e.message || tx('Не вдалось створити бектест', 'Couldn’t create the backtest'));
+      if (e?.code === 'backtest_limit') {
+        setCreating(false);
+        notify.error(tx('Безкоштовні бектести використано', 'Free backtests used up'), e.message);
+        toLite();
+      } else {
+        notify.error(tx('Не вдалось створити бектест', 'Couldn’t create the backtest'), e.message || '');
+      }
     } finally {
       setSaving(false);
     }
@@ -416,6 +443,16 @@ export default function Backtest() {
                 ? tx('Це демо-дані — створи свій бектест, і вони зникнуть.', 'This is demo data — create your own backtest and it’ll disappear.')
                 : tx(`${sessions.length} ${plural(sessions.length, 'бектест', 'бектести', 'бектестів')} · ${totalTrades} ${plural(totalTrades, 'угода', 'угоди', 'угод')}`, `${sessions.length} ${sessions.length === 1 ? 'backtest' : 'backtests'} · ${totalTrades} ${totalTrades === 1 ? 'trade' : 'trades'}`)}
             </p>
+            {limited && (
+              <p style={{ fontFamily: T.sans, marginTop: 8, fontSize: 13, color: freeLeft > 0 ? T.text3 : T.warn }}>
+                {freeLeft > 0
+                  ? tx(`Безкоштовно: лишилось ${freeLeft} з ${FREE_LIMITS.backtests} бектестів. `, `Free plan: ${freeLeft} of ${FREE_LIMITS.backtests} backtests left. `)
+                  : tx('Безкоштовні бектести використано. ', 'Free backtests used up. ')}
+                <button type="button" onClick={toLite} style={{ color: T.acc, textDecoration: 'underline', textUnderlineOffset: 3, fontWeight: 600 }}>
+                  {tx('Lite — без обмежень за $5/міс', 'Lite — unlimited for $5/mo')}
+                </button>
+              </p>
+            )}
           </div>
 
           {/* NewBacktestButton вище — панель і вибух за формулою

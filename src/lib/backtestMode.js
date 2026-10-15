@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { setupsOfTags } from './backtestTags';
+import { t as tx } from './lang';
 
 /* ==================================================================
    Два способи вести бектест.
@@ -52,6 +53,10 @@ export async function insertSession(payload) {
   if (r.error && missingColumn(r.error)) {
     r = await supabase.from('backtest_sessions').insert([base]).select().single();
     if (!r.error && r.data) writeLocal(r.data.id, { mode, settings });
+  }
+  /* 42501 — політика бази не пустила: безкоштовні бектести скінчились. */
+  if (r.error && (r.error.code === '42501' || /row-level security/i.test(r.error.message || ''))) {
+    throw Object.assign(new Error(tx('Безкоштовні бектести використано. Lite відкриває їх без обмежень.', 'Free backtests used up. Lite unlocks unlimited backtests.')), { code: 'backtest_limit' });
   }
   if (r.error) throw r.error;
   return { ...r.data, mode: r.data?.mode || mode, settings: r.data?.settings || settings };
