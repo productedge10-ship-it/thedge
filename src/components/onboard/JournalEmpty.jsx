@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Inbox, Plug, PenLine, Eye } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -15,7 +14,6 @@ import Button from '../ui/Button';
    Для MT5 головна кнопка «Підключити», для інших платформ — ручне
    внесення. Якщо MT5 уже підключено, чесно кажемо, що угоди їдуть. */
 export default function JournalEmpty({ onAdd }) {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const answers = useOnboardAnswers();
   const [mt5, setMt5] = useState(0);
@@ -27,7 +25,7 @@ export default function JournalEmpty({ onAdd }) {
   }, [user?.id]);
 
   const manual = noAutoImport(answers);
-  const demo = () => { markDemoSeen(); track('demo_opened', { from: 'journal_empty' }); navigate(demoUrl('journal')); };
+  const demo = () => { markDemoSeen(); track('demo_opened', { from: 'journal_empty' }); window.location.assign(demoUrl('analytics')); };
 
   let title = tx('Тут з\'являться твої угоди', 'Your trades will appear here');
   let text = tx('Підключи MT5, і вони підтягнуться самі.', 'Connect MT5 and they will sync on their own.');

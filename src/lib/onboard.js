@@ -32,7 +32,7 @@ export const SAVED_EVENT = 'edge:onboard-saved';
 /* Стан самого чекліста — окремим ключем, щоб чекліст і анкета ніколи
    не затирали записи одне одного. */
 export const LIST_KEY = 'onboard_list';
-export const LIST_EMPTY = { demo: false, collapsed: false, steps: [], done: false, propInterest: false };
+export const LIST_EMPTY = { demo: false, collapsed: false, steps: [], done: false, propInterest: false, bonus: false, bonusSeen: false };
 export function normalizeList(v) {
   if (!v || typeof v !== 'object') return { ...LIST_EMPTY };
   return { ...LIST_EMPTY, ...v, steps: Array.isArray(v.steps) ? v.steps : [] };
@@ -75,4 +75,9 @@ export const DEMO_FROM_KEY = 'edge_demo_from_app';
 export const DEMO_SEEN_KEY = 'edge_demo_seen';
 export const markDemoSeen = () => { try { localStorage.setItem(DEMO_SEEN_KEY, '1'); } catch { /* приватний режим */ } };
 export const demoSeen = () => { try { return localStorage.getItem(DEMO_SEEN_KEY) === '1'; } catch { return false; } };
-export const demoUrl = (section = 'journal') => `/demo/${section}?from=app`;
+export const demoUrl = (section = 'analytics') => `/demo/${section}?from=app`;
+/* Демо відкриваємо ПОВНИМ переходом, не navigate(): клієнт бази
+   підміняється на демо лише при завантаженні сторінки на /demo. Перехід
+   усередині застосунку лишав справжній клієнт — і «приклад» показував
+   порожню аналітику самої людини. */
+export const openDemo = (section = 'analytics') => { markDemoSeen(); window.location.assign(demoUrl(section)); };

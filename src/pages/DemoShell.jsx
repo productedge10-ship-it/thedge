@@ -93,7 +93,9 @@ export default function DemoShell() {
   const nav = useNavigate();
   const { pathname } = useLocation();
 
-  const step = !EMBED && hints && stepIdx < STEPS.length ? STEPS[stepIdx] : null;
+  /* Прийшов із застосунку по приклад — тур не запускаємо: він тягне на
+     план, а людина хотіла побачити статистику. */
+  const step = !EMBED && !fromApp && hints && stepIdx < STEPS.length ? STEPS[stepIdx] : null;
 
   /* Крок сам приводить людину туди, де живе його ціль: інакше
      підказка вказувала б на елемент з іншої сторінки. */

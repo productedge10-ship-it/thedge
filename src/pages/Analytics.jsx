@@ -598,6 +598,7 @@ export default function Analytics() {
               </Link>
               {!inSandbox() && (
                 <Link
+                  reloadDocument
                   to={demoUrl('analytics')}
                   onClick={() => { markDemoSeen(); track('demo_opened', { from: 'analytics_empty' }); }}
                   className="flex h-11 items-center gap-2 rounded-xl px-5 text-[14px] font-bold"
