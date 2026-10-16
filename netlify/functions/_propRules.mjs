@@ -58,12 +58,18 @@ async function scrape(url, options = {}) {
    Якщо LLM_API_KEY є — користуємось ним, Gemini лишається запасним. */
 const hasLLM = () => !!process.env.LLM_API_KEY;
 
+let lastLLM = 0;
 async function openaiChat(prompt, { json = true } = {}) {
   const base = (process.env.LLM_BASE_URL || 'https://api.mistral.ai/v1').replace(/\/+$/, '');
   const model = process.env.LLM_MODEL || 'mistral-small-latest';
   let last;
   for (const wait of [0, 20_000, 60_000, 120_000]) {
     if (wait) await sleep(wait);
+    /* Безкоштовні тарифи мають ліміт запитів на секунду/хвилину —
+       тримаємо паузу між викликами. */
+    const gap = Number(process.env.LLM_GAP_MS || 4000) - (Date.now() - lastLLM);
+    if (gap > 0) await sleep(gap);
+    lastLLM = Date.now();
     const r = await fetch(`${base}/chat/completions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.LLM_API_KEY}` },
@@ -80,6 +86,8 @@ async function openaiChat(prompt, { json = true } = {}) {
       return json ? JSON.parse(text.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, '')) : text.trim();
     }
     last = new Error(`llm ${r.status}: ${JSON.stringify(body).slice(0, 200)}`);
+    const ra = Number(r.headers?.get?.('retry-after'));
+    if (ra > 0 && ra < 120) await sleep(ra * 1000);
     if (![0, 429, 500, 502, 503, 504].includes(r.status)) break;
   }
   throw last;
@@ -522,6 +530,8 @@ async function processPage(db, page, prefetched, sources) {
 /* Квота Gemini вичерпана — до цього часу нічого не просимо, щоб не
    палити сторінки помилками. Скидається з перезапуском процесу. */
 let quotaUntil = 0;
+/* Gemini free: добова квота → 1 год. Інший LLM: ліміт на хвилину → 10 хв. */
+const QUOTA_PAUSE = () => (process.env.LLM_API_KEY ? 10 * 60_000 : H);
 const isQuota = (e) => /(gemini|llm) 429/.test(String(e?.message || ''));
 
 function batchPrompt(firm, items) {
@@ -576,7 +586,7 @@ async function processPages(db, prefetched, sources) {
       const r = await processPage(db, p, prefetched.get(p.url), sources);
       if (r) queue.push(r);
     } catch (e) {
-      if (isQuota(e)) { quotaUntil = Date.now() + H; console.error('prop rules: квота Gemini вичерпана, пауза 1 год'); break; }
+      if (isQuota(e)) { quotaUntil = Date.now() + QUOTA_PAUSE(); console.error('prop rules: ліміт LLM, пауза'); break; }
       await fail(p, e);
       console.error('prop page:', p.url, e.message);
     }
@@ -594,7 +604,7 @@ async function processPages(db, prefetched, sources) {
         await extractBatch(db, firm, chunk);
         changedFirms.add(firm);
       } catch (e) {
-        if (isQuota(e)) { quotaUntil = Date.now() + H; console.error('prop rules: квота Gemini вичерпана, пауза 1 год'); }
+        if (isQuota(e)) { quotaUntil = Date.now() + QUOTA_PAUSE(); console.error('prop rules: ліміт LLM, пауза'); }
         else { for (const c of chunk) await fail(c.page, e); console.error('prop batch:', firm, e.message); }
       }
       chunk = []; size = 0;
