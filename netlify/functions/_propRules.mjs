@@ -59,9 +59,10 @@ async function scrape(url, options = {}) {
 const hasLLM = () => !!process.env.LLM_API_KEY;
 
 let lastLLM = 0;
+const modelPause = new Map();
 async function openaiChat(prompt, { json = true } = {}) {
   const base = (process.env.LLM_BASE_URL || 'https://api.mistral.ai/v1').replace(/\/+$/, '');
-  const model = process.env.LLM_MODEL || 'mistral-small-latest';
+  const models = String(process.env.LLM_MODEL || 'mistral-small-latest').split(',').map((m) => m.trim()).filter(Boolean);
   let last;
   for (const wait of [0, 20_000, 60_000, 120_000]) {
     if (wait) await sleep(wait);
@@ -70,11 +71,16 @@ async function openaiChat(prompt, { json = true } = {}) {
     const gap = Number(process.env.LLM_GAP_MS || 4000) - (Date.now() - lastLLM);
     if (gap > 0) await sleep(gap);
     lastLLM = Date.now();
+    /* Кілька моделей через кому: у кожної свій добовий ліміт. Беремо першу,
+       що не на паузі. */
+    const model = models.find((m) => (modelPause.get(m) || 0) < Date.now()) || models[0];
     const r = await fetch(`${base}/chat/completions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.LLM_API_KEY}` },
       body: JSON.stringify({
         model, temperature: 0,
+        max_tokens: Number(process.env.LLM_MAX_TOKENS || 4000),
+        ...(/gpt-oss/.test(model) ? { reasoning_effort: 'low' } : {}),
         messages: [{ role: 'user', content: json ? `${prompt}\n\nВідповідай ЛИШЕ валідним JSON без пояснень і без markdown.` : prompt }],
         ...(json ? { response_format: { type: 'json_object' } } : {}),
       }),
@@ -87,15 +93,25 @@ async function openaiChat(prompt, { json = true } = {}) {
     }
     last = new Error(`llm ${r.status}: ${JSON.stringify(body).slice(0, 200)}`);
     const ra = Number(r.headers?.get?.('retry-after'));
+    if (r.status === 429 && models.length > 1) {
+      /* Ліміт саме цієї моделі — пробуємо наступну без очікування. */
+      modelPause.set(model, Date.now() + (ra > 0 ? ra * 1000 : 60_000));
+      if (models.some((m) => (modelPause.get(m) || 0) < Date.now())) { continue; }
+    }
     if (ra > 0 && ra < 120) await sleep(ra * 1000);
     if (![0, 429, 500, 502, 503, 504].includes(r.status)) break;
   }
   throw last;
 }
 
+/* big:true — великі запити (звід правил фірми, календар, порівняння).
+   Безкоштовна Groq дає лише 8K токенів на хвилину, тому великі йдуть у
+   Gemini (їх мало за добу), а сторінки по одній — у Groq/інший LLM. */
 async function gemini(prompt, opts = {}) {
-  if (hasLLM()) return openaiChat(prompt, opts);
-  return geminiRaw(prompt, opts);
+  const { big, ...o } = opts;
+  if (big && process.env.GEMINI_API_KEY) return geminiRaw(prompt, o);
+  if (hasLLM()) return openaiChat(prompt, o);
+  return geminiRaw(prompt, o);
 }
 
 async function geminiRaw(prompt, { json = true } = {}) {
@@ -268,7 +284,7 @@ async function runNews(db, s) {
 Текст:
 """
 ${res.text.slice(0, 80000)}
-"""`);
+"""`, { big: true });
   const rows = (out?.events || []).filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e?.date) && e.title)
     .map((e) => ({ firm: s.firm, day: e.date, currency: String(e.currency || '').toUpperCase().slice(0, 8), title: String(e.title).slice(0, 200), instruments: e.instruments || null, fetched_at: stamp }));
   if (rows.length) await db.from('prop_restricted_news').upsert(rows, { onConflict: 'firm,day,currency,title' });
@@ -337,6 +353,8 @@ async function notifyApproved(db) {
    лише після схвалення зміни адміном.
 ================================================================== */
 
+const PAGE_CHARS = () => Number(process.env.LLM_PAGE_CHARS || 30000);
+const BATCH_CHARS = () => Number(process.env.LLM_BATCH_CHARS || 60000);
 const PAGES_PER_TICK = () => Number(process.env.PROP_PAGES_PER_TICK || 32);
 const GAP = 4000; // пауза між викликами Gemini: безкоштовний ліміт ~15 запитів/хв
 const DAY = 24 * H;
@@ -504,7 +522,7 @@ async function processPage(db, page, prefetched, sources) {
   }
 
   if (page.text && page.extracted_at && page.relevant !== false) {
-    const cmp = await gemini(comparePrompt(page.firm, page, page.text, text));
+    const cmp = await gemini(comparePrompt(page.firm, page, page.text, text), { big: true });
     await sleep(GAP);
     if (cmp?.meaningful && Array.isArray(cmp.changes) && cmp.changes.length) {
       await db.from('prop_rule_changes').insert({
@@ -548,7 +566,7 @@ topic — одне з: ${TOPICS.join(', ')}.
 
 ${items.map((it, i) => `### СТОРІНКА ${i + 1}: «${it.page.title || ''}» (${it.page.url})
 """
-${it.text.slice(0, 30000)}
+${it.text.slice(0, PAGE_CHARS())}
 """`).join('\n\n')}`;
 }
 
@@ -610,8 +628,8 @@ async function processPages(db, prefetched, sources) {
       chunk = []; size = 0;
     };
     for (const it of items) {
-      const len = Math.min(it.text.length, 30000);
-      if (chunk.length && (chunk.length >= 8 || size + len > 60000)) await flush();
+      const len = Math.min(it.text.length, PAGE_CHARS());
+      if (chunk.length && (chunk.length >= 8 || size + len > BATCH_CHARS())) await flush();
       chunk.push(it); size += len;
     }
     await flush();
@@ -656,7 +674,7 @@ async function synthesize(db, firm) {
   /* Картки програм — через той самий потік змін зі схваленням. */
   const { data: current } = await db.from('prop_rules').select('program,rules').eq('firm', firm);
   const known = (current || []).map((r) => r.program);
-  const out = await gemini(extractPrompt(firm, factsText, known));
+  const out = await gemini(extractPrompt(firm, factsText, known), { big: true });
   await sleep(GAP);
   const programs = Array.isArray(out?.programs) ? out.programs.filter((p) => p?.program) : [];
   const byProgram = new Map((current || []).map((r) => [r.program, r.rules]));
@@ -669,7 +687,7 @@ async function synthesize(db, firm) {
   }
 
   await sleep(GAP);
-  const faq = await gemini(faqPrompt(firm, factsText));
+  const faq = await gemini(faqPrompt(firm, factsText), { big: true });
   await sleep(GAP);
   const items = (faq?.items || []).filter((i) => i?.question && i?.answer).slice(0, 60);
   if (items.length) {
@@ -744,7 +762,7 @@ const cleanRulebook = (rb) => {
 };
 
 async function buildRulebook(db, firm, factsText) {
-  const rb = cleanRulebook(await gemini(rulebookPrompt(firm, factsText)));
+  const rb = cleanRulebook(await gemini(rulebookPrompt(firm, factsText), { big: true }));
   await sleep(GAP);
   if (!rb || !rb.sections.length) return 0;
   const { data: cur } = await db.from('prop_rulebook').select('firm,edited_at').eq('firm', firm).maybeSingle();
@@ -766,7 +784,7 @@ export async function aiEditRulebook(firm, content, instruction) {
 ${RULEBOOK_SCHEMA}
 
 Поточний звід:
-${JSON.stringify(content).slice(0, 300000)}`);
+${JSON.stringify(content).slice(0, 300000)}`, { big: true });
   const rb = cleanRulebook(out);
   if (!rb) throw new Error('Gemini повернув не той формат');
   return rb;
