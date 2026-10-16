@@ -291,7 +291,7 @@ async function notifyApproved(db) {
    лише після схвалення зміни адміном.
 ================================================================== */
 
-const PAGES_PER_TICK = () => Number(process.env.PROP_PAGES_PER_TICK || 12);
+const PAGES_PER_TICK = () => Number(process.env.PROP_PAGES_PER_TICK || 32);
 const GAP = 4000; // пауза між викликами Gemini: безкоштовний ліміт ~15 запитів/хв
 const DAY = 24 * H;
 
@@ -414,23 +414,6 @@ const TOPICS = ['Ліміти збитку', 'Цілі та етапи', 'Нов
   'Радники, копітрейдинг, хедж', 'Плече, лоти, інструменти', 'Консистентність', 'Виплати', 'Неактивність',
   'Масштабування', 'Платформи', 'Порушення і наслідки', 'Інше'];
 
-function factsPrompt(firm, page, text) {
-  return `Ти аналізуєш сторінку сайту/довідки проп-фірми ${firm}: «${page.title || ''}» (${page.url}).
-Витягни ВСІ правила й умови для трейдера: ліміти збитку і як рахуються, цілі, мінімальні дні, строки, новини,
-вихідні й overnight, заборонені стратегії, радники/копітрейдинг/хедж, плече, лоти, інструменти, консистентність,
-виплати та їх умови, неактивність, масштабування, платформи, що буде при порушенні.
-Кожне правило — окремий пункт: конкретно, з числами, українською, 1 речення. Нічого не вигадуй.
-programs — до яких програм пункт стосується (назви як на сайті); [] якщо до всіх.
-topic — одне з: ${TOPICS.join(', ')}.
-Якщо сторінка не містить правил трейдингу (реклама, партнерка, оплата, KYC без обмежень) — relevant:false, facts:[].
-Поверни ТІЛЬКИ JSON: {"relevant":true,"programs":["..."],"facts":[{"topic":"Новини","programs":["2-Step"],"rule":"..."}]}
-
-Текст сторінки:
-"""
-${text.slice(0, 60000)}
-"""`;
-}
-
 function comparePrompt(firm, page, oldText, newText) {
   return `Сторінка правил проп-фірми ${firm} «${page.title || ''}» (${page.url}) змінилась.
 Порівняй СТАРУ і НОВУ версії й визнач, чи змінились правила для трейдера.
@@ -493,16 +476,51 @@ async function processPage(db, page, prefetched, sources) {
     }
   }
 
-  const f = cleanFacts(await gemini(factsPrompt(page.firm, page, text)));
+  /* Витяг фактів — пачкою з кількох сторінок (processPages): так
+     викликів Gemini в рази менше, а безкоштовна квота — крихітна. */
+  return { page, text, hash };
+}
+
+/* Квота Gemini вичерпана — до цього часу нічого не просимо, щоб не
+   палити сторінки помилками. Скидається з перезапуском процесу. */
+let quotaUntil = 0;
+const isQuota = (e) => /gemini 429/.test(String(e?.message || ''));
+
+function batchPrompt(firm, items) {
+  return `Нижче ${items.length} сторінок сайту/довідки проп-фірми ${firm}. Для КОЖНОЇ сторінки окремо витягни ВСІ правила
+й умови для трейдера: ліміти збитку і як рахуються, цілі, мінімальні дні, строки, новини, вихідні й overnight,
+заборонені стратегії, радники/копітрейдинг/хедж, плече, лоти, інструменти, консистентність, виплати та їх умови,
+неактивність, масштабування, платформи, що буде при порушенні.
+Кожне правило — окремий пункт: конкретно, з числами, українською, 1 речення. Нічого не вигадуй.
+programs — до яких програм пункт стосується (назви як на сайті); [] якщо до всіх.
+topic — одне з: ${TOPICS.join(', ')}.
+Сторінка без правил трейдингу (реклама, партнерка, оплата, KYC без обмежень) — relevant:false, facts:[].
+Поверни ТІЛЬКИ JSON: {"pages":[{"n":1,"relevant":true,"programs":["..."],"facts":[{"topic":"Новини","programs":[],"rule":"..."}]}]}
+(n — номер сторінки нижче; по одному об'єкту на КОЖНУ сторінку).
+
+${items.map((it, i) => `### СТОРІНКА ${i + 1}: «${it.page.title || ''}» (${it.page.url})
+"""
+${it.text.slice(0, 30000)}
+"""`).join('\n\n')}`;
+}
+
+async function extractBatch(db, firm, items) {
+  const out = await gemini(batchPrompt(firm, items));
   await sleep(GAP);
-  await db.from('prop_rule_pages').update({
-    text, text_hash: hash, facts: f, relevant: f.relevant, checked_at: now, changed_at: now, extracted_at: now, last_error: null,
-  }).eq('id', page.id);
-  return true;
+  const now = new Date().toISOString();
+  const got = new Map((out?.pages || []).map((p) => [Number(p?.n), p]));
+  for (let i = 0; i < items.length; i += 1) {
+    const { page, text, hash } = items[i];
+    const f = cleanFacts(got.get(i + 1) || { relevant: false, facts: [] });
+    await db.from('prop_rule_pages').update({
+      text, text_hash: hash, facts: f, relevant: f.relevant, checked_at: now, changed_at: now, extracted_at: now, last_error: null,
+    }).eq('id', page.id);
+  }
 }
 
 async function processPages(db, prefetched, sources) {
   const now = Date.now();
+  if (now < quotaUntil) return;
   const { data: pages } = await db.from('prop_rule_pages')
     .select('id,firm,source_id,url,title,text,text_hash,relevant,checked_at,extracted_at')
     .eq('active', true)
@@ -512,15 +530,45 @@ async function processPages(db, prefetched, sources) {
   const due = (pages || []).filter((p) => !p.checked_at || p.relevant !== false
     || now - new Date(p.checked_at).getTime() > 7 * DAY).slice(0, PAGES_PER_TICK());
   const changedFirms = new Set();
+  const queue = [];
+  const fail = (p, e) => db.from('prop_rule_pages').update({ last_error: e.message.slice(0, 300), checked_at: new Date(Date.now() - DAY + H).toISOString() }).eq('id', p.id);
+
   for (const p of due) {
     try {
-      if (await processPage(db, p, prefetched.get(p.url), sources)) changedFirms.add(p.firm);
+      const r = await processPage(db, p, prefetched.get(p.url), sources);
+      if (r) queue.push(r);
     } catch (e) {
-      /* Збій сторінки не валить прогін; повтор приблизно за годину. */
-      await db.from('prop_rule_pages').update({ last_error: e.message.slice(0, 300), checked_at: new Date(Date.now() - DAY + H).toISOString() }).eq('id', p.id);
+      if (isQuota(e)) { quotaUntil = Date.now() + H; console.error('prop rules: квота Gemini вичерпана, пауза 1 год'); break; }
+      await fail(p, e);
       console.error('prop page:', p.url, e.message);
     }
   }
+
+  /* Пачки по фірмі: до 8 сторінок і ~60 тис. символів на виклик. */
+  const byFirm = new Map();
+  queue.forEach((q) => { if (!byFirm.has(q.page.firm)) byFirm.set(q.page.firm, []); byFirm.get(q.page.firm).push(q); });
+  for (const [firm, items] of byFirm) {
+    let chunk = [];
+    let size = 0;
+    const flush = async () => {
+      if (!chunk.length || Date.now() < quotaUntil) return;
+      try {
+        await extractBatch(db, firm, chunk);
+        changedFirms.add(firm);
+      } catch (e) {
+        if (isQuota(e)) { quotaUntil = Date.now() + H; console.error('prop rules: квота Gemini вичерпана, пауза 1 год'); }
+        else { for (const c of chunk) await fail(c.page, e); console.error('prop batch:', firm, e.message); }
+      }
+      chunk = []; size = 0;
+    };
+    for (const it of items) {
+      const len = Math.min(it.text.length, 30000);
+      if (chunk.length && (chunk.length >= 8 || size + len > 60000)) await flush();
+      chunk.push(it); size += len;
+    }
+    await flush();
+  }
+
   const stamp = new Date().toISOString();
   for (const firm of changedFirms) {
     await db.from('prop_firm_status').upsert({ firm, facts_changed_at: stamp }, { onConflict: 'firm' });
@@ -677,6 +725,7 @@ ${JSON.stringify(content).slice(0, 300000)}`);
 }
 
 async function maybeSynthesize(db) {
+  if (Date.now() < quotaUntil) return;
   const { data: st } = await db.from('prop_firm_status').select('firm,facts_changed_at,synth_at');
   for (const s of st || []) {
     if (!s.facts_changed_at || (s.synth_at && new Date(s.synth_at) >= new Date(s.facts_changed_at))) continue;
