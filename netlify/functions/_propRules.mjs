@@ -26,7 +26,10 @@ import { claimMail, mailPropRules } from './_mails.mjs';
 
 const H = 3600 * 1000;
 const EVERY = 24 * H;
-const MODEL = () => process.env.PROP_GEMINI_MODEL || 'gemini-2.5-flash';
+/* Модель — зі змінної: Google час від часу вимикає старі моделі для
+   нових ключів (2.5-flash уже «no longer available to new users»). */
+const MODEL = () => process.env.PROP_GEMINI_MODEL || 'gemini-3.8-flash';
+const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
@@ -52,19 +55,30 @@ async function scrape(url, options = {}) {
 async function gemini(prompt, { json = true } = {}) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY не заданий');
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL()}:generateContent`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0, ...(json ? { responseMimeType: 'application/json' } : {}) },
-    }),
-    signal: AbortSignal.timeout(120_000),
-  });
-  const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`gemini ${r.status}: ${JSON.stringify(body).slice(0, 200)}`);
-  const text = body?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
-  return json ? JSON.parse(text.replace(/^```json\s*|\s*```$/g, '')) : text.trim();
+  /* Безкоштовний Gemini часто відповідає 503 «high demand» або 429.
+     Це минає за хвилину-дві, тому кілька спроб з паузою, а не провал
+     усього прогону. */
+  let last;
+  for (const wait of [0, 15_000, 45_000, 90_000]) {
+    if (wait) await sleep(wait);
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL()}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0, ...(json ? { responseMimeType: 'application/json' } : {}) },
+      }),
+      signal: AbortSignal.timeout(180_000),
+    }).catch((e) => ({ ok: false, status: 0, json: async () => ({ error: e.message }) }));
+    const body = await r.json().catch(() => ({}));
+    if (r.ok) {
+      const text = body?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
+      return json ? JSON.parse(text.replace(/^```json\s*|\s*```$/g, '')) : text.trim();
+    }
+    last = new Error(`gemini ${r.status}: ${JSON.stringify(body).slice(0, 200)}`);
+    if (![0, 429, 500, 502, 503, 504].includes(r.status)) break;
+  }
+  throw last;
 }
 
 /* ---------- формат правил ---------- */
@@ -206,8 +220,8 @@ async function runFirm(db, firm, sources, force) {
     out = await gemini(extractPrompt(firm, joined, known));
   } catch (e) {
     /* Gemini впав (ліміт, мережа) — хеш не зберігаємо, щоб наступна
-       спроба знову дійшла до витягу; повтор через ~2 год, не щотіку. */
-    const retry = new Date(Date.now() - EVERY + 2 * H).toISOString();
+       спроба знову дійшла до витягу; повтор через ~30 хв, не щотіку. */
+    const retry = new Date(Date.now() - EVERY + H / 2).toISOString();
     await Promise.all(texts.map((t) => db.from('prop_rule_sources').update({ last_fetch_at: retry, last_ok: false, last_note: `gemini: ${e.message}`.slice(0, 300) }).eq('id', t.s.id)));
     throw e;
   }
