@@ -79,6 +79,8 @@ const WEB_ROUTES = {
   '/api/np-callback': './netlify/functions/np-callback.mjs',
   /* Події листів від Resend (доставлено/відкрито) — статистика в адмінці. */
   '/api/resend-webhook': './netlify/functions/resend-webhook.mjs',
+  /* Gemini-редагування зводу правил пропа з локальної адмінки (CORS лише localhost). */
+  '/api/prop-rulebook-ai': './netlify/functions/prop-rulebook-ai.mjs',
 };
 
 /* Стиль Vercel: (req, res) */

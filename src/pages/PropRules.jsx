@@ -192,6 +192,62 @@ function FirmFaq({ firm, items, status }) {
   );
 }
 
+
+/* Звід усіх правил фірми «по поличках» (prop_rulebook): розділи →
+   правила → значення по програмах. Розділи згорнуті, крім першого. */
+function FirmBook({ firm, book }) {
+  const [open, setOpen] = useState(0);
+  const sections = book?.content?.sections || [];
+  if (!sections.length) return null;
+  return (
+    <div style={CARD} className="mt-4 p-5 sm:p-6">
+      <div className="mb-1 text-[17px] font-bold" style={{ fontFamily: T.display, color: T.text }}>{firm}: усі правила</div>
+      <p className="mb-4 mt-0 text-[12.5px]" style={{ color: T.text4, fontFamily: T.sans }}>
+        {sections.reduce((n, s) => n + s.items.length, 0)} правил з сайту й довідки {firm} · оновлено {new Date(book.updated_at).toLocaleDateString('uk-UA')}
+      </p>
+      <div className="flex flex-col gap-2">
+        {sections.map((s, si) => {
+          const on = open === si;
+          return (
+            <div key={s.topic} className="overflow-hidden rounded-xl" style={{ background: 'var(--edge-sunken)', border: '1px solid var(--edge-line)' }}>
+              <button type="button" onClick={() => setOpen(on ? -1 : si)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+                <span className="text-[14.5px] font-bold" style={{ color: T.text, fontFamily: T.sans }}>{s.topic}</span>
+                <span className="text-[12px]" style={{ color: T.text4 }}>{s.items.length}</span>
+                <ChevronDown size={16} className="ml-auto" style={{ color: T.text3, transform: on ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+              </button>
+              {on && (
+                <div className="flex flex-col gap-3 px-4 pb-4">
+                  {s.items.map((it, ii) => (
+                    <div key={ii} style={{ borderTop: ii ? '1px solid var(--edge-line)' : 'none', paddingTop: ii ? 12 : 0 }}>
+                      <div className="text-[14px] font-semibold" style={{ color: T.text, fontFamily: T.sans }}>{it.title}</div>
+                      {it.text && <p className="mb-0 mt-1 text-[13.5px] leading-[1.6]" style={{ color: T.text2, fontFamily: T.sans }}>{it.text}</p>}
+                      {Object.keys(it.values || {}).length > 0 && (
+                        <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                          {Object.entries(it.values).map(([k, v]) => (
+                            <div key={k} className="flex justify-between gap-3 rounded-lg px-3 py-1.5 text-[13px]" style={{ background: 'var(--edge-surface)', fontFamily: T.sans }}>
+                              <span style={{ color: T.text3 }}>{k}</span><span className="text-right font-semibold" style={{ color: T.text }}>{v}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {(it.programs?.length > 0 || it.sources?.length > 0) && (
+                        <div className="mt-1.5 flex flex-wrap gap-x-3 text-[12px]" style={{ fontFamily: T.sans }}>
+                          {it.programs?.length > 0 && <span style={{ color: T.text4 }}>{it.programs.join(', ')}</span>}
+                          {it.sources?.slice(0, 3).map((u) => <a key={u} href={u} target="_blank" rel="noreferrer" className="underline" style={{ color: T.text3 }}>джерело</a>)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function PropRulesPage() {
   const { user } = useAuth();
   const [ctx, setCtx] = useState(null);
@@ -232,6 +288,8 @@ export default function PropRulesPage() {
           {ctx.accounts.map((a) => <RulesCard key={a.id} acc={a} ctx={ctx} onProgram={onProgram} />)}
         </div>
       )}
+
+      {ctx && (ctx.books || []).map((b) => <FirmBook key={b.firm} firm={b.firm} book={b} />)}
 
       {ctx && [...new Set(ctx.faq.map((f) => f.firm))].map((firm) => (
         <FirmFaq key={firm} firm={firm} items={ctx.faq.filter((f) => f.firm === firm)} status={ctx.status.find((x) => x.firm === firm)} />

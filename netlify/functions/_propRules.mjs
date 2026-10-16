@@ -572,7 +572,9 @@ async function synthesize(db, firm) {
     await upsertChange(db, { firm, program, sourceId: null, oldR, newR: p, diff, excerpt: factsText.slice(0, 4000) });
   }
 
+  await sleep(GAP);
   const faq = await gemini(faqPrompt(firm, factsText));
+  await sleep(GAP);
   const items = (faq?.items || []).filter((i) => i?.question && i?.answer).slice(0, 60);
   if (items.length) {
     await db.from('prop_faq').delete().eq('firm', firm);
@@ -582,12 +584,96 @@ async function synthesize(db, firm) {
       source_urls: Array.isArray(i.sources) ? i.sources.filter((u) => /^https?:\/\//.test(u)).slice(0, 5) : [], position: k,
     })));
   }
+  let rbItems = 0;
+  try { rbItems = await buildRulebook(db, firm, factsText); } catch (e) { console.error('prop rulebook:', firm, e.message); }
   const stamp = new Date().toISOString();
   const { count: total } = await db.from('prop_rule_pages').select('id', { count: 'exact', head: true }).eq('firm', firm).eq('active', true);
   await db.from('prop_firm_status').upsert({
     firm, synth_at: stamp, faq_at: items.length ? stamp : undefined, pages_total: total || 0, pages_relevant: (pages || []).length, checked_at: stamp,
   }, { onConflict: 'firm' });
-  console.log(`prop rules: ${firm} — програм ${programs.length}, питань ${items.length}`);
+  console.log(`prop rules: ${firm} — програм ${programs.length}, питань ${items.length}, правил у зводі ${rbItems}`);
+}
+
+/* ---------- звід усіх правил («по поличках») ---------- */
+
+const RULEBOOK_SCHEMA = `{
+  "programs": ["2-Step", "1-Step"],
+  "sections": [{
+    "topic": "Ліміти збитку",
+    "items": [{
+      "title": "Денний ліміт",
+      "text": "Пояснення одним-двома реченнями: як рахується, від чого, коли скидається, що буде при порушенні.",
+      "programs": [],
+      "values": {"2-Step": "5% від початкового балансу", "1-Step": "3%"},
+      "sources": ["https://..."]
+    }]
+  }]
+}`;
+
+function rulebookPrompt(firm, factsText) {
+  return `Нижче — сирі правила проп-фірми ${firm}, витягнуті з усіх сторінок її сайту й довідки (багато повторів).
+Склади ПОВНИЙ ЗВІД ПРАВИЛ «по поличках» українською:
+- розділи (topic) лише з цього списку і в цьому порядку: ${TOPICS.join(', ')};
+- у кожному розділі — окремі правила (items) без повторів: схожі пункти з різних сторінок об'єднуй в один;
+- title — коротка назва правила (2–5 слів), text — суть 1–3 реченнями з числами;
+- якщо значення різниться між програмами — заповни values {"назва програми": "значення"}, інакше values {};
+- programs — до яких програм стосується правило ([] — до всіх); sources — url сторінок-джерел;
+- нічого не вигадуй, не губи жодного правила, яке є у фактах;
+- programs на верхньому рівні — повний список програм фірми.
+Поверни ТІЛЬКИ JSON за схемою:
+${RULEBOOK_SCHEMA}
+
+Факти:
+${factsText}`;
+}
+
+const cleanRulebook = (rb) => {
+  if (!rb || !Array.isArray(rb.sections)) return null;
+  const order = new Map(TOPICS.map((t, i) => [t, i]));
+  const sections = rb.sections
+    .filter((s) => s && Array.isArray(s.items) && s.items.length)
+    .map((s) => ({
+      topic: String(s.topic || 'Інше').slice(0, 60),
+      items: s.items.filter((i) => i && (i.title || i.text)).map((i) => ({
+        title: String(i.title || '').slice(0, 120),
+        text: String(i.text || '').slice(0, 1500),
+        programs: Array.isArray(i.programs) ? i.programs.map(String).slice(0, 12) : [],
+        values: i.values && typeof i.values === 'object' && !Array.isArray(i.values)
+          ? Object.fromEntries(Object.entries(i.values).slice(0, 12).map(([k, v]) => [String(k).slice(0, 60), String(v).slice(0, 200)])) : {},
+        sources: Array.isArray(i.sources) ? i.sources.filter((u) => /^https?:\/\//.test(u)).slice(0, 6) : [],
+      })),
+    }))
+    .sort((a, b) => (order.get(a.topic) ?? 99) - (order.get(b.topic) ?? 99));
+  return { programs: Array.isArray(rb.programs) ? rb.programs.map(String).slice(0, 20) : [], sections };
+};
+
+async function buildRulebook(db, firm, factsText) {
+  const rb = cleanRulebook(await gemini(rulebookPrompt(firm, factsText)));
+  await sleep(GAP);
+  if (!rb || !rb.sections.length) return 0;
+  const { data: cur } = await db.from('prop_rulebook').select('firm,edited_at').eq('firm', firm).maybeSingle();
+  const stamp = new Date().toISOString();
+  /* Адмін уже правив звід руками — не затираємо: нова версія лягає
+     чернеткою, і в адмінці її можна переглянути й прийняти. */
+  if (cur?.edited_at) await db.from('prop_rulebook').update({ draft: rb, draft_at: stamp }).eq('firm', firm);
+  else await db.from('prop_rulebook').upsert({ firm, content: rb, updated_at: stamp, draft: null, draft_at: null }, { onConflict: 'firm' });
+  return rb.sections.reduce((n, s) => n + s.items.length, 0);
+}
+
+/* Редагування зводу Gemini за інструкцією адміна (з адмінки). */
+export async function aiEditRulebook(firm, content, instruction) {
+  const out = await gemini(`Ось звід правил проп-фірми ${firm} у JSON. Виконай інструкцію адміністратора
+і поверни ВЕСЬ звід у тому самому форматі. Не губи правила, яких інструкція не стосується, і нічого не вигадуй.
+Інструкція: ${String(instruction || 'Впорядкуй: об\'єднай повтори, розклади по розділах, зроби формулювання чіткими й однаковими.').slice(0, 2000)}
+
+Формат:
+${RULEBOOK_SCHEMA}
+
+Поточний звід:
+${JSON.stringify(content).slice(0, 300000)}`);
+  const rb = cleanRulebook(out);
+  if (!rb) throw new Error('Gemini повернув не той формат');
+  return rb;
 }
 
 async function maybeSynthesize(db) {

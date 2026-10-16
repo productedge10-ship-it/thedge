@@ -1,0 +1,10 @@
+-- Виконано в базі 16.10.2026. Обхід усіх сторінок правил і довідки пропів,
+-- питання-відповіді, звід правил «по поличках».
+-- prop_rule_sources.kind += 'index' (sitemap | zendesk | intercom у options.type)
+-- prop_rule_pages  — кожна сторінка: текст, хеш, факти Gemini, relevant, checked/changed/extracted_at
+-- prop_faq         — питання-відповіді по фірмі (перезбираються при змінах)
+-- prop_firm_status — стан обходу по фірмі
+-- prop_rule_changes += kind ('program'|'page'), page_id, page_url, page_title
+-- prop_rulebook    — звід правил (content), чернетка від монітора (draft), ручні правки (edited_at)
+-- admin_rulebook_save(firm, content, clear_draft) — збереження з адмінки (is_admin_writer)
+-- Повні тексти DDL — у журналі виконання SQL Editor; структура описана тут для орієнтиру.
