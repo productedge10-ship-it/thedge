@@ -56,6 +56,7 @@ export const NAV = [
     items: [
       { to: '/analytics', label: tx('Аналітика', 'Analytics'), icon: 'BarChart2' },
       { to: '/accounts', label: tx('Рахунки', 'Accounts'), icon: 'Users' },
+      { to: '/prop-rules', label: tx('Правила пропа', 'Prop rules'), icon: 'FileCheck2' },
       { to: '/error', label: tx('Журнал помилок', 'Error Log'), icon: 'AlertTriangle' },
     ],
   },

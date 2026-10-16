@@ -16,6 +16,7 @@ import crypto from 'node:crypto';
 import {
   PLANS, admin, site, sendMail, letter, fmtDay,
 } from './_mono.mjs';
+const npMail = (to, subject, html) => sendMail(to, subject, html, { kind: 'billing' });
 
 export const NP_API = 'https://api.nowpayments.io/v1';
 
@@ -117,7 +118,7 @@ export async function applyIpn(db, body) {
     }, { onConflict: 'user_id' }), 'subscriptions');
 
     const { data } = await db.auth.admin.getUserById(order.user_id).catch(() => ({ data: null }));
-    await sendMail(data?.user?.email, 'Дякуємо за підписку на The Edge Pro', letter(
+    await npMail(data?.user?.email, 'Дякуємо за підписку на The Edge Pro', letter(
       'Дякуємо за підписку!',
       [
         `Оплату криптою отримано, Pro активовано до <b style="color:#fafafa">${fmtDay(until)}</b>.`,
@@ -176,7 +177,7 @@ export async function runCryptoReminders() {
     if (!claimed?.length) continue;
 
     const { data } = await db.auth.admin.getUserById(s.user_id).catch(() => ({ data: null }));
-    await sendMail(data?.user?.email, 'Pro закінчується — продовж підписку', letter(
+    await npMail(data?.user?.email, 'Pro закінчується — продовж підписку', letter(
       'Pro скоро закінчиться',
       [
         `Оплачений період триває до <b style="color:#fafafa">${fmtDay(s.valid_until)}</b>.`,

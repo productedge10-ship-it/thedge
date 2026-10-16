@@ -77,6 +77,8 @@ const WEB_ROUTES = {
   /* Крипта (NOWPayments) — передоплата періоду, без автосписань. */
   '/api/np-pay': './netlify/functions/np-pay.mjs',
   '/api/np-callback': './netlify/functions/np-callback.mjs',
+  /* Події листів від Resend (доставлено/відкрито) — статистика в адмінці. */
+  '/api/resend-webhook': './netlify/functions/resend-webhook.mjs',
 };
 
 /* Стиль Vercel: (req, res) */
@@ -664,6 +666,29 @@ const propTick = async () => {
 };
 setTimeout(propTick, 90_000).unref();
 setInterval(propTick, PROP_EVERY).unref();
+
+/* ------------------------------------------------------------------
+   Монітор правил пропів (_propRules.mjs): сторінки фірм раз на добу
+   через сервіс prop-scraper, витяг Gemini, зміни — в адмінку на
+   схвалення; після схвалення — лист і Telegram. Тік раз на 15 хв лише
+   перевіряє, чи хтось «прострочений» або адмін натиснув «Перевірити
+   зараз». Вимкнути: PROP_RULES_OFF=1.
+------------------------------------------------------------------ */
+let rulesBusy = false;
+const rulesTick = async () => {
+  if (rulesBusy) return;
+  rulesBusy = true;
+  try {
+    const r = await import('./netlify/functions/_propRules.mjs');
+    await r.runPropRulesMonitor();
+  } catch (e) {
+    console.error('prop rules cron:', e.message);
+  } finally {
+    rulesBusy = false;
+  }
+};
+setTimeout(rulesTick, 3 * 60_000).unref();
+setInterval(rulesTick, 15 * 60_000).unref();
 
 /* Коректне завершення. Coolify під час деплою шле SIGTERM і чекає;
    без цього обробника процес помирає миттєво разом із запитом, який

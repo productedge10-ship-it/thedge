@@ -321,9 +321,13 @@ const addPeriod = (from, period) => {
    Листи — приємний додаток, а не частина оплати: будь-яка помилка тут
    лише пишеться в лог і ніколи не зриває запис підписки. Немає ключа
    Resend — листів просто немає. */
-export async function sendMail(to, subject, html) {
+export async function sendMail(to, subject, html, { kind = 'other', userId = null } = {}) {
   const key = process.env.RESEND_API_KEY;
   if (!key || !to) return;
+  /* Кожен лист — рядок у mail_sent: так адмінка бачить, скільки чого
+     пішло, а вебхук Resend дописує «доставлено / відкрито» по id. */
+  const log = (row) => admin().from('mail_sent').insert({ kind, user_id: userId, ...row })
+    .then(({ error }) => error && console.error('mail_sent:', error.message), () => {});
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -336,11 +340,21 @@ export async function sendMail(to, subject, html) {
       }),
       signal: AbortSignal.timeout(10_000),
     });
-    if (!r.ok) console.error('mail: Resend відповів', r.status, (await r.text()).slice(0, 200));
+    if (!r.ok) {
+      const t = (await r.text()).slice(0, 200);
+      console.error('mail: Resend відповів', r.status, t);
+      await log({ ok: false, error: `${r.status} ${t}` });
+      return;
+    }
+    const data = await r.json().catch(() => ({}));
+    await log({ resend_id: data?.id || null });
   } catch (e) {
     console.error('mail: не вдалось надіслати —', e.message);
+    await log({ ok: false, error: e.message.slice(0, 200) });
   }
 }
+
+const billMail = (to, subject, html) => sendMail(to, subject, html, { kind: 'billing' });
 
 export const fmtDay = (d) => new Date(d).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -403,7 +417,7 @@ async function thankYou(db, userId, kind, { nextCharge, amount, currency, plan }
     : 'автоімпорт з MetaTrader 5, Telegram-бот, бектест і до 5 рахунків';
 
   if (kind === 'verify') {
-    await sendMail(email, `${tn} активовано — 14 днів безкоштовно`, letter(
+    await billMail(email, `${tn} активовано — 14 днів безкоштовно`, letter(
       'Дякуємо, що з нами!',
       [
         `Картку привʼязано, ${tn} уже працює: ${what}.`,
@@ -412,7 +426,7 @@ async function thankYou(db, userId, kind, { nextCharge, amount, currency, plan }
       { href: app, text: 'Відкрити журнал' },
     ));
   } else if (kind === 'renew') {
-    await sendMail(email, `Підписку ${tn} продовжено — ${money}`, letter(
+    await billMail(email, `Підписку ${tn} продовжено — ${money}`, letter(
       'Підписку продовжено',
       [
         `Ми списали ${money} за ${word} підписку ${tn}, доступ продовжено. Дякуємо, що ти з нами!`,
@@ -421,7 +435,7 @@ async function thankYou(db, userId, kind, { nextCharge, amount, currency, plan }
       { href: app, text: 'Відкрити журнал' },
     ));
   } else {
-    await sendMail(email, `Дякуємо за придбання ${word} підписки ${tn}`, letter(
+    await billMail(email, `Дякуємо за придбання ${word} підписки ${tn}`, letter(
       'Дякуємо за придбання!',
       [
         `Оплату ${money} за ${word} підписку ${tn} отримано, усе активовано.`,
@@ -445,7 +459,7 @@ async function failedPayment(db, order, attempts, validUntil) {
   const href = `${site()}/app?settings=billing`;
 
   if (attempts < MAX_ATTEMPTS) {
-    await sendMail(email, `Не вдалося списати оплату за ${tn}`, letter(
+    await billMail(email, `Не вдалося списати оплату за ${tn}`, letter(
       'Не вдалося списати оплату',
       [
         `Банк відхилив списання ${money} за ${word} підписку ${tn}. Доступ поки діє, і ми спробуємо ще раз завтра (спроба ${attempts} з ${MAX_ATTEMPTS}).`,
@@ -454,7 +468,7 @@ async function failedPayment(db, order, attempts, validUntil) {
       { href, text: 'Оплатити вручну' },
     ));
   } else {
-    await sendMail(email, `Автосписання вимкнено — онови оплату ${tn}`, letter(
+    await billMail(email, `Автосписання вимкнено — онови оплату ${tn}`, letter(
       'Автосписання вимкнено',
       [
         `Банк відхилив ${MAX_ATTEMPTS} спроби списати ${money} за ${word} підписку ${tn}, тому автоматичні списання ми зупинили.`,
@@ -862,7 +876,7 @@ export async function runChargeReminders() {
       const href = `${site()}/app?settings=billing`;
 
       if (s.status === 'trialing') {
-        await sendMail(email, `Пробний період ${tn} скоро закінчується`, letter(
+        await billMail(email, `Пробний період ${tn} скоро закінчується`, letter(
           'Пробний період закінчується',
           [
             `<b style="color:#fafafa">${day}</b> закінчується безкоштовний період, і ми спишемо ${money} за ${word} підписку ${tn} з привʼязаної картки.`,
@@ -871,7 +885,7 @@ export async function runChargeReminders() {
           { href, text: 'Керувати підпискою' },
         ));
       } else {
-        await sendMail(email, `Скоро оплата підписки ${tn}`, letter(
+        await billMail(email, `Скоро оплата підписки ${tn}`, letter(
           'Скоро оплата підписки',
           [
             `<b style="color:#fafafa">${day}</b> ми спишемо ${money} за ${word} підписку ${tn} з привʼязаної картки.`,

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { T, EASE, SPRING_SOFT, useEdgeFonts } from "../lib/theme";
+import { usePropContext, restrictedFor } from "../lib/propRules";
 import {
   IMPACTS,
   WEEK_SPAN,
@@ -610,7 +611,7 @@ function BellPick({ watched, lead, hovered, label, onPick }) {
 
 /* ---------- одна подія ---------- */
 
-function EventRow({ ev, watched, lead, onWatch, canWatch }) {
+function EventRow({ ev, watched, lead, onWatch, canWatch, banned = [] }) {
   const [open, setOpen] = useState(false);
   const [hov, setHov] = useState(false);
   /* undefined — ще не питали, false — питали й не знайшли,
@@ -810,6 +811,15 @@ function EventRow({ ev, watched, lead, onWatch, canWatch }) {
             >
               {ev.title}
             </span>
+            {banned.length > 0 && (
+              <span
+                className="shrink-0 rounded-md px-1.5 py-[2px] text-[10.5px] font-bold"
+                title={tx(`Заборонена новина у ${banned.join(", ")}: не відкривай і не закривай угоди у вікні навколо неї`, `Restricted news at ${banned.join(", ")}`)}
+                style={{ color: "var(--edge-bad)", background: "rgba(var(--edge-bad-rgb),0.1)", border: "1px solid rgba(var(--edge-bad-rgb),0.3)", fontFamily: T.sans }}
+              >
+                ⛔ {banned.join(", ")}
+              </span>
+            )}
             {high && (
               <span className="hidden shrink-0 items-center gap-[3px] sm:flex">
                 {[0, 1, 2].map((i) => (
@@ -1324,6 +1334,8 @@ function AlertToasts() {
 
 export default function News() {
   useEdgeFonts();
+  /* Заборонені новини пропів юзера — бейдж на події (lib/propRules). */
+  const propCtx = usePropContext();
 
   const [week, setWeek] = useState(0);
   const [rows, setRows] = useState([]);
@@ -2592,6 +2604,7 @@ export default function News() {
                                 lead={leadOf(ev.id)}
                                 onWatch={setWatch}
                                 canWatch={canWatch}
+                                banned={restrictedFor(propCtx, ev)}
                               />
                             </div>
                           ))}

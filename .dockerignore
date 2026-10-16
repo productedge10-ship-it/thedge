@@ -26,3 +26,5 @@ npm-debug.log*
 CLAUDE.md
 netlify.toml
 vercel.json
+prop-scraper
+public/_tmp

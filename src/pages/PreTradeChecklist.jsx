@@ -16,6 +16,7 @@ import {
   Counter, DrawnCheck, ProgressRing, Sweep,
 } from '../components/checklist/ChecklistBits';
 import { t as tx } from '../lib/lang';
+import PropTodayStrip from '../components/accounts/PropTodayStrip';
 
 /* ==================================================================
    Чекліст перед входом.
@@ -546,6 +547,9 @@ export default function PreTradeChecklist() {
             )}
           </div>
         </motion.div>
+
+        {/* Заборонені новини пропа на найближчі години (якщо є). */}
+        {!editMode && <PropTodayStrip />}
 
         {/* ─────────── Вердикт ───────────
             Без бордера взагалі. Стан тут і так сказаний тричі —

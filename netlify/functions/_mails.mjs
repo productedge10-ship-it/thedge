@@ -175,6 +175,32 @@ export function mailDigest(uid, s) {
   };
 }
 
+const showVal = (v) => {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'boolean') return v ? 'так' : 'ні';
+  if (Array.isArray(v)) return v.map((x) => (typeof x === 'object' ? [x.name, x.profit_target_pct != null ? `${x.profit_target_pct}%` : null, x.min_trading_days != null ? `${x.min_trading_days} дн.` : null].filter(Boolean).join(' ') : x)).join(', ');
+  return String(v).replace(/_/g, ' ');
+};
+
+/* Зміна правил пропа — після схвалення адміном, лише серйозні. */
+export function mailPropRules(c) {
+  const rows = (c.diff || []).slice(0, 8).map((d) => `<tr>
+<td style="padding:10px 12px;border-top:1px solid #2E2E36;color:#8E8E99;font-size:13px">${blend(d.label)}</td>
+<td style="padding:10px 12px;border-top:1px solid #2E2E36;color:#8E8E99;font-size:13px;text-decoration:line-through">${blend(showVal(d.old))}</td>
+<td style="padding:10px 12px;border-top:1px solid #2E2E36;color:#FAFAFA;font-size:13px;font-weight:700">${blend(showVal(d.new))}</td></tr>`).join('');
+  return {
+    subject: `${c.firm} змінив правила (${c.program})`,
+    html: letter(`${c.firm} змінив правила`, [
+      `Програма <b style="color:#FAFAFA">${c.program}</b>. Ми помітили зміну на сайті ${c.firm} і перевірили її.`,
+      note(c.conclusion || 'Подивись, що змінилось, перед наступною угодою.', 'warn'),
+      { html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px;${BG('#18181C')}border:1px solid #2E2E36;border-radius:14px;overflow:hidden">
+<tr><td style="padding:10px 12px;color:#8E8E99;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">${blend('Правило')}</td><td style="padding:10px 12px;color:#8E8E99;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">${blend('Було')}</td><td style="padding:10px 12px;color:#8E8E99;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">${blend('Стало')}</td></tr>${rows}</table>` },
+      'Зазвичай нові правила діють для рахунків, куплених після зміни, а старі рахунки дограють за старими. Перевір це у своєму кабінеті пропа.',
+    ], { href: `${site()}/prop-rules`, text: 'Правила мого пропа' },
+    'Лист надіслано, бо в тебе в THE EDGE є рахунок цього пропа.<br>Питання?'),
+  };
+}
+
 /* ---------- статистика тижня (те саме правило, що src/lib/tradeStats) ---------- */
 
 const OUTCOME = { win: 'win', lose: 'loss', loss: 'loss', be: 'be', scratch: 'be' };
@@ -269,7 +295,7 @@ async function runWelcome(db) {
     if (!u.email || !at || now - new Date(at).getTime() > 6 * H) continue;
     if (!(await claimMail(db, u.id, 'welcome'))) continue;
     const m = mailWelcome();
-    await sendMail(u.email, m.subject, m.html);
+    await sendMail(u.email, m.subject, m.html, { kind: 'welcome', userId: u.id });
     console.log('mail: welcome →', u.id);
   }
 }
@@ -285,7 +311,7 @@ async function runEnded(db) {
     const email = await emailOf(db, s.user_id);
     if (!email) continue;
     const m = mailEnded(s.plan_id || s.plan);
-    await sendMail(email, m.subject, m.html);
+    await sendMail(email, m.subject, m.html, { kind: 'ended', userId: s.user_id });
     console.log('mail: ended →', s.user_id);
   }
 }
@@ -313,7 +339,7 @@ async function runMt5(db) {
     const email = await emailOf(db, a.user_id);
     if (!email) continue;
     const m = mailMt5(a);
-    await sendMail(email, m.subject, m.html);
+    await sendMail(email, m.subject, m.html, { kind: 'mt5', userId: a.user_id });
     console.log('mail: mt5 →', a.user_id);
   }
 }
@@ -347,7 +373,7 @@ async function runDigest(db) {
       const email = await emailOf(db, uid);
       if (!email) continue;
       const m = mailDigest(uid, { ...s, range: w.range });
-      await sendMail(email, m.subject, m.html);
+      await sendMail(email, m.subject, m.html, { kind: 'digest', userId: uid });
       console.log('mail: digest →', uid);
     } catch (e) {
       console.error('digest:', uid, e.message);
@@ -369,7 +395,7 @@ export async function sendCanceledMail(db, user, sub) {
     if (off() || !user?.email) return;
     if (!(await claimMail(db, user.id, 'canceled', String(sub?.valid_until || '').slice(0, 10)))) return;
     const m = mailCanceled(sub?.plan_id || sub?.plan, sub?.valid_until);
-    await sendMail(user.email, m.subject, m.html);
+    await sendMail(user.email, m.subject, m.html, { kind: 'canceled', userId: user.id });
   } catch (e) {
     console.error('mail canceled:', e.message);
   }
@@ -381,6 +407,7 @@ export const sampleMails2 = (uid = '00000000-0000-0000-0000-000000000000') => ({
   canceled: mailCanceled('pro_monthly', new Date(Date.now() + 12 * D).toISOString()),
   ended: mailEnded('pro_monthly'),
   mt5: mailMt5({ broker: 'FTMO-Server', login: '1510234', last_sync_at: new Date(Date.now() - D).toISOString(), last_error: "terminal: (-6, 'Terminal: Authorization failed')" }),
+  proprules: mailPropRules({ firm: 'FundedNext', program: 'Stellar 2-Step', conclusion: 'Денний ліміт тепер 4% замість 5%, а торгівля за 5 хвилин до і після важливих новин заборонена і на етапах оцінки. Запас на день менший — зменш ризик на угоду.', diff: [{ label: 'Денний ліміт, %', old: 5, new: 4 }, { label: 'Торгівля на новинах', old: 'restricted_funded_only', new: 'restricted_all' }, { label: 'Вікно навколо новин, хв', old: 2, new: 5 }] }),
   prop: mailProp('FTMO', 'day', 'FTMO: використано 92% денного ліміту (−4 600 $ з −5 000 $). Лишилось 400 $ до порушення.'),
   digest: mailDigest(uid, {
     range: '5 жовтня – 11 жовтня', total: 12, wins: 6, losses: 4, be: 2, decided: 10, winrate: 60,

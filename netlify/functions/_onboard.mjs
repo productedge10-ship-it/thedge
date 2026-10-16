@@ -135,7 +135,7 @@ export async function runOnboardingReminders() {
       const platform = st?.data?.platform || null;
 
       const m = kind === '3d' ? mail3d(u.id) : mail24(platform, u.id);
-      await sendMail(u.email, m.subject, m.html);
+      await sendMail(u.email, m.subject, m.html, { kind: `onboard${kind}`, userId: u.id });
 
       if (kind === '24h') {
         const { data: tg } = await db.from('user_settings').select('tg_chat_id').eq('user_id', u.id).maybeSingle();
@@ -238,7 +238,7 @@ export async function runWinback() {
       const email = u?.user?.email;
       if (!email) continue;
       const m = kind === 'wb30' ? mailWb30(s.user_id) : mailWb14(s.user_id);
-      await sendMail(email, m.subject, m.html);
+      await sendMail(email, m.subject, m.html, { kind, userId: s.user_id });
       console.log(`winback: ${kind} → ${s.user_id}`);
     } catch (e) {
       console.error('winback:', s.user_id, e.message);

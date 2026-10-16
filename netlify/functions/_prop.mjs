@@ -136,7 +136,7 @@ export async function runPropAlerts() {
           const { data: u } = await db.auth.admin.getUserById(a.user_id).catch(() => ({ data: null }));
           if (!u?.user?.email) continue;
           const m = mailProp(a.firm_name || 'Prop', al.kind, al.message.replace(/^\S+\s/, ''));
-          await sendMail(u.user.email, m.subject, m.html);
+          await sendMail(u.user.email, m.subject, m.html, { kind: 'prop', userId: a.user_id });
           continue;
         }
         const { error: e2 } = await db.from('tg_alerts').upsert({

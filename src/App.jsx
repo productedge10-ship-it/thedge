@@ -90,6 +90,7 @@ const SharedTrade = lazy(() => import('./pages/SharedTrade'));
 const PreTradeChecklist = lazy(() => import('./pages/PreTradeChecklist'));
 const Calculator = lazy(() => import('./pages/Calculator'));
 const News = lazy(() => import('./pages/News'));
+const PropRules = lazy(() => import('./pages/PropRules'));
 const BlogList = lazy(() => import('./pages/BlogList'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const NotFound = lazy(() => import('./pages/Error404'));
@@ -251,6 +252,7 @@ const router = createBrowserRouter([
       { path: 'checklist', element: page(PreTradeChecklist) },
       { path: 'calculator', element: page(Calculator) },
       { path: 'news', element: page(News) },
+      { path: 'prop-rules', element: page(PropRules) },
     ],
   },
 

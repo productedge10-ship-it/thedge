@@ -88,3 +88,22 @@ React 19 + Vite 8 (rolldown), Tailwind 3 + інлайнові стилі на т
 - Гроші: `referralTerms` / `referralFields` у `_mono.mjs` (знижка запрошеного vs промокод — більша; кредит, мінімум 1 одиниця), нарахування — `referral_on_paid` з `applyInvoice`. Крипта (NOWPayments) реферал поки не враховує.
 
 - **Службові листи** (`netlify/functions/_mails.mjs`, тік біллінгу в `server.mjs`, раз на 15 хв): welcome (≤6 год після підтвердження пошти), canceled (з `billing-cancel.mjs`), ended (кінець оплаченого доступу, вікно 3 дні), digest (понеділок 9–14 за Києвом, лише якщо були закриті угоди; відписка `digest_off` через `/api/unsub?...&k=digest`), mt5 (status=error >2 год або тиша >12 год у платних, лише свіжі ≤7 днів), prop (90% ліміту поштою, якщо немає Telegram). Унікальність — таблиця `mail_log (user_id, kind, ref)` (`supabase/2026-10-17_mail_log.sql`). Вимкнути: `MAIL_JOBS_OFF=1`, лише дайджест — `DIGEST_OFF=1`. Тест: `node scripts/test-mail.mjs you@gmail.com [welcome|digest|...]`. Шаблон `letter()` у `_mono.mjs` — кольори темної теми сайту + захист від інверсії Gmail iOS (BG/blend).
+
+## Монітор правил пропів — стан на 15.10.2026 (продовжити звідси)
+
+Зроблено й перевірено локально:
+- SQL виконано в базі: `supabase/2026-10-17_prop_rules.sql` (prop_rule_sources/snapshots/changes, prop_rules, prop_rule_seen, prop_restricted_news, prop_accounts.rules_program, admin_prop_change_decide, admin_prop_run_now, 6 стартових джерел: FTMO, FundedNext ×3, Funding Pips з вкладками, FTMO calendar) і `supabase/2026-10-17_mail_tracking.sql` (mail_sent, mail_events, admin_mail_stats, admin_mail_unsubs).
+- `prop-scraper/` — Python-сервіс (FastAPI): curl_cffi основний, Scrapling StealthyFetcher запасний (JS-сторінки, клік по вкладках `options.tabs`). ScraperAPI не використовуємо. Токен опційний (`PROP_SCRAPER_TOKEN`), сервіс без домену — лише внутрішня мережа Coolify.
+- `netlify/functions/_propRules.mjs` — щоденний монітор (тік 15 хв у server.mjs): скрейп → Gemini (`GEMINI_API_KEY`, модель `PROP_GEMINI_MODEL`, за замовч. gemini-2.5-flash) → diff → `prop_rule_changes` pending. Після схвалення адміном — лист `mailPropRules` + Telegram (source 'prop', `rules:<id>`) для major. Перший витяг = «новий шаблон», юзерам не шлеться.
+- Застосунок: сторінка `/prop-rules` (`src/pages/PropRules.jsx`), модалка `PropRulesAlert` (Layout), бейдж ⛔ у Календарі новин, смуга `PropTodayStrip` у чеклісті, `src/lib/propRules.js` (sameFirm — «містить», бо firm_name буває «FTMO Challenge Swing USD»; зіставлення назв TV↔FF).
+- sendMail тепер логує в mail_sent з `kind`; вебхук `/api/resend-webhook` (`RESEND_WEBHOOK_SECRET`, Svix) пише mail_events.
+- Адмінка (`D:\edge-journal-admin`): сторінки `/prop-rules` (було/стало, схвалити/відхилити, правка JSON, «Перевірити зараз», джерела) і `/mails` (статистика за видами).
+- Тестові дані з бази прибрано.
+
+Лишилось:
+1. Юзер пушить edge-journal і edge-journal-admin (не додавати audit-shots і public/_tmp — `public/_tmp` можна видалити).
+2. Юзер додає `GEMINI_API_KEY` у Coolify основного застосунку (RESEND_API_KEY там уже є).
+3. Coolify: створити новий ресурс «Git Repository (with GitHub App)», репо `productedge10-ship-it/thedge`, гілка `dev-edge`, Build pack Dockerfile, Base directory `/prop-scraper`, без домену, порт 8000. Потім в основному застосунку `PROP_SCRAPER_URL=http://<internal hostname сервісу>:8000` і передеплой.
+4. Після деплою: в адмінці «Перевірити зараз», подивитись логи, перевірити витяги Gemini, схвалити перші шаблони.
+5. Resend → Webhooks: URL `https://theedgecat.com/api/resend-webhook`, події delivered/opened/clicked/bounced/complained; секрет у `RESEND_WEBHOOK_SECRET` (вставляє юзер).
+6. Далі за планом: автоімпорт cTrader (FundedNext) через Open API — юзер реєструє застосунок на openapi.ctrader.com; шаблони Accounts (PROP_TEMPLATES) брати з prop_rules.

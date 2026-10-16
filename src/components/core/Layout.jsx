@@ -7,7 +7,7 @@ import {
   Activity, AlertTriangle, CheckSquare, BrainCircuit,
   HelpCircle, Target, Menu, X, ClipboardCheck, Calculator,
   NotebookPen, ChevronLeft, LayoutGrid, Sparkles, Settings, CalendarClock,
-  Newspaper
+  Newspaper, FileCheck2
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
@@ -17,6 +17,7 @@ import PlanBackdrop from '../trading/PlanBackdrop';
 import OnboardingModal from '../modals/OnboardingModal';
 import OnboardSurvey from '../onboard/OnboardSurvey';
 import FeedbackPulse from '../onboard/FeedbackPulse';
+import PropRulesAlert from '../accounts/PropRulesAlert';
 import VerifyEmailModal from '../modals/VerifyEmailModal';
 import SettingsModal from '../modals/SettingsModal';
 import Tour from './Tour';
@@ -895,7 +896,7 @@ function NavGroup({ title, collapsed, children }) {
 const NAV_ICONS = {
   LayoutGrid, Target, BookOpen, Activity, ClipboardCheck, CheckSquare, Calculator,
   FileText, BrainCircuit, History, NotebookPen, BarChart2, Users, AlertTriangle,
-  CalendarClock, Newspaper,
+  CalendarClock, Newspaper, FileCheck2,
 };
 
 function SidebarContent({ collapsed, hasUncompleted, signOut }) {
@@ -1243,6 +1244,7 @@ export default function Layout() {
       {!inSandbox() && <OnboardSurvey />}
       {/* Відгук на 3-й день: що подобається, що ні, чи платив би за Lite. */}
       {!inSandbox() && <FeedbackPulse />}
+      {!inSandbox() && <PropRulesAlert />}
       {/* Нагадування підтвердити пошту. Теж живе тут, а не на сторінці
           входу: з вимкненим «Confirm email» реєстрація одразу видає
           сесію, і людина потрапляє в застосунок, не побачивши жодного
