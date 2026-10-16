@@ -180,84 +180,11 @@ ${lines}
 Без вступу, без markdown, без порад купувати.`, { json: false });
 }
 
-/* ---------- одна фірма ---------- */
-
-async function runFirm(db, firm, sources, force) {
-  const texts = [];
-  let changed = force;
-  for (const s of sources) {
-    let res;
-    try {
-      res = await scrape(s.url, s.options || {});
-    } catch (e) {
-      res = { ok: false, notes: [e.message] };
-    }
-    const note = [...(res.notes || []), ...(res.missing_tabs?.length ? [`нема вкладок: ${res.missing_tabs.join(', ')}`] : [])].join('; ') || null;
-    if (!res.ok || !res.text) {
-      await db.from('prop_rule_sources').update({ last_fetch_at: new Date().toISOString(), last_ok: false, last_via: res.via || null, last_note: note, run_requested_at: null }).eq('id', s.id);
-      console.error('prop rules: не вдалось', firm, s.url, note);
-      continue;
-    }
-    const hash = stableHash(res.text);
-    if (hash !== s.last_hash) changed = true;
-    texts.push({ s, text: res.text, hash, via: res.via, note });
-  }
-  if (!texts.length) return;
-
-  const stamp = new Date().toISOString();
-  const saveSources = () => Promise.all(texts.map((t) => db.from('prop_rule_sources').update({
-    last_fetch_at: stamp, last_ok: true, last_via: t.via, last_note: t.note, last_hash: t.hash, run_requested_at: null,
-  }).eq('id', t.s.id)));
-
-  if (!changed) { await saveSources(); return; }
-
-  const { data: current } = await db.from('prop_rules').select('program,rules').eq('firm', firm);
-  const known = (current || []).map((r) => r.program);
-  const joined = texts.map((t) => `### ${t.s.url}\n${t.text}`).join('\n\n');
-
-  let out;
-  try {
-    out = await gemini(extractPrompt(firm, joined, known));
-  } catch (e) {
-    /* Gemini впав (ліміт, мережа) — хеш не зберігаємо, щоб наступна
-       спроба знову дійшла до витягу; повтор через ~30 хв, не щотіку. */
-    const retry = new Date(Date.now() - EVERY + H / 2).toISOString();
-    await Promise.all(texts.map((t) => db.from('prop_rule_sources').update({ last_fetch_at: retry, last_ok: false, last_note: `gemini: ${e.message}`.slice(0, 300) }).eq('id', t.s.id)));
-    throw e;
-  }
-  const programs = Array.isArray(out?.programs) ? out.programs.filter((p) => p?.program) : [];
-
-  for (const t of texts) {
-    await db.from('prop_rule_snapshots').insert({ source_id: t.s.id, via: t.via, text_hash: t.hash, text: t.text, extracted: out });
-  }
-  await saveSources();
-  if (!programs.length) { console.error('prop rules: Gemini не знайшов програм', firm); return; }
-
-  const byProgram = new Map((current || []).map((r) => [r.program, r.rules]));
-  const seen = new Set();
-  for (const p of programs) {
-    const program = String(p.program).trim();
-    seen.add(program);
-    const oldR = byProgram.get(program) || null;
-    const diff = diffRules(oldR, p);
-    if (oldR && !diff.length) continue;
-    await upsertChange(db, { firm, program, sourceId: texts[0].s.id, oldR, newR: p, diff, excerpt: joined.slice(0, 4000) });
-  }
-  /* Програма зникла з сайту — теж зміна, але рішення за адміном:
-     це може бути й промах витягу. */
-  for (const [program, rules] of byProgram) {
-    if (seen.has(program) || rules?.discontinued) continue;
-    const newR = { ...rules, discontinued: true };
-    await upsertChange(db, { firm, program, sourceId: texts[0].s.id, oldR: rules, newR,
-      diff: [{ field: 'discontinued', label: 'Програма', old: 'є на сайті', new: 'не знайдена на сайті', major: true }], excerpt: joined.slice(0, 4000) });
-  }
-}
-
 /* Одна відкрита (pending) зміна на фірму+програму: нова знахідка
    оновлює її, а не плодить дублікати, поки адмін не дійшов. */
 async function upsertChange(db, { firm, program, sourceId, oldR, newR, diff, excerpt }) {
   const { data: open } = await db.from('prop_rule_changes').select('id,new_rules')
-    .eq('firm', firm).eq('program', program).eq('status', 'pending').maybeSingle();
+    .eq('firm', firm).eq('program', program).eq('kind', 'program').eq('status', 'pending').maybeSingle();
   if (open && !diffRules(open.new_rules, newR).length) return;
 
   let text = null;
@@ -339,6 +266,342 @@ async function notifyApproved(db) {
   }
 }
 
+/* ==================================================================
+   Сторінки правил: обхід довідок, факти, порівняння, питання-відповіді.
+
+   Одна сторінка правил — це замало: у пропів правила розкидані по
+   десятках статей довідки (новини, вихідні, заборонені стратегії,
+   виплати…). Тому:
+
+   1. discover — раз на добу обходимо «індекси» кожної фірми:
+      sitemap (FTMO FAQ), Zendesk API (Funding Pips — одразу з текстом
+      статей), Intercom-довідку (FundedNext: колекції → статті) і
+      окремі сторінки правил. Усе це — рядки prop_rule_pages.
+   2. processPages — кожен тік беремо кілька сторінок, які давно не
+      перевіряли. Текст не змінився — лише позначка «перевірено».
+      Нова сторінка — Gemini витягує з неї ВСІ правила (facts).
+      Змінилась — Gemini порівнює стару й нову версію: якщо змінилось
+      щось суттєве, це зміна на схвалення в адмінці.
+   3. synthesize — коли всі сторінки фірми пройдені і щось змінилось,
+      з усіх фактів збираємо картки програм (ліміти — для «Рахунків» і
+      контролю правил) і питання-відповіді для юзерів (prop_faq).
+
+   Факти й Q&A — «як написано на сайті, перевірено тоді-то», тож вони
+   оновлюються самі. Повідомлення юзерам (модалка, лист, Telegram) —
+   лише після схвалення зміни адміном.
+================================================================== */
+
+const PAGES_PER_TICK = () => Number(process.env.PROP_PAGES_PER_TICK || 12);
+const GAP = 4000; // пауза між викликами Gemini: безкоштовний ліміт ~15 запитів/хв
+const DAY = 24 * H;
+
+async function scraper(path, body) {
+  const base = (process.env.PROP_SCRAPER_URL || '').replace(/\/+$/, '');
+  if (!base) throw new Error('PROP_SCRAPER_URL не заданий');
+  const r = await fetch(`${base}${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...(process.env.PROP_SCRAPER_TOKEN ? { 'x-token': process.env.PROP_SCRAPER_TOKEN } : {}) },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(150_000),
+  });
+  if (!r.ok) throw new Error(`scraper ${r.status}`);
+  return r.json();
+}
+
+const ENT = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', rsquo: "'", lsquo: "'", ldquo: '"', rdquo: '"', ndash: '–', mdash: '—', hellip: '…', apos: "'" };
+export const stripHtml = (h) => String(h || '')
+  .replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ')
+  .replace(/<br\s*\/?>|<\/(p|li|h\d|tr|div|section|ul|ol|table)>/gi, '\n')
+  .replace(/<li[^>]*>/gi, '\n• ')
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/&(#\d+|[a-z]+);/gi, (m, e) => (e[0] === '#' ? String.fromCharCode(Number(e.slice(1))) : ENT[e.toLowerCase()] ?? ' '))
+  .replace(/[⁦-⁩‎‏]/g, '')
+  .replace(/[ \t]+/g, ' ')
+  .replace(/ *\n */g, '\n')
+  .replace(/\n{3,}/g, '\n\n')
+  .trim();
+
+const rx = (s) => (s ? new RegExp(s, 'i') : null);
+
+/* ---------- 1. обхід індексів ---------- */
+
+async function discover(db, src) {
+  const o = src.options || {};
+  const inc = rx(o.include);
+  const exc = rx(o.exclude);
+  const found = new Map(); // url → {title, section, text}
+  const keep = (url, meta = {}) => {
+    if (inc && !inc.test(url)) return;
+    if (exc && (exc.test(url) || exc.test(meta.title || '') || exc.test(meta.section || ''))) return;
+    found.set(url, { ...(found.get(url) || {}), ...meta });
+  };
+
+  if (src.kind === 'rules') {
+    found.set(src.url, { title: o.title || null, section: 'Правила' });
+  } else if (o.type === 'sitemap') {
+    const r = await scraper('/fetch', { url: src.url, raw: true });
+    if (!r.ok) throw new Error(`sitemap ${r.status}`);
+    for (const m of String(r.raw).matchAll(/<loc>([^<]+)<\/loc>/g)) keep(m[1].trim());
+  } else if (o.type === 'zendesk') {
+    let next = src.url;
+    for (let i = 0; next && i < 10; i += 1) {
+      const r = await scraper('/fetch', { url: next, raw: true });
+      if (!r.ok) throw new Error(`zendesk ${r.status}`);
+      const j = JSON.parse(r.raw);
+      for (const a of j.articles || []) {
+        if (a.draft) continue;
+        keep(a.html_url, { title: a.title, section: a.section_id ? String(a.section_id) : null, text: stripHtml(a.body) });
+      }
+      next = j.next_page;
+    }
+  } else if (o.type === 'intercom') {
+    const seen = new Set();
+    const queue = [src.url];
+    while (queue.length && seen.size < 80) {
+      const u = queue.shift();
+      if (seen.has(u)) continue;
+      seen.add(u);
+      const r = await scraper('/links', { url: u });
+      if (!r.ok) continue;
+      const section = (u.match(/collections\/\d+-([^/?#]+)/) || [])[1] || null;
+      for (const l of r.links || []) {
+        const clean = l.url.split('?')[0];
+        if (/\/collections\/\d+/.test(clean) && !seen.has(clean) && !(exc && exc.test(clean))) queue.push(clean);
+        else if (/\/articles\/\d+/.test(clean)) keep(clean, { title: l.text || null, section });
+      }
+    }
+  }
+  return found;
+}
+
+async function runDiscovery(db, src) {
+  const stamp = new Date().toISOString();
+  let found;
+  try {
+    found = await discover(db, src);
+  } catch (e) {
+    await db.from('prop_rule_sources').update({ last_fetch_at: stamp, last_ok: false, last_note: e.message.slice(0, 300), run_requested_at: null }).eq('id', src.id);
+    return new Map();
+  }
+  const { data: have } = await db.from('prop_rule_pages').select('id,url,active').eq('source_id', src.id);
+  const known = new Map((have || []).map((p) => [p.url, p]));
+  const fresh = [...found.entries()].filter(([u]) => !known.has(u))
+    .map(([url, m]) => ({ firm: src.firm, source_id: src.id, url, title: m.title || null, section: m.section || null }));
+  for (let i = 0; i < fresh.length; i += 200) {
+    await db.from('prop_rule_pages').upsert(fresh.slice(i, i + 200), { onConflict: 'url', ignoreDuplicates: true });
+  }
+  /* Сторінка зникла з індексу — не видаляємо (історія), лише вимикаємо.
+     Порожній результат обходу — це радше збій, ніж «усе видалили». */
+  if (found.size) {
+    const gone = (have || []).filter((p) => p.active && !found.has(p.url)).map((p) => p.id);
+    if (gone.length) await db.from('prop_rule_pages').update({ active: false }).in('id', gone);
+    const back = (have || []).filter((p) => !p.active && found.has(p.url)).map((p) => p.id);
+    if (back.length) await db.from('prop_rule_pages').update({ active: true }).in('id', back);
+  }
+  await db.from('prop_rule_sources').update({
+    last_fetch_at: stamp, last_ok: found.size > 0, last_note: `${found.size} сторінок, нових ${fresh.length}`, run_requested_at: null,
+  }).eq('id', src.id);
+  /* Zendesk віддає текст статей разом зі списком — не треба тягнути
+     кожну сторінку окремо. */
+  const texts = new Map();
+  for (const [u, m] of found) if (m.text) texts.set(u, m.text);
+  return texts;
+}
+
+/* ---------- 2. сторінки ---------- */
+
+const TOPICS = ['Ліміти збитку', 'Цілі та етапи', 'Новини', 'Вихідні та overnight', 'Заборонені стратегії',
+  'Радники, копітрейдинг, хедж', 'Плече, лоти, інструменти', 'Консистентність', 'Виплати', 'Неактивність',
+  'Масштабування', 'Платформи', 'Порушення і наслідки', 'Інше'];
+
+function factsPrompt(firm, page, text) {
+  return `Ти аналізуєш сторінку сайту/довідки проп-фірми ${firm}: «${page.title || ''}» (${page.url}).
+Витягни ВСІ правила й умови для трейдера: ліміти збитку і як рахуються, цілі, мінімальні дні, строки, новини,
+вихідні й overnight, заборонені стратегії, радники/копітрейдинг/хедж, плече, лоти, інструменти, консистентність,
+виплати та їх умови, неактивність, масштабування, платформи, що буде при порушенні.
+Кожне правило — окремий пункт: конкретно, з числами, українською, 1 речення. Нічого не вигадуй.
+programs — до яких програм пункт стосується (назви як на сайті); [] якщо до всіх.
+topic — одне з: ${TOPICS.join(', ')}.
+Якщо сторінка не містить правил трейдингу (реклама, партнерка, оплата, KYC без обмежень) — relevant:false, facts:[].
+Поверни ТІЛЬКИ JSON: {"relevant":true,"programs":["..."],"facts":[{"topic":"Новини","programs":["2-Step"],"rule":"..."}]}
+
+Текст сторінки:
+"""
+${text.slice(0, 60000)}
+"""`;
+}
+
+function comparePrompt(firm, page, oldText, newText) {
+  return `Сторінка правил проп-фірми ${firm} «${page.title || ''}» (${page.url}) змінилась.
+Порівняй СТАРУ і НОВУ версії й визнач, чи змінились правила для трейдера.
+meaningful=false, якщо змінились лише формулювання, оформлення, дати, промо, посилання.
+severity="major", якщо змінились ліміти збитку, новини, вихідні, заборонені стратегії, умови виплат чи порушень; інакше "minor".
+summary — 2–3 речення українською: що змінилось і що це означає на практиці.
+changes — список змін: topic (одне з: ${TOPICS.join(', ')}), before, after (коротко, з числами, українською).
+Поверни ТІЛЬКИ JSON: {"meaningful":true,"severity":"major","summary":"...","changes":[{"topic":"...","before":"...","after":"..."}]}
+
+СТАРА ВЕРСІЯ:
+"""
+${oldText.slice(0, 45000)}
+"""
+
+НОВА ВЕРСІЯ:
+"""
+${newText.slice(0, 45000)}
+"""`;
+}
+
+const cleanFacts = (out) => ({
+  relevant: out?.relevant !== false && Array.isArray(out?.facts) && out.facts.length > 0,
+  programs: Array.isArray(out?.programs) ? out.programs.slice(0, 20) : [],
+  facts: (Array.isArray(out?.facts) ? out.facts : []).filter((f) => f?.rule).slice(0, 120)
+    .map((f) => ({ topic: TOPICS.includes(f.topic) ? f.topic : 'Інше', programs: Array.isArray(f.programs) ? f.programs : [], rule: String(f.rule).slice(0, 500) })),
+});
+
+async function processPage(db, page, prefetched, sources) {
+  const now = new Date().toISOString();
+  let text = prefetched;
+  if (!text) {
+    const src = sources.get(page.source_id);
+    const opts = src?.kind === 'rules' ? (src.options || {}) : {};
+    const r = await scraper('/fetch', { url: page.url, min_chars: 300, ...opts, raw: false });
+    if (!r.ok || !r.text) throw new Error(`scrape: ${(r.notes || []).join('; ') || r.status}`);
+    text = r.text;
+  }
+  const hash = stableHash(text);
+  if (page.text_hash === hash && page.extracted_at) {
+    await db.from('prop_rule_pages').update({ checked_at: now, last_error: null }).eq('id', page.id);
+    return false;
+  }
+
+  if (page.text && page.extracted_at && page.relevant !== false) {
+    const cmp = await gemini(comparePrompt(page.firm, page, page.text, text));
+    await sleep(GAP);
+    if (cmp?.meaningful && Array.isArray(cmp.changes) && cmp.changes.length) {
+      await db.from('prop_rule_changes').insert({
+        kind: 'page', firm: page.firm, program: page.title || page.url, page_id: page.id, page_url: page.url, page_title: page.title,
+        source_id: page.source_id, old_rules: { excerpt: page.text.slice(0, 6000) }, new_rules: { excerpt: text.slice(0, 6000) },
+        diff: cmp.changes.slice(0, 20).map((c, i) => ({ field: `c${i}`, label: c.topic || 'Зміна', old: c.before || null, new: c.after || null, major: cmp.severity === 'major' })),
+        conclusion: cmp.summary || null, severity: cmp.severity === 'major' ? 'major' : 'minor', excerpt: text.slice(0, 4000),
+      });
+      await db.from('prop_firm_status').upsert({ firm: page.firm, last_change_at: now }, { onConflict: 'firm' });
+      console.log('prop rules: зміна сторінки', page.firm, page.url);
+    } else {
+      /* Косметика: оновлюємо текст і факти не чіпаємо. */
+      await db.from('prop_rule_pages').update({ text, text_hash: hash, checked_at: now, last_error: null }).eq('id', page.id);
+      return false;
+    }
+  }
+
+  const f = cleanFacts(await gemini(factsPrompt(page.firm, page, text)));
+  await sleep(GAP);
+  await db.from('prop_rule_pages').update({
+    text, text_hash: hash, facts: f, relevant: f.relevant, checked_at: now, changed_at: now, extracted_at: now, last_error: null,
+  }).eq('id', page.id);
+  return true;
+}
+
+async function processPages(db, prefetched, sources) {
+  const now = Date.now();
+  const { data: pages } = await db.from('prop_rule_pages')
+    .select('id,firm,source_id,url,title,text,text_hash,relevant,checked_at,extracted_at')
+    .eq('active', true)
+    .or(`checked_at.is.null,checked_at.lt."${new Date(now - DAY).toISOString()}"`)
+    .order('checked_at', { ascending: true, nullsFirst: true })
+    .limit(PAGES_PER_TICK() * 3);
+  const due = (pages || []).filter((p) => !p.checked_at || p.relevant !== false
+    || now - new Date(p.checked_at).getTime() > 7 * DAY).slice(0, PAGES_PER_TICK());
+  const changedFirms = new Set();
+  for (const p of due) {
+    try {
+      if (await processPage(db, p, prefetched.get(p.url), sources)) changedFirms.add(p.firm);
+    } catch (e) {
+      /* Збій сторінки не валить прогін; повтор приблизно за годину. */
+      await db.from('prop_rule_pages').update({ last_error: e.message.slice(0, 300), checked_at: new Date(Date.now() - DAY + H).toISOString() }).eq('id', p.id);
+      console.error('prop page:', p.url, e.message);
+    }
+  }
+  const stamp = new Date().toISOString();
+  for (const firm of changedFirms) {
+    await db.from('prop_firm_status').upsert({ firm, facts_changed_at: stamp }, { onConflict: 'firm' });
+  }
+}
+
+/* ---------- 3. картки програм і питання-відповіді ---------- */
+
+function faqPrompt(firm, factsText) {
+  return `Нижче — правила проп-фірми ${firm}, зібрані з усіх сторінок її сайту й довідки (у дужках — сторінка-джерело).
+Склади для трейдерів ПИТАННЯ-ВІДПОВІДІ українською — те, що люди питають найчастіше:
+денний і загальний ліміт (скільки, від чого рахується, коли скидається), цілі та мінімальні дні, строки,
+новини (можна чи ні, яке вікно, на яких етапах), вихідні й overnight, заборонені стратегії, радники/копітрейдинг/хедж,
+плече й лоти, консистентність, виплати (коли, скільки, умови), неактивність, масштабування, що буде при порушенні.
+Відповідь коротка (1–3 речення), конкретна, з числами. Якщо відрізняється між програмами — розпиши по програмах.
+Тільки з наведених фактів, нічого не вигадуй; чого немає у фактах — не питай.
+30–50 питань. topic — одне з: ${TOPICS.join(', ')}. sources — url сторінок, з яких відповідь.
+Поверни ТІЛЬКИ JSON: {"items":[{"topic":"Новини","question":"...","answer":"...","programs":[],"sources":["https://..."]}]}
+
+Факти:
+${factsText}`;
+}
+
+async function synthesize(db, firm) {
+  const { data: pages } = await db.from('prop_rule_pages').select('url,title,facts')
+    .eq('firm', firm).eq('active', true).eq('relevant', true);
+  const lines = [];
+  for (const p of pages || []) {
+    const facts = p.facts?.facts || [];
+    if (!facts.length) continue;
+    lines.push(`## ${p.title || ''} (${p.url})`);
+    for (const f of facts) lines.push(`- [${f.topic}]${f.programs?.length ? `[${f.programs.join(', ')}]` : ''} ${f.rule}`);
+  }
+  if (!lines.length) return;
+  const factsText = lines.join('\n').slice(0, 400000);
+
+  /* Картки програм — через той самий потік змін зі схваленням. */
+  const { data: current } = await db.from('prop_rules').select('program,rules').eq('firm', firm);
+  const known = (current || []).map((r) => r.program);
+  const out = await gemini(extractPrompt(firm, factsText, known));
+  await sleep(GAP);
+  const programs = Array.isArray(out?.programs) ? out.programs.filter((p) => p?.program) : [];
+  const byProgram = new Map((current || []).map((r) => [r.program, r.rules]));
+  for (const p of programs) {
+    const program = String(p.program).trim();
+    const oldR = byProgram.get(program) || null;
+    const diff = diffRules(oldR, p);
+    if (oldR && !diff.length) continue;
+    await upsertChange(db, { firm, program, sourceId: null, oldR, newR: p, diff, excerpt: factsText.slice(0, 4000) });
+  }
+
+  const faq = await gemini(faqPrompt(firm, factsText));
+  const items = (faq?.items || []).filter((i) => i?.question && i?.answer).slice(0, 60);
+  if (items.length) {
+    await db.from('prop_faq').delete().eq('firm', firm);
+    await db.from('prop_faq').insert(items.map((i, k) => ({
+      firm, topic: TOPICS.includes(i.topic) ? i.topic : 'Інше', question: String(i.question).slice(0, 300),
+      answer: String(i.answer).slice(0, 2000), programs: Array.isArray(i.programs) ? i.programs.slice(0, 10) : [],
+      source_urls: Array.isArray(i.sources) ? i.sources.filter((u) => /^https?:\/\//.test(u)).slice(0, 5) : [], position: k,
+    })));
+  }
+  const stamp = new Date().toISOString();
+  const { count: total } = await db.from('prop_rule_pages').select('id', { count: 'exact', head: true }).eq('firm', firm).eq('active', true);
+  await db.from('prop_firm_status').upsert({
+    firm, synth_at: stamp, faq_at: items.length ? stamp : undefined, pages_total: total || 0, pages_relevant: (pages || []).length, checked_at: stamp,
+  }, { onConflict: 'firm' });
+  console.log(`prop rules: ${firm} — програм ${programs.length}, питань ${items.length}`);
+}
+
+async function maybeSynthesize(db) {
+  const { data: st } = await db.from('prop_firm_status').select('firm,facts_changed_at,synth_at');
+  for (const s of st || []) {
+    if (!s.facts_changed_at || (s.synth_at && new Date(s.synth_at) >= new Date(s.facts_changed_at))) continue;
+    /* Перший обхід ще йде — чекаємо, поки всі сторінки фірми пройдуть. */
+    const { count: pending } = await db.from('prop_rule_pages').select('id', { count: 'exact', head: true })
+      .eq('firm', s.firm).eq('active', true).is('extracted_at', null).is('last_error', null);
+    if (pending) continue;
+    try { await synthesize(db, s.firm); } catch (e) { console.error('prop synth:', s.firm, e.message); }
+  }
+}
+
 /* ---------- вхід з server.mjs ---------- */
 
 export async function runPropRulesMonitor() {
@@ -347,24 +610,32 @@ export async function runPropRulesMonitor() {
   await notifyApproved(db);
   if (!process.env.PROP_SCRAPER_URL || !process.env.GEMINI_API_KEY) return;
 
-  const { data: sources, error } = await db.from('prop_rule_sources').select('*').eq('active', true);
+  const { data: list, error } = await db.from('prop_rule_sources').select('*').eq('active', true);
   if (error) { console.error('prop rules:', error.message); return; }
   const now = Date.now();
   const due = (s) => !s.last_fetch_at || now - new Date(s.last_fetch_at).getTime() >= EVERY
     || (s.run_requested_at && new Date(s.run_requested_at) > new Date(s.last_fetch_at));
+  const sources = new Map((list || []).map((s) => [s.id, s]));
 
-  const firms = new Map();
-  for (const s of sources || []) {
+  /* «Перевірити зараз» з адмінки: усі сторінки фірми — у чергу. */
+  const forced = [...new Set((list || []).filter((s) => s.run_requested_at && (!s.last_fetch_at || new Date(s.run_requested_at) > new Date(s.last_fetch_at))).map((s) => s.firm))];
+  if (forced.length) await db.from('prop_rule_pages').update({ checked_at: null }).in('firm', forced);
+
+  const prefetched = new Map();
+  for (const s of list || []) {
+    if (!due(s)) continue;
     if (s.kind === 'news') {
-      if (due(s)) { try { await runNews(db, s); } catch (e) { console.error('prop news:', s.firm, e.message); } }
+      try {
+        await runNews(db, s);
+      } catch (e) {
+        console.error('prop news:', s.firm, e.message);
+        await db.from('prop_rule_sources').update({ last_fetch_at: new Date(Date.now() - EVERY + H).toISOString(), last_ok: false, last_note: e.message.slice(0, 300), run_requested_at: null }).eq('id', s.id);
+      }
       continue;
     }
-    if (!firms.has(s.firm)) firms.set(s.firm, []);
-    firms.get(s.firm).push(s);
+    const texts = await runDiscovery(db, s);
+    texts.forEach((t, u) => prefetched.set(u, t));
   }
-  for (const [firm, list] of firms) {
-    if (!list.some(due)) continue;
-    const force = list.some((s) => s.run_requested_at && (!s.last_fetch_at || new Date(s.run_requested_at) > new Date(s.last_fetch_at)));
-    try { await runFirm(db, firm, list, force); } catch (e) { console.error('prop rules:', firm, e.message); }
-  }
+  await processPages(db, prefetched, sources);
+  await maybeSynthesize(db);
 }

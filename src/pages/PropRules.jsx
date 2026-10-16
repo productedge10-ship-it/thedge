@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileCheck2, History, ShieldAlert, Newspaper } from 'lucide-react';
+import { FileCheck2, History, ShieldAlert, Newspaper, ChevronDown, Search } from 'lucide-react';
 import { T } from '../lib/theme';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -127,6 +127,71 @@ function RulesCard({ acc, ctx, onProgram }) {
   );
 }
 
+
+/* Питання-відповіді по фірмі: Gemini збирає їх з усіх сторінок правил і
+   довідки пропа (prop_faq), монітор оновлює, коли щось змінюється. */
+function FirmFaq({ firm, items, status }) {
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(null);
+  const topics = useMemo(() => {
+    const k = q.trim().toLowerCase();
+    const list = k ? items.filter((i) => `${i.question} ${i.answer}`.toLowerCase().includes(k)) : items;
+    const m = new Map();
+    list.forEach((i) => { if (!m.has(i.topic)) m.set(i.topic, []); m.get(i.topic).push(i); });
+    return [...m.entries()];
+  }, [items, q]);
+  if (!items.length) return null;
+  return (
+    <div style={CARD} className="mt-4 p-5 sm:p-6">
+      <div className="mb-1 flex flex-wrap items-center gap-3">
+        <span className="text-[17px] font-bold" style={{ fontFamily: T.display, color: T.text }}>{firm}: питання й відповіді</span>
+      </div>
+      <p className="mb-4 mt-0 text-[12.5px]" style={{ color: T.text4, fontFamily: T.sans }}>
+        Зібрано з {status?.pages_relevant || 'усіх'} сторінок правил і довідки {firm}
+        {status?.checked_at ? ` · перевірено ${new Date(status.checked_at).toLocaleDateString('uk-UA')}` : ''}
+        {status?.last_change_at ? ` · остання зміна правил ${new Date(status.last_change_at).toLocaleDateString('uk-UA')}` : ''}
+      </p>
+      <label className="mb-4 flex h-10 items-center gap-2 rounded-xl px-3" style={{ background: 'var(--edge-sunken)', border: '1px solid var(--edge-line)' }}>
+        <Search size={15} style={{ color: T.text4 }} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Пошук: новини, вихідні, EA, виплати…"
+          className="h-full w-full bg-transparent text-[14px] outline-none" style={{ color: T.text, fontFamily: T.sans }} />
+      </label>
+      <div className="flex flex-col gap-5">
+        {topics.map(([topic, list]) => (
+          <div key={topic}>
+            <div className="mb-2 text-[11.5px] font-bold uppercase tracking-wider" style={{ color: T.text4, fontFamily: T.sans }}>{topic}</div>
+            <div className="flex flex-col gap-1.5">
+              {list.map((i) => {
+                const on = open === i.id;
+                return (
+                  <div key={i.id} className="overflow-hidden rounded-xl" style={{ background: 'var(--edge-sunken)', border: `1px solid ${on ? 'var(--edge-line-hi)' : 'var(--edge-line)'}` }}>
+                    <button type="button" onClick={() => setOpen(on ? null : i.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+                      <span className="min-w-0 flex-1 text-[14px] font-semibold" style={{ color: T.text, fontFamily: T.sans }}>{i.question}</span>
+                      <ChevronDown size={16} style={{ color: T.text3, transform: on ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+                    </button>
+                    {on && (
+                      <div className="px-4 pb-3.5">
+                        <p className="m-0 text-[14px] leading-[1.6]" style={{ color: T.text2, fontFamily: T.sans }}>{i.answer}</p>
+                        {(i.programs?.length > 0 || i.source_urls?.length > 0) && (
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]" style={{ fontFamily: T.sans }}>
+                            {i.programs?.length > 0 && <span style={{ color: T.text4 }}>{i.programs.join(', ')}</span>}
+                            {i.source_urls?.map((u) => <a key={u} href={u} target="_blank" rel="noreferrer" className="underline" style={{ color: T.text3 }}>джерело</a>)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        {!topics.length && <p className="m-0 text-[13.5px]" style={{ color: T.text3 }}>Нічого не знайдено.</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function PropRulesPage() {
   const { user } = useAuth();
   const [ctx, setCtx] = useState(null);
@@ -167,6 +232,10 @@ export default function PropRulesPage() {
           {ctx.accounts.map((a) => <RulesCard key={a.id} acc={a} ctx={ctx} onProgram={onProgram} />)}
         </div>
       )}
+
+      {ctx && [...new Set(ctx.faq.map((f) => f.firm))].map((firm) => (
+        <FirmFaq key={firm} firm={firm} items={ctx.faq.filter((f) => f.firm === firm)} status={ctx.status.find((x) => x.firm === firm)} />
+      ))}
 
       {upcoming.length > 0 && (
         <div style={CARD} className="mt-4 p-5 sm:p-6">

@@ -46,6 +46,11 @@ class FetchReq(BaseModel):
     render: bool = False           # одразу браузером
     tabs: list[str] | None = None  # підписи вкладок, які треба проклікати
     wait_ms: int = 1500
+    raw: bool = False              # віддати сирий вміст (sitemap XML, JSON API довідок)
+
+
+class LinksReq(BaseModel):
+    url: str
 
 
 def clean_text(html: str) -> str:
@@ -127,6 +132,15 @@ async def fetch(req: FetchReq, x_token: str = Header(default="")):
     t0 = time.time()
     notes: list[str] = []
 
+    if req.raw:
+        # Сирий вміст без чистки: sitemap.xml, JSON API Zendesk тощо.
+        try:
+            status, body = await via_curl(req.url)
+            return {"ok": status == 200 and not blocked(status, body), "via": "curl_cffi", "status": status,
+                    "raw": body, "ms": int((time.time() - t0) * 1000)}
+        except Exception as e:  # noqa: BLE001
+            return {"ok": False, "via": "curl_cffi", "status": None, "raw": "", "notes": [str(e)]}
+
     if not req.render and not req.tabs:
         try:
             status, html = await via_curl(req.url)
@@ -153,3 +167,33 @@ async def fetch(req: FetchReq, x_token: str = Header(default="")):
         notes.append(f"scrapling: {e}")
         return {"ok": False, "via": None, "status": None, "text": "", "notes": notes,
                 "ms": int((time.time() - t0) * 1000)}
+
+
+@app.post("/links")
+async def links(req: LinksReq, x_token: str = Header(default="")):
+    """Посилання сторінки (для обходу довідкових центрів: колекції → статті).
+    Спершу curl_cffi; якщо заблоковано — браузер."""
+    if TOKEN and x_token != TOKEN:
+        raise HTTPException(status_code=401, detail="bad token")
+    from urllib.parse import urljoin
+    html = ""
+    try:
+        status, html = await via_curl(req.url)
+        if blocked(status, html):
+            html = ""
+    except Exception:  # noqa: BLE001
+        html = ""
+    if not html:
+        try:
+            _, html, _, _ = await asyncio.to_thread(via_browser, req.url, None, 1500)
+        except Exception as e:  # noqa: BLE001
+            return {"ok": False, "links": [], "notes": [str(e)]}
+    soup = BeautifulSoup(html, "html.parser")
+    out, seen = [], set()
+    for a in soup.find_all("a", href=True):
+        u = urljoin(req.url, a["href"]).split("#")[0]
+        if u in seen or not u.startswith("http"):
+            continue
+        seen.add(u)
+        out.append({"url": u, "text": BIDI.sub("", a.get_text(" ", strip=True))[:200]})
+    return {"ok": True, "links": out}

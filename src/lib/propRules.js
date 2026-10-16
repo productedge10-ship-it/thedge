@@ -44,16 +44,18 @@ export async function loadPropContext(uid, force = false) {
       .eq('user_id', uid).eq('status', 'Active');
     const accounts = accs || [];
     const firms = [...new Set(accounts.map((a) => a.firm_name).filter(Boolean))];
-    if (!firms.length) return { accounts, rules: [], changes: [], news: [] };
+    if (!firms.length) return { accounts, rules: [], changes: [], news: [], faq: [], status: [] };
 
     const from = new Date(); from.setDate(from.getDate() - 1);
     const to = new Date(); to.setDate(to.getDate() + 14);
-    const [rules, changes, news] = await Promise.all([
+    const [rules, changes, news, faq, status] = await Promise.all([
       supabase.from('prop_rules').select('firm,program,rules,approved_at'),
       supabase.from('prop_rule_changes').select('id,firm,program,diff,conclusion,severity,old_rules,new_rules,decided_at,created_at')
         .eq('status', 'approved').not('old_rules', 'is', null).order('decided_at', { ascending: false }).limit(60),
       supabase.from('prop_restricted_news').select('firm,day,currency,title,instruments')
         .gte('day', ymd(from)).lte('day', ymd(to)),
+      supabase.from('prop_faq').select('id,firm,topic,question,answer,programs,source_urls,position,updated_at').order('position'),
+      supabase.from('prop_firm_status').select('firm,pages_total,pages_relevant,checked_at,faq_at,last_change_at'),
     ]);
     const mine = (r) => firms.some((f) => sameFirm(f, r.firm));
     return {
@@ -61,8 +63,10 @@ export async function loadPropContext(uid, force = false) {
       rules: (rules.data || []).filter(mine),
       changes: (changes.data || []).filter(mine),
       news: (news.data || []).filter(mine),
+      faq: (faq.data || []).filter(mine),
+      status: (status.data || []).filter(mine),
     };
-  })().catch(() => ({ accounts: [], rules: [], changes: [], news: [] }));
+  })().catch(() => ({ accounts: [], rules: [], changes: [], news: [], faq: [], status: [] }));
 
   const data = await cache.wait;
   cache = { uid, at: Date.now(), data, wait: null };
