@@ -52,7 +52,45 @@ async function scrape(url, options = {}) {
   return r.json();
 }
 
-async function gemini(prompt, { json = true } = {}) {
+/* Безкоштовна LLM через будь-який OpenAI-сумісний API (Mistral, Groq,
+   Cerebras, OpenRouter :free, DeepSeek…). Задається змінними:
+   LLM_API_KEY, LLM_BASE_URL (напр. https://api.mistral.ai/v1), LLM_MODEL.
+   Якщо LLM_API_KEY є — користуємось ним, Gemini лишається запасним. */
+const hasLLM = () => !!process.env.LLM_API_KEY;
+
+async function openaiChat(prompt, { json = true } = {}) {
+  const base = (process.env.LLM_BASE_URL || 'https://api.mistral.ai/v1').replace(/\/+$/, '');
+  const model = process.env.LLM_MODEL || 'mistral-small-latest';
+  let last;
+  for (const wait of [0, 20_000, 60_000, 120_000]) {
+    if (wait) await sleep(wait);
+    const r = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.LLM_API_KEY}` },
+      body: JSON.stringify({
+        model, temperature: 0,
+        messages: [{ role: 'user', content: json ? `${prompt}\n\nВідповідай ЛИШЕ валідним JSON без пояснень і без markdown.` : prompt }],
+        ...(json ? { response_format: { type: 'json_object' } } : {}),
+      }),
+      signal: AbortSignal.timeout(180_000),
+    }).catch((e) => ({ ok: false, status: 0, json: async () => ({ error: e.message }) }));
+    const body = await r.json().catch(() => ({}));
+    if (r.ok) {
+      const text = body?.choices?.[0]?.message?.content || '';
+      return json ? JSON.parse(text.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, '')) : text.trim();
+    }
+    last = new Error(`llm ${r.status}: ${JSON.stringify(body).slice(0, 200)}`);
+    if (![0, 429, 500, 502, 503, 504].includes(r.status)) break;
+  }
+  throw last;
+}
+
+async function gemini(prompt, opts = {}) {
+  if (hasLLM()) return openaiChat(prompt, opts);
+  return geminiRaw(prompt, opts);
+}
+
+async function geminiRaw(prompt, { json = true } = {}) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY не заданий');
   /* Безкоштовний Gemini часто відповідає 503 «high demand» або 429.
@@ -484,7 +522,7 @@ async function processPage(db, page, prefetched, sources) {
 /* Квота Gemini вичерпана — до цього часу нічого не просимо, щоб не
    палити сторінки помилками. Скидається з перезапуском процесу. */
 let quotaUntil = 0;
-const isQuota = (e) => /gemini 429/.test(String(e?.message || ''));
+const isQuota = (e) => /(gemini|llm) 429/.test(String(e?.message || ''));
 
 function batchPrompt(firm, items) {
   return `Нижче ${items.length} сторінок сайту/довідки проп-фірми ${firm}. Для КОЖНОЇ сторінки окремо витягни ВСІ правила
@@ -743,7 +781,7 @@ export async function runPropRulesMonitor() {
   if (process.env.PROP_RULES_OFF === '1') return;
   const db = admin();
   await notifyApproved(db);
-  if (!process.env.PROP_SCRAPER_URL || !process.env.GEMINI_API_KEY) return;
+  if (!process.env.PROP_SCRAPER_URL || !(process.env.LLM_API_KEY || process.env.GEMINI_API_KEY)) return;
 
   const { data: list, error } = await db.from('prop_rule_sources').select('*').eq('active', true);
   if (error) { console.error('prop rules:', error.message); return; }
