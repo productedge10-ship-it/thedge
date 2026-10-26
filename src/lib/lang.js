@@ -1,7 +1,11 @@
 /* ==================================================================
    Мова застосунку.
 
-   Дві мови — українська й англійська. Російської немає свідомо.
+   Три мови — українська, англійська й російська (з жовтня 2026).
+   Російський текст не пишемо в коді руками: його дописує під час
+   збірки scripts/ruI18n.mjs зі словника src/i18n/ru.json —
+   t('укр', 'eng') стає t('укр', 'eng', 'рус'). Немає перекладу —
+   показуємо українську.
 
    Мова визначається ОДИН раз на завантаження сторінки й далі не
    змінюється: `t('укр', 'eng')` можна кликати будь-де — у компоненті,
@@ -12,20 +16,25 @@
    імпорті модуля, а мову міняють раз у житті, а не щохвилини.
 
    Порядок визначення:
-   1. адреса: /en і /en/… — англійська, /uk/… — українська
+   1. адреса: /en і /en/… — англійська, /ru і /ru/… — російська,
+      /uk/… — українська
       (публічні сторінки мають мову в адресі, її бачить пошуковик);
    2. явний вибір людини (localStorage `edge_lang`);
+   2½. системна мова браузера — російська → російська;
    3. країна за IP — сервер кладе її в window.__EDGE_CC__ із
       заголовка Cloudflare `cf-ipcountry` (див. server.mjs);
    4. часовий пояс браузера (Київ і сусіди — українська);
-   5. мова браузера (uk або ru — українська);
+   5. мова браузера (uk — українська);
    6. інакше — англійська.
 ================================================================== */
 
 export const LANGS = [
   { id: 'uk', short: 'UA', name: 'Українська' },
   { id: 'en', short: 'EN', name: 'English' },
+  { id: 'ru', short: 'RU', name: 'Русский' },
 ];
+
+const isLangId = (v) => v === 'uk' || v === 'en' || v === 'ru';
 
 export const LANG_KEY = 'edge_lang';
 
@@ -42,6 +51,7 @@ export const isBot = () => {
 function fromUrl() {
   const p = window.location.pathname;
   if (p === '/en' || p.startsWith('/en/')) return 'en';
+  if (p === '/ru' || p.startsWith('/ru/')) return 'ru';
   if (p.startsWith('/uk/')) return 'uk';
   if (isBot()) return 'uk';
   return null;
@@ -53,8 +63,16 @@ export function preferredLang() {
   if (typeof window === 'undefined') return 'uk';
   try {
     const saved = localStorage.getItem(LANG_KEY);
-    if (saved === 'uk' || saved === 'en') return saved;
+    if (isLangId(saved)) return saved;
   } catch { /* приватний режим */ }
+
+  /* Системна мова — перша в списку браузера. Російська там означає,
+     що людина живе з російським інтерфейсом, тож і журнал їй
+     показуємо російською, незалежно від країни. */
+  try {
+    const first = String((navigator.languages && navigator.languages[0]) || navigator.language || '').slice(0, 2).toLowerCase();
+    if (first === 'ru') return 'ru';
+  } catch { /* старий браузер */ }
 
   const cc = String(window.__EDGE_CC__ || '').toUpperCase();
   if (/^[A-Z]{2}$/.test(cc) && cc !== 'XX' && cc !== 'T1') return cc === 'UA' ? 'uk' : 'en';
@@ -66,7 +84,8 @@ export function preferredLang() {
 
   const langs = (navigator.languages?.length ? navigator.languages : [navigator.language || ''])
     .map((l) => String(l).slice(0, 2).toLowerCase());
-  if (langs.some((l) => l === 'uk' || l === 'ru')) return 'uk';
+  if (langs.some((l) => l === 'uk')) return 'uk';
+  if (langs.some((l) => l === 'ru')) return 'ru';
   return 'en';
 }
 
@@ -77,30 +96,36 @@ function detect() {
 
 export const LANG = detect();
 export const isEn = LANG === 'en';
+export const isRu = LANG === 'ru';
 
 /* Локаль для дат і чисел: toLocaleString(LOCALE, …), Intl.*(LOCALE). */
-export const LOCALE = isEn ? 'en-US' : 'uk-UA';
+export const LOCALE = isEn ? 'en-US' : isRu ? 'ru-RU' : 'uk-UA';
 
 /* Головна функція перекладу. Пара рядків поруч — щоб переклад не
    відставав від оригіналу непомітно. Працює й з масивами/обʼєктами:
-   t([...uk], [...en]). */
-export const t = (uk, en) => (isEn ? en : uk);
+   t([...uk], [...en]). Третій аргумент — російська, його дописує
+   збірка (scripts/ruI18n.mjs); немає — лишається українська. */
+export const t = (uk, en, ru) => (isEn ? en : isRu ? (ru ?? uk) : uk);
 
 /* Для довідників-констант: pickLang({ uk: …, en: … }). */
-export const pickLang = (v) => (isEn ? v.en : v.uk);
+export const pickLang = (v) => (isEn ? v.en : isRu ? (v.ru ?? v.uk) : v.uk);
 
 /* Вибір мови з налаштувань: запамʼятати й перезавантажити. */
 export function setLang(id) {
-  if (id !== 'uk' && id !== 'en') return;
+  if (!isLangId(id)) return;
   try { localStorage.setItem(LANG_KEY, id); } catch { /* приватний режим */ }
   window.location.reload();
 }
 
 if (typeof document !== 'undefined') document.documentElement.lang = LANG;
+/* Для умов isEn ? … : …, які збірка доповнює російською (scripts/ruI18n.mjs). */
+if (typeof globalThis !== 'undefined') globalThis.__EDGE_LANG = LANG;
 
 /* Українська множина: 1 прогін, 2–4 прогони, 5+ прогонів, 11–14 —
    теж «прогонів». Англійську рахуємо окремо — там лише one/other. */
-export function pluralUk(n, one, few, many) {
+export function pluralUk(n, one, few, many, ruOne, ruFew, ruMany) {
+  /* Правило множини в російській те саме; форми дописує збірка. */
+  if (isRu && ruOne != null) { one = ruOne; few = ruFew; many = ruMany; }
   const a = Math.abs(n) % 100;
   const b = a % 10;
   if (a > 10 && a < 20) return many;

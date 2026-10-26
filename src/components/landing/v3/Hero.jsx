@@ -5,7 +5,7 @@ import { C, F, A, Cat, useInView, reducedMotion, SHELL } from './base';
 import DemoTransition from './DemoTransition';
 import { useLang, useTx, pick } from './lang';
 import Button from '../../ui/Button';
-import { track } from '../../../lib/analytics';
+import { track } from '../../../lib/pulse';
 
 /* ==================================================================
    Герой — живий журнал, а не картинка.

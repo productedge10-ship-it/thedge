@@ -28,14 +28,17 @@ const BelowFold = lazy(() => import('../components/landing/v3/BelowFold'));
 
 const navFor = (lang) => (lang === 'en'
   ? [['#product', 'Product'], ['#coach', 'Coach'], ['#pricing', 'Pricing'], [blogPath('en'), 'Blog'], ['#faq', 'FAQ']]
-  : [['#product', 'Продукт'], ['#coach', 'Коуч'], ['#pricing', 'Ціни'], [blogPath('uk'), 'Блог'], ['#faq', 'Питання']]);
+  : lang === 'ru'
+    ? [['#product', 'Продукт'], ['#coach', 'Коуч'], ['#pricing', 'Цены'], [blogPath('ru'), 'Блог'], ['#faq', 'Вопросы']]
+    : [['#product', 'Продукт'], ['#coach', 'Коуч'], ['#pricing', 'Ціни'], [blogPath('uk'), 'Блог'], ['#faq', 'Питання']]);
 
-/* Мови сайту. Російської немає свідомо (з вересня 2026). Перемикач —
-   це перехід між адресами / і /en, а не зміна стану: у кожної мови
-   своя адреса, і саме її бачить пошуковик. */
+/* Мови сайту. Перемикач — це перехід між адресами /, /en і /ru,
+   а не зміна стану: у кожної мови своя адреса, і саме її бачить
+   пошуковик. Блогу російською немає — посилання ведуть на українську. */
 const LANGS = [
   { id: 'uk', code: 'UA', href: '/' },
   { id: 'en', code: 'EN', href: '/en' },
+  { id: 'ru', code: 'RU', href: '/ru' },
 ];
 
 /* Повне завантаження, а не navigate(): мова решти застосунку
@@ -66,8 +69,8 @@ function Header() {
   const tx = useTx();
   const switchLang = useSwitchLang();
   const NAV = navFor(pageLang);
-  const lang = pageLang === 'en' ? 'EN' : 'UA';
-  const setLang = (code) => switchLang(code === 'EN' ? 'en' : 'uk');
+  const lang = (LANGS.find((l) => l.id === pageLang) || LANGS[0]).code;
+  const setLang = (code) => switchLang((LANGS.find((l) => l.code === code) || LANGS[0]).id);
   const [shrunk, setShrunk] = useState(false);
   const [progress, setProgress] = useState(0);
   const [langOpen, setLangOpen] = useState(false);
@@ -264,8 +267,8 @@ export default function Landing({ lang = 'uk' }) {
 
   if (user && !stay) return <Navigate to="/app" replace />;
 
-  const redirect = lang === 'uk' ? preferredEnglish() : false;
-  if (redirect) return <Navigate to={`/en${window.location.search}${window.location.hash}`} replace />;
+  const redirect = lang === 'uk' ? preferredOther() : null;
+  if (redirect) return <Navigate to={`/${redirect}${window.location.search}${window.location.hash}`} replace />;
 
   /* key — щоб перехід / ↔ /en перемонтував сторінку: анімації й
      друкований текст коуча не домальовуються старою мовою. */
@@ -282,9 +285,10 @@ export default function Landing({ lang = 'uk' }) {
    мова браузера. Роботів не чіпаємо взагалі: кожна адреса має
    віддавати пошуковику свою мову, інакше Google вирішить, що / — це
    дубль /en, і викине українську головну з індексу. */
-function preferredEnglish() {
-  if (typeof window === 'undefined' || isBot()) return false;
-  return preferredLang() === 'en';
+function preferredOther() {
+  if (typeof window === 'undefined' || isBot()) return null;
+  const p = preferredLang();
+  return p === 'en' || p === 'ru' ? p : null;
 }
 
 function LandingPage() {

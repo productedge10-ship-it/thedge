@@ -156,6 +156,7 @@ const router = createBrowserRouter([
   /* Англійська вітрина: своя адреса, щоб пошуковик бачив одну мову
      на одній адресі (hreflang — у scripts/seo-routes.mjs). */
   { path: '/en', element: <Landing lang="en" /> },
+  { path: '/ru', element: <Landing lang="ru" /> },
   { path: '/auth', element: page(Auth) },
   /* ---- Пісочниця ----
      Ті самі сторінки й ті самі модалки, що в застосунку: підмінений
@@ -267,7 +268,7 @@ const router = createBrowserRouter([
    довантажився, помилку ковтаємо тут, а не ведемо на самовідновлення
    з перезавантаженням, як для сторінок. */
 if (typeof window !== 'undefined') {
-  const bootAnalytics = () => import('./lib/analytics')
+  const bootAnalytics = () => import('./lib/pulse')
     .then((m) => m.startAnalytics(router))
     .catch(() => {});
   if ('requestIdleCallback' in window) window.requestIdleCallback(bootAnalytics, { timeout: 3000 });

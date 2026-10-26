@@ -4,7 +4,7 @@ import { createContext, useContext } from 'react';
    Мова лендінга.
 
    Мова береться з адреси, а не з браузера: `/` — українська, `/en` —
-   англійська. Для пошуковика це головне — одна адреса завжди віддає
+   англійська, `/ru` — російська. Для пошуковика це головне — одна адреса завжди віддає
    одну мову, інакше Google бачить то один текст, то інший і не
    ранжує жоден. Людину з англомовним браузером на `/en` переводить
    Landing.jsx (див. там), а не цей файл.
@@ -12,7 +12,8 @@ import { createContext, useContext } from 'react';
    Тексти тримаємо парами прямо в компонентах — `tx('укр', 'eng')`, —
    а не в окремому словнику: лендінг правлять часто, і переклад, що
    лежить поруч з оригіналом, не відстає від нього непомітно.
-   Російської немає свідомо (з вересня 2026).
+   Російську сюди не пишемо: третій аргумент tx('укр', 'eng', 'рус')
+   дописує збірка зі словника src/i18n/ru.json (scripts/ruI18n.mjs).
 ================================================================== */
 
 export const LangCtx = createContext('uk');
@@ -23,12 +24,13 @@ export const useLang = () => useContext(LangCtx);
    компонент перемальовується, коли її перемикають. */
 export function useTx() {
   const lang = useContext(LangCtx);
-  return (uk, en) => (lang === 'en' ? en : uk);
+  return (uk, en, ru) => (lang === 'en' ? en : lang === 'ru' ? (ru ?? uk) : uk);
 }
 
 /* Для списків-констант поза компонентами: { uk: [...], en: [...] }. */
-export const pick = (lang, v) => (v && typeof v === 'object' && 'uk' in v ? (lang === 'en' ? v.en : v.uk) : v);
+export const pick = (lang, v) => (v && typeof v === 'object' && 'uk' in v ? (lang === 'en' ? v.en : lang === 'ru' ? (v.ru ?? v.uk) : v.uk) : v);
 
 /* Шлях з урахуванням мови: блог і головна мають свої адреси. */
-export const homePath = (lang) => (lang === 'en' ? '/en' : '/');
+export const homePath = (lang) => (lang === 'en' ? '/en' : lang === 'ru' ? '/ru' : '/');
+/* Блогу російською немає — з /ru ведемо на український. */
 export const blogPath = (lang) => (lang === 'en' ? '/en/blog' : '/uk/blog');

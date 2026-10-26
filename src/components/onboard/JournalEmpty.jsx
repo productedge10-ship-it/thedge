@@ -6,7 +6,7 @@ import useOnboardAnswers from '../../hooks/useOnboardAnswers';
 import { openSettings } from '../../lib/settings';
 import { T } from '../../lib/theme';
 import { t as tx } from '../../lib/lang';
-import { track } from '../../lib/analytics';
+import { track } from '../../lib/pulse';
 import { noAutoImport, platformName, demoUrl, markDemoSeen } from '../../lib/onboard';
 import Button from '../ui/Button';
 import QuickTrade from './QuickTrade';

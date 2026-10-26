@@ -7,7 +7,7 @@ import useSubscription from '../../hooks/useSubscription';
 import { supabase } from '../../lib/supabase';
 import { T, EASE } from '../../lib/theme';
 import { t as tx } from '../../lib/lang';
-import { track } from '../../lib/analytics';
+import { track } from '../../lib/pulse';
 
 /* ==================================================================
    Короткий відгук: що подобається, що ні, і чи платив би за Lite.

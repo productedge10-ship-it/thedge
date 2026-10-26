@@ -11,7 +11,7 @@ import useOnboardAnswers from '../../hooks/useOnboardAnswers';
 import { openSettings } from '../../lib/settings';
 import { T, EASE } from '../../lib/theme';
 import { t as tx } from '../../lib/lang';
-import { track } from '../../lib/analytics';
+import { track } from '../../lib/pulse';
 import {
   LIST_KEY, LIST_EMPTY, normalizeList, CHECKLIST_DAYS, noAutoImport, platformName,
   demoUrl, markDemoSeen, demoSeen, isWarmingUp,

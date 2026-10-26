@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { parseTradesFile, guessRisk, toRows } from '../../lib/tradeImport';
 import { T, EASE } from '../../lib/theme';
 import { t as tx } from '../../lib/lang';
-import { track } from '../../lib/analytics';
+import { track } from '../../lib/pulse';
 import { notify } from '../../utils/notify';
 
 /* ==================================================================

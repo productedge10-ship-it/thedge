@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import useCloudState from '../../hooks/useCloudState';
 import { T, EASE } from '../../lib/theme';
 import { t as tx } from '../../lib/lang';
-import { track } from '../../lib/analytics';
+import { track } from '../../lib/pulse';
 import { openSettings } from '../../lib/settings';
 import {
   KEY, EMPTY, normalize, PLATFORMS, GOALS, TPW, SAVED_EVENT, isWarmingUp, platformName, demoUrl, markDemoSeen,

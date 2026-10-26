@@ -19,7 +19,7 @@ import { EMOTION_LABEL } from '../components/analytics/data';
 import ExportStats from '../components/analytics/ExportStats';
 import { withSandbox, inSandbox } from '../lib/sandbox';
 import { demoUrl, markDemoSeen } from '../lib/onboard';
-import { track } from '../lib/analytics';
+import { track } from '../lib/pulse';
 import { t as tx, LOCALE, isEn } from '../lib/lang';
 import Button from '../components/ui/Button';
 
