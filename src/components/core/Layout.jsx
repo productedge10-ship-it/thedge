@@ -20,6 +20,7 @@ import WorkspaceSetup, { openWorkspaceSetup, useWorkspaceDone } from '../onboard
 import TableImportModal from '../journal/TableImportModal';
 import FeedbackPulse from '../onboard/FeedbackPulse';
 import PropRulesAlert from '../accounts/PropRulesAlert';
+import PropNewsWatcher from '../accounts/PropNewsWatcher';
 import VerifyEmailModal from '../modals/VerifyEmailModal';
 import SettingsModal from '../modals/SettingsModal';
 import Tour from './Tour';
@@ -1252,6 +1253,7 @@ export default function Layout() {
       {/* Відгук на 3-й день: що подобається, що ні, чи платив би за Lite. */}
       {!inSandbox() && <FeedbackPulse />}
       {!inSandbox() && <PropRulesAlert />}
+      {!inSandbox() && <PropNewsWatcher />}
       {/* Нагадування підтвердити пошту. Теж живе тут, а не на сторінці
           входу: з вимкненим «Confirm email» реєстрація одразу видає
           сесію, і людина потрапляє в застосунок, не побачивши жодного

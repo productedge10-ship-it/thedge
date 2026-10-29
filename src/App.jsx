@@ -99,6 +99,8 @@ const PreTradeChecklist = lazy(() => import('./pages/PreTradeChecklist'));
 const Calculator = lazy(() => import('./pages/Calculator'));
 const News = lazy(() => import('./pages/News'));
 const PropRules = lazy(() => import('./pages/PropRules'));
+const PropProPreview = lazy(() => import('./dev/PropProPreview'));
+const PropHubPreview = lazy(() => import('./dev/PropHubPreview'));
 const BlogList = lazy(() => import('./pages/BlogList'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const NotFound = lazy(() => import('./pages/Error404'));
@@ -182,6 +184,7 @@ const router = createBrowserRouter([
   { path: '/en', element: <Landing lang="en" /> },
   { path: '/ru', element: <Landing lang="ru" /> },
   { path: '/auth', element: page(Auth) },
+  ...(import.meta.env.DEV ? [{ path: '/dev/prop-pro', element: page(PropProPreview) }, { path: '/dev/prop-hub', element: page(PropHubPreview) }] : []),
   /* ---- Пісочниця ----
      Ті самі сторінки й ті самі модалки, що в застосунку: підмінений
      лише клієнт бази, тому демо не може розійтися з продуктом. */

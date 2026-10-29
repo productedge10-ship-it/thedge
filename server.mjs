@@ -92,6 +92,7 @@ const NODE_ROUTES = {
   '/api/ev': './api/ev.js',
   '/api/unsub': './api/unsub.js',
   '/api/stats': './api/stats.js',
+  '/api/prop-ask': './api/prop-ask.js',
 };
 
 /* ------------------------------------------------------------------

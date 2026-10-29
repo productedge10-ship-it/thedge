@@ -1,4 +1,5 @@
 /* global process */
+import { STRUCT, BOOK, firmIdOf, hashRules, versionDiff } from './_propVersion.mjs';
 import crypto from 'node:crypto';
 import { admin, sendMail, site } from './_mono.mjs';
 import { claimMail, mailPropRules } from './_mails.mjs';
@@ -432,6 +433,18 @@ async function discover(db, src) {
       }
       next = j.next_page;
     }
+  } else if (o.type === 'wpjson') {
+    /* WordPress REST (The5ers): питання-відповіді, які сайт довантажує скриптом. */
+    for (let pg = 1; pg <= 20; pg += 1) {
+      const r = await scraper('/fetch', { url: `${src.url}${src.url.includes('?') ? '&' : '?'}per_page=100&page=${pg}`, raw: true });
+      if (!r.ok) break;
+      let items; try { items = JSON.parse(r.raw); } catch { break; }
+      if (!Array.isArray(items) || !items.length) break;
+      for (const it of items) {
+        const title = stripHtml(it.title?.rendered || '');
+        keep(it.link, { title, section: 'FAQ', text: `${title}\n${stripHtml(it.content?.rendered || '')}` });
+      }
+    }
   } else if (o.type === 'intercom') {
     const seen = new Set();
     const queue = [src.url];
@@ -714,6 +727,7 @@ async function synthesize(db, firm) {
   }
   let rbItems = 0;
   try { rbItems = await buildRulebook(db, firm, factsText); } catch (e) { console.error('prop rulebook:', firm, e.message); }
+  try { await publishVersion(db, firm, factsText); } catch (e) { console.error('prop version:', firm, e.message); }
   const stamp = new Date().toISOString();
   const { count: total } = await db.from('prop_rule_pages').select('id', { count: 'exact', head: true }).eq('firm', firm).eq('active', true);
   await db.from('prop_firm_status').upsert({
@@ -815,6 +829,43 @@ async function maybeSynthesize(db) {
     if (pending) continue;
     try { await synthesize(db, s.firm); } catch (e) { console.error('prop synth:', s.firm, e.message); }
   }
+}
+
+/* ---------- правила для юзера (prop_rule_versions) ----------
+
+   Після кожної перезбірки фірми збираємо картку, яку бачить юзер на
+   «Правилах мого пропа» (ті самі промпти, що в scripts/prop-build.mjs).
+   Числа не змінились — оновлюємо тексти поточної версії на місці, щоб
+   не плодити «нових версій» від того, що модель інакше сформулювала.
+   Змінились — нова версія йде адміну на схвалення (prop_rules_decide),
+   з коротким висновком простою мовою для вкладки «Оновлення». */
+async function publishVersion(db, firm, factsText) {
+  const id = firmIdOf(firm);
+  if (!id) return;
+  const structured = await gemini(STRUCT(firm) + factsText, { big: true });
+  await sleep(GAP);
+  const rulebook = await gemini(BOOK(firm) + factsText, { big: true });
+  await sleep(GAP);
+  const one = (j) => (Array.isArray(j) && j.length === 1 ? j[0] : j);
+  const { data: cur } = await db.from('prop_rule_versions').select('id,data').eq('firm_id', id).eq('is_current', true).maybeSingle();
+  const next = { ...(cur?.data || {}), structured: one(structured), rulebook: one(rulebook), built_at: new Date().toISOString() };
+  const hash = hashRules(next);
+  const changes = cur ? versionDiff(cur.data, next) : [];
+  if (cur && !changes.length) {
+    await db.from('prop_rule_versions').update({ data: next, data_hash: hash, built_at: next.built_at, checked_at: next.built_at }).eq('id', cur.id);
+    return;
+  }
+  let summary = null;
+  if (changes.length) {
+    summary = await gemini(`Проп-фірма ${firm} змінила правила. Ось що змінилось у числах (було → стало):
+${changes.map((c) => `- ${c.program} · ${c.field}: ${c.old ?? '—'} → ${c.new ?? '—'}`).join('\n')}
+Напиши трейдеру 1-3 речення простою українською: що змінилось і що це значить для його торгівлі. Без вступу.`, { big: true, json: false }).catch(() => null);
+  }
+  /* Перша версія — одразу юзерам; зміна в числах — спершу адміну на схвалення. */
+  const args = { p_firm_id: id, p_firm: firm, p_data: next, p_hash: hash, p_built_at: next.built_at, p_changes: changes, p_summary: summary };
+  const { error } = cur ? await db.rpc('prop_rules_stage', args) : await db.rpc('prop_rules_publish', args);
+  if (error) throw new Error(error.message);
+  console.log(`prop rules: ${cur ? 'на схвалення' : 'перша версія'} ${firm} (${changes.length} змін)`);
 }
 
 /* ---------- вхід з server.mjs ---------- */

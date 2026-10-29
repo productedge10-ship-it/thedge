@@ -1,0 +1,510 @@
+{
+ "id": "blueguardian",
+ "firm": "Blue Guardian",
+ "source": "https://help.blueguardian.com/en/",
+ "structured": {
+  "programs": [
+   {
+    "program": "2 Step Nano",
+    "phases": [
+     {
+      "name": "Phase 1",
+      "profit_target_pct": 8,
+      "min_trading_days": 0,
+      "time_limit_days": null
+     },
+     {
+      "name": "Phase 2",
+      "profit_target_pct": 5,
+      "min_trading_days": 0,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 3,
+    "daily_loss_basis": "від вищого значення між балансом та еквіті на момент скидання о 5:00 PM EST",
+    "daily_reset": "5:00 PM EST",
+    "max_loss_pct": 10,
+    "max_loss_type": "static",
+    "consistency_rule": "50% лише на Funded (найбільший прибуток за 1 день не повинен перевищувати або дорівнювати 50% від загального прибутку за період)",
+    "funded_rules": "Діє правило консистентності 50%, заборонена торгівля на новинах (5 хв до/після), обмеження виплат (Payout Cap) 2% від балансу за цикл",
+    "leverage": "Evaluation & Funded: FX 1:50, Indices 1:10, Commodities 1:10, Crypto 1:2",
+    "notes": [
+     "Payout Cap: максимум 2% виплати від початкового балансу за один цикл",
+     "Tick Scalping: мінімальний час утримання угоди — 2 хвилини"
+    ]
+   },
+   {
+    "program": "2 Step Standard",
+    "phases": [
+     {
+      "name": "Phase 1",
+      "profit_target_pct": 8,
+      "min_trading_days": 3,
+      "time_limit_days": null
+     },
+     {
+      "name": "Phase 2",
+      "profit_target_pct": 4,
+      "min_trading_days": 3,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 4,
+    "daily_loss_basis": "від вищого значення між балансом та еквіті на момент скидання о 5:00 PM EST",
+    "daily_reset": "5:00 PM EST",
+    "max_loss_pct": 8,
+    "max_loss_type": "static",
+    "consistency_rule": null,
+    "funded_rules": "Діє Guardian Shield (автозакриття угод при 2% плаваючого збитку), заборона торгівлі на новинах за 5 хв до/після",
+    "leverage": "Evaluation & Funded: FX 1:50, Indices 1:10, Commodities 1:10, Crypto 1:2",
+    "notes": [
+     "Торговий день зараховується, якщо прибуток за день становить щонайменше +0.5%",
+     "Guardian Shield: при першому спрацьовуванні Profit Split знижується до 50%, при другому — рахунок закривається"
+    ]
+   },
+   {
+    "program": "1 Step Nano",
+    "phases": [
+     {
+      "name": "Phase 1",
+      "profit_target_pct": 10,
+      "min_trading_days": 0,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 4,
+    "daily_loss_basis": "від вищого значення між балансом та еквіті на момент скидання о 5:00 PM EST",
+    "daily_reset": "5:00 PM EST",
+    "max_loss_pct": 6,
+    "max_loss_type": "trailing",
+    "consistency_rule": "50% на Challenge та Funded рахунках",
+    "funded_rules": "Потрібно виконати мінімум 5 прибуткових днів, заборонена торгівля на новинах (5 хв до/після), діє 1% буфер виведення при прибутку від 6%",
+    "leverage": "Evaluation: FX 1:50, Indices 1:20, Commodities 1:20, Crypto 1:2 | Funded: FX 1:50, Indices 1:10, Commodities 1:10, Crypto 1:2",
+    "notes": [
+     "Trailing drawdown фіксується на початковому балансі при досягненні 6% прибутку",
+     "Після фіксації просідання на початковому балансі застосовується 1% буфер залишуваного балансу при виплаті"
+    ]
+   },
+   {
+    "program": "1 Step Standard",
+    "phases": [
+     {
+      "name": "Phase 1",
+      "profit_target_pct": 9,
+      "min_trading_days": 3,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 4,
+    "daily_loss_basis": "від вищого значення між балансом та еквіті на момент скидання о 5:00 PM EST",
+    "daily_reset": "5:00 PM EST",
+    "max_loss_pct": 6,
+    "max_loss_type": "trailing",
+    "consistency_rule": null,
+    "funded_rules": "Guardian Shield (автозакриття угод при 2% збитку), заборона торгівлі на новинах за 5 хв до/після, 1% буфер виведення при досягненні 6% прибутку",
+    "leverage": "Evaluation: FX 1:50, Indices 1:20, Commodities 1:20, Crypto 1:2 | Funded: FX 1:50, Indices 1:10, Commodities 1:10, Crypto 1:2",
+    "notes": [
+     "Цільовий прибуток знижено до 9% для рахунків, придбаних після 20 серпня",
+     "Trailing drawdown фіксується на початковому балансі при +6% прибутку"
+    ]
+   },
+   {
+    "program": "Instant Starter",
+    "phases": [
+     {
+      "name": "Funded",
+      "profit_target_pct": 0,
+      "min_trading_days": 5,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 3,
+    "daily_loss_basis": "від вищого значення між балансом та еквіті на момент скидання о 5:00 PM EST",
+    "daily_reset": "5:00 PM EST",
+    "max_loss_pct": 5,
+    "max_loss_type": "trailing",
+    "consistency_rule": "15% на виплату",
+    "funded_rules": "Одноразовий рахунок на $5,000, лише одна виплата з максимальним прибутком $250, після виплати рахунок закривається",
+    "leverage": "FX 1:30, Indices 1:10, Commodities 1:10, Crypto 1:2",
+    "notes": [
+     "Максимальний ліміт прибутку $250",
+     "Виплати лише в Crypto (через мінімум Rise у $500)",
+     "Guardian Shield спрацьовує при 1% плаваючого збитку",
+     "Можна придбати тільки 1 рахунок на трейдера"
+    ]
+   },
+   {
+    "program": "Instant Standard",
+    "phases": [
+     {
+      "name": "Funded",
+      "profit_target_pct": 0,
+      "min_trading_days": 5,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 3,
+    "daily_loss_basis": "від вищого значення між балансом та еквіті на момент скидання о 5:00 PM EST",
+    "daily_reset": "5:00 PM EST",
+    "max_loss_pct": 6,
+    "max_loss_type": "trailing",
+    "consistency_rule": "20% (для $300k та $400k — 15%)",
+    "funded_rules": "Заборона новини за 5 хв до/після (для покупка після 13.11.2025), Guardian Shield при 1% збитку, 1% буфер виведення при прибутку від 6%",
+    "leverage": "FX 1:30, Indices 1:10, Commodities 1:10, Crypto 1:2",
+    "notes": [
+     "Перші дві виплати на рахунках $200k, $300k та $400k обмежені сумою $10,000 за виплату",
+     "Trailing drawdown блокується на початковому балансі при прибутку в 6%"
+    ]
+   },
+   {
+    "program": "Buy Now Pay Later (BNPL)",
+    "phases": [
+     {
+      "name": "Phase 1",
+      "profit_target_pct": 4,
+      "min_trading_days": 0,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 4,
+    "daily_loss_basis": "від вищого значення між балансом та еквіті на момент скидання о 5:00 PM EST",
+    "daily_reset": "5:00 PM EST",
+    "max_loss_pct": 8,
+    "max_loss_type": "trailing",
+    "consistency_rule": "20% на Funded",
+    "funded_rules": "Після проходження виклику сплачується Activation Fee, мінімум 5 прибуткових днів для виплати, Guardian Shield на 1% збитку, заборона новин 5 хв до/після",
+    "leverage": "FX 1:50, Indices 1:20, Commodities 1:20, Crypto 1:2",
+    "notes": [
+     "Початкова оплата лише $10, решта сплачується у вигляді Activation Fee після успішного проходження",
+     "Фіксація макс. просідання на стартовому балансі при +8% прибутку з 1% фіксованим буфером"
+    ]
+   }
+  ],
+  "restricted_news": {
+   "window_min_before": 5,
+   "window_min_after": 5,
+   "applies_to": [
+    "Funded рахунки всіх програм (включно з Instant Standard)"
+   ],
+   "exempt": [
+    "Evaluation / Challenge фази",
+    "Instant Starter"
+   ],
+   "what_is_restricted": "Заборонено відкривати та закривати угоди за 5 хвилин до та 5 хвилин після виходу червоних (високого впливу) новин та подій FOMC",
+   "events": [
+    {
+     "announcement": "USD (включно з FOMC)",
+     "instruments": "USDCAD, AUDUSD, EURUSD, GBPUSD, NZDUSD, USDCHF, USDJPY, XAUUSD, NDX100, SPX500, US30, XAGUSD, BTCUSD, ETHUSD"
+    },
+    {
+     "announcement": "EUR",
+     "instruments": "EURUSD, EURAUD, EURCAD, EURCHF, EURDKK, EURGBP, EURJPY, EURNZD, GER40"
+    },
+    {
+     "announcement": "GBP",
+     "instruments": "EURGBP, GBPAUD, GBPCAD, GBPCHF, GBPJPY, GBPNZD, GBPUSD, UK100"
+    },
+    {
+     "announcement": "JPY",
+     "instruments": "AUDJPY, CADJPY, CHFJPY, EURJPY, GBPJPY, NZDJPY, USDJPY, JPN225"
+    },
+    {
+     "announcement": "AUD",
+     "instruments": "AUDCAD, AUDCHF, AUDJPY, AUDNZD, AUDUSD, EURAUD, GBPAUD"
+    },
+    {
+     "announcement": "CAD",
+     "instruments": "AUDCAD, CADCHF, CADJPY, EURCAD, GBPCAD, NZDCAD, USDCAD"
+    },
+    {
+     "announcement": "CHF",
+     "instruments": "AUDCHF, CADCHF, CHFJPY, EURCHF, GBPCHF, NZDCHF, USDCHF"
+    },
+    {
+     "announcement": "NZD",
+     "instruments": "AUDNZD, EURNZD, GBPNZD, NZDCAD, NZDCHF, NZDJPY, NZDUSD"
+    }
+   ],
+   "penalty": "Вилучення отриманого прибутку з новинних угод без нарахування порушення на рахунок"
+  },
+  "forbidden_practices": [
+   {
+    "name": "Tick Scalping",
+    "explanation": "Закриття угод з часом утримання менше 2 хвилин",
+    "penalty": "Позначення угод як некоректних та вилучення прибутку"
+   },
+   {
+    "name": "Gambling Rule",
+    "explanation": "Використання понад 80% маржі у відкритих угодах (азартна торгівля)",
+    "penalty": "Скасування виплати, вилучення прибутку або анулювання рахунку"
+   },
+   {
+    "name": "Shared Device Usage (CID Match)",
+    "explanation": "Використання одного пристрою, мережі або VPS для кількох акаунтів різних трейдерів",
+    "penalty": "Дискваліфікація з виплат, вилучення прибутку, блокування акаунту"
+   },
+   {
+    "name": "Arbitrage & Exploit Trading",
+    "explanation": "Використання затримок котирувань (latency), арбітражу, помилок демо-сервера чи HFT-ботів",
+    "penalty": "Негайне закриття рахунку та занесення до чорного списку"
+   },
+   {
+    "name": "Cross-Account Hedging / Third-Party Trading",
+    "explanation": "Хеджування угод між різними акаунтами, копіювання з чужих акаунтів або передача торгівлі третім особам",
+    "penalty": "Закриття акаунту та анулювання результатів"
+   },
+   {
+    "name": "Account Inactivity",
+    "explanation": "Відсутність бодай однієї угоди протягом 30 календарних днів",
+    "penalty": "Порушення правил та закриття рахунку"
+   }
+  ],
+  "weekend_holding": "Дозволено утримувати позиції через ніч та протягом вихідних на всіх типах рахунків.",
+  "vpn_vps": "Дозволено використовувати VPN та VPS для роботи, але суворо заборонено використовувати їх для обходу правил копітрейдингу, групової торгівлі чи сигналів.",
+  "ea_allowed": "Дозволено використовувати власні EAs. Заборонені арбітражні боти, HFT та робочі скрипти, що експлуатують демо-сервер.",
+  "account_merge": null,
+  "payouts": {
+   "first_payout": "Для Funded: через 14 днів після першої угоди (або 7 днів із платною опцією). Для Instant: одразу після виконання вимог мінімальних днів та консистентності.",
+   "frequency": "Кожні 14 днів (або кожні 7 днів з опцією 7-Day Add-On); для Instant — за запитом (On-demand).",
+   "split": "85% стандартно (80% на 2 Step Nano, Instant Standard та BNPL; 90% на Instant Starter). Можливе підвищення до 90% або 100% (для Nano) через платний аддон.",
+   "scaling": "Збільшення балансу рахунку на 30% кожні 3 місяці за умови досягнення 12% прибутку за цей період (максимум до $4,000,000)."
+  },
+  "recent_changes": [
+   {
+    "date": "2026-01-21",
+    "change": "Змінено правила повернення вартості челенджу (Refund Fee).",
+    "details": "Оплата за проходження оцінювання тепер повертається лише після четвертої успішної виплати (крім Instant Starter). Якщо рахунок буде закритий через порушення до четвертої виплати, комісія не повертається. Зміна стосується всіх рахунків, придбаних починаючи з 21 січня 2026 року.",
+    "affects": [
+     "Усі Evaluation рахунки"
+    ],
+    "source": "https://help.blueguardian.com/en/articles/15618204-general-information-rules"
+   },
+   {
+    "date": "2025-11-13",
+    "change": "Заборонено торгівлю на новинах для нових рахунків Instant Standard.",
+    "details": "Для всіх рахунків Instant Standard, куплених після 13 листопада 2025 року, введено заборону на відкриття та закриття угод за 5 хвилин до та після новин високого впливу. Трейдерам тепер потрібно уникати торгівлі під час новин, оскільки прибуток від таких угод буде вилучено.",
+    "affects": [
+     "Instant Standard"
+    ],
+    "source": "https://help.blueguardian.com/en/articles/14061082-instant-standard-account-rules"
+   },
+   {
+    "date": "2024-08-20",
+    "change": "Знижено вимоги для проходження програм 1 Step та 2 Step Standard.",
+    "details": "Для 1 Step Standard цільовий прибуток Phase 1 зменшено з 10% до 9%, а мінімальну кількість торгових днів скорочено до 3. Для 2 Step Standard мінімальну кількість торгових днів також зменшено з 5 до 3 днів. Трейдерам тепер легше виконати умови виклику.",
+    "affects": [
+     "1 Step Standard",
+     "2 Step Standard"
+    ],
+    "source": "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules"
+   }
+  ]
+ },
+ "rulebook": {
+  "topics": [
+   {
+    "id": "loss-limits",
+    "title": "Ліміти збитку",
+    "summary": "Ліміти просідання розраховуються від початкового балансу або еквіті та скидаються щодня о 17:00 EST.",
+    "points": [
+     "Максимальна денна втрата становить 3% (2 Step Nano, Instant Standard, Instant Starter) або 4% (1 Step Nano, 1 Step Standard, 2 Step Standard, BNPL) від початкового балансу.",
+     "Денний ліміт збитку скидається о 17:00 EST і вираховується від вищого значення між балансом та еквіті на момент скидання.",
+     "Загальне просідання є статичним (10% у 2 Step Nano, 8% у 2 Step Standard) або плаваючим trailing (6% у 1 Step Nano, 1 Step Standard, Instant Standard; 5% у Instant Starter; 8% у BNPL).",
+     "Плаваюче просідання фіксується на початковому балансі після досягнення 5%-8% прибутку (залежно від моделі) з додаванням 1% обов'язкового буфера.",
+     "Рівень Stop Out за маржею становить 100% — при його досягненні система автоматично закриває найменш прибуткову відкриту позицію."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/9661525-platform-rules",
+     "https://help.blueguardian.com/en/articles/16445450-2-step-nano-rules",
+     "https://help.blueguardian.com/en/articles/14062291-2-step-standard-rules",
+     "https://help.blueguardian.com/en/articles/16444654-1-step-nano-rules",
+     "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules",
+     "https://help.blueguardian.com/en/articles/14061082-instant-standard-account-rules",
+     "https://help.blueguardian.com/en/articles/14061939-instant-starter",
+     "https://help.blueguardian.com/en/articles/15859899-buy-now-pay-later-bnpl-rules"
+    ]
+   },
+   {
+    "id": "stages-and-goals",
+    "title": "Етапи та цілі торгівлі",
+    "summary": "Вимоги до прибутку та торгових днів різняться залежно від обраної програми оцінювання або миттєвого фінансування.",
+    "points": [
+     "1 Step Nano: цільовий прибуток 10% (Фаза 1), обов'язкові 5 прибуткових днів лише на funded-рахунку.",
+     "2 Step Nano: цільовий прибуток 8% (Фаза 1) та 5% (Фаза 2), мінімальні торгові дні відсутні.",
+     "1 Step Standard: цільовий прибуток 9% (Фаза 1), мінімум 3 прибуткові дні.",
+     "2 Step Standard: цільовий прибуток 8% (Фаза 1) та 4% (Фаза 2), мінімум 3 прибуткові дні.",
+     "Instant Standard та Instant Starter: ціль прибутку відсутня, доступ до виплат відкривається після 5 прибуткових днів.",
+     "BNPL: цільовий прибуток 4% (Фаза 1), мінімум 5 прибуткових днів на funded-рахунку.",
+     "Прибутковим вважається торговий день, у який досягнуто прибуток не менше 0.5% від початкового балансу."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/16445450-2-step-nano-rules",
+     "https://help.blueguardian.com/en/articles/14062291-2-step-standard-rules",
+     "https://help.blueguardian.com/en/articles/16444654-1-step-nano-rules",
+     "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules",
+     "https://help.blueguardian.com/en/articles/14061082-instant-standard-account-rules",
+     "https://help.blueguardian.com/en/articles/14061939-instant-starter",
+     "https://help.blueguardian.com/en/articles/15859899-buy-now-pay-later-bnpl-rules"
+    ]
+   },
+   {
+    "id": "news",
+    "title": "Торгівля на новинах",
+    "summary": "Торгівля під час виходу важливих новин дозволена на фазах випробування, але обмежена на фінансованих рахунках.",
+    "points": [
+     "На етапах оцінювання (челенджах) та рахунках Instant Starter торгівля на новинах повністю дозволена.",
+     "На funded та Instant Standard рахунках заборонено відкривати та закривати угоди за 5 хвилин до та 5 хвилин після виходу червоних новин (high-impact) і подій FOMC.",
+     "Обмеження поширюються на відповідні валютні пари, індекси, товари та криптовалюти (BTCUSD, ETHUSD під час новин USD).",
+     "Прибуток від угод, здійснених у заборонений 10-хвилинний інтервал, підлягає анулюванню без закриття акаунту."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/16445450-2-step-nano-rules",
+     "https://help.blueguardian.com/en/articles/14062291-2-step-standard-rules",
+     "https://help.blueguardian.com/en/articles/16444654-1-step-nano-rules",
+     "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules",
+     "https://help.blueguardian.com/en/articles/14061082-instant-standard-account-rules",
+     "https://help.blueguardian.com/en/articles/14061939-instant-starter",
+     "https://help.blueguardian.com/en/articles/15859899-buy-now-pay-later-bnpl-rules"
+    ]
+   },
+   {
+    "id": "weekend-and-overnight",
+    "title": "Перенесення позицій через ніч та на вихідні",
+    "summary": "Blue Guardian дозволяє вільно утримувати відкриті позиції вночі та протягом вихідних днів.",
+    "points": [
+     "Утримання позицій через ніч (overnight) дозволено на всіх типах рахунків.",
+     "Перенесення угод через вихідні дні (over the weekend) дозволено для всіх чинних програм.",
+     "Угоди, відкриті після 17:00 EST, зараховуються до розрахунків наступного торгового дня."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/9661525-platform-rules",
+     "https://help.blueguardian.com/en/articles/16445450-2-step-nano-rules",
+     "https://help.blueguardian.com/en/articles/14062291-2-step-standard-rules",
+     "https://help.blueguardian.com/en/articles/16444654-1-step-nano-rules",
+     "https://help.blueguardian.com/en/articles/14062186-1-step-standard-rules",
+     "https://help.blueguardian.com/en/articles/14061082-instant-standard-account-rules",
+     "https://help.blueguardian.com/en/articles/14061939-instant-starter",
+     "https://help.blueguardian.com/en/articles/15859899-buy-now-pay-later-bnpl-rules"
+    ]
+   },
+   {
+    "id": "forbidden-practices",
+    "title": "Заборонені практики",
+    "summary": "Компанія суворо забороняє нечесні торгові стратегії, передачу акаунтів та азартну торгівлю.",
+    "points": [
+     "Правило 2 хвилин (Tick Scalping): закриття угоди менш ніж через 2 хвилини після відкриття вважається порушенням.",
+     "Заборонено гемблінг: використання понад 80% маржі у відкритих позиціях веде до анулювання прибутку або закриття рахунку.",
+     "Суворо заборонені арбітраж затримок (latency), тиковий скальпінг, арбітражні боти, HFT та використання помилок сервера.",
+     "Хеджування дозволено лише в межах одного рахунку; хеджування між різними акаунтами заборонено.",
+     "Заборонено використання спільних пристроїв/IP (CID match), передачу пароля та управління акаунтом третіми особами.",
+     "Правило неактивності: необхідно зробити хоча б одну угоду протягом 30 днів, інакше рахунок анулюється."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/9661512-prohibited-trading-practices-account-policies",
+     "https://help.blueguardian.com/en/articles/15618204-general-information-rules",
+     "https://help.blueguardian.com/en/articles/16445450-2-step-nano-rules"
+    ]
+   },
+   {
+    "id": "software-and-vpn",
+    "title": "Платформи, робот та VPN",
+    "summary": "Трейдери можуть використовувати програмне забезпечення, власних ботів та VPN для торгівлі.",
+    "points": [
+     "Доступні платформи: MetaTrader 5, Match Trader, TradeLocker (клієнти з США обмежені Match Trader та TradeLocker).",
+     "Дозволено використання торгових радників (EA) та індикаторів, налаштованих під власну стратегію.",
+     "Копіювання угод дозволено виключно між власними рахунками Blue Guardian та власними зовнішніми акаунтами.",
+     "Використання VPN/VPS дозволено, але суворо заборонено застосовувати їх для приховування забороненого копіювання чи сигнальної торгівлі.",
+     "Зміна платформи можлива лише до виконання першої угоди на рахунку або при переході на наступний етап."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/9661525-platform-rules",
+     "https://help.blueguardian.com/en/articles/9661512-prohibited-trading-practices-account-policies",
+     "https://help.blueguardian.com/en/articles/16445450-2-step-nano-rules"
+    ]
+   },
+   {
+    "id": "payouts-and-funded",
+    "title": "Виплати та фінансовані рахунки",
+    "summary": "Виплати обробляються протягом 24 робочих годин з часткою прибутку трейдера від 80% до 100%.",
+    "points": [
+     "Перший запит на виплату доступний через 14 днів після першої угоди (або 7 днів з аддоном / на 1 Step Nano), надалі — кожні 14 або 7 днів; на Instant рахунках — за запитом.",
+     "Базовий розподіл прибутку: 80% (2 Step Nano, Instant Standard, BNPL), 85% (1 Step Nano, 1/2 Step Standard) або 90% (Instant Starter); доступні аддони до 90% або 100%.",
+     "Виплати здійснюються у Crypto (від $100 до $1,000 за запит) та через Rise Works (від $500 без верхнього ліміту); Instant Starter виплачується тільки у Crypto.",
+     "Гарантія 24 годин: якщо виплата обробляється довше 24 робочих годин, трейдер отримує додаткові +10% до своєї частки прибутку.",
+     "Правило консистентності: один прибутковий день не повинен перевищувати 50% (Nano), 20% (Instant Standard, BNPL) або 15% (Instant Starter, Instant $300k/$400k) від загального прибутку.",
+     "Максимальний активний ліміт фінансованого капіталу на одного трейдера становить $400,000."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/14187958-24-hours-payout-guarantee",
+     "https://help.blueguardian.com/en/articles/9660857-how-do-payouts-work",
+     "https://help.blueguardian.com/en/articles/15618204-general-information-rules",
+     "https://help.blueguardian.com/en/articles/16445450-2-step-nano-rules",
+     "https://help.blueguardian.com/en/articles/14061082-instant-standard-account-rules",
+     "https://help.blueguardian.com/en/articles/14061939-instant-starter"
+    ]
+   },
+   {
+    "id": "scaling-plan",
+    "title": "План масштабування",
+    "summary": "Трейдери можуть збільшити свій депозит до $4,000,000 за умови стабільної прибуткової торгівлі.",
+    "points": [
+     "Для масштабування необхідно досягти 12% прибутку протягом 3-місячного періоду.",
+     "Трейдер повинен дотримуватися всіх правил ризик-менеджменту та умов платформи.",
+     "При виконанні умов баланс рахунку збільшується на 30% від початкового розміру.",
+     "Максимальний ліміт капіталу за програмою масштабування становить $4,000,000."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/15618204-general-information-rules"
+    ]
+   },
+   {
+    "id": "account-review-and-liquidation",
+    "title": "Перевірка та закриття рахунку",
+    "summary": "Порушення правил призводить до закриття акаунту, а Guardian Shield допомагає уникнути жорсткого брейчу.",
+    "points": [
+     "Guardian Shield (на Standard, Instant та BNPL funded): автоматично закриває всі угоди при досягненні 2% плаваючого збитку (1% на Instant/BNPL).",
+     "Наслідки Guardian Shield: перше спрацювання зменшує частку прибутку (profit split) до 50%, друге — призводить до остаточного закриття рахунку.",
+     "Будь-яке порушення правил на етапі оцінювання позбавляє можливості отримати фінансований рахунок.",
+     "Порушення на фінансованому рахунку веде до розірвання угоди та можливого анулювання прибутку.",
+     "Відділ ризиків проводить обов'язкову manual перевірку акаунтів під час оформлення запитів на виплату."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/9661512-prohibited-trading-practices-account-policies",
+     "https://help.blueguardian.com/en/articles/14062291-2-step-standard-rules",
+     "https://help.blueguardian.com/en/articles/14061082-instant-standard-account-rules"
+    ]
+   },
+   {
+    "id": "fees-and-refunds",
+    "title": "Комісії та повернення коштів",
+    "summary": "Оплата за оцінювання повертається з 4-ю виплатою, а з виплат стягується комісія 3%.",
+    "points": [
+     "З усіх виплат прибутку стягується комісія за обробку в розмірі 3%.",
+     "Вартість челенджу повністю повертається трейдеру разом із 4-ю вдалою виплатою (крім Instant Starter).",
+     "Якщо рахунок закривається через порушення правил до 4-ї виплати, вартість оцінювання не повертається.",
+     "У програмі BNPL після проходження випробування сплачується активаційний збір (від $52 до $1,033 залежно від розміру рахунку)."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/9660857-how-do-payouts-work",
+     "https://help.blueguardian.com/en/articles/15618204-general-information-rules",
+     "https://help.blueguardian.com/en/articles/15859899-buy-now-pay-later-bnpl-rules"
+    ]
+   },
+   {
+    "id": "other",
+    "title": "Інша інформація",
+    "summary": "Усі торгами проводяться у віртуальному середовищі з дотриманням вікових та юрисдикційних обмежень.",
+    "points": [
+     "Усі рахунки Blue Guardian (включаючи funded) є демо-рахунками з віртуальними коштами та реальними ринковими котируваннями.",
+     "До реєстрації та купівлі акаунтів допускаються лише особи віком від 18 років.",
+     "Проходження KYC (перевірки особи) є обов'язковим перед першою виплатою.",
+     "Послуги не надаються резидентам обмежених країн (зокрема Північна Корея, Іран, Куба, Сирія, Філіппіни, В'єтнам тощо)."
+    ],
+    "sources": [
+     "https://help.blueguardian.com/en/articles/15618204-general-information-rules"
+    ]
+   }
+  ]
+ },
+ "built_at": "2026-10-29T12:02:17.061Z"
+}

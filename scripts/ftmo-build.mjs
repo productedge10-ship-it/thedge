@@ -1,7 +1,7 @@
 // Збирає зі спарсених сторінок FTMO структуровані правила + rulebook:
 //   node scripts/ftmo-build.mjs [structured|rulebook]
 // Вхід: prop-scraper/out/ftmo/*.txt (python prop-scraper/crawl_ftmo.py)
-// Вихід: src/dev/ftmo-rules.json (показується на /prop-rules лише в dev-режимі)
+// Вихід: src/dev/prop-rules/ftmo.json (показується на /prop-rules лише в dev-режимі)
 // Ключ GEMINI_API_KEY — з .env, на екран не друкується.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,7 +12,7 @@ const KEY = env.GEMINI_API_KEY;
 if (!KEY) { console.error('GEMINI_API_KEY в .env немає'); process.exit(1); }
 const MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'];
 const dir = path.join(root, 'prop-scraper/out/ftmo');
-const outFile = path.join(root, 'src/dev/ftmo-rules.json');
+const outFile = path.join(root, 'src/dev/prop-rules/ftmo.json');
 const all = fs.readdirSync(dir).filter((f) => f.endsWith('.txt'));
 const read = (f) => fs.readFileSync(path.join(dir, f), 'utf8');
 const pick = (re, limit = 99) => all.filter((f) => re.test(f)).slice(0, limit).map((f) => `##### ${f}\n${read(f)}`).join('\n\n');

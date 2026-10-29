@@ -1,0 +1,457 @@
+{
+ "id": "alphacapital",
+ "firm": "Alpha Capital",
+ "source": "https://help.alphacapitalgroup.uk/en/",
+ "structured": {
+  "programs": [
+   {
+    "program": "Alpha Pro",
+    "phases": [
+     {
+      "name": "Phase 1",
+      "profit_target_pct": 8,
+      "min_trading_days": 3,
+      "time_limit_days": null
+     },
+     {
+      "name": "Phase 2",
+      "profit_target_pct": 5,
+      "min_trading_days": 3,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 4,
+    "daily_loss_basis": "Баланс (або баланс/еквіті залежно від підпроєкту 6%/8%/10%)",
+    "daily_reset": "00:00 GMT+3",
+    "max_loss_pct": 8,
+    "max_loss_type": "static",
+    "consistency_rule": "Для On-Demand виплат правило найкращого дня: один день не може приносити понад 40% загального прибутку.",
+    "funded_rules": "На funded-рахунку перенесення позицій через вихідні заборонено (soft breach — зняття прибутку), діє правило Max Risk для кваліфікованих рахунків, відкритих після 21.07.2026.",
+    "leverage": "FX: 1:100, Метали: 1:30, Індекси: 1:20, Нафта: 1:10",
+    "notes": [
+     "Доступні плани Pro 6%, Pro 8%, Pro 10%",
+     "Участь у виплатах бі-віклі або On-Demand"
+    ]
+   },
+   {
+    "program": "Alpha Swing",
+    "phases": [
+     {
+      "name": "Phase 1",
+      "profit_target_pct": 10,
+      "min_trading_days": 3,
+      "time_limit_days": null
+     },
+     {
+      "name": "Phase 2",
+      "profit_target_pct": 5,
+      "min_trading_days": 3,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 5,
+    "daily_loss_basis": "Баланс",
+    "daily_reset": "00:00 GMT+3",
+    "max_loss_pct": 10,
+    "max_loss_type": "static",
+    "consistency_rule": "Правило найкращого дня: найкращий день не має перевищувати 40% загального прибутку.",
+    "funded_rules": "Дозволено переносити угоди через вихідні. Доступні лише On-Demand виплати.",
+    "leverage": "FX: 1:30, Метали: 1:9, Індекси: 1:10, Нафта: 1:10",
+    "notes": [
+     "Спеціально для свінг-трейдерів із гнучкішими правилами новин"
+    ]
+   },
+   {
+    "program": "Alpha One",
+    "phases": [
+     {
+      "name": "Phase 1",
+      "profit_target_pct": 10,
+      "min_trading_days": 1,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 4,
+    "daily_loss_basis": "Найбільше значення між кінцевим балансом або еКвіті попереднього дня",
+    "daily_reset": "00:00 GMT+3",
+    "max_loss_pct": 6,
+    "max_loss_type": "trailing",
+    "consistency_rule": "Правило найкращого дня: найкращий день не більш ніж 40% загального прибутку.",
+    "funded_rules": "Дозволено переносити через вихідні.",
+    "leverage": "FX: 1:30, Метали: 1:9, Індекси: 1:10, Нафта: 1:10",
+    "notes": [
+     "Однокрокова програма (1-step evaluation)",
+     "Trailing drawdown рахується від High Water Mark і фіксується на початковому балансі"
+    ]
+   },
+   {
+    "program": "Alpha Three",
+    "phases": [
+     {
+      "name": "Phase 1",
+      "profit_target_pct": 8,
+      "min_trading_days": 3,
+      "time_limit_days": null
+     },
+     {
+      "name": "Phase 2",
+      "profit_target_pct": 4,
+      "min_trading_days": 3,
+      "time_limit_days": null
+     },
+     {
+      "name": "Phase 3",
+      "profit_target_pct": 4,
+      "min_trading_days": 3,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 4,
+    "daily_loss_basis": "Найбільше значення між балансом або еКвіті",
+    "daily_reset": "00:00 GMT+3",
+    "max_loss_pct": 6,
+    "max_loss_type": "static",
+    "consistency_rule": "Правило найкращого дня для On-Demand: максимум 40% прибутку за один день.",
+    "funded_rules": "Дозволено переносити угоди через вихідні. Доступні бі-віклі або On-Demand виплати.",
+    "leverage": "FX: 1:50, Метали: 1:9, Індекси: 1:10, Нафта: 1:10",
+    "notes": [
+     "Трикрокова програма оцінювання"
+    ]
+   },
+   {
+    "program": "Alpha Direct",
+    "phases": [
+     {
+      "name": "Instant Qualified",
+      "profit_target_pct": 0,
+      "min_trading_days": 0,
+      "time_limit_days": null
+     }
+    ],
+    "daily_loss_pct": 3,
+    "daily_loss_basis": "Найбільше значення між балансом або еКвіті",
+    "daily_reset": "00:00 GMT+3",
+    "max_loss_pct": 5,
+    "max_loss_type": "trailing",
+    "consistency_rule": "Правило найкращого дня: найкращий день не може перевищувати 15% від загального прибутку.",
+    "funded_rules": "Акаунт одразу кваліфікований. Вихідні переносити заборонено. Діє буфер прибутку 3% перед першою виплатою.",
+    "leverage": "FX: 1:30, Метали: 1:9, Індекси: 1:10, Нафта: 1:10",
+    "notes": [
+     "Instant funding програма без етапу челенджу",
+     "Максимальний ризик на актив (Max Risk Rule) становить 1% з першої угоди"
+    ]
+   }
+  ],
+  "restricted_news": {
+   "window_min_before": 5,
+   "window_min_after": 5,
+   "applies_to": [
+    "Qualified Analyst Pro",
+    "Qualified Analyst One",
+    "Qualified Analyst Three",
+    "Qualified Analyst Direct"
+   ],
+   "exempt": [
+    "Alpha Swing (має інші правила для свінг-рахунків)",
+    "Етап еволюції / челенджу (не обмежується)"
+   ],
+   "what_is_restricted": "Заборонено відкривати нові або закривати наявні угоди на цільових інструментах за 5 хвилин до і 5 хвилин після новинної події.",
+   "events": [
+    {
+     "announcement": "USD CPI / Inflation Rate",
+     "instruments": "ALL INSTRUMENTS"
+    },
+    {
+     "announcement": "Federal Funds Rates and Statements + Press conference",
+     "instruments": "ALL INSTRUMENTS"
+    },
+    {
+     "announcement": "Non-Farm Employment Change",
+     "instruments": "ALL INSTRUMENTS"
+    },
+    {
+     "announcement": "ALL USD HIGH-IMPACT NEWS/SPEECHES",
+     "instruments": "USD (Forex, Commodities, US30, US100, US500)"
+    },
+    {
+     "announcement": "ALL EUR HIGH-IMPACT NEWS/SPEECHES",
+     "instruments": "EUR (FOREX, EU Indices)"
+    },
+    {
+     "announcement": "ALL GBP HIGH-IMPACT NEWS/SPEECHES",
+     "instruments": "GBP (FOREX, UK indices)"
+    },
+    {
+     "announcement": "ALL CAD HIGH-IMPACT NEWS/SPEECHES",
+     "instruments": "CAD (FOREX, Oil)"
+    },
+    {
+     "announcement": "ALL AUD HIGH-IMPACT NEWS/SPEECHES",
+     "instruments": "AUD (FOREX Only)"
+    },
+    {
+     "announcement": "ALL NZD HIGH-IMPACT NEWS/SPEECHES",
+     "instruments": "NZD (FOREX Only)"
+    },
+    {
+     "announcement": "ALL CHF HIGH-IMPACT NEWS/SPEECHES",
+     "instruments": "CHF (FOREX Only)"
+    },
+    {
+     "announcement": "ALL JPY HIGH-IMPACT NEWS/SPEECHES",
+     "instruments": "JPY (FOREX, Asian Indices)"
+    }
+   ],
+   "penalty": "М'яке порушення (soft breach): прибуток з цих угод анулюється, виплата за цей період затримується/скасовується, але рахунок не закривається (якщо немає інших порушень)."
+  },
+  "forbidden_practices": [
+   {
+    "name": "Використання нереалістичних цін / Арбітраж",
+    "explanation": "Використання затримок котирувань (latency trading), арбітражу або технічних збоїв платформи.",
+    "penalty": "Закриття рахунку та повна заборона послуг."
+   },
+   {
+    "name": "Групова торгівля / Копіювання чужих сигналів",
+    "explanation": "Копіювання угод інших трейдерів або використання однакових сигналів/сторонніх ботів з однаковими входами.",
+    "penalty": "Втрата прибутку, закриття рахунку."
+   },
+   {
+    "name": " Position Spamming (Спам позиціями)",
+    "explanation": "Штучне розділення однієї великої торгової ідеї на безліч дрібних ордерів (3 або більше), які відкриваються менш ніж за 60 секунд один за одним.",
+    "penalty": "Анулювання прибутку за невалідними угодами або за весь період виплати, можливе закриття рахунку."
+   },
+   {
+    "name": "Гемблінг (Gambling)",
+    "explanation": "Стратегії «все або нічого», різка незвична зміна лотату порівняно із середнім, спекуляції виключно навколо новин короткостроковими угодами.",
+    "penalty": "Видалення прибутку, закриття рахунку."
+   }
+  ],
+  "weekend_holding": "На челенджах тримання через вихідні дозволено (крім прямих обмежень програми). На Qualified Pro та Direct — заборонено (soft breach для Pro). На Swing та One/Three — дозволено на всіх етапах.",
+  "vpn_vps": "Дозволено використовувати VPN або VPS лише зі статечною виділеною (static dedicated) IP-адресою, попередивши сапорт заздалегідь через email. Заборонено маскувати IP чи поля платформи.",
+  "ea_allowed": "Дозволено лише торгові асистенти для управління ризиками (стоп-лоси, тріілінги). Повністю автономні торгові боти та високоволатильні алгоритми заборонені. На swap-free та Alpha Direct EA взагалі вимкнені.",
+  "account_merge": "Дозволено об’єднувати лише кваліфіковані акаунти однакового типу та платформи на суму до $300,000 (до реінвестування/скейлінгу). Акаунти мають бути на початковому балансі.",
+  "payouts": {
+   "first_payout": "Через 14 днів для бі-віклі (з мінімум 5 торговими днями) або за запитом On-Demand після виконання умов (буфер, найкращий день).",
+   "frequency": "Кожні 14 днів або на вимогу (On-Demand).",
+   "split": "Стандартно 80% трейдеру, з опцією 90% (при покупці add-on).",
+   "scaling": "Збільшення капіталу на 10% від початкового балансу щоразу при досягненні 10% росту рахунку (кумулятивно до $2 млн)."
+  },
+  "recent_changes": [
+   {
+    "date": "2026-07-21",
+    "change": "Впроваджено нове правило максимального ризику на один актив (Max Risk Rule) для Qualified Analyst рахунків.",
+    "details": "Для нових рахунків, придбаних після 21.07.2026, запроваджено ліміт відкритого просадки на один інструмент (1% для Alpha Direct, від 1% до 3% залежно від розміру для Pro/One/Three/Direct). Якщо сукупні збитки за відкритими позиціями на одному активі досягають цього порогу, акаунт автоматично закривається системою. Ураховується також 10-хвилинний період охолодження при перезаході в той самий бік по тому ж активу.",
+    "affects": [
+     "Qualified Analyst (Pro, One, Three, Direct, придбані після 21.07.2026)"
+    ],
+    "source": "https://help.alphacapitalgroup.uk/en/articles/15888623-what-is-the-max-risk-rule-and-how-does-it-work"
+   }
+  ]
+ },
+ "rulebook": {
+  "topics": [
+   {
+    "id": "loss-limits",
+    "title": "Ліміти збитку",
+    "summary": "Правила регулюють максимально припустимий денний та загальний збиток, а також граничний ризик на один актив.",
+    "points": [
+     "Денний ліміт збитку розраховується від початкового балансу або еквіті на початок дня (00:00 GMT+3) залежно від обраного плану (від 3% до 5%).",
+     "Максимальний загальний збиток становить від 4% до 10% залежно від плану та буває статичним або плаваючим (trailing).",
+     "Плаваючий збиток (trailing drawdown у планах Alpha One та Direct) рахується від найвищої точки балансу (high-water mark) і фіксується на початковому балансі після досягнення визначеного прибутку.",
+     "Падіння еквіті нижче встановленої межі денного або загального збитку є жорстким порушенням (hard breach) і призводить до закриття акаунту.",
+     "Правило Max Risk обмежує плаваючий збиток на один актив на кваліфікованому акаунті: 1% для Alpha Direct, 2% або 3% для інших планів.",
+     "Якщо угоду на один актив закрито і знову відкрито в тому ж напрямку протягом 10 хвилин, їхні збитки сумуються для оцінки правила Max Risk."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/6934210-what-are-the-daily-risk-limits-and-how-do-they-work",
+     "https://help.alphacapitalgroup.uk/en/articles/6934220-what-is-the-maximum-total-loss",
+     "https://help.alphacapitalgroup.uk/en/articles/15888623-what-is-the-max-risk-rule-and-how-does-it-work"
+    ]
+   },
+   {
+    "id": "stages-and-goals",
+    "title": "Етапи та цілі",
+    "summary": "Кожна програма має власні цілі прибутку та вимоги щодо мінімальних днів торгівлі.",
+    "points": [
+     "Програми оцінювання поділяються на 1-етапні (Alpha One), 2-етапні (Alpha Pro, Alpha Swing) та 3-етапні (Alpha Three).",
+     "План Alpha Direct є миттєвим (Instant-Qualified) і не має етапу оцінювання або цільового прибутку.",
+     "Максимальних обмежень за часом для проходження оцінювання немає.",
+     "Мінімальна кількість торгових днів становить 3 дні для кожного етапу у планах Pro, Swing, Three, та 1 день для плану Alpha One.",
+     "Торговим днем вважається день, коли угоду було і відкрито, і закрито в межах тієї ж доби.",
+     "На кваліфікованому акаунті (Qualified Analyst) цільовий прибуток відсутній."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/6934224-what-are-the-minimum-and-maximum-trading-days-for-the-evaluation",
+     "https://help.alphacapitalgroup.uk/en/articles/6934229-what-is-the-total-duration-of-the-evaluation-period",
+     "https://help.alphacapitalgroup.uk/en/articles/6933909-are-there-any-profit-targets-on-a-qualified-analyst-account",
+     "https://help.alphacapitalgroup.uk/en/articles/11378706-alpha-pro-6",
+     "https://help.alphacapitalgroup.uk/en/articles/10097421-alpha-one-6-10-12",
+     "https://help.alphacapitalgroup.uk/en/articles/16003693-alpha-direct"
+    ]
+   },
+   {
+    "id": "news",
+    "title": "Новини",
+    "summary": "Торгівля під час виходу новин дозволена на челенджах, але має часові обмеження на реальних акаунтах.",
+    "points": [
+     "Під час етапів оцінювання (челенджів) торгівля на новинах дозволена без обмежень.",
+     "На кваліфікованих акаунтах Pro, One, Three та Direct заборонено відкривати й закривати угоди за 5 хвилин до та 5 хвилин після важливих новин.",
+     "Заборона стосується ринкових ордерів, лімітних ордерів, а також спрацьовування Stop Loss, Take Profit і Stop Gain.",
+     "Утримувати вже відкриті позиції під час виходу новин дозволено, якщо їх було відкрито раніше ніж за 5 хвилин до події.",
+     "Порушення правила новин вважається м'яким (Soft Breach): прибуток від такої угоди скасовується, але акаунт залишається активним.",
+     "На плані Alpha Swing торгівля на новинах дозволена, але угоди, відкриті у 4-хвилинному вікні навколо новини, мають тривати понад 2 хвилини."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/9293522-can-i-trade-news"
+    ]
+   },
+   {
+    "id": "weekend-and-overnight",
+    "title": "Перенесення угод через ніч та вихідні",
+    "summary": "Утримання позицій через ніч дозволено усім, а перенесення на вихідні залежить від типу акаунту.",
+    "points": [
+     "Залишати відкриті угоди через ніч (Overnight) дозволено на всіх планах та етапах з оплатою свопів.",
+     "Утримання угод через вихідні дозволено на всіх етапах планів Alpha Swing, Alpha One та Alpha Three.",
+     "У планах Alpha Pro перенесення угод через вихідні дозволено на челенджах, але заборонено на кваліфікованому акаунті.",
+     "Перенесення позицій через вихідні повністю заборонено на плані Alpha Direct.",
+     "Порушення правила вихідних на Pro Qualified є Soft Breach: прибуток скасовується, але акаунт залишається дійсним, якщо еквіті не впало нижче допустимого drawdown."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/6934247-can-i-hold-trades-over-the-weekend",
+     "https://help.alphacapitalgroup.uk/en/articles/15701381-can-i-hold-trades-overnight"
+    ]
+   },
+   {
+    "id": "forbidden-practices",
+    "title": "Заборонені практики",
+    "summary": "Компанія забороняє будь-які маніпулятивні стратегії, невиправданий ризик та недотримання самостійності торгівлі.",
+    "points": [
+     "Заборонено арбітраж, high-frequency trading (HFT), latency trading, хеджування між різними акаунтами та використання затримок у цінах.",
+     "Заборонено позиційний спам (Position spamming) — відкриття 3 або більше позицій з однієї ідеї з інтервалом менше 60 секунд.",
+     "Середня тривалість усіх угод на акаунті має перевищувати 2 хвилини, а понад 50% прибутку має бути отримано з угод тривалістю понад 2 хвилини.",
+     "Заборонено копіювати чужі угоди, торгувати за сигналами (Group trading) або передавати акаунт під управління третім особам.",
+     "Заборонено гемблінг (азартну торгівлю): нетипове збільшення лотажу, різку зміну тривалості угод або торгівлю за принципом «все або нічого».",
+     "Перевищення ліміту максимального лотажу на кваліфікованому акаунті при першому порушенні позбавляє права на виведення прибутку з цього лотажу, при другому — призводить до закриття акаунту."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/6934275-what-are-prohibited-trading-strategies",
+     "https://help.alphacapitalgroup.uk/en/articles/8447268-what-is-the-2-minute-average-trade-duration-rule",
+     "https://help.alphacapitalgroup.uk/en/articles/7060909-what-is-alpha-capital-group-s-policy-against-gambling-in-trading",
+     "https://help.alphacapitalgroup.uk/en/articles/6934289-what-is-the-lot-size-limit-on-qualified-analyst-accounts",
+     "https://help.alphacapitalgroup.uk/en/articles/7060898-can-i-pass-using-someone-s-signals"
+    ]
+   },
+   {
+    "id": "software-and-vpn",
+    "title": "Програмне забезпечення, VPN та IP",
+    "summary": "Використання торговельних роботів обмежене інструментами ризик-менеджменту, а використання VPN вимагає попереднього узгодження.",
+    "points": [
+     "Повністю автоматизовані торговельні роботи (EAs), які торгують без участі людини, суворо заборонені.",
+     "Дозволені лише EAs для управління ризиками (розрахунок лота, SL/TP, розрахунок беззбитку), які пройшли попередню перевірку підтримкою.",
+     "EAs заборонені на акаунтах Alpha Direct, Swap-Free, платформах cTrader/DX Trade/TradeLocker та для трейдерів у Focused Trader Group.",
+     "Використання VPN/VPS дозволено лише зі статичною виділеною IP-адресою та після обов'язкового попереднього сповіщення підтримки по email.",
+     "Торгівля з однієї IP-адреси кількома членами сім'ї дозволена тільки після попереднього повідомлення підтримки з вказуванням акаунтів.",
+     "Маскування IP-адреси або поля «Reason» у торговельній платформі призводить до деактивації акаунту та бану."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/8420522-what-is-the-ip-rule-are-vpns-and-vpss-allowed",
+     "https://help.alphacapitalgroup.uk/en/articles/6934236-can-i-use-an-expert-advisor-ea"
+    ]
+   },
+   {
+    "id": "payouts-and-funded",
+    "title": "Виплати та кваліфіковані акаунти",
+    "summary": "Трейдери отримують 80-90% прибутку за умови проходження KYC та дотримання правил виплат.",
+    "points": [
+     "Стандартна частка прибутку трейдера становить 80%, її можна збільшити до 90% за допомогою додаткової опції під час купівлі.",
+     "Виплати доступні кожні 14 днів (Bi-Weekly) або за запитом (On-Demand) залежно від вибраних умов.",
+     "Для виплат On-Demand діє правило кращого дня (Best Day Rule): прибуток за один день не повинен перевищувати 40% від загального прибутку (15% для Alpha Direct).",
+     "Для першої виплати на Bi-Weekly необхідно відторгувати мінімум 5 торгових днів за тією ж стратегією без використання мікролотів.",
+     "На плані Alpha Direct для першого виведення необхідно спочатку сформувати буфер прибутку в розмірі 3%.",
+     "Запити на виплату обробляються протягом 2 робочих днів через Rise, Wise, банківський переказ або криптовалюту (через Rise).",
+     "Отримання кваліфікованого акаунту та перша виплата вимагають обов'язкового проходження верифікації особи (KYC) через Veriff."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/7060937-what-do-qualified-analysts-earn-from-account-profits",
+     "https://help.alphacapitalgroup.uk/en/articles/6933755-how-do-i-get-paid-performance-fees",
+     "https://help.alphacapitalgroup.uk/en/articles/10570531-bi-weekly-performance-fee",
+     "https://help.alphacapitalgroup.uk/en/articles/10102634-on-demand-performance-fee",
+     "https://help.alphacapitalgroup.uk/en/articles/8420532-what-documentation-is-required-for-a-qualified-analyst-account"
+    ]
+   },
+   {
+    "id": "scaling-plan",
+    "title": "План масштабування",
+    "summary": "Прибуткові трейдери можуть поступово збільшувати свій капітал до 2 мільйонів доларів.",
+    "points": [
+     "Масштабування капіталу доступне для планів Alpha Pro, Alpha Swing та Alpha Three.",
+     "Для подачі запиту необхідно досягти 10% прибутку від початкового балансу акаунту.",
+     "Запит подається під час виведення прибутку, після чого акаунт збільшується на 10% від початкового розміру.",
+     "Починаючи з другого масштабування, трейдер додатково отримує збільшення максимального лотажу на 10%.",
+     "Об'єднані акаунти та рахунки у Focused Trader Group не підлягають масштабуванню.",
+     "Максимальний сукупний ліміт капіталу за планом масштабування становить $2 000 000."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/6933852-how-does-the-scaling-plan-work"
+    ]
+   },
+   {
+    "id": "account-review-and-liquidation",
+    "title": "Перевірка акаунту та ліквідація",
+    "summary": "Акаунти підлягають перевірці ризиків, обмеженням за алокацією та закриттю у разі порушень або неактивності.",
+    "points": [
+     "Якщо на акаунті немає торгівлі протягом 30 послідовних календарних днів, він деактивується без можливості відновлення.",
+     "Порушення жорстких правил (Daily/Max Drawdown, IP, EAs, заборонені стратегії) призводить до закриття акаунту та анулювання прибутку.",
+     "Трейдери з агресивним або ризикованим стилем торгівлі можуть бути тимчасово переведені у Focused Trader Group із пониженням кредитного плеча.",
+     "Кваліфіковані акаунти можна об'єднувати (merge) до сумарного ліміту $300 000, якщо вони знаходяться на початковому балансі.",
+     "Максимальний ліміт алокації на одне домогосподарство становить $400 000, а на одну торгову стратегію (актив) — $300 000."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/8420080-inactivity",
+     "https://help.alphacapitalgroup.uk/en/articles/7060940-what-happens-if-a-rule-is-broken-on-a-qualified-analyst-account",
+     "https://help.alphacapitalgroup.uk/en/articles/9691161-focused-trader-group",
+     "https://help.alphacapitalgroup.uk/en/articles/8786521-merging-accounts",
+     "https://help.alphacapitalgroup.uk/en/articles/8804535-how-many-accounts-can-i-have-what-is-the-maximum-allocation-per-strategy"
+    ]
+   },
+   {
+    "id": "fees-and-refunds",
+    "title": "Комісії та повернення коштів",
+    "summary": "Умови оплати оцінювання, торгові комісії та правильне проведення платежів.",
+    "points": [
+     "На акаунтах Standard Evaluation комісія за торги відсутня; на акаунтах Raw Evaluation стягується $2.5 за лот в один бік ($5 за круг).",
+     "Торгівля індексами є безкомісійною на всіх типах акаунтів.",
+     "На акаунтах з опцією Swap-Free замість свопів стягується комісія у розмірі $5.0 за лот за круг.",
+     "Оплата від третіх осіб заборонена: ім'я на платіжній картці має суворо збігатися з даними KYC трейдера.",
+     "Доступні методи оплати: картка (реквізити надаються одразу), криптовалюта або PayPal (до 24 годин)."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/8420066-are-there-commission-fees",
+     "https://help.alphacapitalgroup.uk/en/articles/16004122-90-profit-split-and-swap-free-add-ons",
+     "https://help.alphacapitalgroup.uk/en/articles/7883145-third-party-payments",
+     "https://help.alphacapitalgroup.uk/en/articles/6933849-how-long-will-it-take-to-get-my-credentials"
+    ]
+   },
+   {
+    "id": "other",
+    "title": "Інше",
+    "summary": "Додаткові відомості про торгове середовище, платформи, регіональні обмеження та програму Alpha Prime.",
+    "points": [
+     "Alpha Capital Group не є брокером, а торгівля відбувається в імітованому середовищі через брокера ACG Markets.",
+     "Доступні торгові платформи: MetaTrader 5, cTrader, DX Trade та TradeLocker (для резидентів США — cTrader, DX Trade, TradeLocker).",
+     "Сервіс недоступний для громадян та резидентів санкційних країн (зокрема Росії, Білорусі, Ірану, окупованих територій України тощо).",
+     "Трейдери самостійно відповідають за сплату податків у своїй країні проживання.",
+     "Успішні трейдери з високим прибутком можуть кваліфікуватися до Alpha Prime для торгівлі реальним капіталом у Лондоні."
+    ],
+    "sources": [
+     "https://help.alphacapitalgroup.uk/en/articles/6933922-are-you-a-broker",
+     "https://help.alphacapitalgroup.uk/en/articles/6933883-what-trading-platforms-are-available-for-use",
+     "https://help.alphacapitalgroup.uk/en/articles/8775575-countries-with-limitations",
+     "https://help.alphacapitalgroup.uk/en/articles/8420078-how-should-i-handle-taxes-when-trading-with-alpha-capital-group",
+     "https://help.alphacapitalgroup.uk/en/articles/10965278-alpha-prime"
+    ]
+   }
+  ]
+ },
+ "built_at": "2026-10-29T12:01:38.162Z"
+}

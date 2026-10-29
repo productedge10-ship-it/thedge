@@ -6,7 +6,9 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import PageHeader from '../components/ui/PageHeader';
 import PropRulesSoon from '../components/accounts/PropRulesSoon';
-import FtmoDevPreview from '../components/accounts/FtmoDevPreview';
+import PropRulesHub from '../components/accounts/PropRulesHub';
+import PropRulesPro from '../components/accounts/PropRulesPro';
+import useSubscription from '../hooks/useSubscription';
 import { loadPropContext, programsFor, rulesForAccount, ruleText, sameFirm, openPropChange } from '../lib/propRules';
 
 /* ==================================================================
@@ -257,8 +259,29 @@ const LIVE = import.meta.env.DEV || import.meta.env.VITE_PROP_RULES_LIVE === '1'
 
 export default function PropRulesPage() {
   const preview = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('live') === '1';
+  const sub = useSubscription();
   if (!LIVE && !preview) return <PropRulesSoon />;
-  return <PropRulesLive />;
+  /* Розділ лише для Pro. Free / Lite — вітрина з живим макетом. */
+  if (!sub.ready) return <div className="py-24 text-center text-[14px]" style={{ color: T.text3 }}>Завантажую…</div>;
+  // dev-only: ?as=free / ?as=lite показує тизер на Pro-акаунті
+  const as = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('as') : null;
+  const showTeaser = !sub.isPro || as === 'free' || as === 'lite';
+  if (showTeaser) {
+    return (
+      <div className="relative z-10 mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6 sm:py-8">
+        <PageHeader kicker="Рахунки" title="Правила мого пропа" subtitle="Новини, на яких твій проп забороняє торгувати, ліміти рахунку і перевірка угод." />
+        <PropRulesPro lite={as ? as === 'lite' : sub.hasLite} />
+      </div>
+    );
+  }
+  /* Стара сторінка (рахунки + картки програм з монітора) — ?old=1, поки нова не замінить її повністю. */
+  if (new URLSearchParams(window.location.search).get('old') === '1') return <PropRulesLive />;
+  return (
+    <div className="relative z-10 mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8">
+      <PageHeader kicker="Рахунки" title="Правила мого пропа" subtitle="Новини, на яких твій проп забороняє торгувати, його правила і що в них змінилось." />
+      <PropRulesHub />
+    </div>
+  );
 }
 
 function PropRulesLive() {
@@ -286,7 +309,6 @@ function PropRulesLive() {
         subtitle="Ми щодня звіряємо правила з сайтами пропів. Коли щось змінюється, ти дізнаєшся першим."
       />
 
-      {import.meta.env.DEV && <FtmoDevPreview />}
 
       {!ctx && <div className="py-16 text-center text-[14px]" style={{ color: T.text3 }}>Завантажую…</div>}
 
