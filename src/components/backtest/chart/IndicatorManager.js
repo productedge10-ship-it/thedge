@@ -83,7 +83,13 @@ export default class IndicatorManager {
     const chart = this.e.chart;
     this.series.forEach((s) => { try { chart.removeSeries(s); } catch { /* вже немає */ } });
     this.series.clear();
-    for (let i = chart.panes().length - 1; i > 0; i -= 1) { try { chart.removePane(i); } catch { /* ок */ } }
+    /* Спершу серії панелей інших інструментів, потім самі панелі
+       (див. LinkedPanes.detach — інакше лишаються «привиди» на шкалі часу). */
+    this.e.linked?.detach();
+    for (let i = chart.panes().length - 1; i > 0; i -= 1) {
+      try { chart.panes()[i]?.getSeries?.().forEach((s) => { try { chart.removeSeries(s); } catch { /* ок */ } }); } catch { /* ок */ }
+      try { chart.removePane(i); } catch { /* ок */ }
+    }
     this.paneOf.clear();
     /* Одразу під графіком — інші інструменти (LinkedPanes), осцилятори
        після них. Їхні панелі щойно прибрано разом з усіма — ставимо
@@ -234,7 +240,7 @@ export default class IndicatorManager {
     const o = [];
     /* Підпис: просто текст кольору лінії або з плашкою (білий текст на
        кольоровому тлі) — щоб читався навіть поверх свічок. */
-    const label = (lx, ly, text, color, anchor = 'start', size = 11, bg = false) => {
+    const label = (lx, ly, text, color, anchor = 'start', size = 11, bg = false, soft = false) => {
       if (!text) return;
       if (bg) {
         const w = String(text).length * size * 0.6 + 10; const h = size + 6;
@@ -243,6 +249,7 @@ export default class IndicatorManager {
         o.push(`<text x="${bx + w / 2}" y="${ly}" fill="#fff" font-size="${size}" font-weight="600" text-anchor="middle" font-family="${FONT}">${esc(text)}</text>`);
         return;
       }
+      if (soft) { o.push(`<text x="${lx}" y="${ly}" fill="${color}" font-size="${size}" font-weight="400" text-anchor="${anchor}" font-family="${FONT}">${esc(text)}</text>`); return; }
       o.push(`<text x="${lx}" y="${ly}" fill="${color}" font-size="${size}" font-weight="600" text-anchor="${anchor}" font-family="${FONT}" paint-order="stroke" stroke="rgba(0,0,0,0.35)" stroke-width="2">${esc(text)}</text>`);
     };
     const vis = (a1, a2) => (a2 === 'R' ? true : a2 >= lo) && a1 <= hi;
@@ -279,7 +286,7 @@ export default class IndicatorManager {
             const right = pos === 'tr' || pos === 'br';
             const lx = right ? Math.min(x2, plotW) - 4 : x1 + 4;
             const ly = pos[0] === 't' ? (full ? top + size + 2 : top - 4) : (full ? bot - 2 : bot + size + 2);
-            label(lx, ly, rc.label, lc, right ? 'end' : 'start', size, rc.labelBg);
+            label(lx, ly, rc.label, lc, right ? 'end' : 'start', size, rc.labelBg, rc.soft);
           }
         }
       });

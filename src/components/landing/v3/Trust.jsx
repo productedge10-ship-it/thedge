@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { ShieldCheck, Clock3, ArrowRight, BarChart3, Check, Minus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ShieldCheck, Clock3, ArrowRight, BarChart3, Check, Minus, ChevronLeft, ChevronRight, EyeOff } from 'lucide-react';
 import { C, F, A, Section, Eyebrow, H2, Sub, SoonTag } from './base';
 import { useLang, useTx, blogPath } from './lang';
-import { REVIEWS, CASE } from '../../../lib/testimonials';
+import { REVIEWS, REVIEWS_NOTE, CASE } from '../../../lib/testimonials';
 import { postsFor } from '../../../lib/blogContent';
 
 /* ==================================================================
@@ -120,18 +120,71 @@ function Counter() {
   );
 }
 
+/* Карусель відгуків: стрічка з прокруткою і «магнітом» (scroll-snap).
+   На телефоні гортається пальцем, на компʼютері — стрілками.
+   Картки однієї висоти в ряду, довгий текст не розтягує сусідів. */
+function ReviewsCarousel({ lang }) {
+  const tx = useTx();
+  const track = useRef(null);
+  const [edge, setEdge] = useState({ l: true, r: false });
+  const upd = () => {
+    const el = track.current;
+    if (!el) return;
+    setEdge({ l: el.scrollLeft < 8, r: el.scrollLeft + el.clientWidth > el.scrollWidth - 8 });
+  };
+  useEffect(() => { upd(); }, []);
+  const go = (dir) => {
+    const el = track.current;
+    if (!el) return;
+    const cardW = el.firstElementChild?.getBoundingClientRect().width || 340;
+    el.scrollBy({ left: dir * (cardW + 14) * Math.max(1, Math.floor(el.clientWidth / (cardW + 14))), behavior: 'smooth' });
+  };
+  const arrow = (dir, off) => (
+    <button
+      type="button"
+      onClick={() => go(dir)}
+      disabled={off}
+      aria-label={dir < 0 ? tx('Попередні відгуки', 'Previous reviews') : tx('Наступні відгуки', 'Next reviews')}
+      style={{ width: 40, height: 40, borderRadius: 999, display: 'grid', placeItems: 'center', border: '1px solid rgba(255,255,255,.1)', background: C.panel, color: off ? C.text3 : '#fff', opacity: off ? 0.4 : 1, cursor: off ? 'default' : 'pointer' }}
+    >
+      {dir < 0 ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+    </button>
+  );
+  return (
+    <div style={{ marginTop: 22 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+        <div style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 700, color: '#fff' }}>{tx('Що кажуть трейдери', 'What traders say')} <span style={{ color: C.text3, fontWeight: 400 }}>· {REVIEWS.length}</span></div>
+        <div style={{ display: 'flex', gap: 8 }}>{arrow(-1, edge.l)}{arrow(1, edge.r)}</div>
+      </div>
+      <div
+        ref={track}
+        onScroll={upd}
+        style={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'min(340px, 86%)', gap: 14, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none', paddingBottom: 4, WebkitMaskImage: `linear-gradient(90deg, ${edge.l ? '#000' : 'transparent'} 0, #000 28px, #000 calc(100% - 28px), ${edge.r ? '#000' : 'transparent'} 100%)`, maskImage: `linear-gradient(90deg, ${edge.l ? '#000' : 'transparent'} 0, #000 28px, #000 calc(100% - 28px), ${edge.r ? '#000' : 'transparent'} 100%)` }}
+      >
+        {REVIEWS.map((r, i) => (
+          <div key={i} style={{ scrollSnapAlign: 'start' }}>
+            <Review r={r} lang={lang} />
+          </div>
+        ))}
+      </div>
+      <p style={{ fontFamily: F.sans, fontSize: 12.5, lineHeight: 1.5, color: C.text3, margin: '12px 0 0' }}>{(lang === 'en' && REVIEWS_NOTE.en) || REVIEWS_NOTE.uk}</p>
+    </div>
+  );
+}
+
 function Review({ r, lang }) {
   const text = (lang === 'en' && r.text?.en) || r.text?.uk || '';
   const role = (lang === 'en' && r.role?.en) || r.role?.uk || '';
+  const name = typeof r.name === 'string' ? r.name : ((lang === 'en' && r.name?.en) || r.name?.uk || '');
   return (
-    <figure style={{ ...card, margin: 0, padding: 22, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <figure style={{ ...card, margin: 0, padding: 22, display: 'flex', flexDirection: 'column', gap: 16, height: '100%', boxSizing: 'border-box' }}>
       <blockquote style={{ margin: 0, fontFamily: F.sans, fontSize: 15, lineHeight: 1.6, color: '#e6e6ee' }}>«{text}»</blockquote>
       <figcaption style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'auto' }}>
         {r.photo
           ? <img src={r.photo} alt="" width={40} height={40} loading="lazy" style={{ borderRadius: 999, objectFit: 'cover' }} />
-          : <span style={{ width: 40, height: 40, borderRadius: 999, display: 'grid', placeItems: 'center', background: A(0.18), color: C.accSoft, fontFamily: F.sans, fontWeight: 700 }}>{(r.name || '?').slice(0, 1)}</span>}
+          : <span style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 999, display: 'grid', placeItems: 'center', background: r.anon ? 'rgba(255,255,255,.06)' : A(0.18), color: r.anon ? C.text3 : C.accSoft, fontFamily: F.sans, fontWeight: 700 }}>{r.anon ? <EyeOff size={16} /> : (name || '?').slice(0, 1).toUpperCase()}</span>}
         <div>
-          <div style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 700, color: '#fff' }}>{r.name}{r.handle ? <span style={{ color: C.text3, fontWeight: 400 }}> {r.handle}</span> : null}</div>
+          <div style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 700, color: r.anon ? C.text2 : '#fff' }}>{name}{r.handle ? <span style={{ color: C.text3, fontWeight: 400 }}> {r.handle}</span> : null}</div>
           {role && <div style={{ fontFamily: F.sans, fontSize: 12.5, color: C.text3 }}>{role}</div>}
         </div>
       </figcaption>
@@ -206,11 +259,7 @@ export function Proof() {
         </div>
       )}
 
-      {REVIEWS.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(300px,100%),1fr))', gap: 14, marginTop: 18 }}>
-          {REVIEWS.slice(0, 5).map((r) => <Review key={r.name + (r.handle || '')} r={r} lang={lang} />)}
-        </div>
-      )}
+      {REVIEWS.length > 0 && <ReviewsCarousel lang={lang} />}
     </Section>
   );
 }

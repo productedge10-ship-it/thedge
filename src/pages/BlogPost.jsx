@@ -54,6 +54,20 @@ const TXT = {
   },
 };
 
+/* Стаття з полем faq: Article і FAQPage одним @graph — так Google
+   бачить і статтю, і питання-відповіді (розширений сніпет). */
+function withFaq(post, article) {
+  if (!post.faq?.length) return article;
+  const { '@context': ctx, ...a } = article;
+  return {
+    '@context': ctx,
+    '@graph': [a, {
+      '@type': 'FAQPage',
+      mainEntity: post.faq.map(({ q, a: ans }) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: ans } })),
+    }],
+  };
+}
+
 export default function BlogPost() {
   useEdgeFonts();
   const { lang, slug } = useParams();
@@ -90,19 +104,20 @@ export default function BlogPost() {
     return out;
   }, [post]);
 
-  const jsonLd = useMemo(() => (post ? {
+  const jsonLd = useMemo(() => (post ? withFaq(post, {
     '@context': 'https://schema.org',
     '@type': 'Article',
+    ...(post.cover?.src ? { image: `${siteOrigin()}${post.cover.src}` } : {}),
     headline: post.seo?.title || post.title,
     description: post.seo?.description || post.excerpt,
     datePublished: post.date,
     inLanguage: post.lang,
-    author: { '@type': 'Organization', name: AUTHOR[post.lang] || AUTHOR.uk },
+    author: post.authors?.length ? post.authors.map((name) => ({ '@type': 'Person', name })) : { '@type': 'Organization', name: AUTHOR[post.lang] || AUTHOR.uk },
     publisher: { '@type': 'Organization', name: 'The Edge' },
     mainEntityOfPage: canonical,
     articleSection: categoryById(post.category)?.title[post.lang],
     keywords: post.tags.join(', '),
-  } : null), [post, canonical]);
+  }) : null), [post, canonical]);
 
   useDocumentMeta({
     title: post ? `${post.seo?.title || post.title} — The Edge` : 'The Edge',

@@ -1,7 +1,7 @@
 import { CandlestickSeries } from 'lightweight-charts';
 import { aggregate, barAt, lowerBound, upperBound, tfById } from '../../../lib/candles/agg';
 import { seriesOptions } from '../../../lib/candles/chartPrefs';
-import { isRemote, remoteName, getManifest, loadMonths, monthOf, shiftMonth } from '../../../lib/candles/remote';
+import { isRemote, remoteName, getManifest, loadMonths, monthOf, shiftMonth, requestMonths, waitMonths } from '../../../lib/candles/remote';
 
 /* ==================================================================
    Графіки інших інструментів у панелях під основним — як «Додати
@@ -122,10 +122,25 @@ export default class LinkedPanes {
     this.e.sizePanes();
   }
 
+  /* Прибрати наші серії з графіка. Саме removeSeries, а не лише
+     removePane: бібліотека при видаленні панелі лишала часові точки її
+     серій на шкалі часу. Після зміни ТФ ці «привиди» (напр. точки M15)
+     стояли між свічками H4 — свічки розʼїжджались з величезними
+     проміжками аж до перезавантаження сторінки. */
+  detach() {
+    const chart = this.e.chart;
+    (this.apis || new Set()).forEach((api) => { try { chart.removeSeries(api); } catch { /* вже немає */ } });
+    this.apis = new Set();
+    this.list.forEach((x) => { x.api = null; });
+  }
+
   attach() {
     const chart = this.e.chart;
+    this.detach();
     this.list.forEach((x, i) => {
       x.api = chart.addSeries(CandlestickSeries, { ...this.opts(x), visible: !x.collapsed }, i + 1);
+      x.fitted = false;
+      this.apis.add(x.api);
     });
     this.render();
   }
@@ -148,11 +163,16 @@ export default class LinkedPanes {
     this.changed();
     try {
       if (x.remote) {
-        x.manifest = await getManifest(x.name);
-        if (!x.manifest || !Object.keys(x.manifest.months || {}).length) throw new Error('no_history');
+        /* Інструмент «на запит» (не з основних) може ще не мати жодного
+           місяця на сервері — тоді просимо VPS докачати потрібні місяці,
+           як при відкритті такого інструмента основним графіком. */
+        x.manifest = await getManifest(x.name).catch(() => null);
+        if (!x.manifest) x.manifest = { months: {}, core: false };
+        if (!x.manifest.months) x.manifest.months = {};
         x.digits = x.manifest.digits ?? 2;
         try { x.api?.applyOptions(this.opts(x)); } catch { /* ок */ }
         await this.ensure(x);
+        if (!x.base?.n && !x.error && this.e.agg) throw new Error('no_history');
       } else {
         const rec = await this.loadLocal?.(x.key);
         if (!rec) throw new Error('not_found');
@@ -174,8 +194,11 @@ export default class LinkedPanes {
      Не на кожен піксель прокрутки: раз на 250 мс. */
   ensureSoon() {
     if (!this.list.some((x) => x.remote)) return;
-    clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.list.forEach((x) => { if (x.remote && x.manifest && !x.busy) this.ensure(x); }), 250);
+    if (this.timer) return;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this.list.forEach((x) => { if (x.remote && x.manifest && !x.busy) this.ensure(x); });
+    }, 250);
   }
 
   /* Місяці, які покриває видимий шматок основного графіка (з місяцем
@@ -190,8 +213,12 @@ export default class LinkedPanes {
     const last = monthOf(a.t[k1]);
     const first = shiftMonth(monthOf(a.t[k0]), -1);
     const out = [];
+    const m = x.manifest;
     for (let ym = last; ym >= first && out.length < MAX_MONTHS; ym = shiftMonth(ym, -1)) {
-      if (x.manifest.months[ym] && !x.parts.has(ym)) out.push(ym);
+      if (x.parts.has(ym)) continue;
+      if (m.months[ym]) out.push(ym);
+      /* Немає на сервері: для «на запит» — попросимо (один раз). */
+      else if (!m.core && !(m.historyStart && ym < m.historyStart) && !x.asked?.has(ym)) out.push(ym);
     }
     return out;
   }
@@ -205,16 +232,32 @@ export default class LinkedPanes {
         if (!need.length) break;
         /* По чотири місяці: панель заповнюється справа наліво й не
            чекає, поки скачається вся видима історія. */
+        const miss = need.filter((ym) => !x.manifest.months[ym]);
+        if (miss.length) {
+          x.asked = x.asked || new Set();
+          miss.forEach((ym) => x.asked.add(ym));
+          x.loading = true;
+          this.changed();
+          await requestMonths(x.name, miss);
+          x.manifest = await waitMonths(x.name, miss);
+          if (!x.manifest.months) x.manifest.months = {};
+          x.digits = x.manifest.digits ?? x.digits;
+          x.loading = false;
+          if (!this.alive || !this.list.includes(x)) return;
+          continue;
+        }
         const batch = need.slice(0, 4);
         const parts = await Promise.all(batch.map((ym) => loadMonths(x.name, x.manifest, [ym]).then((p) => [ym, p])));
         if (!this.alive || !this.list.includes(x)) return;
         parts.forEach(([ym, p]) => x.parts.set(ym, p));
         this.join(x);
+        x.error = null;
         this.render();
         this.changed();
       }
     } catch (err) {
       x.error = err?.message || 'error';
+      x.loading = false;
       this.changed();
     } finally {
       x.busy = false;
@@ -277,11 +320,22 @@ export default class LinkedPanes {
 
   render() {
     if (!this.e.agg) return;
+    /* Реплей дійшов до нового місяця — догружаємо його й для панелей
+       (раніше це робилось лише при прокрутці, і панель лишалась
+       порожньою). */
+    this.ensureSoon();
     this.list.forEach((x) => {
       if (!x.api) return;
       const d = this.data(x);
       x.last = d.length ? d[d.length - 1] : null;
       try { x.api.setData(d); } catch { /* панель могли щойно прибрати */ }
+      /* Шкала ціни панелі завжди авто при першому показі даних: інакше
+         стара ручна/порожня шкала (напр. 1.3–2.5 для DXY ~99) лишала
+         свічки за межами екрана — панель здавалась порожньою. */
+      if (d.length && !x.fitted) {
+        x.fitted = true;
+        try { x.api.priceScale().applyOptions({ autoScale: true }); } catch { /* ок */ }
+      }
     });
   }
 

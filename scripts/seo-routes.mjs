@@ -328,16 +328,27 @@ for (const lang of BLOG_LANGS) {
       type: 'article',
       published: post.date,
       alternates: withXDefault(alternates),
-      jsonLd: {
-        '@context': 'https://schema.org',
-        '@type': 'BlogPosting',
-        headline: post.title,
-        description,
-        datePublished: post.date,
-        inLanguage: lang,
-        mainEntityOfPage: ORIGIN + p,
-        publisher: { '@type': 'Organization', name: 'The Edge', url: ORIGIN },
-      },
+      jsonLd: (() => {
+        const art = {
+          '@type': 'BlogPosting',
+          headline: post.title,
+          description,
+          datePublished: post.date,
+          inLanguage: lang,
+          mainEntityOfPage: ORIGIN + p,
+          publisher: { '@type': 'Organization', name: 'The Edge', url: ORIGIN },
+          ...(post.cover?.src ? { image: ORIGIN + post.cover.src } : {}),
+          ...(post.authors?.length ? { author: post.authors.map((name) => ({ '@type': 'Person', name })) } : {}),
+        };
+        if (!post.faq?.length) return { '@context': 'https://schema.org', ...art };
+        return {
+          '@context': 'https://schema.org',
+          '@graph': [art, {
+            '@type': 'FAQPage',
+            mainEntity: post.faq.map(({ q, a }) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+          }],
+        };
+      })(),
       body: {
         h1: post.title,
         text: post.excerpt,

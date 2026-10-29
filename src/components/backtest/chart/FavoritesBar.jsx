@@ -11,7 +11,7 @@ import DrawIcon from './DrawingIcons';
    Інструменти додаються зірочкою в лівому меню.
 ================================================================== */
 
-export default function FavoritesBar({ favs, tool, pos, host, onPick, onMove, onClose }) {
+export default function FavoritesBar({ favs, tool, pos, host, onPick, onMove, onClose, onReorder }) {
   const ref = useRef(null);
   const [at, setAt] = useState(pos || { x: 64, y: 56 });
   const [vertical, setVertical] = useState(!!pos?.v);
@@ -61,6 +61,55 @@ export default function FavoritesBar({ favs, tool, pos, host, onPick, onMove, on
 
   const [tip, setTip] = useState(null);
 
+  /* Перестановка: затиснув інструмент і потягнувши, ставиш його між
+     іншими. Поки тягнеш — порядок міняється наживо, відпустив — зберігся.
+     Короткий клік без руху лишається звичайним вибором інструмента. */
+  const [order, setOrder] = useState(null);
+  const [dragId, setDragId] = useState(null);
+  const itemRefs = useRef({});
+  const suppressClick = useRef(false);
+  const list = order || favs;
+  const startItemDrag = (e, id) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    const el = e.currentTarget;
+    const sx = e.clientX; const sy = e.clientY;
+    let cur = [...favs];
+    let moved = false;
+    el.setPointerCapture?.(e.pointerId);
+    const move = (ev) => {
+      if (!moved) {
+        if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+        moved = true; setDragId(id); setTip(null);
+      }
+      const p = vertical ? ev.clientY : ev.clientX;
+      const others = cur.filter((x) => x !== id);
+      let at = others.length;
+      for (let i = 0; i < others.length; i += 1) {
+        const r = itemRefs.current[others[i]]?.getBoundingClientRect();
+        if (!r) continue;
+        const mid = vertical ? r.top + r.height / 2 : r.left + r.width / 2;
+        if (p < mid) { at = i; break; }
+      }
+      const next = [...others.slice(0, at), id, ...others.slice(at)];
+      if (next.join('|') !== cur.join('|')) { cur = next; setOrder(next); }
+    };
+    const up = () => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+      if (moved) {
+        suppressClick.current = true;
+        setTimeout(() => { suppressClick.current = false; }, 0);
+        if (cur.join('|') !== favs.join('|')) onReorder?.(cur);
+      }
+      setDragId(null);
+      setOrder(null);
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+  };
+
   return (
     <div
       ref={ref}
@@ -94,19 +143,25 @@ export default function FavoritesBar({ favs, tool, pos, host, onPick, onMove, on
       {favs.length === 0 && (
         <span className="px-2 text-[12px]" style={{ color: T.text3 }}>{tx('Зірочка в лівому меню додає інструмент сюди', 'Star a tool in the left menu')}</span>
       )}
-      {favs.map((id) => {
+      {list.map((id) => {
         const on = tool === id;
+        const dragging = dragId === id;
         return (
-          <div key={id} className="relative">
+          <div key={id} ref={(el) => { itemRefs.current[id] = el; }} className="relative" style={{ zIndex: dragging ? 2 : undefined }}>
             <button
               type="button"
               aria-label={itemName(id)}
               aria-pressed={on || undefined}
-              onClick={() => onPick(on ? null : id)}
+              onPointerDown={(e) => startItemDrag(e, id)}
+              onClick={() => { if (suppressClick.current) return; onPick(on ? null : id); }}
               onMouseEnter={() => setTip(id)}
               onMouseLeave={() => setTip(null)}
-              className="grid h-9 w-9 place-items-center rounded-xl transition-all duration-150 active:scale-95"
+              className={`grid h-9 w-9 place-items-center rounded-xl transition-all duration-150 active:scale-95 ${dragId ? 'cursor-grabbing' : ''}`}
               style={{
+                touchAction: 'none',
+                opacity: dragging ? 0.85 : 1,
+                transform: dragging ? 'scale(1.12)' : undefined,
+                outline: dragging ? '1px dashed rgba(255,255,255,0.35)' : 'none',
                 color: on ? '#fff' : '#c9ccd6',
                 background: on ? 'linear-gradient(180deg, #3d6bff, #2453e6)' : tip === id ? 'rgba(255,255,255,0.08)' : 'transparent',
                 boxShadow: on ? '0 4px 14px rgba(41,98,255,0.45), inset 0 1px 0 rgba(255,255,255,0.25)' : 'none',
@@ -114,7 +169,7 @@ export default function FavoritesBar({ favs, tool, pos, host, onPick, onMove, on
             >
               <DrawIcon id={id} size={24} />
             </button>
-            {tip === id && (
+            {tip === id && !dragId && (
               <span
                 className={`pointer-events-none absolute z-10 whitespace-nowrap rounded-md px-2 py-1 text-[11.5px] font-semibold ${vertical ? 'left-[calc(100%+8px)] top-1/2 -translate-y-1/2' : 'left-1/2 top-[calc(100%+8px)] -translate-x-1/2'}`}
                 style={{ background: '#0f1014', color: '#e8eaf0', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 6px 16px rgba(0,0,0,0.4)' }}

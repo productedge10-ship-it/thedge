@@ -1,5 +1,6 @@
 import { createElement, lazy as reactLazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { demoClient } from './lib/demoDb';
 import { sharedClient } from './lib/sharedDb';
 import { setDemoClient, setSharedClient } from './lib/supabase';
@@ -78,6 +79,13 @@ const Todo = lazy(() => import('./pages/Todo'));
 const Reviews = lazy(() => import('./pages/Reviews'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const TradingSystem = lazy(() => import('./pages/TradingSystem'));
+/* Перезавантажили сторінку прямо на бектесті: важку сторінку графіка
+   тягнемо паралельно з Layout, а не після нього — інакше кілька секунд
+   видно порожню оболонку з меню. */
+if (typeof window !== 'undefined' && window.location.pathname.startsWith('/backtest')) {
+  import('./pages/BacktestChart').catch(() => {});
+  import('./pages/BacktestSession').catch(() => {});
+}
 const Backtest = lazy(() => import('./pages/Backtest'));
 const BacktestSession = lazy(() => import('./pages/BacktestSession'));
 const BacktestChart = lazy(() => import('./pages/BacktestChart'));
@@ -124,6 +132,22 @@ const page = (Comp) => (
    таке вміє, і ніколи за це не заплатить. */
 const betaPage = (Comp, feature) => (
   <BetaOnly>{proPage(Comp, feature)}</BetaOnly>
+);
+
+/* Сторінка графіка бектесту займає весь екран і закриває бічне меню.
+   Поки вона вантажиться, закриваємо оболонку так само одразу — інакше
+   кілька секунд видно меню й порожній розділ («мигає журнал»). */
+/* Через портал у body, як і сама сторінка графіка: <main> у Layout —
+   окремий шар (relative z-0), і все fixed усередині нього лежить ПІД
+   бічним меню, хоч який z-index йому дай. */
+const FullBlankEl = () => createPortal(<div style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'var(--edge-bg, #0A0A0C)' }} />, document.body);
+const FullBlank = <FullBlankEl />;
+const betaChartPage = (Comp, feature) => (
+  <BetaOnly>
+    <Suspense fallback={FullBlank}>
+      <ProSection feature={feature}>{createElement(Comp)}</ProSection>
+    </Suspense>
+  </BetaOnly>
 );
 
 const proPage = (Comp, feature) => (
@@ -247,7 +271,7 @@ const router = createBrowserRouter([
       { path: 'faq', element: page(FAQ) },
       { path: 'system', element: page(TradingSystem) },
       { path: 'backtest', element: betaPage(Backtest, 'backtest') },
-      { path: 'backtest/chart', element: betaPage(BacktestChart, 'backtest') },
+      { path: 'backtest/chart', element: betaChartPage(BacktestChart, 'backtest') },
       { path: 'backtest/:sessionId', element: betaPage(BacktestSession, 'backtest') },
       { path: '20-trades', element: page(TwentyTrades) },
       { path: 'checklist', element: page(PreTradeChecklist) },

@@ -35,6 +35,7 @@ import LinkedLegend from '../components/backtest/chart/LinkedLegend';
 import NewsMarks from '../components/backtest/chart/NewsMarks';
 import SymbolLogo from '../components/backtest/chart/SymbolLogo';
 import SymbolSearch from '../components/backtest/chart/SymbolSearch';
+import { assetInfo, GROUPS as ASSET_GROUPS } from '../lib/candles/assets';
 import TfDialog from '../components/backtest/chart/TfDialog';
 import TradePanel from '../components/backtest/chart/TradePanel';
 import SideChart from '../components/backtest/chart/SideChart';
@@ -42,8 +43,8 @@ import FavoritesBar from '../components/backtest/chart/FavoritesBar';
 import IndicatorsDialog from '../components/backtest/chart/IndicatorsDialog';
 import IndicatorSettings from '../components/backtest/chart/IndicatorSettings';
 import IndicatorLegend from '../components/backtest/chart/IndicatorLegend';
-import { loadDrawings, saveDrawings, loadDefaults, saveDefaults, TOOLS, GROUPS, itemName } from '../lib/candles/drawings';
-import ImportCandles, { ImportProgress, useCandleFilePicker } from '../components/backtest/chart/ImportCandles';
+import { loadDrawings, saveDrawings, hasDrawings, loadDefaults, saveDefaults, TOOLS, GROUPS, itemName } from '../lib/candles/drawings';
+import { ImportProgress, useCandleFilePicker } from '../components/backtest/chart/ImportCandles';
 import { listSets, loadSet, saveSet, deleteSet, parseFile } from '../lib/candles/store';
 import {
   remoteAllowed, isRemote, remoteName, REMOTE_PREFIX, getCatalog, getManifest, openRemote, loadOlder, monthOf, shiftMonth,
@@ -150,7 +151,10 @@ function BacktestChartInner() {
   const sessionId = params.get('session') || '';
   const uid = user?.id || 'anon';
 
-  const [prefsRaw, setPrefsRaw] = useCloudState('chart_prefs', DEFAULT_PREFS, { normalize: normalizePrefs });
+  const [prefsRaw, setPrefsRaw, prefsMeta] = useCloudState('chart_prefs', DEFAULT_PREFS, { normalize: normalizePrefs });
+  /* Вибір інструмента робимо лише коли налаштування з бази вже прийшли (або минула 1.5 с) — інакше стартовий порожній стан давав XAUUSD замість останнього вибору. */
+  const [prefsGate, setPrefsGate] = useState(false);
+  useEffect(() => { if (prefsMeta?.ready) { setPrefsGate(true); return undefined; } const t = setTimeout(() => setPrefsGate(true), 1500); return () => clearTimeout(t); }, [prefsMeta?.ready]);
   const prefs = useMemo(() => normalizePrefs(prefsRaw), [prefsRaw]);
   const setPrefs = useCallback((p) => setPrefsRaw(normalizePrefs(p)), [setPrefsRaw]);
   const prefsRef = useRef(null);
@@ -173,6 +177,8 @@ function BacktestChartInner() {
   closedRef.current = closed;
   const [sessions, setSessions] = useState([]);
   const [menu, setMenu] = useState(null);
+  const [linkQ, setLinkQ] = useState('');
+  const [linkCat, setLinkCat] = useState('all');
   /* Пошук інструмента: null — закрито, рядок — з чого почати (літера, яку набрали на графіку). */
   const [symSearch, setSymSearch] = useState(null);
   const [tfDlg, setTfDlg] = useState(null);
@@ -195,6 +201,7 @@ function BacktestChartInner() {
   const digits = useRef(2);
   const sessionRef = useRef(sessionId);
   sessionRef.current = sessionId;
+  const drawKey = (sym) => (sessionRef.current && !isDemo(sessionRef.current) ? `${sym}#${sessionRef.current}` : sym);
   const dmRef = useRef(null);
   const symRef = useRef('');
   const saveTimer = useRef(null);
@@ -237,6 +244,7 @@ function BacktestChartInner() {
         setClosed((list) => [...list, { ...trade, saved: false }]);
       },
       onNotice: (code) => {
+        if (code === 'be_loss') notify.info?.(tx('Беззбиток — лише в плюсі', 'Breakeven only in profit'), tx('Ціна ще не пройшла вхід. Можна посунути стоп вручну на графіку.', 'Price hasn’t passed the entry yet. You can drag the stop on the chart.'));
         if (code === 'back_closed') notify.info?.(tx('Далі назад не можна', 'Can’t go back further'), tx('Тут закрилась угода — вона вже в результатах.', 'A trade closed here — it’s already in the results.'));
       },
       onFrame: () => placeHandles(),
@@ -250,8 +258,8 @@ function BacktestChartInner() {
       onChange: (list) => {
         setDraw((v) => ({ ...v, count: list.length }));
         clearTimeout(saveTimer.current);
-        const sym = symRef.current;
-        saveTimer.current = setTimeout(() => saveDrawings(uid, sym, list), 300);
+        const key = drawKey(symRef.current);
+        saveTimer.current = setTimeout(() => saveDrawings(uid, key, list), 300);
       },
       onSelect: (d) => setSelDraw(d ? { ...d, style: { ...d.style } } : null),
       onTool: (tool) => setDraw((v) => ({ ...v, tool })),
@@ -261,7 +269,10 @@ function BacktestChartInner() {
       onSettings: (d) => setDrawEdit(d.id),
       onContext: (c) => setCtxMenu(c),
       /* Довга/коротка позиція в реплеї — у чернетку панелі угоди. */
-      onPosTool: (d) => eng.draftFromTool(d.type, d.pts),
+      /* Позиція з лівої панелі — як у TV: просто малюнок, який стоїть
+         на місці й сам рахує результат. В угоду (і статистику) її
+         перетворює лише ввімкнене налаштування «Позиція → угода». */
+      onPosTool: (d) => (prefsRef.current?.posToolTrade ? eng.draftFromTool(d.type, d.pts) : false),
     });
     dm.defaults = loadDefaults(uid);
     /* Подвійний клік будь-де по графіку — панелі інших інструментів
@@ -419,18 +430,22 @@ function BacktestChartInner() {
   }, [uid]);
 
   useEffect(() => {
+    if (!prefsGate) return undefined;
     let alive = true;
     Promise.all([refreshSets(), remoteEnabled ? getCatalog() : Promise.resolve(null)]).then(([list, cat]) => {
       if (!alive) return;
       setCatalog(cat);
-      if (isRemote(prefs.symbol) && cat) { setSymbol(prefs.symbol); return; }
-      const want = list.find((x) => x.symbol === prefs.symbol) || list[0];
+      let lastSym = '';
+      try { lastSym = localStorage.getItem('edge_bt_last_symbol') || ''; } catch { /* ок */ }
+      const saved = prefsRef.current?.symbol || lastSym;
+      if (isRemote(saved) && cat) { setSymbol(saved); return; }
+      const want = list.find((x) => x.symbol === saved) || list[0];
       if (want) setSymbol(want.symbol);
       else if (cat?.core?.length) setSymbol(REMOTE_PREFIX + (cat.core.find((c) => c.symbol === 'XAUUSD') || cat.core[0]).symbol);
     });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshSets, remoteEnabled]);
+  }, [refreshSets, remoteEnabled, prefsGate]);
 
   useEffect(() => {
     if (!symbol) return undefined;
@@ -452,9 +467,17 @@ function BacktestChartInner() {
       setClosed([]);
       symRef.current = rec.symbol;
       setLoadedSym(rec.symbol);
-      const list = loadDrawings(uid, rec.symbol);
+      /* Малюнки — свої в кожного бектесту. Старі (спільні на інструмент)
+         один раз переносимо лише в бектест, який уже ганяли раніше. */
+      const key = drawKey(rec.symbol);
+      let list = loadDrawings(uid, key);
+      if (key !== rec.symbol && !hasDrawings(uid, key) && prefsRef.current?.resumeBy?.[sessionRef.current]) {
+        list = loadDrawings(uid, rec.symbol);
+        if (list.length) saveDrawings(uid, key, list);
+      }
       dmRef.current?.setList(list);
       setDraw((v) => ({ ...v, count: list.length }));
+      try { localStorage.setItem('edge_bt_last_symbol', symbol); if (sessionRef.current) localStorage.setItem(`edge_bt_sym_${sessionRef.current}`, remoteName(symbol)); } catch { /* ок */ }
       if (prefs.symbol !== symbol) setPrefs({ ...prefs, symbol });
     }).catch((e) => {
       const msg = e.message === 'timeout'
@@ -513,7 +536,29 @@ function BacktestChartInner() {
       .then(({ data }) => setSessions(data || []));
   }, [user?.id]);
 
+  /* Перемкнули бектест на тому ж інструменті — підтягуємо його малюнки. */
+  const drawSess = useRef(sessionId);
+  useEffect(() => {
+    if (drawSess.current === sessionId) return;
+    drawSess.current = sessionId;
+    if (!symRef.current || !dmRef.current) return;
+    const list = loadDrawings(uid, drawKey(symRef.current));
+    dmRef.current.setList(list);
+    setDraw((v) => ({ ...v, count: list.length }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
   const currentSession = sessions.find((s) => s.id === sessionId);
+  /* «Продовжити з…» — лише точка САМЕ цього бектесту. Раніше бралась
+     спільна точка інструмента, і новий бектест на GER30 пропонував
+     продовжити чужий реплей. Без бектесту — як було, по інструменту. */
+  const resumePt = (() => {
+    if (sessionId && !isDemo(sessionId)) {
+      const r = prefs.resumeBy?.[sessionId];
+      return r?.t && r.sym === symbol ? r : null;
+    }
+    return prefs.resume && prefs.resume.sym === symbol ? prefs.resume : null;
+  })();
   const demo = isDemo(sessionId);
 
   const toPayload = (t, shot = null) => ({
@@ -704,7 +749,11 @@ function BacktestChartInner() {
     if (sessOpen.current.sym === currentSession.id) return;
     sessOpen.current.sym = currentSession.id;
     const all = [...(catalog.core || []), ...(catalog.onDemand || [])].map((c) => String(c.symbol || c).toUpperCase());
-    if (want && all.includes(want) && remoteName(symbol) !== want) setSymbol(REMOTE_PREFIX + want);
+    /* Інструмент, на який користувач перемкнувся всередині цього бектесту, має пережити перезавантаження: інакше завжди повертало на пару бектесту (XAUUSD). */
+    let last = '';
+    try { last = String(localStorage.getItem(`edge_bt_sym_${currentSession.id}`) || '').toUpperCase(); } catch { /* ок */ }
+    const pick = last && all.includes(last) ? last : want;
+    if (pick && all.includes(pick) && remoteName(symbol) !== pick) setSymbol(REMOTE_PREFIX + pick);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSession?.id, catalog]);
   useEffect(() => {
@@ -722,7 +771,11 @@ function BacktestChartInner() {
     if (set.start) {
       const sec = Date.UTC(+set.start.slice(0, 4), +set.start.slice(5, 7) - 1, +set.start.slice(8, 10)) / 1000;
       if (Number.isFinite(sec)) goTime(sec, 'replay');
+      return;
     }
+    /* Новий бектест без дати старту: одразу просимо клікнути свічку,
+       а не показуємо всю історію з «майбутнім». */
+    if (!closed.length) eng()?.startSelect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSession?.id, loadedSym, st.ready]);
   useEffect(() => { if (engRef.current) engRef.current.riskUsd = (balance * riskPct) / 100; }, [balance, riskPct, st.ready]);
@@ -969,6 +1022,18 @@ function BacktestChartInner() {
     saveDefaults(uid, dm.defaults);
     notify.success(tx('Збережено', 'Saved'), tx('Нові такі фігури будуть з цим стилем.', 'New drawings of this type will use this style.'));
   };
+  /* Як у TV: змінив колір/товщину фігури — наступна фігура цим
+     інструментом малюється так само. Пишемо в ті самі «типові» стилі,
+     але тихо й не частіше ніж раз на 400 мс (повзунок кольору). */
+  const rememberRef = useRef(null);
+  const rememberStyle = (id) => {
+    const dm = dmRef.current;
+    const cur = dm?.list.find((x) => x.id === id);
+    if (!dm || !cur || !TOOLS[cur.type] || TOOLS[cur.type].temp) return;
+    dm.defaults = { ...dm.defaults, [cur.type]: JSON.parse(JSON.stringify(cur.style || {})) };
+    clearTimeout(rememberRef.current);
+    rememberRef.current = setTimeout(() => saveDefaults(uid, dmRef.current?.defaults || {}), 400);
+  };
   const resetStyleDefault = (d) => {
     const dm = dmRef.current;
     if (!dm || !d) return;
@@ -1063,7 +1128,6 @@ function BacktestChartInner() {
             current={symbol}
             onPick={setSymbol}
             onRemoveSet={removeSet}
-            onUpload={pickFile}
           />
           <TfDialog open={tfDlg !== null} initial={tfDlg || ''} onClose={() => setTfDlg(null)} onPick={setTf} />
         </div>
@@ -1079,12 +1143,27 @@ function BacktestChartInner() {
           >
             <Plus size={16} />
           </ToolBtn>
-          <Menu open={menu === 'link'} onClose={() => setMenu(null)} width={260}>
+          <Menu open={menu === 'link'} onClose={() => { setMenu(null); setLinkQ(''); }} width={300}>
             {(() => {
               const have = new Set(linkedKeys);
-              const srv = remoteEnabled && catalog ? (catalog.core || []).map((c) => REMOTE_PREFIX + c.symbol) : [];
-              const mine = (sets || []).map((x) => x.symbol);
-              const opts = [...srv, ...mine].filter((k) => k !== symbol);
+              const needle = linkQ.trim().toUpperCase();
+              const hit = (sym, desc = '') => !needle || sym.toUpperCase().includes(needle) || String(desc).toUpperCase().includes(needle);
+              const rows = [];
+              if (remoteEnabled && catalog) {
+                (catalog.core || []).forEach((c) => rows.push({ key: REMOTE_PREFIX + c.symbol, sym: c.symbol, desc: c.desc || '', kind: 'core' }));
+                (catalog.onDemand || []).forEach((c) => rows.push({ key: REMOTE_PREFIX + c.symbol, sym: c.symbol, desc: c.desc || '', kind: 'demand' }));
+              }
+              (sets || []).forEach((x) => rows.push({ key: x.symbol, sym: x.symbol, desc: '', kind: 'file' }));
+              const seen = new Set();
+              const gi = (r) => { const g = assetInfo(r.sym).group; const i = ASSET_GROUPS.findIndex((x) => x.id === g); return i < 0 ? 99 : i; };
+              const opts = rows
+                .filter((r) => r.key !== symbol && remoteName(r.key) !== remoteName(symbol || '') && !seen.has(r.key) && seen.add(r.key))
+                .filter((r) => (linkCat === 'all' || assetInfo(r.sym).group === linkCat) && hit(r.sym, r.desc || assetInfo(r.sym).name))
+                .sort((x, y) => (have.has(y.key) - have.has(x.key))
+                  || (needle ? (y.sym.toUpperCase().startsWith(needle) - x.sym.toUpperCase().startsWith(needle)) : 0)
+                  || ((x.kind === 'demand') - (y.kind === 'demand'))
+                  || gi(x) - gi(y) || x.sym.localeCompare(y.sym));
+              const chips = [{ id: 'all', uk: 'Усі', en: 'All' }, ...ASSET_GROUPS.filter((g) => rows.some((r) => assetInfo(r.sym).group === g.id))];
               const full = linkedKeys.length >= MAX_LINKED;
               return (
                 <>
@@ -1094,24 +1173,54 @@ function BacktestChartInner() {
                       ? tx(`Максимум ${MAX_LINKED} графіки — прибери один хрестиком на панелі.`, `Up to ${MAX_LINKED} charts — remove one with the cross on its pane.`)
                       : tx('Та сама дата й таймфрейм, у реплеї — без майбутнього.', 'Same dates and timeframe; no future in replay.')}
                   </div>
-                  <div className="max-h-[320px] overflow-y-auto">
-                    {opts.map((k) => {
-                      const on = have.has(k);
+                  <div className="px-2 pb-1.5">
+                    <input
+                      autoFocus
+                      value={linkQ}
+                      onChange={(e) => setLinkQ(e.target.value)}
+                      onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') { setMenu(null); setLinkQ(''); } if (e.key === 'Enter' && opts[0] && !full) { addLinked(opts[0].key); setLinkQ(''); } }}
+                      placeholder={tx('Пошук: EU50, DXY, золото…', 'Search: EU50, DXY, gold…')}
+                      className="h-8 w-full rounded-lg px-2.5 text-[13px] font-semibold outline-none placeholder:font-normal"
+                      style={{ background: T.sunken, border: `1px solid ${T.line}`, color: T.text }}
+                      spellCheck={false}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1 px-2 pb-1.5">
+                    {chips.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setLinkCat(c.id)}
+                        className="rounded-md px-2 py-0.5 text-[11.5px] font-semibold"
+                        style={{ background: linkCat === c.id ? act(0.18) : 'transparent', color: linkCat === c.id ? T.text : T.text3, border: `1px solid ${linkCat === c.id ? ACT.to : T.line}` }}
+                      >
+                        {tx(c.uk, c.en)}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="max-h-[320px] overflow-y-auto pb-1">
+                    {opts.map((r) => {
+                      const on = have.has(r.key);
                       return (
                         <button
-                          key={k}
+                          key={r.key}
                           type="button"
                           disabled={!on && full}
-                          onClick={() => (on ? removeLinked(k) : addLinked(k))}
-                          className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left disabled:opacity-40"
+                          onClick={() => { if (on) removeLinked(r.key); else { addLinked(r.key); setLinkQ(''); } }}
+                          className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-white/5 disabled:opacity-40"
                           style={{ background: on ? act(0.14) : 'transparent' }}
                         >
-                          <span className="text-[13.5px] font-bold" style={{ color: T.text }}>{remoteName(k)}</span>
-                          {on ? <Check size={14} style={{ color: ACT.tint }} /> : <span className="text-[11px]" style={{ color: T.text3 }}>{isRemote(k) ? 'EDGE' : tx('мій файл', 'my file')}</span>}
+                          <span className="min-w-0">
+                            <span className="block text-[13.5px] font-bold" style={{ color: T.text }}>{r.sym}</span>
+                            <span className="block truncate text-[11px]" style={{ color: T.text3 }}>{r.desc || assetInfo(r.sym).name || ''}</span>
+                          </span>
+                          {on
+                            ? <Check size={14} style={{ color: ACT.tint }} />
+                            : <span className="shrink-0 text-[11px]" style={{ color: T.text3 }}>{r.kind === 'file' ? tx('мій файл', 'my file') : r.kind === 'demand' ? tx('на запит', 'on request') : 'EDGE'}</span>}
                         </button>
                       );
                     })}
-                    {!opts.length && <div className="px-2.5 py-2 text-[12.5px]" style={{ color: T.text3 }}>{tx('Інших інструментів поки немає.', 'No other symbols yet.')}</div>}
+                    {!opts.length && <div className="px-2.5 py-2 text-[12.5px]" style={{ color: T.text3 }}>{needle ? tx('Нічого не знайдено.', 'Nothing found.') : tx('Інших інструментів поки немає.', 'No other symbols yet.')}</div>}
                   </div>
                 </>
               );
@@ -1285,6 +1394,7 @@ function BacktestChartInner() {
                 else drawAct.tool(id);
               }}
               onMove={(p) => setPrefs({ ...prefs, favPos: p })}
+              onReorder={(next) => setPrefs({ ...prefs, drawFav: next })}
               onClose={() => setPrefs({ ...prefs, favBar: false })}
             />
           )}
@@ -1299,7 +1409,7 @@ function BacktestChartInner() {
               onBack={() => dmRef.current?.toBack(selDraw.id)}
               onSaveDefault={() => saveStyleDefault(selDraw)}
               onResetDefault={() => resetStyleDefault(selDraw)}
-              onStyle={(patch) => dmRef.current?.update(selDraw.id, (d) => ({ style: { ...d.style, ...patch } }))}
+              onStyle={(patch) => { dmRef.current?.update(selDraw.id, (d) => ({ style: { ...d.style, ...patch } })); rememberStyle(selDraw.id); }}
               onPatch={(patch) => dmRef.current?.update(selDraw.id, patch)}
               onSettings={() => setDrawEdit(selDraw.id)}
               onClone={() => dmRef.current?.clone(selDraw.id)}
@@ -1539,7 +1649,7 @@ function BacktestChartInner() {
                   const kind = st.draft.type === 'market' ? tx('по ринку', 'market') : (eng()?.orderKind(st.draft.side, st.draft.entry) === 'limit' ? 'Limit' : 'Stop');
                   return (
                     <>
-                      <B onClick={() => eng()?.confirmDraft()} bg={long ? '#2962ff' : '#f23645'} title="Shift+B / Shift+S">{long ? 'Buy' : 'Sell'} {kind}</B>
+                      <B onClick={() => eng()?.confirmDraft()} bg={long ? '#2962ff' : '#f23645'} title="Shift+B / Shift+S">{st.draft.type === 'market' ? `${long ? tx('Купити', 'Buy') : tx('Продати', 'Sell')} ${kind}` : `${long ? 'Buy' : 'Sell'} ${kind}`}</B>
                       <B onClick={() => eng()?.setDraft(null)} title="Esc">✕</B>
                     </>
                   );
@@ -1689,9 +1799,10 @@ function BacktestChartInner() {
           {/* Атрибуція бібліотеки (умова ліцензії) — на сторінці «Умови». */}
 
           {/* Порожньо / вантажиться */}
+          {/* Свої CSV не завантажуються — поки каталог сервера не прийшов, просто крутилка. */}
           {sets && !hasSets && !(remoteEnabled && catalog) && importing == null && (
-            <div className="absolute inset-0 z-20" style={{ background: T.bg }}>
-              <ImportCandles onFile={onFile} />
+            <div className="absolute inset-0 z-20 grid place-items-center" style={{ background: T.bg }}>
+              <Loader2 size={28} className="animate-spin" style={{ color: ACT.tint }} />
             </div>
           )}
           {(sets === null || loadingSet) && (hasSets !== false || (remoteEnabled && catalog)) && importing == null && (
@@ -1908,8 +2019,8 @@ function BacktestChartInner() {
               onDeleteTrade={deleteTrade}
               onFocusTrade={(t) => openSnap(t, 'entry')}
               onEditTrade={editTrade}
-              resume={prefs.resume && prefs.resume.sym === symbol && !st.replay ? prefs.resume : null}
-              onResume={() => goTime(prefs.resume.t + 1, 'replay')}
+              resume={resumePt && !st.replay ? resumePt : null}
+              onResume={() => resumePt && goTime(resumePt.t + 1, 'replay')}
               onHide={() => setPrefs({ ...prefs, panel: false })}
             />
           </aside>
@@ -1940,7 +2051,11 @@ function BacktestChartInner() {
           d={editing}
           digits={d}
           fmtTime={(t) => fmtStamp(t, prefs)}
-          onChange={(patch, record) => { dmRef.current?.update(editing.id, patch, record); setDrawEdit(editing.id); }}
+          onChange={(patch, record) => {
+            dmRef.current?.update(editing.id, patch, record);
+            if (patch && typeof patch === 'object' && 'style' in patch) rememberStyle(editing.id);
+            setDrawEdit(editing.id);
+          }}
           onClose={() => {
             /* Порожній текст не лишаємо на графіку — як у TV. */
             const dm = dmRef.current;
@@ -2016,7 +2131,7 @@ export default function BacktestChart() {
   }, [bypass, user?.id, sub.ready, sessionId, key]);
 
   if (bypass) return <BacktestChartInner />;
-  if (res.key !== key || res.ok === null) return <div className="grid min-h-[70vh] place-items-center"><Loader2 size={28} className="animate-spin" style={{ color: ACT.tint }} /></div>;
+  if (res.key !== key || res.ok === null) return createPortal(<div className="fixed inset-0 z-[70] grid place-items-center" style={{ background: 'var(--edge-bg, #0A0A0C)' }}><Loader2 size={28} className="animate-spin" style={{ color: ACT.tint }} /></div>, document.body);
   if (!res.ok) return <ChartGate />;
   return <BacktestChartInner />;
 }

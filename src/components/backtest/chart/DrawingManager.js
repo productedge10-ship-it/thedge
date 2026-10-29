@@ -55,6 +55,40 @@ function smoothPath(P) {
   return d;
 }
 
+/* ---------- Пензель: непомітна допомога руці ----------
+   1) «Лінивий пензель»: перо тягнеться за мишкою на невидимій нитці
+      (BRUSH_LAG px) — тремтіння руки не потрапляє в лінію.
+   2) Після мазка: згладжування [1,2,1] і проріджування (RDP) —
+      без «мікротріщин» від сотень дрібних відрізків.
+   3) Майже пряма лінія стає ідеально прямою. */
+const BRUSH_LAG = 6;
+function rdp(pts, eps) {
+  if (pts.length < 3) return pts;
+  const [a, b] = [pts[0], pts[pts.length - 1]];
+  const L = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  let idx = 0; let max = 0;
+  for (let i = 1; i < pts.length - 1; i += 1) {
+    const d = Math.abs((b.y - a.y) * pts[i].x - (b.x - a.x) * pts[i].y + b.x * a.y - b.y * a.x) / L;
+    if (d > max) { max = d; idx = i; }
+  }
+  if (max <= eps) return [a, b];
+  return [...rdp(pts.slice(0, idx + 1), eps).slice(0, -1), ...rdp(pts.slice(idx), eps)];
+}
+function tidyStroke(S) {
+  if (S.length < 3) return S;
+  let P = S;
+  for (let pass = 0; pass < 2; pass += 1) {
+    P = P.map((q, i) => (i === 0 || i === P.length - 1 ? q
+      : { x: (P[i - 1].x + 2 * q.x + P[i + 1].x) / 4, y: (P[i - 1].y + 2 * q.y + P[i + 1].y) / 4 }));
+  }
+  const a = P[0]; const b = P[P.length - 1];
+  const L = Math.hypot(b.x - a.x, b.y - a.y);
+  let dev = 0;
+  P.forEach((q) => { dev = Math.max(dev, Math.abs((b.y - a.y) * q.x - (b.x - a.x) * q.y + b.x * a.y - b.y * a.x) / (L || 1)); });
+  if (L > 40 && dev < Math.min(5, L * 0.025)) return [a, b];
+  return rdp(P, 0.6);
+}
+
 /* Які інструменти лишаються вибраними після фігури — як у TV:
    • за замовчуванням кожен інструмент — на одну фігуру, далі курсор;
    • «Режим малювання» (замок з олівцем) — усі лишаються до Esc;
@@ -320,8 +354,12 @@ export default class DrawingManager {
     return { w: ts.width(), h: this.e.chart.paneSize(0).height };
   }
 
+  /* Час → індекс свічки. Беремо ВСІ свічки таймфрейму, а не лише вже
+     показані в реплеї: інакше праворуч від останньої свічки час
+     рахувався рівномірно (без ночей і вихідних), і малюнок у
+     «майбутньому» (рамка позиції) зсувався з кожним кроком реплею. */
   absOf(t) {
-    const a = this.e.agg; const sec = a.sec; const last = this.e.lastK;
+    const a = this.e.agg; const sec = a.sec; const last = Math.max(this.e.lastK, a.n - 1);
     if (t <= a.t[0]) return (t - a.t[0]) / sec;
     if (t >= a.t[last]) return last + (t - a.t[last]) / sec;
     const k = upperBound(a.t, t, 0, last + 1) - 1;
@@ -330,7 +368,7 @@ export default class DrawingManager {
   }
 
   timeOf(abs) {
-    const a = this.e.agg; const sec = a.sec; const last = this.e.lastK;
+    const a = this.e.agg; const sec = a.sec; const last = Math.max(this.e.lastK, a.n - 1);
     if (abs <= 0) return a.t[0] + abs * sec;
     if (abs >= last) return a.t[last] + (abs - last) * sec;
     const k = Math.floor(abs);
@@ -428,6 +466,7 @@ export default class DrawingManager {
       if (def.points === 0) {
         this.draft = newDrawing(tool, [pt], this.defaults);
         this.draft.free = true;
+        this.lazy = { x: m.x, y: m.y };
         return;
       }
       if (!this.draft) {
@@ -515,9 +554,15 @@ export default class DrawingManager {
       if (d.free) {
         if (!(ev.buttons & 1)) return;
         ev.stopPropagation();
+        const pen = this.lazy || { x: m.x, y: m.y };
+        const dx = m.x - pen.x; const dy = m.y - pen.y; const dist = Math.hypot(dx, dy);
+        if (dist <= BRUSH_LAG) return;
+        const k = (dist - BRUSH_LAG) / dist;
+        pen.x += dx * k; pen.y += dy * k;
+        this.lazy = pen;
         const last = d.pts[d.pts.length - 1];
         const lx = this.x(last.t); const ly = this.y(last.p);
-        if (lx == null || Math.hypot(lx - m.x, ly - m.y) > 4) d.pts.push(this.pointAt(m.x, m.y, { snapTime: false, magnet: false }));
+        if (lx == null || Math.hypot(lx - pen.x, ly - pen.y) > 2) d.pts.push(this.pointAt(pen.x, pen.y, { snapTime: false, magnet: false }));
         return;
       }
       let pt = this.pointAt(m.x, m.y);
@@ -579,7 +624,17 @@ export default class DrawingManager {
     }
     const d = this.draft;
     if (!d) return;
-    if (d.free) { if (d.pts.length > 1) this.place(d); else this.draft = null; return; }
+    if (d.free) {
+      this.lazy = null;
+      if (d.pts.length > 1) {
+        const S = d.pts.map((q) => ({ x: this.x(q.t), y: this.y(q.p) }));
+        if (S.every((q) => q.x != null && q.y != null)) {
+          d.pts = tidyStroke(S).map((q) => this.pointAt(q.x, q.y, { snapTime: false, magnet: false }));
+        }
+        this.place(d);
+      } else this.draft = null;
+      return;
+    }
     /* Клік-протягування-відпустив для двоточкових — теж ставить фігуру. */
     const def = TOOLS[d.type];
     if (def.points === 2 && d.pts.length === 2 && this.downAt && Math.hypot(m.x - this.downAt.x, m.y - this.downAt.y) > 8) {
@@ -1388,8 +1443,15 @@ export default class DrawingManager {
           const l2 = `${tx('Співвідношення ризик/прибуток', 'Risk/reward ratio')}: ${rr.toFixed(2)}`;
           const mbg = out ? (out.r >= 0 ? '#089981' : '#f23645') : '#787b86';
           const mw = Math.max(pnlTxt.length, l2.length) * 6.4 + 14;
-          o.push(`<rect x="${cx - mw / 2}" y="${ye - 15}" width="${mw}" height="30" rx="3" fill="${mbg}"/>`);
-          [pnlTxt, l2].forEach((tline, i) => o.push(`<text x="${cx}" y="${ye - 3 + i * 13}" fill="#fff" font-size="11" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Trebuchet MS',Roboto,sans-serif">${esc(tline)}</text>`));
+          /* Не налазимо на підписи цілі/стопу: тримаємо плашку між ними,
+             а в низькій рамці — праворуч від неї. */
+          const topY = Math.min(yt, ys); const botY = Math.max(yt, ys);
+          const lo = topY + 15; const hi = botY - 15;
+          let mc = ye; let mx = cx;
+          if (hi >= lo) mc = Math.max(lo, Math.min(hi, ye));
+          else mx = L + Wd + mw / 2 + 8;
+          o.push(`<rect x="${mx - mw / 2}" y="${mc - 15}" width="${mw}" height="30" rx="3" fill="${mbg}"/>`);
+          [pnlTxt, l2].forEach((tline, i) => o.push(`<text x="${mx}" y="${mc - 3 + i * 13}" fill="#fff" font-size="11" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Trebuchet MS',Roboto,sans-serif">${esc(tline)}</text>`));
         }
         break;
       }

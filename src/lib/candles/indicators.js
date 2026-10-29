@@ -258,9 +258,10 @@ const lineStyleFields = (w = 1, style = 'dashed') => [
 ================================================================== */
 
 const SESSIONS = [
-  { name: 'Asia', range: '00:00-08:00', color: '#9c27b0', on: true },
-  { name: 'London', range: '07:00-16:00', color: '#2962ff', on: true },
-  { name: 'New York', range: '12:00-21:00', color: '#ff9800', on: true },
+  { name: 'Tokyo', range: '00:00-09:00', color: '#787b9a', on: true },
+  { name: 'London', range: '08:00-16:00', color: '#1976d2', on: true },
+  { name: 'New York', range: '13:00-22:00', color: '#2e9d8a', on: true },
+  { name: 'Frankfurt', range: '07:00-16:00', color: '#a4195f', on: true },
 ];
 const KILLZONES = [
   { name: 'Asia KZ', range: '20:00-00:00', color: '#9c27b0', on: true },
@@ -289,7 +290,7 @@ const sessionFields = (list, tz, alpha, mode) => [
   f.sel('maxTf', 'Показувати до таймфрейму', 'Show up to timeframe', 'H1', TFMAX),
   f.sel('mode', 'Вигляд', 'Style', mode, () => [['box', tx('Коробка (high/low)', 'Box (high/low)')], ['bg', tx('Фон на всю висоту', 'Full-height background')]], 'st'),
   f.num('alpha', 'Прозорість заливки', 'Fill opacity', alpha, 0, 1, 0.02, 'st'),
-  f.bool('border', 'Рамка', 'Border', true, 'st', (i) => i.mode === 'box'),
+  f.bool('border', 'Рамка', 'Border', false, 'st', (i) => i.mode === 'box'),
   f.bool('hl', 'Лінії high / low сесії', 'Session high / low lines', false, 'st'),
   f.sel('extendHL', '  Продовжити high / low', '  Extend high / low', 'none', () => [['none', tx('Ні — лише в межах сесії', 'No — within the session')], ['right', tx('До правого краю', 'To the right edge')], ['swept', tx('До зняття ціною', 'Until swept')]], 'st', (i) => i.hl),
   f.bool('mid', 'Середина сесії', 'Session midline', false, 'st'),
@@ -298,7 +299,7 @@ const sessionFields = (list, tz, alpha, mode) => [
   f.sel('boxLabelPos', '  Де назва', '  Name position', 'tl', () => [['tl', tx('Зверху зліва', 'Top left')], ['tr', tx('Зверху справа', 'Top right')], ['bl', tx('Знизу зліва', 'Bottom left')], ['br', tx('Знизу справа', 'Bottom right')]], 'lb', (i) => i.labels),
   f.bool('hlLabels', 'Підписи high / low', 'High / low labels', false, 'lb', (i) => i.hl),
   f.bool('labelPrice', '  Ціна в підписі', '  Price in label', true, 'lb', (i) => i.hl && i.hlLabels),
-  f.num('labelSize', 'Розмір шрифту', 'Font size', 11, 8, 20, 1, 'lb'),
+  f.num('labelSize', 'Розмір шрифту', 'Font size', 10, 8, 20, 1, 'lb'),
   f.bool('labelBg', 'Плашка під текстом', 'Label background', false, 'lb'),
   f.bool('axis', 'Мітки high / low на шкалі', 'High / low labels on scale', false, 'lb', (i) => i.hl),
 ];
@@ -332,7 +333,7 @@ function sessionBoxes(ctx, inp, list) {
     const keep = new Set(days.slice(-(inp.show === 'today' ? 1 : Math.max(1, Math.round(inp.count || 1)))));
     shown = all.filter((b) => keep.has(b.day));
   }
-  const ls = { labelSize: inp.labelSize, labelBg: inp.labelBg };
+  const ls = { labelSize: inp.labelSize, labelBg: inp.labelBg, soft: true };
   shown.forEach((b) => {
     const color = inp[`color${b.si}`];
     const name = inp[`name${b.si}`] || list[b.si].name;
@@ -464,8 +465,8 @@ function pivots(ctx, L) {
 export const INDICATORS = {
   sessions: {
     cat: 'ict', uk: 'Торгові сесії', en: 'Trading sessions',
-    dUk: 'Азія, Лондон, Нью-Йорк — коробки з high/low кожної сесії.', dEn: 'Asia, London, New York boxes with session high/low.',
-    fields: sessionFields(SESSIONS, 'UTC', 0.08, 'box'),
+    dUk: 'Токіо, Франкфурт, Лондон, Нью-Йорк — коробки з high/low кожної сесії.', dEn: 'Tokyo, Frankfurt, London, New York boxes with session high/low.',
+    fields: sessionFields(SESSIONS, 'UTC', 0.12, 'box'),
     compute: (ctx, inp) => sessionBoxes(ctx, inp, SESSIONS),
   },
   killzones: {
