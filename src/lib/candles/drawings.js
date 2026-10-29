@@ -172,6 +172,10 @@ export function loadDrawings(uid, symbol) {
   } catch { return []; }
 }
 
+export function hasDrawings(uid, symbol) {
+  try { return localStorage.getItem(key(uid, symbol)) != null; } catch { return false; }
+}
+
 export function saveDrawings(uid, symbol, list) {
   try { localStorage.setItem(key(uid, symbol), JSON.stringify(list)); } catch { /* приватний режим або повне сховище */ }
 }
