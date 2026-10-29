@@ -84,3 +84,6 @@ export const notify = {
     ), { duration: 6000 });
   }
 };
+/* Нейтральне повідомлення (раніше notify.info не існувало — підказки
+   «далі назад не можна» тощо мовчки губились). */
+notify.info = (title, desc) => notify.success(title, desc);

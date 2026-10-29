@@ -204,7 +204,15 @@ export default function ruI18n() {
     enforce: 'pre',
     configureServer(server) {
       server.watcher.add(DICT_PATH);
-      server.watcher.on('change', (f) => { if (path.resolve(f) === DICT_PATH) { load(); server.ws.send({ type: 'full-reload' }); } });
+      /* Новий переклад — скидаємо кеш перетворених модулів: без цього
+         Vite віддавав файли, перетворені ще старим словником, і в dev
+         половина інтерфейсу лишалась українською до перезапуску. */
+      server.watcher.on('change', (f) => {
+        if (path.resolve(f).toLowerCase() !== DICT_PATH.toLowerCase()) return;
+        load();
+        server.moduleGraph.invalidateAll();
+        server.ws.send({ type: 'full-reload' });
+      });
     },
     transform(code, id) {
       const file = id.split('?')[0];

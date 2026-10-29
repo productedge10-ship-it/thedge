@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { T, EASE } from '../../lib/theme';
 import { fmtR, SESSIONS } from '../../lib/backtestStats';
-import { t as tx, isEn } from '../../lib/lang';
+import { t as tx, isEn, pluralUk } from '../../lib/lang';
 
 /* ==================================================================
    Три розбивки поруч: сесії, дні тижня, розподіл результатів.
@@ -12,12 +12,8 @@ import { t as tx, isEn } from '../../lib/lang';
 /* «1 угод» різало око в кожній панелі — рахуємо форму слова */
 const trades = (n) => {
   if (isEn) return `${n} ${n === 1 ? 'trade' : 'trades'}`;
-  const t = n % 100;
-  const o = n % 10;
-  if (t >= 11 && t <= 14) return `${n} угод`;
-  if (o === 1) return `${n} угода`;
-  if (o >= 2 && o <= 4) return `${n} угоди`;
-  return `${n} угод`;
+  /* pluralUk — щоб і російська мала свої форми (збірка дописує їх). */
+  return `${n} ${pluralUk(n, 'угода', 'угоди', 'угод')}`;
 };
 
 function Rows({ rows }) {

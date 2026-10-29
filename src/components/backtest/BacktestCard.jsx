@@ -3,7 +3,7 @@ import { ArrowRight, Trash2, Globe, Link2, Loader2, CandlestickChart, BarChart3,
 import { T, EASE } from '../../lib/theme';
 import { computeStats, sparkFromTrades, fmtPF, fmtR } from '../../lib/backtestStats';
 import { ACT, act } from './accent';
-import { t as tx, LOCALE } from '../../lib/lang';
+import { t as tx, LOCALE, pluralUk } from '../../lib/lang';
 
 /* ==================================================================
    Картка бектесту у списку.
@@ -173,7 +173,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
           </div>
 
           <span className="shrink-0" style={mono(11, { color: T.text2 })}>
-            {tx(`${s.total} угод`, `${s.total} ${s.total === 1 ? 'trade' : 'trades'}`)}
+            {tx(`${s.total} ${pluralUk(s.total, 'угода', 'угоди', 'угод')}`, `${s.total} ${s.total === 1 ? 'trade' : 'trades'}`)}
           </span>
         </div>
 
@@ -241,7 +241,7 @@ export default function BacktestCard({ session, onOpen, onDelete, onShare, shari
         <span style={mono(11.5, { color: T.text2 })}>
           DD{' '}
           <span style={{ color: s.maxDrawdownR > 0 ? T.bad : T.text3, fontWeight: 600 }}>
-            {s.total ? `−${s.maxDrawdownR.toFixed(1)}R` : '—'}
+            {s.total ? (s.maxDrawdownR >= 0.05 ? `−${s.maxDrawdownR.toFixed(1)}R` : '0R') : '—'}
           </span>
           {tx(' · серія ', ' · streak ')}
           <span style={{ color: T.text, fontWeight: 600 }}>

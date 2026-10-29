@@ -6,7 +6,7 @@ import {
   History, BookOpen, FileText, BarChart2, Users,
   Activity, AlertTriangle, CheckSquare, BrainCircuit,
   HelpCircle, Target, Menu, X, ClipboardCheck, Calculator,
-  NotebookPen, ChevronLeft, LayoutGrid, Sparkles, Settings, CalendarClock,
+  NotebookPen, ChevronLeft, LayoutGrid, Sparkles, Settings, CalendarClock, SlidersHorizontal,
   Newspaper, FileCheck2
 } from 'lucide-react';
 
@@ -16,6 +16,8 @@ import { onlyMine } from '../../lib/myId';
 import PlanBackdrop from '../trading/PlanBackdrop';
 import OnboardingModal from '../modals/OnboardingModal';
 import OnboardSurvey from '../onboard/OnboardSurvey';
+import WorkspaceSetup, { openWorkspaceSetup, useWorkspaceDone } from '../onboard/WorkspaceSetup';
+import TableImportModal from '../journal/TableImportModal';
 import FeedbackPulse from '../onboard/FeedbackPulse';
 import PropRulesAlert from '../accounts/PropRulesAlert';
 import VerifyEmailModal from '../modals/VerifyEmailModal';
@@ -901,6 +903,7 @@ const NAV_ICONS = {
 
 function SidebarContent({ collapsed, hasUncompleted, signOut }) {
   const { hiddenNav } = useSettings();
+  const menuDone = useWorkspaceDone();
   const beta = useBetaAccess();
 
   return (
@@ -957,6 +960,7 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
                     icon={NAV_ICONS[it.icon]}
                     label={it.label}
                     badge={it.badge === 'tasks' ? hasUncompleted : undefined}
+                    soon={!!it.soon && !import.meta.env.DEV && import.meta.env.VITE_PROP_RULES_LIVE !== '1'}
                   />
                 ))}
               </NavGroup>
@@ -976,6 +980,7 @@ function SidebarContent({ collapsed, hasUncompleted, signOut }) {
               це дії над акаунтом, якого в демо просто не існує. */}
           {!inSandbox() && (
             <>
+              {!menuDone && <NavItem collapsed={collapsed} onClick={openWorkspaceSetup} icon={SlidersHorizontal} label={tx('Меню', 'Menu')} />}
               <NavItem collapsed={collapsed} onClick={openOnboarding} icon={Sparkles} label={tx('Про тебе', 'About you')} tour="about" soon />
               <NavItem collapsed={collapsed} onClick={openSettings} icon={Settings} label="Settings" tour="settings" fx="nx-gear" />
             </>
@@ -1242,6 +1247,8 @@ export default function Layout() {
       {/* Три питання після першого входу (платформа, ціль, угод на
           тиждень). У демо їх немає: там нема акаунта, куди писати. */}
       {!inSandbox() && <OnboardSurvey />}
+      {!inSandbox() && !isSharedView() && <WorkspaceSetup />}
+      {!inSandbox() && !isSharedView() && <TableImportModal />}
       {/* Відгук на 3-й день: що подобається, що ні, чи платив би за Lite. */}
       {!inSandbox() && <FeedbackPulse />}
       {!inSandbox() && <PropRulesAlert />}

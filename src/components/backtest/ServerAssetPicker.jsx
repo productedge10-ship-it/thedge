@@ -34,6 +34,12 @@ export default function ServerAssetPicker({ value, onChange, height = 56, fallba
   const core = catalog?.core || [];
   const shown = core.filter((c) => !needle || c.symbol.toUpperCase().includes(needle) || assetInfo(c.symbol, c).name.toUpperCase().includes(needle));
   const cols = GROUPS.map((g) => ({ ...g, items: shown.filter((c) => assetInfo(c.symbol, c).group === g.id) })).filter((g) => g.items.length);
+  /* Інструменти «на запит» (149 у брокера) — коли щось шукають: сервер
+     докачує їх при першому відкритті. Раніше їх тут не було взагалі. */
+  const coreSet = new Set(core.map((c) => c.symbol));
+  const demand = needle
+    ? (catalog?.onDemand || []).filter((c) => !coreSet.has(c.symbol) && (c.symbol.toUpperCase().includes(needle) || String(c.desc || '').toUpperCase().includes(needle))).slice(0, 40)
+    : [];
   const pick = (s) => { onChange(s); setOpen(false); setQ(''); };
 
   return (
@@ -74,7 +80,7 @@ export default function ServerAssetPicker({ value, onChange, height = 56, fallba
             </div>
             <div className="custom-scrollbar max-h-[300px] overflow-y-auto p-1.5">
               {catalog === undefined && <p className="px-2.5 py-3 text-[13px]" style={{ color: T.text4 }}>{tx('Завантажую…', 'Loading…')}</p>}
-              {catalog && !cols.length && <p className="px-2.5 py-3 text-[13px]" style={{ color: T.text4 }}>{tx('Нічого не знайшлось.', 'Nothing found.')}</p>}
+              {catalog && !cols.length && !demand.length && <p className="px-2.5 py-3 text-[13px]" style={{ color: T.text4 }}>{tx('Нічого не знайшлось.', 'Nothing found.')}</p>}
               {cols.map((g) => (
                 <div key={g.id}>
                   <div className="flex items-center justify-between px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: T.text3 }}>
@@ -96,6 +102,28 @@ export default function ServerAssetPicker({ value, onChange, height = 56, fallba
                   })}
                 </div>
               ))}
+              {demand.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: T.text3 }}>
+                    <span>{tx('На запит', 'On request')}</span>
+                    <span style={{ fontFamily: T.mono, opacity: 0.7 }}>{demand.length}</span>
+                  </div>
+                  {demand.map((c) => (
+                    <button key={c.symbol} type="button" onClick={() => pick(c.symbol)} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-white/5" style={{ background: c.symbol === value ? act(0.18) : undefined }}>
+                      <SymbolLogo symbol={c.symbol} size={24} />
+                      <span className="min-w-0">
+                        <span className="block text-[13.5px] font-bold leading-tight" style={{ color: T.text }}>{c.symbol}</span>
+                        <span className="block truncate text-[11.5px] leading-tight" style={{ color: T.text3 }}>{c.desc || assetInfo(c.symbol, c).name} · {tx('перше відкриття ~1 хв', 'first open ~1 min')}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!needle && catalog?.onDemand?.length > 0 && (
+                <p className="px-2.5 pb-1 pt-2.5 text-[11.5px]" style={{ color: T.text3 }}>
+                  {tx(`Ще ${catalog.onDemand.length} інструментів на запит — почни вводити назву.`, `${catalog.onDemand.length} more on request — start typing.`)}
+                </p>
+              )}
             </div>
             <div className="px-3 py-2.5" style={{ borderTop: `1px solid ${T.line}`, background: T.sunken }}>
               <div className="text-[12px] leading-snug" style={{ color: T.text2 }}>{tx('Немає вашого активу? Будь ласка, напишіть нам у Telegram — додамо.', "Don't see your asset? Please message us on Telegram and we'll add it.")}</div>

@@ -202,6 +202,7 @@ export default class ChartEngine {
   destroy() {
     this.pause();
     cancelAnimationFrame(this.raf);
+    cancelAnimationFrame(this.clampRaf);
     this.chart.timeScale().unsubscribeVisibleLogicalRangeChange(this.onRange);
     this.chart.unsubscribeCrosshairMove(this.onMove);
     this.chart.unsubscribeClick(this.onClick);
@@ -324,7 +325,7 @@ export default class ChartEngine {
     else if (r) {
       const span = r.to - r.from;
       const lastL = this.lastK - this.win;
-      if (!this.prefs.keepLeft && r.to >= lastL + 0.5) anchor = { live: true, span, offset: r.to - lastL };
+      if (!this.prefs.keepLeft && r.to >= lastL + 0.5) anchor = { live: true, span, offset: Math.min(r.to - lastL, Math.max(this.prefs.rightOffset || 0, span * 0.2)) };
       else {
         /* Тримаємо середину екрана: те, на що дивишся, лишається по
            центру, а більший ТФ просто показує більше навколо. */
@@ -421,6 +422,25 @@ export default class ChartEngine {
   /* Доклеюємо історію ліворуч, коли до краю лишилось мало свічок. */
   onRange(r) {
     if (!r || !this.agg) return;
+    /* Як у TV: праворуч від останньої свічки можна відсунути не більше
+       ~70% екрана. Раніше графік відʼїжджав у порожнечу, де лишалась
+       одна-дві свічки, а після зміни ТФ цей «відступ у порожнечу»
+       переносився — і вид ламався до перезавантаження сторінки. */
+    if (!this.keepRange && !this.clampRaf) {
+      const span = r.to - r.from;
+      const lastL = this.lastK - this.win;
+      const maxTo = lastL + Math.max(this.prefs.rightOffset || 0, span * 0.7);
+      if (span > 0 && r.to > maxTo + 0.5) {
+        this.clampRaf = requestAnimationFrame(() => {
+          this.clampRaf = null;
+          const cur = this.chart.timeScale().getVisibleLogicalRange();
+          if (!cur) return;
+          const sp = cur.to - cur.from;
+          const lim = this.lastK - this.win + Math.max(this.prefs.rightOffset || 0, sp * 0.7);
+          if (cur.to > lim + 0.5) this.chart.timeScale().setVisibleLogicalRange({ from: lim - sp, to: lim });
+        });
+      }
+    }
     if (this.prefs.hiLo) this.updateHiLo();
     this.linked?.ensureSoon();
     /* Наперед, за кілька екранів до краю — щоб не впиратись у стіну. */
@@ -1121,7 +1141,7 @@ export default class ChartEngine {
     this.finishAnim();
     const now = this.price();
     const p = this.pos;
-    if ((p.side === 'LONG' && now <= p.entry) || (p.side === 'SHORT' && now >= p.entry)) return;
+    if ((p.side === 'LONG' && now <= p.entry) || (p.side === 'SHORT' && now >= p.entry)) { this.cb.onNotice?.('be_loss'); return; }
     p.sl = p.entry;
     this.syncPriceLines();
     this.emit();
@@ -1259,7 +1279,11 @@ export default class ChartEngine {
   }
 
   /* Підтвердження чернетки: ринок — одразу в позицію, інакше ордер. */
-  confirmDraft({ note = '', meta = null } = {}) {
+  /* Нотатку й теги з панелі беремо й тоді, коли вхід підтвердили кнопкою
+     на графіку (раніше вони там губились). */
+  confirmDraft(opts = {}) {
+    const note = opts.note ?? this.draftNote?.note ?? '';
+    const meta = opts.meta ?? this.draftNote?.meta ?? null;
     const L = this.draftLevels();
     if (!L || !this.replay) return false;
     if (L.type === 'market') {
@@ -1668,10 +1692,10 @@ export default class ChartEngine {
     }
     const FONT = "-apple-system,BlinkMacSystemFont,'Trebuchet MS',Roboto,sans-serif";
     const cx = (Math.max(L, 0) + Math.min(plotW, L + W)) / 2;
-    const label = (y, lines, bg) => {
+    const label = (y, lines, bg, minX = 2, forceX = null) => {
       const w = Math.max(...lines.map((s) => s.length)) * 6.3 + 14;
       const h = lines.length * 14 + 6;
-      const x = Math.max(2, Math.min(plotW - w - 2, cx - w / 2));
+      const x = forceX != null ? Math.min(plotW - w - 2, forceX) : Math.max(2, Math.min(plotW - w - 2, Math.max(minX, cx - w / 2)));
       o.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${bg}"/>`);
       lines.forEach((ln, i) => o.push(`<text x="${x + w / 2}" y="${y + 14 + i * 14}" fill="#fff" font-size="11.5" font-weight="600" text-anchor="middle" font-family="${FONT}">${ln.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</text>`));
       return h;
@@ -1679,13 +1703,17 @@ export default class ChartEngine {
     const top = Math.min(yt, ys); const bot = Math.max(yt, ys);
     const tpLine = `${tx('Ціль', 'Target')}: ${f(tpD)} (${pct(tpD)}%) ${Math.round(tpD / pip)}, ${money(this.riskUsd * rr)}`;
     const slLine = `${tx('Стоп', 'Stop')}: ${f(slD)} (${pct(slD)}%) ${Math.round(slD / pip)}, ${money(-this.riskUsd * (slD / (risk0 || 1e-9)))}`;
+    /* Підпис цілі — біля лінії цілі, стопу — біля стопу. Раніше для
+       шорту вони мінялись місцями. */
     const tpTop = yt < ys;
-    label(tpTop ? top - 24 : bot + 4, [tpTop ? tpLine : slLine], tpTop ? '#089981' : '#f23645');
-    label(tpTop ? bot + 4 : top - 24, [tpTop ? slLine : tpLine], tpTop ? '#f23645' : '#089981');
+    label(top - 24, [tpTop ? tpLine : slLine], tpTop ? '#089981' : '#f23645');
+    label(bot + 4, [tpTop ? slLine : tpLine], tpTop ? '#f23645' : '#089981');
     let mid; let bg;
     if (live) {
-      const r = this.rOf(this.pos, this.price());
-      mid = [`${tx('П/З', 'P&L')}: ${r >= 0 ? '+' : '−'}${Math.abs(r).toFixed(2)}R, ${money(r * this.riskUsd)} · R:R ${rr.toFixed(2)}`];
+      /* R усієї угоди (з уже зафіксованими частинами), як у панелі. */
+      const r = this.posR(this.pos, this.price());
+      const left = this.pos.size != null && this.pos.size < 0.999 ? ` · ${tx('відкрито', 'open')} ${Math.round(this.pos.size * 100)}%` : '';
+      mid = [`${tx('П/З', 'P&L')}: ${r >= 0 ? '+' : '−'}${Math.abs(r).toFixed(2)}R, ${money(r * this.riskUsd)}${left} · R:R ${rr.toFixed(2)}`];
       bg = r >= 0 ? '#089981' : '#f23645';
     } else if (tk.kind === 'order') {
       mid = [`${long ? 'Buy' : 'Sell'} ${tk.orderKind === 'limit' ? 'Limit' : 'Stop'} ${f(tk.entry)} · R:R ${rr.toFixed(2)}`];
@@ -1694,7 +1722,15 @@ export default class ChartEngine {
       mid = [`${long ? tx('Довга', 'Long') : tx('Коротка', 'Short')} ${tk.type === 'market' ? tx('по ринку', 'market') : f(tk.entry)} · R:R ${rr.toFixed(2)}`];
       bg = long ? '#2962ff' : '#e91e63';
     }
-    label(ye - 10, mid, bg);
+    /* Середня плашка не має лізти на підписи цілі/стопу й на ручку
+       входу (коло на лівому краї): тримаємо її між підписами, правіше
+       від ручки, а якщо рамка надто низька — ставимо збоку від рамки. */
+    /* Середня плашка — праворуч від рамки на рівні входу: так вона не
+       лізе ні на підписи, ні на ручки входу й ширини (обидві на лінії
+       входу). Немає місця праворуч — над лінією входу всередині рамки. */
+    const midW = Math.max(...mid.map((x) => x.length)) * 6.3 + 14;
+    if (L + W + 14 + midW <= plotW) label(ye - 10, mid, bg, 2, L + W + 14);
+    else label(Math.max(top - 2, ye - 30), mid, bg, L + 12);
     return o.join('');
   }
 

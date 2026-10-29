@@ -126,6 +126,7 @@ export default function TradePanel({
   const [note, setNote] = useState('');
   const [meta, setMeta] = useState({});
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [draftTags, setDraftTags] = useState(false);
   const [editId, setEditId] = useState(null);
   const usedSetups = useMemo(() => [...new Set(closed.flatMap((t) => t.meta?.setups || []))], [closed]);
   const pos = st.pos;
@@ -136,6 +137,7 @@ export default function TradePanel({
 
   /* Нотатка належить угоді: після входу поле очищаємо. */
   useEffect(() => { if (pos || order) { setNote(''); setMeta({}); } }, [!!pos, !!order]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const en = eng(); if (en) en.draftNote = { note: note.trim(), meta }; }, [note, meta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = useMemo(() => {
     const dec = closed.filter((t) => t.result !== 'BE');
@@ -256,11 +258,6 @@ export default function TradePanel({
           </Row>
         </div>
         {liveTags(pos)}
-        {(pos.partials || []).length > 0 && (
-          <p className="mt-2 text-[11.5px]" style={{ color: T.text3 }}>
-            {tx('Відкрито', 'Open')} {Math.round((pos.size ?? 1) * 100)}% · {tx('зафіксовано', 'locked')} <span style={{ color: pos.realized >= 0 ? T.ok : T.bad, fontFamily: T.mono }}>{fmtR(pos.realized)}</span>
-          </p>
-        )}
         <div className="mt-3 grid grid-cols-2 gap-2">
           <button type="button" onClick={() => e?.partialClose(0.5)} title={tx('Закрити половину позиції за поточною ціною', 'Close half at the current price')} className="rounded-lg py-2 text-[12.5px] font-semibold" style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text }}>{tx('Закрити 50%', 'Close 50%')}</button>
           <button
@@ -276,6 +273,13 @@ export default function TradePanel({
           <button type="button" onClick={() => e?.moveToBE()} className="rounded-lg py-2 text-[12.5px] font-semibold" style={{ background: T.surface, border: `1px solid ${T.line}`, color: T.text }}>{tx('Беззбиток', 'Breakeven')}</button>
           <button type="button" onClick={() => e?.closePosition('manual')} className="rounded-lg py-2 text-[12.5px] font-semibold text-white" style={{ background: long ? SELL : BUY }}>{tx('Закрити', 'Close')} {fmtNum(st.price, d)}</button>
         </div>
+        {/* Під кнопками, а не над ними: інакше після «Закрити 50%» кнопки
+            зʼїжджали вниз і другий клік влучав не туди. */}
+        {(pos.partials || []).length > 0 && (
+          <p className="mt-2 text-[11.5px]" style={{ color: T.text3 }}>
+            {tx('Відкрито', 'Open')} {Math.round((pos.size ?? 1) * 100)}% · {tx('зафіксовано', 'locked')} <span style={{ color: pos.realized >= 0 ? T.ok : T.bad, fontFamily: T.mono }}>{fmtR(pos.realized)}</span>
+          </p>
+        )}
       </div>
     );
   } else if (order && !draft) {
@@ -392,7 +396,22 @@ export default function TradePanel({
             <Row label={tx('Ризик', 'Risk')} hint={`$${riskUsd.toFixed(0)} ${tx('з', 'of')} $${balance.toLocaleString('en-US')}`}>
               <NumField value={riskPct} digits={2} width="w-[80px]" suffix="%" onCommit={(v) => setPrefs({ ...prefs, riskPct: Math.min(100, v) })} />
             </Row>
-            <TradeTags note={note} meta={meta} onNote={setNote} onMeta={(patch) => setMeta((m) => ({ ...m, ...patch }))} usedSetups={usedSetups} />
+            {/* Теги до входу — згорнуті: щоб увійти, потрібні лише стоп,
+                тейк і ризик. Розгорнути можна тут або вже в угоді. */}
+            <div className="rounded-lg" style={{ background: T.surface, border: `1px solid ${T.line}` }}>
+              <button type="button" onClick={() => setDraftTags((v) => !v)} className="flex w-full items-center justify-between px-2.5 py-1.5 text-[12px] font-semibold" style={{ color: T.text2 }}>
+                <span className="flex min-w-0 items-center gap-2">
+                  {tx('Нотатка й теги', 'Note & tags')}
+                  {!draftTags && <TagsSummary meta={meta} note={note} />}
+                </span>
+                <ChevronDown size={14} style={{ transform: draftTags ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+              </button>
+              {draftTags && (
+                <div className="px-2.5 pb-2.5">
+                  <TradeTags note={note} meta={meta} onNote={setNote} onMeta={(patch) => setMeta((m) => ({ ...m, ...patch }))} usedSetups={usedSetups} />
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => e?.confirmDraft({ note: note.trim(), meta })}
@@ -454,7 +473,7 @@ export default function TradePanel({
             [tx('Разом', 'Net'), stats.n ? fmtR(stats.net) : '—', stats.net >= 0 ? T.ok : T.bad],
             [tx('У $', 'In $'), stats.n ? fmtUsd(stats.net * riskUsd) : '—', stats.net >= 0 ? T.ok : T.bad],
             ['PF', stats.pf == null ? '—' : stats.pf === Infinity ? '∞' : stats.pf.toFixed(2), T.text],
-            [tx('Просідання', 'Max DD'), stats.n ? `${stats.dd.toFixed(1)}R` : '—', stats.dd > 0 ? T.bad : T.text],
+            [tx('Просідання', 'Max DD'), stats.n ? `${stats.dd > 0 ? '−' : ''}${stats.dd.toFixed(1)}R` : '—', stats.dd > 0 ? T.bad : T.text],
             [tx('Сер. угода', 'Avg trade'), stats.avg == null ? '—' : fmtR(stats.avg), stats.avg >= 0 ? T.ok : T.bad],
             [tx('Сер. виграш', 'Avg win'), stats.avgW == null ? '—' : fmtR(stats.avgW), T.ok],
             [tx('Сер. збиток', 'Avg loss'), stats.avgL == null ? '—' : fmtR(-stats.avgL), T.bad],

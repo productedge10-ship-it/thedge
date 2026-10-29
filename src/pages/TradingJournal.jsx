@@ -36,6 +36,7 @@ import SharePeriodButton from "../components/journal/SharePeriod";
 import { inSandbox } from "../lib/sandbox";
 import JournalEmpty from "../components/onboard/JournalEmpty";
 import ImportTradesModal, { IMPORT_EVENT } from '../components/journal/ImportTradesModal';
+import { TRADES_IMPORTED_EVENT } from '../components/journal/TableImportModal';
 import AssetIcon from "../components/ui/AssetIcon";
 
 const PAGE_SIZES = [10, 20, 30, 40];
@@ -1001,6 +1002,14 @@ export default function TradingJournal() {
   useEffect(() => {
     fetchTradesList(page);
   }, [fetchTradesList, page]);
+
+  /* Імпорт з Notion/таблиці живе в Layout (його відкривають і з
+     Лаунчпада) — сюди приходить лише сигнал «угоди змінились». */
+  useEffect(() => {
+    const on = () => { tradesCache.current = {}; fetchGlobalData(); fetchTradesList(1, { force: true }); setPage(1); };
+    window.addEventListener(TRADES_IMPORTED_EVENT, on);
+    return () => window.removeEventListener(TRADES_IMPORTED_EVENT, on);
+  }, [fetchGlobalData, fetchTradesList]);
 
   useEffect(() => {
     fetchOpenTrades();

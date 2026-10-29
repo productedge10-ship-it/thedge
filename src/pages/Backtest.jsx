@@ -474,12 +474,9 @@ export default function Backtest() {
           {/* NewBacktestButton вище — панель і вибух за формулою
               «Add Account» з рахунків, перефарбовані під суть
               бектесту (деталі — у коментарі над компонентом). */}
-          {/* Реальний графік — поруч із «Новим бектестом», а не в меню:
-              це другий спосіб вести бектест, а не його налаштування. */}
+          {/* Одна кнопка: вибір «на графіку / вручну» — у самій модалці.
+              Друга кнопка «Бектест на реальному графіку» вела туди ж. */}
           <div className="flex flex-wrap items-center gap-2.5">
-            <Button variant="secondary" icon={CandlestickChart} onClick={() => setCreating('chart')}>
-              {tx('Бектест на реальному графіку', 'Backtest on a real chart')}
-            </Button>
             <NewBacktestButton onClick={() => setCreating(true)} />
           </div>
         </motion.div>
@@ -683,7 +680,7 @@ export default function Backtest() {
               <p className="mb-6 text-[14px]" style={{ fontFamily: T.sans, color: T.text3, lineHeight: 1.65 }}>
                 {confirm.demo
                   ? tx('Це приклад, не твої дані — просто сховається з цього перегляду. Онови сторінку, і він зʼявиться знову, поки не створиш свій перший бектест.', 'This is an example, not your data — it’ll just be hidden from this view. Refresh the page and it’ll come back until you create your first backtest.')
-                  : tx(`Разом із бектестом зникнуть усі ${confirm.trades?.length || 0} угод у ньому.`, `All ${confirm.trades?.length || 0} trades in it will be deleted along with the backtest.`)}
+                  : tx(`Разом із бектестом зникнуть усі його угоди: ${confirm.trades?.length || 0}.`, `All ${confirm.trades?.length || 0} trades in it will be deleted along with the backtest.`)}
               </p>
               <div className="flex gap-2.5">
                 <button

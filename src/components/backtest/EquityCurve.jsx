@@ -79,10 +79,9 @@ export default function EquityCurve({ stats }) {
     const xy = pts.map((p, i) => [x(i), y(p.r)]);
 
     let d = `M${xy[0][0].toFixed(1)},${xy[0][1].toFixed(1)}`;
-    for (let i = 0; i < xy.length - 1; i += 1) {
-      const p0 = xy[i], p1 = xy[i + 1], mx = (p0[0] + p1[0]) / 2;
-      d += ` C${mx.toFixed(1)},${p0[1].toFixed(1)} ${mx.toFixed(1)},${p1[1].toFixed(1)} ${p1[0].toFixed(1)},${p1[1].toFixed(1)}`;
-    }
+    /* Прямі відрізки між угодами: крива-сплайн малювала одну угоду як
+       плавну «S», а між точками показувала значення, яких не було. */
+    for (let i = 1; i < xy.length; i += 1) d += ` L${xy[i][0].toFixed(1)},${xy[i][1].toFixed(1)}`;
     const zero = y(0);
     const area = `${d} L${xy[xy.length - 1][0].toFixed(1)},${zero} L${xy[0][0].toFixed(1)},${zero} Z`;
 
@@ -196,12 +195,12 @@ export default function EquityCurve({ stats }) {
             >
               <defs>
                 <linearGradient id="eqUp" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={T.ok} stopOpacity="0.34" />
-                  <stop offset="100%" stopColor={T.ok} stopOpacity="0" />
+                  <stop offset="0%" stopColor={T.ok} stopOpacity="0.08" />
+                  <stop offset="100%" stopColor={T.ok} stopOpacity="0.08" />
                 </linearGradient>
                 <linearGradient id="eqDn" x1="0" y1="1" x2="0" y2="0">
-                  <stop offset="0%" stopColor={T.warn} stopOpacity="0.26" />
-                  <stop offset="100%" stopColor={T.warn} stopOpacity="0" />
+                  <stop offset="0%" stopColor={T.warn} stopOpacity="0.08" />
+                  <stop offset="100%" stopColor={T.warn} stopOpacity="0.08" />
                 </linearGradient>
                 <clipPath id="eqClipUp"><rect x="0" y="0" width={W} height={Math.max(0, geo.zero)} /></clipPath>
                 <clipPath id="eqClipDn"><rect x="0" y={geo.zero} width={W} height={Math.max(0, H - geo.zero)} /></clipPath>

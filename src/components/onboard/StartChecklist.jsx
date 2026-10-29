@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronDown, ChevronUp, Plug, PenLine, Eye, Send, ShieldCheck, Lock, FlaskConical, CalendarCheck, Gift, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Plug, PenLine, Eye, Send, ShieldCheck, Lock, FlaskConical, CalendarCheck, Gift, X, Upload } from 'lucide-react';
+import { openTableImport } from '../journal/TableImportModal';
 import useSubscription from '../../hooks/useSubscription';
 import { TRIAL_DAYS } from '../../lib/billing';
 import { supabase } from '../../lib/supabase';
@@ -148,7 +149,7 @@ export default function StartChecklist() {
     );
   }
 
-  if (!ready || !facts || expired || finished || list.done) return null;
+  if (!ready || expired || finished || list.done) return null;
 
   const manualFirst = noAutoImport(answers);
   const openDemo = () => {
@@ -250,6 +251,8 @@ export default function StartChecklist() {
                   : tx('Хвилина: інструмент, результат, причина входу.', 'A minute: instrument, result, reason for entry.')}
               >
                 <Btn primary={steps[1].done} icon={PenLine} onClick={addManual}>{tx('Внести вручну', 'Log manually')}</Btn>
+                {/* Хто вже вів журнал у Notion чи таблиці — переносить усю історію. */}
+                <Btn icon={Upload} onClick={() => { track('table_import_open', { from: 'checklist' }); openTableImport(); }}>{tx('Перенести з Notion', 'Move from Notion')}</Btn>
                 {/* Ще не торгує регулярно — даємо потренуватись на історії. */}
                 {isWarmingUp(answers) && (
                   <Btn icon={FlaskConical} onClick={() => navigate('/backtest')}>{tx('Спершу бектест', 'Backtest first')}</Btn>

@@ -8,6 +8,7 @@ import { T, EASE } from '../../lib/theme';
 import { t as tx } from '../../lib/lang';
 import { track } from '../../lib/pulse';
 import { notify } from '../../utils/notify';
+import { openTableImport } from './TableImportModal';
 
 /* ==================================================================
    Імпорт історії з файлу: звіт MT5/MT4 (HTML) або CSV.
@@ -135,6 +136,14 @@ export default function ImportTradesModal({ onDone }) {
             <p className="m-0 mt-1.5 text-[13px] leading-[1.55]" style={{ fontFamily: T.sans, color: T.text3 }}>
               {tx('Звіт MT5/MT4 (Історія → правий клік → Звіт → HTML) або CSV з cTrader, TradeLocker, Match-Trader чи своєї таблиці. Excel — збережи як CSV.', 'An MT5/MT4 report (History → right-click → Report → HTML) or a CSV from cTrader, TradeLocker, Match-Trader or your own sheet. Excel — save as CSV.')}
             </p>
+            <button
+              type="button"
+              onClick={() => { setOpen(false); track('table_import_open', { from: 'import_modal' }); openTableImport(file && !parsed ? [file] : null); }}
+              className="mt-2 text-left text-[13px] font-semibold"
+              style={{ fontFamily: T.sans, color: T.acc }}
+            >
+              {tx('Журнал у Notion, Google Sheets чи Excel? Перенести з налаштуванням колонок →', 'Journal in Notion, Google Sheets or Excel? Move it with column setup →')}
+            </button>
 
             {done ? (
               <div className="mt-5 rounded-2xl p-4" style={{ background: T.sunken, border: `1px solid ${T.line}` }}>

@@ -21,7 +21,7 @@ import EquityCurve from '../components/backtest/EquityCurve';
 import BreakdownPanels from '../components/backtest/BreakdownPanels';
 import ReportPanels from '../components/backtest/ReportPanels';
 import { ACT, act } from '../components/backtest/accent';
-import { t as tx, LOCALE } from '../lib/lang';
+import { t as tx, LOCALE, pluralUk } from '../lib/lang';
 import ErrorComposerModal from '../components/errors/ErrorComposerModal';
 import { fetchBacktestErrors, saveError, uid, todayISO } from '../lib/errorsStore';
 import { catsFromReasons } from '../components/errors/utils';
@@ -43,6 +43,13 @@ export default function BacktestSession() {
   const [session, setSession] = useState(null);
   const [trades, setTrades] = useState([]);
   const [expOpen, setExpOpen] = useState(false);
+  /* Меню експорту закривається й Esc, як решта меню. */
+  useEffect(() => {
+    if (!expOpen) return undefined;
+    const k = (e) => { if (e.key === 'Escape') setExpOpen(false); };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [expOpen]);
   /* Бектест на графіку: угоди пише сам графік, тож рядок ручного
      запису ховаємо за кнопкою, а головна дія — «Продовжити на графіку». */
   const chartMode = !isDemo(sessionId) && !!session && isChartSession({ ...session, trades });
@@ -452,11 +459,20 @@ export default function BacktestSession() {
           <EquityCurve stats={stats} />
         </div>
 
-        <div className="mt-[18px]">
-          <BreakdownPanels stats={stats} />
-        </div>
-
-        <ReportPanels stats={stats} onOpen={(t) => setSheet({ trade: t })} />
+        {/* Розбивки (сесії, дні, сетапи…) на 1–4 угодах — шум із «немає»:
+            показуємо їх від 5 угод, до того — один рядок пояснення. */}
+        {(trades?.length || 0) >= 5 ? (
+          <>
+            <div className="mt-[18px]">
+              <BreakdownPanels stats={stats} />
+            </div>
+            <ReportPanels stats={stats} onOpen={(t) => setSheet({ trade: t })} />
+          </>
+        ) : (
+          <p className="mt-[18px] rounded-xl px-4 py-3 text-[13px]" style={{ fontFamily: T.sans, color: T.text3, border: `1px dashed ${T.line}` }}>
+            {tx('Розбивки по сесіях, днях, сетапах і помилках зʼявляться від 5 угод.', 'Breakdowns by session, day, setup and mistake appear from 5 trades.')}
+          </p>
+        )}
 
         {/* ─────────── Робоча зона: запис і список ─────────── */}
         <div className="mb-4 mt-[34px]">
@@ -464,7 +480,7 @@ export default function BacktestSession() {
             {tx('Угоди', 'Trades')}
           </h2>
           <p className="mt-1.5 text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-            {tx(`${stats.total} ${stats.total === 1 ? 'запис' : 'записів'} · клік по рядку відкриє картку угоди`, `${stats.total} ${stats.total === 1 ? 'entry' : 'entries'} · click a row to open the trade`)}
+            {tx(`${stats.total} ${pluralUk(stats.total, 'запис', 'записи', 'записів')} · клік по рядку відкриє картку угоди`, `${stats.total} ${stats.total === 1 ? 'entry' : 'entries'} · click a row to open the trade`)}
           </p>
         </div>
 

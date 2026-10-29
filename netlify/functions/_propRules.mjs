@@ -28,14 +28,16 @@ const H = 3600 * 1000;
 const EVERY = 24 * H;
 /* Модель — зі змінної: Google час від часу вимикає старі моделі для
    нових ключів (2.5-flash уже «no longer available to new users»). */
-const MODEL = () => process.env.PROP_GEMINI_MODEL || 'gemini-3.8-flash';
+/* Кілька моделей через кому: при 503/429 береться наступна. Тест 28.10:
+   3.6-flash і 3.5-flash-lite відповідали стабільно, 3.8-flash і 3.1-flash-lite — 503. */
+const MODELS = () => String(process.env.PROP_GEMINI_MODEL || 'gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.8-flash').split(',').map((m) => m.trim()).filter(Boolean);
 const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
 /* Числа й дати, що міняються щодня (лічильники трейдерів, «сьогодні»),
    не повинні будити Gemini. У хеш іде текст без них; сам текст — повний. */
-const stableHash = (t) => sha(String(t)
+export const stableHash = (t) => sha(String(t)
   .replace(/\$?\d[\d,.]*\s*(M|K|k|\+)?\+?\s*(traders|customers|users|paid|reviews|trustpilot)/gi, '')
   .replace(/\s+/g, ' ').trim());
 
@@ -56,19 +58,19 @@ async function scrape(url, options = {}) {
    Cerebras, OpenRouter :free, DeepSeek…). Задається змінними:
    LLM_API_KEY, LLM_BASE_URL (напр. https://api.mistral.ai/v1), LLM_MODEL.
    Якщо LLM_API_KEY є — користуємось ним, Gemini лишається запасним. */
-const hasLLM = () => !!process.env.LLM_API_KEY;
+const hasLLM = () => !!(process.env.LLM_API_KEY || process.env.BIG_LLM_API_KEY);
 
 let lastLLM = 0;
 const modelPause = new Map();
-async function openaiChat(prompt, { json = true } = {}) {
-  const base = (process.env.LLM_BASE_URL || 'https://api.mistral.ai/v1').replace(/\/+$/, '');
-  const models = String(process.env.LLM_MODEL || 'mistral-small-latest').split(',').map((m) => m.trim()).filter(Boolean);
+async function openaiChat(prompt, { json = true, P = 'LLM' } = {}) {
+  const base = (process.env[`${P}_BASE_URL`] || 'https://api.mistral.ai/v1').replace(/\/+$/, '');
+  const models = String(process.env[`${P}_MODEL`] || 'mistral-small-latest').split(',').map((m) => m.trim()).filter(Boolean);
   let last;
   for (const wait of [0, 20_000, 60_000, 120_000]) {
     if (wait) await sleep(wait);
     /* Безкоштовні тарифи мають ліміт запитів на секунду/хвилину —
        тримаємо паузу між викликами. */
-    const gap = Number(process.env.LLM_GAP_MS || 4000) - (Date.now() - lastLLM);
+    const gap = Number(process.env[`${P}_GAP_MS`] || 4000) - (Date.now() - lastLLM);
     if (gap > 0) await sleep(gap);
     lastLLM = Date.now();
     /* Кілька моделей через кому: у кожної свій добовий ліміт. Беремо першу,
@@ -76,10 +78,10 @@ async function openaiChat(prompt, { json = true } = {}) {
     const model = models.find((m) => (modelPause.get(m) || 0) < Date.now()) || models[0];
     const r = await fetch(`${base}/chat/completions`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.LLM_API_KEY}` },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env[`${P}_API_KEY`]}` },
       body: JSON.stringify({
         model, temperature: 0,
-        max_tokens: Number(process.env.LLM_MAX_TOKENS || 4000),
+        max_tokens: Number(process.env[`${P}_MAX_TOKENS`] || (P === 'LLM' ? 4000 : 16000)),
         ...(/gpt-oss/.test(model) ? { reasoning_effort: 'low' } : {}),
         messages: [{ role: 'user', content: json ? `${prompt}\n\nВідповідай ЛИШЕ валідним JSON без пояснень і без markdown.` : prompt }],
         ...(json ? { response_format: { type: 'json_object' } } : {}),
@@ -107,10 +109,18 @@ async function openaiChat(prompt, { json = true } = {}) {
 /* big:true — великі запити (звід правил фірми, календар, порівняння).
    Безкоштовна Groq дає лише 8K токенів на хвилину, тому великі йдуть у
    Gemini (їх мало за добу), а сторінки по одній — у Groq/інший LLM. */
-async function gemini(prompt, opts = {}) {
+export async function gemini(prompt, opts = {}) {
   const { big, ...o } = opts;
+  /* Великі: спершу окремий LLM (BIG_LLM_*, напр. Cerebras), потім Gemini. */
+  if (big && process.env.BIG_LLM_API_KEY) {
+    try { return await openaiChat(prompt, { ...o, P: 'BIG_LLM' }); } catch (e) {
+      if (!process.env.GEMINI_API_KEY) throw e;
+      console.error('prop rules: BIG_LLM не відповів, пробую Gemini:', e.message.slice(0, 120));
+    }
+  }
   if (big && process.env.GEMINI_API_KEY) return geminiRaw(prompt, o);
-  if (hasLLM()) return openaiChat(prompt, o);
+  if (process.env.LLM_API_KEY) return openaiChat(prompt, o);
+  if (!process.env.GEMINI_API_KEY && process.env.BIG_LLM_API_KEY) return openaiChat(prompt, { ...o, P: 'BIG_LLM' });
   return geminiRaw(prompt, o);
 }
 
@@ -121,9 +131,13 @@ async function geminiRaw(prompt, { json = true } = {}) {
      Це минає за хвилину-дві, тому кілька спроб з паузою, а не провал
      усього прогону. */
   let last;
-  for (const wait of [0, 15_000, 45_000, 90_000]) {
+  const list = MODELS();
+  let attempt = 0;
+  for (const wait of [0, 0, 0, 20_000, 45_000, 90_000]) {
     if (wait) await sleep(wait);
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL()}:generateContent`, {
+    const model = list[attempt % list.length];
+    attempt += 1;
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
@@ -195,7 +209,7 @@ const SCHEMA = `{
   }]
 }`;
 
-function extractPrompt(firm, text, known) {
+export function extractPrompt(firm, text, known) {
   return `Ти витягуєш правила проп-фірми ${firm} з тексту її сайту.
 Поверни ТІЛЬКИ JSON за схемою нижче. Одна програма (тип челенджу) — один об'єкт.
 Правила:
@@ -809,7 +823,7 @@ export async function runPropRulesMonitor() {
   if (process.env.PROP_RULES_OFF === '1') return;
   const db = admin();
   await notifyApproved(db);
-  if (!process.env.PROP_SCRAPER_URL || !(process.env.LLM_API_KEY || process.env.GEMINI_API_KEY)) return;
+  if (!process.env.PROP_SCRAPER_URL || !(process.env.LLM_API_KEY || process.env.BIG_LLM_API_KEY || process.env.GEMINI_API_KEY)) return;
 
   const { data: list, error } = await db.from('prop_rule_sources').select('*').eq('active', true);
   if (error) { console.error('prop rules:', error.message); return; }

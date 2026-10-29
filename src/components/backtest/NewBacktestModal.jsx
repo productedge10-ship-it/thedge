@@ -244,13 +244,15 @@ export default function NewBacktestModal({ saving, onClose, onCreate, initialMod
 
   const dep = Number(String(f.initial_balance).replace(/[^\d.]/g, '')) || 0;
   const risk = Number(f.riskPct) > 0 ? Number(f.riskPct) : 1;
-  const canSave = !!mode && f.name.trim() && dep > 0;
+  /* Назва не обовʼязкова: порожня → «GER30 · 27.10», як у TV. */
+  const autoName = `${f.pair} · ${new Date().toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' })}`;
+  const canSave = !!mode && dep > 0;
   const submit = () => {
     if (!canSave || saving) return;
     const settings = mode === 'chart'
       ? { riskPct: risk, tf: f.tf, ...(f.start ? { start: f.start } : {}) }
       : { riskPct: risk };
-    onCreate({ name: f.name, pair: f.pair, strategy_name: f.strategy_name.trim(), initial_balance: dep, mode, settings });
+    onCreate({ name: f.name.trim() || autoName, pair: f.pair, strategy_name: f.strategy_name.trim(), initial_balance: dep, mode, settings });
   };
   const pickMode = (m) => { setMode(m); if (m === 'chart' && f.pair === 'EURUSD' && !f.name) set({ pair: 'XAUUSD' }); };
 
@@ -546,7 +548,7 @@ export default function NewBacktestModal({ saving, onClose, onCreate, initialMod
                   color: f.name.trim() ? T.text : T.text4,
                 }}
               >
-                {f.name.trim() || tx('Без назви', 'Untitled')}
+                {f.name.trim() || autoName}
               </div>
 
               <div className="flex items-end justify-between" style={{ gap: 10, marginTop: 14 }}>

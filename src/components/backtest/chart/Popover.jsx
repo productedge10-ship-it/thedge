@@ -54,14 +54,23 @@ export function PopPanel({ pop, children, width, align = 'start', className = ''
       const w = p.offsetWidth; const h = p.offsetHeight;
       let x = align === 'end' ? a.right - w : align === 'center' ? a.left + a.width / 2 - w / 2 : a.left;
       x = Math.max(8, Math.min(window.innerWidth - w - 8, x));
+      const H = window.innerHeight;
       let y = a.bottom + 6;
-      if (y + h > window.innerHeight - 8) y = Math.max(8, a.top - h - 6);
-      setPos({ x, y });
+      if (y + h > H - 8) {
+        /* Не влазить знизу — над якорем; не влазить і там — притискаємо
+           до низу екрана, щоб панель (палітра з «+») не йшла за край. */
+        y = a.top - h - 6 >= 8 ? a.top - h - 6 : Math.max(8, H - h - 8);
+      }
+      setPos((old) => (old && old.x === x && old.y === y ? old : { x, y }));
     };
     place();
+    /* Панель може вирости вже відкритою (у палітрі «+» розгортає вибір
+       свого кольору) — перераховуємо місце. */
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(place) : null;
+    if (ro && pop.panel.current) ro.observe(pop.panel.current);
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
-    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+    return () => { ro?.disconnect(); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
   }, [pop.open, pop.anchor, pop.panel, align]);
 
   if (!pop.open) return null;
@@ -71,6 +80,7 @@ export function PopPanel({ pop, children, width, align = 'start', className = ''
       className={`fixed z-[300] rounded-xl p-1 ${className}`}
       style={{
         left: pos?.x ?? -9999, top: pos?.y ?? -9999, width,
+        maxHeight: 'calc(100vh - 16px)', overflowY: 'auto',
         background: T.surface3, border: `1px solid ${T.lineHi}`,
         boxShadow: '0 18px 44px rgba(0,0,0,0.5)',
         animation: 'edgePop .14s cubic-bezier(.22,1,.36,1)',

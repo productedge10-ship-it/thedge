@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { T, EASE } from '../../lib/theme';
 import { fmtPF, fmtR, money } from '../../lib/backtestStats';
-import { t as tx } from '../../lib/lang';
+import { t as tx, pluralUk } from '../../lib/lang';
 
 /* ==================================================================
    Смуга ключових цифр.
@@ -38,7 +38,7 @@ export default function StatStrip({ stats }) {
     },
     {
       label: tx('Просадка', 'Drawdown'),
-      value: `−${stats.maxDrawdownR.toFixed(2)}R`,
+      value: stats.maxDrawdownR >= 0.005 ? `−${stats.maxDrawdownR.toFixed(2)}R` : '0.00R',
       sub: stats.currentDDR > 0 ? tx(`зараз −${stats.currentDDR.toFixed(2)}R від піку`, `now −${stats.currentDDR.toFixed(2)}R from peak`) : tx('зараз на піку', 'at the peak now'),
       color: stats.maxDrawdownR > 0 ? T.warn : T.text3,
     },
@@ -65,7 +65,7 @@ export default function StatStrip({ stats }) {
           {fmtR(stats.netR)}
         </div>
         <div className="mt-[11px] text-[13px]" style={{ fontFamily: T.sans, color: T.text3 }}>
-          {stats.total} {tx('угод', stats.total === 1 ? 'trade' : 'trades')} · {stats.wins}W / {stats.losses}L · {stats.bes} BE
+          {stats.total} {tx(pluralUk(stats.total, 'угода', 'угоди', 'угод'), stats.total === 1 ? 'trade' : 'trades')} · {stats.wins}W / {stats.losses}L · {stats.bes} BE
         </div>
         <div className="mt-1 text-[12.5px]" style={{ fontFamily: T.sans, color: T.text4 }}>
           {tx('Баланс', 'Balance')} {money(Math.round(stats.balance))} · {stats.returnPct >= 0 ? '+' : ''}{stats.returnPct.toFixed(1)}%

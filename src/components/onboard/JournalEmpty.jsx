@@ -10,6 +10,7 @@ import { track } from '../../lib/pulse';
 import { noAutoImport, platformName, demoUrl, markDemoSeen } from '../../lib/onboard';
 import Button from '../ui/Button';
 import QuickTrade from './QuickTrade';
+import { openTableImport } from '../journal/TableImportModal';
 
 /* Журнал без жодної угоди: замість «нічого не знайдено» — перша дія.
    Для MT5 головна кнопка «Підключити», для інших платформ — ручне
@@ -48,7 +49,8 @@ export default function JournalEmpty({ onAdd, onSaved, quickOpen = false }) {
         {!quick && <Button variant={mt5First ? 'secondary' : 'primary'} icon={Zap} onClick={() => setQuick(true)}>{tx('Швидка угода', 'Quick trade')}</Button>}
         <Button variant="ghost" icon={PenLine} onClick={onAdd}>{tx('Повна форма', 'Full form')}</Button>
         {/* Хто вже вів журнал деінде — переносить історію файлом. */}
-        <Button variant="ghost" icon={Upload} onClick={() => window.dispatchEvent(new Event('edge:import-trades'))}>{tx('Імпорт з файлу', 'Import from file')}</Button>
+        <Button variant="ghost" icon={Upload} onClick={() => { track('table_import_open', { from: 'journal_empty' }); openTableImport(); }}>{tx('З Notion чи таблиці', 'From Notion or a sheet')}</Button>
+        <Button variant="ghost" icon={Upload} onClick={() => window.dispatchEvent(new Event('edge:import-trades'))}>{tx('Звіт MT5 / брокера', 'MT5 / broker report')}</Button>
         <Button variant="ghost" icon={Eye} onClick={demo}>{tx('Подивитись приклад', 'See an example')}</Button>
       </div>
       {quick && <QuickTrade onSaved={onSaved} />}
