@@ -28,7 +28,7 @@ import { sameFirm } from '../../lib/propRules';
 
 const LEAD = 15;
 const SEEN = 'edge_prop_news_seen';
-const LIVE = import.meta.env.DEV || import.meta.env.VITE_PROP_RULES_LIVE === '1';
+const LIVE = true; // розділ відкритий для Pro
 const clock = (ms) => new Date(ms).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
 const readSeen = () => { try { return JSON.parse(localStorage.getItem(SEEN)) || {}; } catch { return {}; } };
 

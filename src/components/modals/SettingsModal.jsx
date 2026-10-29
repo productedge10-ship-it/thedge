@@ -38,6 +38,7 @@ import {
   setTelegramPref, watchTelegramLink,
 } from '../../lib/telegramStore';
 import { shareUrl } from '../../lib/sandbox';
+import { openTableImport } from '../journal/TableImportModal';
 
 /* ==================================================================
    Налаштування.
@@ -688,6 +689,21 @@ export default function SettingsModal() {
                         style={{ fontFamily: T.sans, marginTop: 12, padding: '14px 18px', borderRadius: 14, border: `1px solid ${T.line}`, background: T.surfaceHi, color: T.text2, fontSize: 14.5 }}
                       >
                         {t('Що подобається, що бісить, чого бракує — 30 секунд →', 'What you like, what annoys you, what is missing — 30 seconds →')}
+                      </button>
+                    </div>
+
+                    {/* Імпорт з Notion є в онбордингу й порожньому журналі, але
+                        давні акаунти їх уже не бачать — тут він доступний завжди. */}
+                    <div>
+                      <Label>{t('Імпорт даних', 'Import data')}</Label>
+                      <button
+                        type="button"
+                        onClick={() => { setOpen(false); openTableImport(); }}
+                        className="w-full text-left"
+                        style={{ fontFamily: T.sans, marginTop: 12, padding: '14px 18px', borderRadius: 14, border: `1px solid ${T.line}`, background: T.surfaceHi, color: T.text, fontSize: 14.5 }}
+                      >
+                        <span style={{ fontWeight: 600 }}>{t('Імпорт даних з Notion', 'Import data from Notion')}</span>
+                        <span style={{ display: 'block', marginTop: 2, fontSize: 13, color: T.text3 }}>{t('Або з Excel / Google Таблиць — перенесемо всю історію угод →', 'Or from Excel / Google Sheets — we’ll move your whole trade history →')}</span>
                       </button>
                     </div>
 

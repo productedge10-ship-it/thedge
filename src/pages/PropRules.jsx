@@ -5,7 +5,6 @@ import { T } from '../lib/theme';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import PageHeader from '../components/ui/PageHeader';
-import PropRulesSoon from '../components/accounts/PropRulesSoon';
 import PropRulesHub from '../components/accounts/PropRulesHub';
 import PropRulesPro from '../components/accounts/PropRulesPro';
 import useSubscription from '../hooks/useSubscription';
@@ -252,15 +251,10 @@ function FirmBook({ firm, book }) {
   );
 }
 
-/* Поки монітор не наповнений — «Coming Soon». Увімкнути: VITE_PROP_RULES_LIVE=1;
-   подивитись справжню сторінку до релізу — додати ?live=1 в адресу.
-   У dev-режимі (localhost) завжди справжня сторінка + блок «що спарсено з FTMO». */
-const LIVE = import.meta.env.DEV || import.meta.env.VITE_PROP_RULES_LIVE === '1';
+/* Відкрито для Pro; Free / Lite бачать вітрину (PropRulesPro). */
 
 export default function PropRulesPage() {
-  const preview = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('live') === '1';
   const sub = useSubscription();
-  if (!LIVE && !preview) return <PropRulesSoon />;
   /* Розділ лише для Pro. Free / Lite — вітрина з живим макетом. */
   if (!sub.ready) return <div className="py-24 text-center text-[14px]" style={{ color: T.text3 }}>Завантажую…</div>;
   // dev-only: ?as=free / ?as=lite показує тизер на Pro-акаунті

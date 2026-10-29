@@ -14,9 +14,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const env = Object.fromEntries(fs.readFileSync(path.join(root, '.env'), 'utf8').split(/\r?\n/)
   .map((l) => l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/)).filter(Boolean).map((m) => [m[1], m[2].replace(/^["']|["']$/g, '')]));
 const WRITE = process.argv.includes('--write');
-const URL_ = (env.PROD_SUPABASE_URL || '').replace(/\/+$/, '');
-const KEY = env.PROD_SUPABASE_SERVICE_KEY;
-if (!URL_ || !KEY) { console.error('Додай у .env PROD_SUPABASE_URL і PROD_SUPABASE_SERVICE_KEY'); process.exit(1); }
+const URL_ = (env.PROD_SUPABASE_URL || env.SUPABASE_URL || '').replace(/\/+$/, '');
+const KEY = env.PROD_SUPABASE_SERVICE_KEY || env.SUPABASE_SERVICE_KEY || env.SUPABASE_KEY;
+if (!URL_ || !KEY) { console.error('Додай у .env SUPABASE_URL і SUPABASE_KEY (service_role)'); process.exit(1); }
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'content-type': 'application/json' };
 
 const dir = path.join(root, 'src/dev/prop-rules');
